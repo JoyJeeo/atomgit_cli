@@ -35,7 +35,10 @@ except ImportError:
 try:
     from .config import config
 except ImportError:
-    from config import config
+    try:
+        from config import config
+    except ImportError:
+        from atomgit.config import config
 
 
 def _normalize_repo_id(repo_id: str) -> str:
