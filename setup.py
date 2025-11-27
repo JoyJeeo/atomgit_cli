@@ -24,7 +24,9 @@ def read_requirements():
             'tqdm>=4.66.1',
             'pathlib>=1.0.1',
             'colorama>=0.4.6',
-            'tabulate>=0.9.0'
+            'tabulate>=0.9.0',
+            'huggingface-hub>=0.20.0',
+            'datasets>=2.16.0'
         ]
 
 setup(
