@@ -1,6 +1,9 @@
 import os
 from typing import Optional, Dict, Any
 from pathlib import Path
+import json
+import urllib.request
+import urllib.error
 
 # 设置Hugging Face Hub的API端点为AtomGit
 os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
@@ -57,6 +60,35 @@ class HuggingFaceAPI:
         config.set_credentials(token)
         print("✅ Token已保存")
         return True
+    
+    def get_login_user(self):
+        try:
+            credentials = config.get_credentials()
+            if not credentials:
+                print("❌ 未找到登录凭证")
+                return None
+            api_url = 'https://atomgit.com/api/v5/user'
+            req = urllib.request.Request(
+                api_url,
+                headers={
+                    'Authorization': credentials['token'],
+                    'User-Agent': 'atomgit-cli',
+                    'Accept': 'application/json'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    login = data.get('login')
+                    if login and login.strip():
+                        return {
+                            'login': login,
+                            'name': data.get('name'),
+                            'email': data.get('email')
+                        }
+            return None
+        except Exception as e:
+            return None
     
     def create_repo(self, 
                     repo_name: str,
