@@ -118,7 +118,7 @@ twine_upload() {
     
     # 上传
     echo -e "${YELLOW}开始上传...${NC}"
-    #twine upload dist/* -u "__token__" -p "$atomgitsdktoken"
+    twine upload dist/* -u "__token__" -p "$atomgitsdktoken"
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ 上传成功！${NC}"
