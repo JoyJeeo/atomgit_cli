@@ -162,28 +162,9 @@ def snapshot_download(
     })
     
     try:
-        # 首先尝试公开下载（适用于公开仓库）
-        if not local_files_only and token is None:
-            try:
-                result = hf_snapshot_download(**{k: v for k, v in kwargs.items() if v is not None})
-                return result
-            except Exception as e:
-                error_msg = str(e)
-                # 如果是认证问题，尝试使用token
-                if ("403" in error_msg or "FORBIDDEN" in error_msg or 
-                    "no scopes" in error_msg or "unauthorized" in error_msg.lower()):
-                    saved_token = _get_token()
-                    if saved_token:
-                        kwargs['token'] = saved_token
-                    else:
-                        raise Exception(f"仓库访问需要认证，但未找到保存的token。请先使用 'atomgit login' 登录，或在调用时提供token参数。")
-                else:
-                    raise e
-        
         # 使用token下载
         result = hf_snapshot_download(**{k: v for k, v in kwargs.items() if v is not None})
         return result
-        
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "403" in error_msg:
@@ -271,27 +252,8 @@ def download_file(
         kwargs['force_download'] = force_download
     
     try:
-        # 首先尝试公开下载
-        if token is None:
-            try:
-                result = hf_hub_download(**{k: v for k, v in kwargs.items() if v is not None})
-                return result
-            except Exception as e:
-                error_msg = str(e)
-                if ("403" in error_msg or "FORBIDDEN" in error_msg or 
-                    "no scopes" in error_msg or "unauthorized" in error_msg.lower()):
-                    saved_token = _get_token()
-                    if saved_token:
-                        kwargs['token'] = saved_token
-                    else:
-                        raise Exception(f"文件访问需要认证，但未找到保存的token。请先使用 'atomgit login' 登录。")
-                else:
-                    raise e
-        
-        # 使用token下载
         result = hf_hub_download(**{k: v for k, v in kwargs.items() if v is not None})
         return result
-        
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "403" in error_msg:
@@ -440,7 +402,6 @@ def create_repository(
             exist_ok=exist_ok,
         )
         return result
-        
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "403" in error_msg:
@@ -533,29 +494,8 @@ def load_dataset(
     load_kwargs.update(kwargs)
     
     try:
-        # 首先尝试公开访问（适用于公开数据集）
-        if token is None:
-            try:
-                dataset = ds_load_dataset(**{k: v for k, v in load_kwargs.items() if v is not None})
-                return dataset
-            except Exception as e:
-                error_msg = str(e)
-                # 如果是认证问题，尝试使用保存的token
-                if ("403" in error_msg or "FORBIDDEN" in error_msg or 
-                    "no scopes" in error_msg or "unauthorized" in error_msg.lower() or
-                    "401" in error_msg):
-                    saved_token = _get_token()
-                    if saved_token:
-                        load_kwargs['token'] = saved_token
-                    else:
-                        raise Exception(f"数据集访问需要认证，但未找到保存的token。请先使用 'atomgit login' 登录，或在调用时提供token参数。原始错误：{error_msg}")
-                else:
-                    raise e
-        
-        # 使用token加载数据集
         dataset = ds_load_dataset(**{k: v for k, v in load_kwargs.items() if v is not None})
         return dataset
-        
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "403" in error_msg:
