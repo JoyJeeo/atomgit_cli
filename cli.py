@@ -87,13 +87,18 @@ def logout():
         print_info("当前未登录")
 
 
-# @cli.command()
-# def whoami():
-#     """显示当前登录状态"""
-#     if config.is_logged_in():
-#         print_info("当前已登录")
-#     else:
-#         print_warning("当前未登录，请先运行 'atomgit login'")
+@cli.command()
+def whoami():
+    if not config.is_logged_in():
+        print_warning("请先登录：atomgit login")
+        sys.exit(1)
+    # 调用API获取用户信息
+    user_info = api.get_login_user()
+    if user_info:
+        print_success(f"当前登录用户: {user_info['login']}")
+    else:
+        print_error("获取用户信息失败")
+        sys.exit(1)
 
 
 @cli.group()

@@ -1,6 +1,9 @@
 import os
 from typing import Optional, Dict, Any
 from pathlib import Path
+import json
+import urllib.request
+import urllib.error
 
 # 设置Hugging Face Hub的API端点为AtomGit
 os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
@@ -52,11 +55,48 @@ class HuggingFaceAPI:
         if not token or len(token) < 10:
             print("❌ Token格式不正确")
             return False
-            
-        # 简单保存token，先不验证API
+        user_info = self._get_login_user_by_token(token)
+        if not user_info:
+            print("❌ 获取用户信息失败")
+            return False
         config.set_credentials(token)
         print("✅ Token已保存")
         return True
+    
+    def _get_login_user_by_token(self, token: str) -> Optional[Dict[str, Any]]:
+        try:
+            if not token:
+                print("❌ 未找到登录凭证")
+                return None
+            api_url = 'https://atomgit.com/api/v5/user'
+            req = urllib.request.Request(
+                api_url,
+                headers={
+                    'Authorization': token,
+                    'User-Agent': 'atomgit-cli',
+                    'Accept': 'application/json'
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode('utf-8'))
+                    login = data.get('login')
+                    if login and login.strip():
+                        return {
+                            'login': login,
+                            'name': data.get('name'),
+                            'email': data.get('email')
+                        }
+            return None
+        except Exception as e:
+            return None
+
+    def get_login_user(self):
+        credentials = config.get_credentials()
+        if not credentials:
+            print("❌ 未找到登录凭证")
+            return None
+        return self._get_login_user_by_token(credentials['token'])
     
     def create_repo(self, 
                     repo_name: str,
