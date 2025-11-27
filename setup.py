@@ -31,7 +31,7 @@ setup(
     name='atomgit',
     version='1.1.0',
     author='AtomGit CLI Team',
-    author_email='sa@gitcode.com',
+    author_email='sa@atomgit.com',
     description='AtomGit模型文件上传下载CLI工具',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
