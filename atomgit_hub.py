@@ -277,6 +277,7 @@ def upload_folder(
     commit_description: Optional[str] = None,
     path_in_repo: str = "./",
     ignore_patterns: Optional[List[str]] = None,
+    upload_timeout: float = 300.0,
 ) -> str:
     """
     上传文件夹到AtomGit Hub
@@ -291,6 +292,8 @@ def upload_folder(
         commit_description (str, 可选): 提交描述
         path_in_repo (str, 可选): 在仓库中的路径，默认为根目录
         ignore_patterns (List[str], 可选): 要忽略的文件模式
+        upload_timeout (float, 可选): 上传超时时间（秒），默认60秒（1分钟）。
+                                      对于大文件，服务器处理响应可能需要较长时间。
     
     返回:
         str: 提交的URL或ID
@@ -298,6 +301,7 @@ def upload_folder(
     示例:
         >>> upload_folder("./my-model/", "username/repo-name")
         >>> upload_folder("./data/", "username/repo", path_in_repo="datasets/")
+        >>> upload_folder("./big-files/", "username/repo", upload_timeout=1200.0)  # 20分钟超时
     """
     # 标准化仓库ID
     normalized_repo_id = _normalize_repo_id(repo_id)
@@ -320,7 +324,7 @@ def upload_folder(
     # 直接使用原始目录，或者创建临时目录来重新组织结构
     import tempfile
     import shutil
-    
+
     if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
         # 如果要上传到根目录，直接使用源文件夹
         upload_path = str(folder_path)
@@ -337,6 +341,14 @@ def upload_folder(
             shutil.copytree(folder_path, target_path, dirs_exist_ok=True)
             
             upload_path = str(temp_path)
+    # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
+    from huggingface_hub import constants as hf_constants
+    
+    # 保存原始超时配置
+    original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    
+    # 临时修改超时配置
+    hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
     
     try:
         # 使用huggingface_hub的upload_folder上传
@@ -349,7 +361,7 @@ def upload_folder(
         )
         
         return result
-        
+
     except Exception as e:
         error_msg = str(e)
         if "401" in error_msg or "403" in error_msg:
