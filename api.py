@@ -7,18 +7,15 @@ import urllib.error
 
 # 设置Hugging Face Hub的API端点为AtomGit
 os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
+# 禁用Xet协议，避免 xet-write-token 请求
+os.environ["HF_HUB_DISABLE_XET"] = "1"
 # 设置缓存目录
 cache_dir = os.path.expanduser("~/.cache/atomgit")
 os.makedirs(cache_dir, exist_ok=True)
 os.environ["HF_HOME"] = cache_dir
 
 
-from huggingface_hub import hf_hub_download, create_repo, snapshot_download
-
-try:
-    from .atomgit_hub import upload_folder as atomgit_upload_folder
-except ImportError:
-    from atomgit_hub import upload_folder as atomgit_upload_folder
+from huggingface_hub import hf_hub_download, upload_folder, create_repo, snapshot_download, constants as hf_constants
 
 try:
     from .config import config
@@ -153,15 +150,17 @@ class HuggingFaceAPI:
                 # 复制文件到临时目录
                 import shutil
                 shutil.copy2(file_path, target_file)
-                # 使用AtomGit Hub SDK上传整个目录
+                # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
                 commit_message = message or "Upload folder using atomgit client"
-                atomgit_upload_folder(
+                hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+                upload_kwargs = dict(
                     repo_id=repo_id,
                     folder_path=str(temp_dir),
                     token=credentials['token'],
                     commit_message=commit_message,
-                    upload_timeout=upload_timeout
                 )
+                upload_folder(**upload_kwargs)
+                
                 return True
             finally:
                 # 清理临时目录
@@ -186,15 +185,16 @@ class HuggingFaceAPI:
                 print("未找到登录凭证")
                 return False
             
-            # 直接使用AtomGit Hub SDK上传目录
+            # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
             commit_message = message or "Upload folder using atomgit client"
-            atomgit_upload_folder(
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+            upload_kwargs = dict(
                 repo_id=repo_id,
                 folder_path=str(dir_path),
                 token=credentials['token'],
                 commit_message=commit_message,
-                upload_timeout=upload_timeout
             )
+            upload_folder(**upload_kwargs)
             
             return True
             
