@@ -37,7 +37,7 @@ except ImportError:
 
 
 @click.group()
-@click.version_option(version='1.0.2')
+@click.version_option(version='1.0.3')
 def cli():
     """AtomGit CLI - 基于Transformers和Hugging Face Hub的AtomGit平台模型文件上传下载工具"""
     pass

@@ -31,7 +31,7 @@ def read_requirements():
 
 setup(
     name='atomgit',
-    version='1.0.2',
+    version='1.0.3',
     author='AtomGit CLI Team',
     author_email='sa@atomgit.com',
     description='AtomGit模型文件上传下载CLI工具',
