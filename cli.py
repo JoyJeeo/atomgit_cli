@@ -9,6 +9,8 @@ from getpass import getpass
 
 # 设置Hugging Face Hub的API端点为AtomGit
 os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
+# 禁用Xet协议，避免 xet-write-token 请求
+os.environ["HF_HUB_DISABLE_XET"] = "1"
 # 设置缓存目录
 cache_dir = os.path.expanduser("~/.cache/atomgit")
 os.makedirs(cache_dir, exist_ok=True)
@@ -37,7 +39,7 @@ except ImportError:
 
 
 @click.group()
-@click.version_option(version='1.0.2')
+@click.version_option(version='1.0.5')
 def cli():
     """AtomGit CLI - 基于Transformers和Hugging Face Hub的AtomGit平台模型文件上传下载工具"""
     pass
@@ -158,7 +160,9 @@ def create(repo_name, repo_type, private):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')
 @click.option('--message', '-m', default='', help='上传说明')
-def upload(path, repo_id, message):
+@click.option('--timeout', '-t', 'timeout_sec', default=300, type=float, 
+              help='上传超时时间（秒），默认300秒（5分钟）。大数据集建议增大此值')
+def upload(path, repo_id, message, timeout_sec):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -178,7 +182,7 @@ def upload(path, repo_id, message):
         file_size = format_file_size(path.stat().st_size)
         print_info(f"文件大小: {file_size}")
         
-        if api.upload_folder(path, repo_id, message=message):
+        if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -191,8 +195,9 @@ def upload(path, repo_id, message):
         print_info(f"正在上传目录: {path}")
         print_info(f"文件数量: {file_count}")
         print_info(f"目录大小: {dir_size}")
+        print_info(f"超时设置: {timeout_sec}秒")
         
-        if api.upload_directory(path, repo_id, message=message):
+        if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")
