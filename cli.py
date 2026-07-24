@@ -24,7 +24,8 @@ try:
         validate_repo_name, validate_repo_type, get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
-        clear_git_credentials, check_git_available, normalize_path_in_repo
+        clear_git_credentials, check_git_available, normalize_path_in_repo,
+        parse_ignore_patterns
     )
 except ImportError:
     from config import config
@@ -34,7 +35,8 @@ except ImportError:
         validate_repo_name, validate_repo_type, get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
-        clear_git_credentials, check_git_available, normalize_path_in_repo
+        clear_git_credentials, check_git_available, normalize_path_in_repo,
+        parse_ignore_patterns
     )
 
 
@@ -171,7 +173,10 @@ def create(repo_name, repo_type, private):
               help='仓库类型 (model/dataset)，默认按 model 处理')
 @click.option('--revision', 'revision', default=None,
               help='上传目标分支/版本（如 "dev" 或 "v1.0"），默认提交到默认分支(通常为main)')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision):
+@click.option('--ignore', '-i', 'ignore', default=None,
+              help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
+                   '仅对目录上传有意义')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -196,6 +201,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
         print_error(str(e))
         sys.exit(1)
 
+    # 解析忽略模式（逗号分隔 → 列表；空 → None）
+    ignore_patterns = parse_ignore_patterns(ignore)
+
     if path.is_file():
         print_info(f"正在上传文件: {path}")
         file_size = format_file_size(path.stat().st_size)
@@ -206,10 +214,13 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"仓库类型: {repo_type}")
         if revision:
             print_info(f"目标分支: {revision}")
+        if ignore_patterns:
+            print_warning("注意：--ignore 对单文件上传几乎不生效（仅匹配文件名），主要对目录上传有意义")
 
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
                              progress_bar=show_progress, path_in_repo=path_in_repo,
-                             repo_type=repo_type, revision=revision):
+                             repo_type=repo_type, revision=revision,
+                             ignore_patterns=ignore_patterns):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -229,12 +240,15 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"仓库类型: {repo_type}")
         if revision:
             print_info(f"目标分支: {revision}")
+        if ignore_patterns:
+            print_info(f"忽略模式: {', '.join(ignore_patterns)}")
         if not show_progress:
             print_info("进度条已禁用")
 
         if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
                                 progress_bar=show_progress, path_in_repo=path_in_repo,
-                                repo_type=repo_type, revision=revision):
+                                repo_type=repo_type, revision=revision,
+                                ignore_patterns=ignore_patterns):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")

@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from colorama import Fore, Style, init
 import urllib.parse
 
@@ -87,6 +87,28 @@ def normalize_path_in_repo(path_in_repo: Optional[str]) -> Optional[str]:
     if ".." in parts:
         raise ValueError("path_in_repo 不能包含 '..'（禁止路径穿越）")
     return "/".join(parts) if parts else None
+
+
+def parse_ignore_patterns(raw: Optional[str]) -> Optional[List[str]]:
+    """解析 ``--ignore`` 选项的逗号分隔字符串为 HF ignore_patterns 列表。
+
+    - 输入可为 None / 空字符串 / 空白 → 返回 None（表示不忽略任何文件）
+    - 按逗号拆分，去空白与首尾空格，丢弃空片段
+    - 去重后保持顺序；返回 None 以便调用方仅在不忽略时不向 HF 传该参数
+
+    HF 的 ignore_patterns 支持 fnmatch/glob 风格，如 ``*.tmp``、``logs/``、
+    ``**/.DS_Store`` 等。
+    """
+    if not raw:
+        return None
+    seen = set()
+    patterns = []
+    for p in raw.split(","):
+        p = p.strip()
+        if p and p not in seen:
+            seen.add(p)
+            patterns.append(p)
+    return patterns or None
 
 
 def get_file_size(file_path: Path) -> int:

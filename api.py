@@ -29,10 +29,10 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
 
 try:
     from .config import config
-    from .utils import normalize_path_in_repo
+    from .utils import normalize_path_in_repo, parse_ignore_patterns
 except ImportError:
     from config import config
-    from utils import normalize_path_in_repo
+    from utils import normalize_path_in_repo, parse_ignore_patterns
 
 
 def _set_progress_bar(enabled: bool) -> None:
@@ -160,7 +160,8 @@ class HuggingFaceAPI:
                    progress_bar: bool = True,
                    path_in_repo: str = None,
                    repo_type: str = None,
-                   revision: str = None) -> bool:
+                   revision: str = None,
+                   ignore_patterns=None) -> bool:
         """上传文件 - 使用Hugging Face Hub SDK
 
         Args:
@@ -171,6 +172,10 @@ class HuggingFaceAPI:
             revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
                 ``main``）；指定时若分支不存在会自动创建。注意：目标分支
                 不存在已有文件时，上传会从空状态开始。
+            ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
+                ``*.tmp``）。为 None 时不忽略。注意：单文件上传路径下，
+                该参数仅会匹配 ``file_path.name``，几乎不生效——主要对
+                目录上传有意义。
         """
         try:
             if not file_path.exists():
@@ -222,6 +227,8 @@ class HuggingFaceAPI:
                     upload_kwargs['repo_type'] = repo_type
                 if revision is not None:
                     upload_kwargs['revision'] = revision
+                if ignore_patterns:
+                    upload_kwargs['ignore_patterns'] = ignore_patterns
                 upload_folder(**upload_kwargs)
 
                 return True
@@ -242,7 +249,8 @@ class HuggingFaceAPI:
                         progress_bar: bool = True,
                         path_in_repo: str = None,
                         repo_type: str = None,
-                        revision: str = None) -> bool:
+                        revision: str = None,
+                        ignore_patterns=None) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
@@ -252,6 +260,8 @@ class HuggingFaceAPI:
                 默认按 ``model`` 处理（保持既有行为）。
             revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
                 ``main``）；指定时若分支不存在会自动创建。
+            ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
+                ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
         """
         try:
             if not dir_path.exists() or not dir_path.is_dir():
@@ -291,6 +301,8 @@ class HuggingFaceAPI:
                     upload_kwargs['repo_type'] = repo_type
                 if revision is not None:
                     upload_kwargs['revision'] = revision
+                if ignore_patterns:
+                    upload_kwargs['ignore_patterns'] = ignore_patterns
                 upload_folder(**upload_kwargs)
 
                 return True
