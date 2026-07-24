@@ -23,8 +23,8 @@ try:
         print_success, print_error, print_warning, print_info,
         validate_repo_name, validate_repo_type, get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
-        is_valid_path, ensure_directory, setup_git_credentials, 
-        clear_git_credentials, check_git_available
+        is_valid_path, ensure_directory, setup_git_credentials,
+        clear_git_credentials, check_git_available, normalize_path_in_repo
     )
 except ImportError:
     from config import config
@@ -34,7 +34,7 @@ except ImportError:
         validate_repo_name, validate_repo_type, get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
-        clear_git_credentials, check_git_available
+        clear_git_credentials, check_git_available, normalize_path_in_repo
     )
 
 
@@ -164,7 +164,9 @@ def create(repo_name, repo_type, private):
               help='上传超时时间（秒），默认300秒（5分钟）。大数据集建议增大此值')
 @click.option('--no-progress-bar', is_flag=True, default=False,
               help='禁用上传进度条（适用于日志/CI等非交互场景）')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar):
+@click.option('--path-in-repo', '-p', 'path_in_repo', default=None,
+              help='仓库内目标目录前缀（如 "sub/" 或 "sub/extra/"），默认上传到仓库根目录')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -182,13 +184,22 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar):
     # 进度条默认开启；--no-progress-bar 时关闭
     show_progress = not no_progress_bar
 
+    # 规范化并校验仓库内路径（含路径穿越防护）
+    try:
+        pipr = normalize_path_in_repo(path_in_repo)
+    except ValueError as e:
+        print_error(str(e))
+        sys.exit(1)
+
     if path.is_file():
         print_info(f"正在上传文件: {path}")
         file_size = format_file_size(path.stat().st_size)
         print_info(f"文件大小: {file_size}")
+        if pipr:
+            print_info(f"仓库内路径: {pipr}/")
 
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
-                             progress_bar=show_progress):
+                             progress_bar=show_progress, path_in_repo=path_in_repo):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -202,11 +213,13 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar):
         print_info(f"文件数量: {file_count}")
         print_info(f"目录大小: {dir_size}")
         print_info(f"超时设置: {timeout_sec}秒")
+        if pipr:
+            print_info(f"仓库内路径: {pipr}/")
         if not show_progress:
             print_info("进度条已禁用")
 
         if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
-                                progress_bar=show_progress):
+                                progress_bar=show_progress, path_in_repo=path_in_repo):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")

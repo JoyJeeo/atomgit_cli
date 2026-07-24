@@ -29,8 +29,10 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
 
 try:
     from .config import config
+    from .utils import normalize_path_in_repo
 except ImportError:
     from config import config
+    from utils import normalize_path_in_repo
 
 
 def _set_progress_bar(enabled: bool) -> None:
@@ -155,8 +157,14 @@ class HuggingFaceAPI:
     def upload_folder(self, file_path: Path, repo_id: str,
                    remote_path: str = None, message: str = None,
                    upload_timeout: float = 300.0,
-                   progress_bar: bool = True) -> bool:
-        """上传文件 - 使用Hugging Face Hub SDK"""
+                   progress_bar: bool = True,
+                   path_in_repo: str = None) -> bool:
+        """上传文件 - 使用Hugging Face Hub SDK
+
+        Args:
+            path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
+                否则文件会被放到该前缀下（如 ``sub/`` → ``sub/<文件名>``）。
+        """
         try:
             if not file_path.exists():
                 print(f"文件不存在: {file_path}")
@@ -167,6 +175,13 @@ class HuggingFaceAPI:
                 print("未找到登录凭证")
                 return False
 
+            # 规范化 path_in_repo（remote_path 为旧别名，向后兼容）
+            try:
+                pipr = normalize_path_in_repo(path_in_repo if path_in_repo is not None else remote_path)
+            except ValueError as e:
+                print(f"上传路径不合法: {e}")
+                return False
+
             # 创建一个临时目录在当前工作目录下
             temp_dir = Path.cwd() / ".tmp_upload"
             temp_dir.mkdir(exist_ok=True)
@@ -175,12 +190,14 @@ class HuggingFaceAPI:
             _set_progress_bar(progress_bar)
 
             try:
-                if remote_path:
-                    # 如果指定了远程路径，创建相应的目录结构
-                    target_file = temp_dir / remote_path
+                if pipr:
+                    # 指定仓库内路径：按前缀创建子目录结构
+                    target_file = temp_dir / pipr / file_path.name
                     target_file.parent.mkdir(parents=True, exist_ok=True)
+                    upload_path_in_repo = f"{pipr}/"
                 else:
                     target_file = temp_dir / file_path.name
+                    upload_path_in_repo = "./"
                 # 复制文件到临时目录
                 import shutil
                 shutil.copy2(file_path, target_file)
@@ -190,6 +207,7 @@ class HuggingFaceAPI:
                 upload_kwargs = dict(
                     repo_id=repo_id,
                     folder_path=str(temp_dir),
+                    path_in_repo=upload_path_in_repo,
                     token=credentials['token'],
                     commit_message=commit_message,
                 )
@@ -206,12 +224,18 @@ class HuggingFaceAPI:
         except Exception as e:
             print(f"上传文件失败: {e}")
             return False
-    
+
     def upload_directory(self, dir_path: Path, repo_id: str,
                         message: str = None, progress_callback=None,
                         upload_timeout: float = 300.0,
-                        progress_bar: bool = True) -> bool:
-        """上传目录 - 使用Hugging Face Hub SDK"""
+                        progress_bar: bool = True,
+                        path_in_repo: str = None) -> bool:
+        """上传目录 - 使用Hugging Face Hub SDK
+
+        Args:
+            path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
+                否则目录内容会被放到该前缀下。
+        """
         try:
             if not dir_path.exists() or not dir_path.is_dir():
                 print(f"目录不存在: {dir_path}")
@@ -221,6 +245,16 @@ class HuggingFaceAPI:
             if not credentials:
                 print("未找到登录凭证")
                 return False
+
+            # 规范化 path_in_repo
+            try:
+                pipr = normalize_path_in_repo(path_in_repo)
+            except ValueError as e:
+                print(f"上传路径不合法: {e}")
+                return False
+
+            # 仓库内目标前缀：空 → "./"（根目录）
+            upload_path_in_repo = pipr + "/" if pipr else "./"
 
             # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
             _set_progress_bar(progress_bar)
@@ -232,6 +266,7 @@ class HuggingFaceAPI:
                 upload_kwargs = dict(
                     repo_id=repo_id,
                     folder_path=str(dir_path),
+                    path_in_repo=upload_path_in_repo,
                     token=credentials['token'],
                     commit_message=commit_message,
                 )

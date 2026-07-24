@@ -70,6 +70,25 @@ def validate_repo_type(repo_type: str) -> bool:
     return repo_type in ['model', 'dataset']
 
 
+def normalize_path_in_repo(path_in_repo: Optional[str]) -> Optional[str]:
+    """规范化和校验仓库内路径前缀（用于 upload 的 --path-in-repo）。
+
+    - 去除首尾的 ``./`` ``/`` 及空片段，统一为 ``a/b/c`` 形式
+    - 拒绝包含 ``..`` 的路径（防止路径穿越，保护仓库其它目录）
+    - 返回规范化后的字符串；空或仅 ``./`` 时返回 None（表示仓库根目录）
+
+    Raises:
+        ValueError: 当路径包含 ``..`` 片段时。
+    """
+    if not path_in_repo:
+        return None
+    # 统一斜杠并拆分，丢弃空片段与当前目录标记 "."
+    parts = [p for p in path_in_repo.replace("\\", "/").split("/") if p and p != "."]
+    if ".." in parts:
+        raise ValueError("path_in_repo 不能包含 '..'（禁止路径穿越）")
+    return "/".join(parts) if parts else None
+
+
 def get_file_size(file_path: Path) -> int:
     """获取文件大小"""
     try:
