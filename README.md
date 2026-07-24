@@ -12,11 +12,20 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 - 🔐 用户认证和登录管理
 - 🔗 **Git集成**：自动配置Git凭证，支持标准Git命令
 - 📁 支持模型和数据集仓库创建
-- ⬆️ 文件和目录批量上传
-- ⬇️ 仓库内容下载
+- ⬆️ 文件和目录上传，支持丰富的参数控制（见下文「上传文件」）
+- ⬇️ 仓库内容下载（公开仓库无需登录）
 - 🎨 彩色终端输出
-- 📊 上传下载进度显示
+- 📊 上传进度条（可禁用）
 - 🔧 配置文件管理
+- 🧩 **上传能力增强（v1.0.5）**：
+  - 进度条开关（`--no-progress-bar`）
+  - 仓库内目标路径（`-p/--path-in-repo`）
+  - 仓库类型选择（`-r/--repo-type model|dataset`）
+  - 目标分支/版本（`--revision`）
+  - 忽略文件模式（`-i/--ignore`）
+  - 断点续传/分块上传（`--resumable`、`--num-workers`）
+  - 单文件上传无本地拷贝（直接走 `upload_file`）
+  - 语义化错误分类（认证失败 / 仓库不存在 / 超时等，附可执行建议）
 
 ### SDK功能
 - 🐍 **Python原生接口**：类似huggingface_hub的API设计
@@ -112,23 +121,67 @@ git pull origin main
 
 ### 2. 上传文件
 
-#### 上传模型
+`atomgit upload` 支持文件与目录上传，并提供丰富的参数控制。
+
+#### 基础用法
 
 ```bash
+# 上传模型目录（默认上传到仓库根目录，默认分支 main）
 atomgit upload ./your-model-dir --repo-id your-username/your-model-name
-```
 
-#### 上传数据集
-
-```bash
+# 上传数据集目录
 atomgit upload ./your-dataset-dir --repo-id your-username/your-dataset-name
-```
 
-#### 上传单个文件
-
-```bash
+# 上传单个文件（v1.0.5 起直接上传，无本地拷贝开销）
 atomgit upload ./model.bin --repo-id your-username/your-model-name
 ```
+
+#### 完整选项
+
+```bash
+atomgit upload <path> --repo-id <id> [options]
+```
+
+| 选项 | 说明 |
+|------|------|
+| `--repo-id <id>` | 目标仓库ID（必填，如 `username/repo-name`） |
+| `-m, --message <text>` | 上传提交说明 |
+| `-t, --timeout <sec>` | 上传超时秒数，默认 300（大文件建议调大） |
+| `--no-progress-bar` | 禁用进度条（日志/CI 场景） |
+| `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
+| `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
+| `--revision <name>` | 目标分支/版本（如 `dev`、`v1.0`），默认 main |
+| `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
+| `--resumable` | 启用断点续传/分块上传（仅目录，走 HF `upload_large_folder`，中断可续传） |
+| `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
+
+#### 进阶示例
+
+```bash
+# 上传到仓库内 sub/ 目录、dataset 类型、dev 分支，忽略 .tmp 文件
+atomgit upload ./data --repo-id user/my-dataset \
+  -p sub/ -r dataset --revision dev -i "*.tmp"
+
+# 大目录断点续传（中断后再次执行同一命令即可续传）
+atomgit upload ./large-model --repo-id user/large-model \
+  --resumable --num-workers 4 -t 1800
+
+# 单文件无本地拷贝，直接上传到仓库内指定路径
+atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
+```
+
+> ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m` 不生效（会产生多次提交）；`--repo-type` 必填，未指定时默认 `model`。
+
+#### 错误处理
+
+上传失败时，CLI 会给出语义化错误类型与可执行建议，例如：
+
+```
+上传文件失败[仓库不存在]: 404 ...
+💡 建议: 仓库 user/repo 不存在或为私有且无访问权限。请检查 repo_id/repo_type，或先 atomgit login。
+```
+
+涵盖：认证失败 / 仓库不存在 / 受限仓库 / 仓库已禁用 / 分支不存在 / 请求参数错误 / 请求超时 / 网络连接失败 等情形。
 
 ### 3. 下载文件
 
@@ -156,6 +209,22 @@ atomgit logout
 
 ```bash
 atomgit config-show
+```
+
+#### 查看当前登录用户
+
+```bash
+atomgit whoami
+```
+
+#### 创建仓库
+
+```bash
+# 创建 model 仓库
+atomgit repo create your-username/your-repo --type model
+
+# 创建私有 dataset 仓库
+atomgit repo create your-username/your-dataset --type dataset --private
 ```
 
 ## SDK使用方法
@@ -446,6 +515,7 @@ git remote add origin https://atomgit.com/username/repo-name.git
 
 - 如果遇到网络错误，工具会自动重试
 - 上传大文件时会显示进度条
+- **上传失败语义化提示**：CLI 会把异常归类为「认证失败 / 仓库不存在 / 受限仓库 / 仓库已禁用 / 分支不存在 / 请求参数错误 / 请求超时 / 网络连接失败 / 未知错误」并附可执行建议
 - 所有操作都有详细的错误信息提示
 
 ## 支持的文件类型
@@ -465,11 +535,13 @@ atomgit/
 ├── cli.py               # CLI命令定义
 ├── api.py               # Hugging Face Hub API客户端
 ├── config.py            # 配置管理
-├── utils.py             # 工具函数
+├── utils.py             # 工具函数（路径/忽略模式解析等）
 ├── atomgit_hub.py       # Python SDK接口
 ├── requirements.txt     # 依赖包
 ├── setup.py             # 包安装配置
-└── README.md           # 说明文档
+├── deploy.sh            # 构建/安装/发布脚本
+├── tests/               # 集成测试（upload 各能力）
+└── README.md            # 说明文档
 ```
 
 ### 本地开发
@@ -491,8 +563,15 @@ atomgit --help
 # 测试SDK功能
 python -c "from atomgit_hub import snapshot_download; print('SDK导入成功')"
 
-# 运行测试
-python -m pytest tests/
+# 运行集成测试（需在 atomgit_cli conda 环境下）
+python tests/test_upload_progress.py        # 进度条
+python tests/test_upload_path_in_repo.py    # 仓库内路径
+python tests/test_upload_repo_type.py       # 仓库类型
+python tests/test_upload_revision.py         # 目标分支
+python tests/test_upload_ignore.py          # 忽略模式
+python tests/test_upload_resumable.py       # 断点续传
+python tests/test_upload_file_no_copy.py    # 单文件无拷贝
+python tests/test_upload_error_classify.py  # 错误分类
 ```
 
 ## Python版本兼容性
