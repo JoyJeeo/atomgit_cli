@@ -160,49 +160,58 @@ def create(repo_name, repo_type, private):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')
 @click.option('--message', '-m', default='', help='上传说明')
-@click.option('--timeout', '-t', 'timeout_sec', default=300, type=float, 
+@click.option('--timeout', '-t', 'timeout_sec', default=300, type=float,
               help='上传超时时间（秒），默认300秒（5分钟）。大数据集建议增大此值')
-def upload(path, repo_id, message, timeout_sec):
+@click.option('--no-progress-bar', is_flag=True, default=False,
+              help='禁用上传进度条（适用于日志/CI等非交互场景）')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
         sys.exit(1)
-    
+
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
         sys.exit(1)
-    
+
     path = Path(path)
     if not path.exists():
         print_error(f"路径不存在: {path}")
         sys.exit(1)
-    
+
+    # 进度条默认开启；--no-progress-bar 时关闭
+    show_progress = not no_progress_bar
+
     if path.is_file():
         print_info(f"正在上传文件: {path}")
         file_size = format_file_size(path.stat().st_size)
         print_info(f"文件大小: {file_size}")
-        
-        if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec):
+
+        if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
+                             progress_bar=show_progress):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
             sys.exit(1)
-    
+
     elif path.is_dir():
         file_count = count_files_in_directory(path)
         dir_size = format_file_size(get_directory_size(path))
-        
+
         print_info(f"正在上传目录: {path}")
         print_info(f"文件数量: {file_count}")
         print_info(f"目录大小: {dir_size}")
         print_info(f"超时设置: {timeout_sec}秒")
-        
-        if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec):
+        if not show_progress:
+            print_info("进度条已禁用")
+
+        if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
+                                progress_bar=show_progress):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")
             sys.exit(1)
-    
+
     else:
         print_error(f"不支持的路径类型: {path}")
         sys.exit(1)

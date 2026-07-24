@@ -18,9 +18,39 @@ os.environ["HF_HOME"] = cache_dir
 from huggingface_hub import hf_hub_download, upload_folder, create_repo, snapshot_download, constants as hf_constants
 
 try:
+    # huggingface_hub >= 0.14 提供的进度条程序化开关
+    from huggingface_hub.utils import enable_progress_bars, disable_progress_bars
+except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可用
+    def enable_progress_bars(*args, **kwargs):
+        pass
+
+    def disable_progress_bars(*args, **kwargs):
+        pass
+
+try:
     from .config import config
 except ImportError:
     from config import config
+
+
+def _set_progress_bar(enabled: bool) -> None:
+    """控制 Hugging Face Hub 上传过程中的进度条显示。
+
+    注意：此为进程级全局状态（HF Hub 的设计）。
+    - enabled=True  时显式开启进度条（防御性兜底，覆盖任何先前禁用）；
+    - enabled=False 时关闭进度条（适用于日志/CI 等非交互场景）。
+
+    若环境变量 HF_HUB_DISABLE_PROGRESS_BARS=1 在 import 前已设置，则其优先级最高，
+    程序化开关将被忽略（HF Hub 既定行为）。
+    """
+    try:
+        if enabled:
+            enable_progress_bars()
+        else:
+            disable_progress_bars()
+    except Exception:
+        # 进度条控制不应影响上传主流程
+        pass
 
 
 class HuggingFaceAPI:
@@ -122,24 +152,28 @@ class HuggingFaceAPI:
         except Exception as e:
             return False
     
-    def upload_folder(self, file_path: Path, repo_id: str, 
+    def upload_folder(self, file_path: Path, repo_id: str,
                    remote_path: str = None, message: str = None,
-                   upload_timeout: float = 300.0) -> bool:
+                   upload_timeout: float = 300.0,
+                   progress_bar: bool = True) -> bool:
         """上传文件 - 使用Hugging Face Hub SDK"""
         try:
             if not file_path.exists():
                 print(f"文件不存在: {file_path}")
                 return False
-            
+
             credentials = config.get_credentials()
             if not credentials:
                 print("未找到登录凭证")
                 return False
-            
+
             # 创建一个临时目录在当前工作目录下
             temp_dir = Path.cwd() / ".tmp_upload"
             temp_dir.mkdir(exist_ok=True)
-            
+
+            # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
+            _set_progress_bar(progress_bar)
+
             try:
                 if remote_path:
                     # 如果指定了远程路径，创建相应的目录结构
@@ -160,9 +194,11 @@ class HuggingFaceAPI:
                     commit_message=commit_message,
                 )
                 upload_folder(**upload_kwargs)
-                
+
                 return True
             finally:
+                # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
+                _set_progress_bar(True)
                 # 清理临时目录
                 import shutil
                 if temp_dir.exists():
@@ -171,33 +207,41 @@ class HuggingFaceAPI:
             print(f"上传文件失败: {e}")
             return False
     
-    def upload_directory(self, dir_path: Path, repo_id: str, 
+    def upload_directory(self, dir_path: Path, repo_id: str,
                         message: str = None, progress_callback=None,
-                        upload_timeout: float = 300.0) -> bool:
+                        upload_timeout: float = 300.0,
+                        progress_bar: bool = True) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK"""
         try:
             if not dir_path.exists() or not dir_path.is_dir():
                 print(f"目录不存在: {dir_path}")
                 return False
-            
+
             credentials = config.get_credentials()
             if not credentials:
                 print("未找到登录凭证")
                 return False
-            
-            # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-            commit_message = message or "Upload folder using atomgit client"
-            hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
-            upload_kwargs = dict(
-                repo_id=repo_id,
-                folder_path=str(dir_path),
-                token=credentials['token'],
-                commit_message=commit_message,
-            )
-            upload_folder(**upload_kwargs)
-            
-            return True
-            
+
+            # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
+            _set_progress_bar(progress_bar)
+
+            try:
+                # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
+                commit_message = message or "Upload folder using atomgit client"
+                hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+                upload_kwargs = dict(
+                    repo_id=repo_id,
+                    folder_path=str(dir_path),
+                    token=credentials['token'],
+                    commit_message=commit_message,
+                )
+                upload_folder(**upload_kwargs)
+
+                return True
+            finally:
+                # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
+                _set_progress_bar(True)
+
         except Exception as e:
             print(f"上传目录失败: {e}")
             return False
