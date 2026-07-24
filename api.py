@@ -15,7 +15,10 @@ os.makedirs(cache_dir, exist_ok=True)
 os.environ["HF_HOME"] = cache_dir
 
 
-from huggingface_hub import hf_hub_download, upload_folder, create_repo, snapshot_download, constants as hf_constants
+from huggingface_hub import (
+    hf_hub_download, upload_folder, create_repo, snapshot_download,
+    constants as hf_constants, HfApi,
+)
 
 try:
     # huggingface_hub >= 0.14 提供的进度条程序化开关
@@ -250,7 +253,9 @@ class HuggingFaceAPI:
                         path_in_repo: str = None,
                         repo_type: str = None,
                         revision: str = None,
-                        ignore_patterns=None) -> bool:
+                        ignore_patterns=None,
+                        resumable: bool = False,
+                        num_workers: int = None) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
@@ -262,6 +267,15 @@ class HuggingFaceAPI:
                 ``main``）；指定时若分支不存在会自动创建。
             ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
                 ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
+            resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF
+                ``upload_large_folder``：进程级元数据写入目录下
+                ``.cache/.huggingface/``，中断后再次执行可自动续传；适合
+                大目录。注意该模式下的限制（HF 既定）：
+                (1) ``path_in_repo`` 不生效（需本地自行组织目录结构）；
+                (2) ``message`` / ``commit_message`` 不生效（会产生多次提交）；
+                (3) ``repo_type`` 必须有值（HF 要求），为空时默认 ``model``。
+            num_workers: 仅 ``resumable=True`` 生效，并发 worker 数；为空时
+                由 HF 默认决定。
         """
         try:
             if not dir_path.exists() or not dir_path.is_dir():
@@ -280,30 +294,52 @@ class HuggingFaceAPI:
                 print(f"上传路径不合法: {e}")
                 return False
 
-            # 仓库内目标前缀：空 → "./"（根目录）
-            upload_path_in_repo = pipr + "/" if pipr else "./"
-
             # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
             _set_progress_bar(progress_bar)
 
             try:
-                # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
                 commit_message = message or "Upload folder using atomgit client"
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
-                upload_kwargs = dict(
-                    repo_id=repo_id,
-                    folder_path=str(dir_path),
-                    path_in_repo=upload_path_in_repo,
-                    token=credentials['token'],
-                    commit_message=commit_message,
-                )
-                if repo_type is not None:
-                    upload_kwargs['repo_type'] = repo_type
-                if revision is not None:
-                    upload_kwargs['revision'] = revision
-                if ignore_patterns:
-                    upload_kwargs['ignore_patterns'] = ignore_patterns
-                upload_folder(**upload_kwargs)
+
+                if resumable:
+                    # 断点续传/分块上传：走 upload_large_folder
+                    eff_repo_type = repo_type or "model"
+                    lf_kwargs = dict(
+                        repo_id=repo_id,
+                        folder_path=str(dir_path),
+                        repo_type=eff_repo_type,
+                        token=credentials['token'],
+                    )
+                    if revision is not None:
+                        lf_kwargs['revision'] = revision
+                    if ignore_patterns:
+                        lf_kwargs['ignore_patterns'] = ignore_patterns
+                    if num_workers is not None:
+                        lf_kwargs['num_workers'] = num_workers
+                    if pipr:
+                        # upload_large_folder 不支持 path_in_repo，显式提示
+                        print("⚠ 注意：resumable 模式不支持 path_in_repo，"
+                              "如需子目录请本地自行组织目录结构")
+                    # 构造带端点/token 的 HfApi 实例（endpoint 已由环境变量重定向）
+                    hf_api = HfApi()
+                    hf_api.upload_large_folder(**lf_kwargs)
+                else:
+                    # 仓库内目标前缀：空 → "./"（根目录）
+                    upload_path_in_repo = pipr + "/" if pipr else "./"
+                    upload_kwargs = dict(
+                        repo_id=repo_id,
+                        folder_path=str(dir_path),
+                        path_in_repo=upload_path_in_repo,
+                        token=credentials['token'],
+                        commit_message=commit_message,
+                    )
+                    if repo_type is not None:
+                        upload_kwargs['repo_type'] = repo_type
+                    if revision is not None:
+                        upload_kwargs['revision'] = revision
+                    if ignore_patterns:
+                        upload_kwargs['ignore_patterns'] = ignore_patterns
+                    upload_folder(**upload_kwargs)
 
                 return True
             finally:

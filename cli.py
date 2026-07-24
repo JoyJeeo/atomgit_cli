@@ -176,7 +176,12 @@ def create(repo_name, repo_type, private):
 @click.option('--ignore', '-i', 'ignore', default=None,
               help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
                    '仅对目录上传有意义')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore):
+@click.option('--resumable', is_flag=True, default=False,
+              help='启用断点续传/分块上传模式（仅目录上传有效，走 HF upload_large_folder，'
+                   '中断后可自动续传；注意此模式下 path_in_repo 与 message 不生效）')
+@click.option('--num-workers', 'num_workers', default=None, type=int,
+              help='断点续传模式的并发 worker 数（仅 --resumable 生效）')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -205,6 +210,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     ignore_patterns = parse_ignore_patterns(ignore)
 
     if path.is_file():
+        # 断点续传仅对目录上传有效
+        if resumable:
+            print_warning("--resumable 仅对目录上传有效，对单文件上传已忽略")
         print_info(f"正在上传文件: {path}")
         file_size = format_file_size(path.stat().st_size)
         print_info(f"文件大小: {file_size}")
@@ -242,13 +250,20 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"目标分支: {revision}")
         if ignore_patterns:
             print_info(f"忽略模式: {', '.join(ignore_patterns)}")
+        if resumable:
+            print_info("上传模式: 断点续传/分块 (resumable)")
+            if num_workers:
+                print_info(f"并发 worker: {num_workers}")
+            if not repo_type:
+                print_info("提示：未指定 --repo-type，断点续传模式下默认按 model 处理")
         if not show_progress:
             print_info("进度条已禁用")
 
         if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
                                 progress_bar=show_progress, path_in_repo=path_in_repo,
                                 repo_type=repo_type, revision=revision,
-                                ignore_patterns=ignore_patterns):
+                                ignore_patterns=ignore_patterns,
+                                resumable=resumable, num_workers=num_workers):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")
