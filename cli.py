@@ -169,7 +169,9 @@ def create(repo_name, repo_type, private):
 @click.option('--repo-type', '-r', 'repo_type',
               type=click.Choice(['model', 'dataset']), default=None,
               help='仓库类型 (model/dataset)，默认按 model 处理')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type):
+@click.option('--revision', 'revision', default=None,
+              help='上传目标分支/版本（如 "dev" 或 "v1.0"），默认提交到默认分支(通常为main)')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -202,10 +204,12 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"仓库内路径: {pipr}/")
         if repo_type:
             print_info(f"仓库类型: {repo_type}")
+        if revision:
+            print_info(f"目标分支: {revision}")
 
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
                              progress_bar=show_progress, path_in_repo=path_in_repo,
-                             repo_type=repo_type):
+                             repo_type=repo_type, revision=revision):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -223,12 +227,14 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"仓库内路径: {pipr}/")
         if repo_type:
             print_info(f"仓库类型: {repo_type}")
+        if revision:
+            print_info(f"目标分支: {revision}")
         if not show_progress:
             print_info("进度条已禁用")
 
         if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
                                 progress_bar=show_progress, path_in_repo=path_in_repo,
-                                repo_type=repo_type):
+                                repo_type=repo_type, revision=revision):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")
