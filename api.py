@@ -158,12 +158,15 @@ class HuggingFaceAPI:
                    remote_path: str = None, message: str = None,
                    upload_timeout: float = 300.0,
                    progress_bar: bool = True,
-                   path_in_repo: str = None) -> bool:
+                   path_in_repo: str = None,
+                   repo_type: str = None) -> bool:
         """上传文件 - 使用Hugging Face Hub SDK
 
         Args:
             path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
                 否则文件会被放到该前缀下（如 ``sub/`` → ``sub/<文件名>``）。
+            repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
+                默认按 ``model`` 处理（保持既有行为）。
         """
         try:
             if not file_path.exists():
@@ -211,6 +214,8 @@ class HuggingFaceAPI:
                     token=credentials['token'],
                     commit_message=commit_message,
                 )
+                if repo_type is not None:
+                    upload_kwargs['repo_type'] = repo_type
                 upload_folder(**upload_kwargs)
 
                 return True
@@ -229,12 +234,15 @@ class HuggingFaceAPI:
                         message: str = None, progress_callback=None,
                         upload_timeout: float = 300.0,
                         progress_bar: bool = True,
-                        path_in_repo: str = None) -> bool:
+                        path_in_repo: str = None,
+                        repo_type: str = None) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
             path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
                 否则目录内容会被放到该前缀下。
+            repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
+                默认按 ``model`` 处理（保持既有行为）。
         """
         try:
             if not dir_path.exists() or not dir_path.is_dir():
@@ -270,6 +278,8 @@ class HuggingFaceAPI:
                     token=credentials['token'],
                     commit_message=commit_message,
                 )
+                if repo_type is not None:
+                    upload_kwargs['repo_type'] = repo_type
                 upload_folder(**upload_kwargs)
 
                 return True

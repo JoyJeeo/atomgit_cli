@@ -166,7 +166,10 @@ def create(repo_name, repo_type, private):
               help='禁用上传进度条（适用于日志/CI等非交互场景）')
 @click.option('--path-in-repo', '-p', 'path_in_repo', default=None,
               help='仓库内目标目录前缀（如 "sub/" 或 "sub/extra/"），默认上传到仓库根目录')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo):
+@click.option('--repo-type', '-r', 'repo_type',
+              type=click.Choice(['model', 'dataset']), default=None,
+              help='仓库类型 (model/dataset)，默认按 model 处理')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type):
     """上传文件或目录到仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -197,9 +200,12 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo):
         print_info(f"文件大小: {file_size}")
         if pipr:
             print_info(f"仓库内路径: {pipr}/")
+        if repo_type:
+            print_info(f"仓库类型: {repo_type}")
 
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
-                             progress_bar=show_progress, path_in_repo=path_in_repo):
+                             progress_bar=show_progress, path_in_repo=path_in_repo,
+                             repo_type=repo_type):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -215,11 +221,14 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo):
         print_info(f"超时设置: {timeout_sec}秒")
         if pipr:
             print_info(f"仓库内路径: {pipr}/")
+        if repo_type:
+            print_info(f"仓库类型: {repo_type}")
         if not show_progress:
             print_info("进度条已禁用")
 
         if api.upload_directory(path, repo_id, message=message, upload_timeout=timeout_sec,
-                                progress_bar=show_progress, path_in_repo=path_in_repo):
+                                progress_bar=show_progress, path_in_repo=path_in_repo,
+                                repo_type=repo_type):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")
