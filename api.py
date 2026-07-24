@@ -64,6 +64,61 @@ def _set_progress_bar(enabled: bool) -> None:
         pass
 
 
+def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
+    """把 HF Hub 上传异常归类为 (error_type, hint) 二元组，供上层给出语义化提示。
+
+    覆盖以下典型情形（基于 huggingface_hub 错误类型与文本特征）：
+      - 认证失败 (401/403, 无有效 token)
+      - 仓库不存在 (RepositoryNotFoundError)
+      - 仓库已禁用 (DisabledRepoError)
+      - 分支不存在 (RevisionNotFoundError)
+      - 请求参数错误 (BadRequestError / 400)
+      - 超时 / 网络连接 (timeout / connection)
+      - 其他未知错误
+
+    返回 (error_type, hint)，其中 hint 是给用户的可执行建议。
+    """
+    msg = str(e)
+    ename = type(e).__name__
+
+    # 仓库已禁用（需放在 RepositoryNotFoundError 之前，避免被 403 误吞）
+    if ename == "DisabledRepoError" or "disabled" in msg.lower() and "repo" in msg.lower():
+        return "仓库已禁用", "该仓库已被作者禁用，无法上传。请联系仓库所有者。"
+
+    # 分支/版本不存在
+    if ename == "RevisionNotFoundError" or "revision" in msg.lower() and ("not found" in msg.lower() or "404" in msg):
+        return "分支/版本不存在", f"目标分支不存在且无法自动创建。请检查 revision 是否正确。"
+
+    # 仓库不存在（HF 既定：含 404 与"私有但无权访问"两种语义）
+    if ename in ("RepositoryNotFoundError", "GatedRepoError") or "Repository Not Found" in msg:
+        if ename == "GatedRepoError" or "gated" in msg.lower():
+            return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
+        return "仓库不存在", f"仓库 {repo_id or ''} 不存在或为私有且无访问权限。请检查 repo_id/repo_type，或先 atomgit login。"
+
+    # 受限仓库（文本特征兜底：gated 但非 RepositoryNotFound 上下文）
+    if "gated" in msg.lower() and ("repo" in msg.lower() or "access" in msg.lower()):
+        return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
+
+    # 请求参数错误
+    if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
+        return "请求参数错误", "请求参数不合法。请检查 repo_id、repo_type、path_in_repo 等参数。"
+
+    # 认证失败（401/403 且不属于上述仓库类错误）
+    if "401" in msg or "403" in msg or "unauthorized" in msg.lower() or "forbidden" in msg.lower():
+        return "认证失败", "认证失败或权限不足。请使用 'atomgit login' 重新登录获取有效 token。"
+
+    # 超时
+    if "timeout" in msg.lower() or "timed out" in msg.lower() or ename == "TimeoutError":
+        return "请求超时", "请求超时。可使用 -t/--timeout 增大超时时间后重试。"
+
+    # 网络连接
+    if "connection" in msg.lower() or "connectionerror" in ename.lower() or "resolve" in msg.lower():
+        return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
+
+    # 其他
+    return "未知错误", f"{type(e).__name__}: {msg}"
+
+
 class HuggingFaceAPI:
     """AtomGit API 客户端，完全基于Hugging Face Hub SDK"""
     
@@ -271,7 +326,9 @@ class HuggingFaceAPI:
                 # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
                 _set_progress_bar(True)
         except Exception as e:
-            print(f"上传文件失败: {e}")
+            err_type, hint = _classify_upload_error(e, repo_id=repo_id)
+            print(f"上传文件失败[{err_type}]: {e}")
+            print(f"💡 建议: {hint}")
             return False
 
     def upload_directory(self, dir_path: Path, repo_id: str,
@@ -375,7 +432,9 @@ class HuggingFaceAPI:
                 _set_progress_bar(True)
 
         except Exception as e:
-            print(f"上传目录失败: {e}")
+            err_type, hint = _classify_upload_error(e, repo_id=repo_id)
+            print(f"上传目录失败[{err_type}]: {e}")
+            print(f"💡 建议: {hint}")
             return False
     
     def download_repo(self, repo_id: str, local_path: Path = None, force_download: bool = False) -> bool:
