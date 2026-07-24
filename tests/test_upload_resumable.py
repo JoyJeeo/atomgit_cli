@@ -59,8 +59,12 @@ class FakeHfApi:
         return None
 
 
-# 替换 api 模块引用的两个底层入口
+# 替换 api 模块引用的底层入口：
+# - upload_folder（目录上传 + 文件回退路径）
+# - hf_upload_file（单文件上传主路径，v1.0.5 起新增；单文件+resumable 时走它）
+# - HfApi（resumable 模式下用其实例的 upload_large_folder）
 api_mod.upload_folder = fake_upload_folder
+api_mod.hf_upload_file = fake_upload_folder
 api_mod.HfApi = FakeHfApi
 
 # stub 鉴权

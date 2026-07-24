@@ -49,7 +49,12 @@ def fake_upload_folder(**kwargs):
     return "fake-commit-url"
 
 
+# 替换 api 模块内导入的两个底层上传入口名字（方法内调用的是模块全局名）：
+# - upload_folder（目录上传 + 文件回退路径）
+# - hf_upload_file（单文件上传主路径，v1.0.5 起新增）
+# 两入口均透传 revision，故共用同一桩函数即可。
 api_mod.upload_folder = fake_upload_folder
+api_mod.hf_upload_file = fake_upload_folder
 
 # stub 鉴权
 cfg_mod.config.is_logged_in = lambda: True
@@ -128,8 +133,8 @@ def main():
                 check("T5 repo_type=dataset",
                       captured[0]["repo_type"] == "dataset",
                       f"repo_type={captured[0]['repo_type']!r}")
-                check("T5 path_in_repo='sub/'",
-                      captured[0]["path_in_repo"] == "sub/",
+                check("T5 path_in_repo='sub/file.bin'",
+                      captured[0]["path_in_repo"] == "sub/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
             # --- T6: revision 全特性选项组合（目录 + 全部参数） ---
@@ -153,13 +158,17 @@ def main():
                 check("T6 path_in_repo='weights/'",
                       captured[0]["path_in_repo"] == "weights/",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
+                # T6 是目录上传，走 upload_folder，folder_path 应为原目录
+                check("T6 folder_path=原目录",
+                      captured[0]["folder_path"] == str(sub),
+                      f"folder_path={captured[0]['folder_path']}")
                 check("T6 commit_message='add weights'",
                       captured[0]["commit_message"] == "add weights",
                       f"msg={captured[0]['commit_message']!r}")
 
-            # --- T7: 临时目录清理（文件分支会复制到 .tmp_upload） ---
+            # --- T7: 临时目录清理（单文件默认走 hf_upload_file，不再产生 .tmp_upload） ---
             leftover = Path.cwd() / ".tmp_upload"
-            check("T7 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
+            check("T7 无 .tmp_upload 临时目录", not leftover.exists(), f"exists={leftover.exists()}")
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

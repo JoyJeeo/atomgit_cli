@@ -21,6 +21,19 @@ from huggingface_hub import (
 )
 
 try:
+    from .config import config
+    from .utils import normalize_path_in_repo, parse_ignore_patterns
+except ImportError:
+    from config import config
+    from utils import normalize_path_in_repo, parse_ignore_patterns
+
+try:
+    # 单文件上传专用：直接以 path_or_fileobj 上传，避免本地拷贝
+    from huggingface_hub import upload_file as hf_upload_file
+except ImportError:  # 老版本兜底
+    hf_upload_file = None
+
+try:
     # huggingface_hub >= 0.14 提供的进度条程序化开关
     from huggingface_hub.utils import enable_progress_bars, disable_progress_bars
 except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可用
@@ -29,13 +42,6 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
 
     def disable_progress_bars(*args, **kwargs):
         pass
-
-try:
-    from .config import config
-    from .utils import normalize_path_in_repo, parse_ignore_patterns
-except ImportError:
-    from config import config
-    from utils import normalize_path_in_repo, parse_ignore_patterns
 
 
 def _set_progress_bar(enabled: bool) -> None:
@@ -165,7 +171,12 @@ class HuggingFaceAPI:
                    repo_type: str = None,
                    revision: str = None,
                    ignore_patterns=None) -> bool:
-        """上传文件 - 使用Hugging Face Hub SDK
+        """上传单个文件 - 使用Hugging Face Hub SDK
+
+        优先使用 HF ``upload_file`` 直接以文件路径上传，避免旧实现中
+        "先 copy 到 ``.tmp_upload`` 再上传"的额外本地拷贝开销；仅在
+        HF 版本过旧（无 ``upload_file``）时回退到 ``upload_folder``
+        + 临时目录拷贝的旧行为。
 
         Args:
             path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
@@ -175,10 +186,10 @@ class HuggingFaceAPI:
             revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
                 ``main``）；指定时若分支不存在会自动创建。注意：目标分支
                 不存在已有文件时，上传会从空状态开始。
-            ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
-                ``*.tmp``）。为 None 时不忽略。注意：单文件上传路径下，
-                该参数仅会匹配 ``file_path.name``，几乎不生效——主要对
-                目录上传有意义。
+            ignore_patterns: 单文件上传路径下该参数仅会匹配 ``file_path.name``，
+                几乎不生效——主要对目录上传有意义。新实现（``upload_file``）
+                不支持该参数，传入时若非空会回退到 ``upload_folder`` 旧路径
+                以保留语义。
         """
         try:
             if not file_path.exists():
@@ -197,51 +208,68 @@ class HuggingFaceAPI:
                 print(f"上传路径不合法: {e}")
                 return False
 
-            # 创建一个临时目录在当前工作目录下
-            temp_dir = Path.cwd() / ".tmp_upload"
-            temp_dir.mkdir(exist_ok=True)
-
             # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
             _set_progress_bar(progress_bar)
 
-            try:
-                if pipr:
-                    # 指定仓库内路径：按前缀创建子目录结构
-                    target_file = temp_dir / pipr / file_path.name
-                    target_file.parent.mkdir(parents=True, exist_ok=True)
-                    upload_path_in_repo = f"{pipr}/"
-                else:
-                    target_file = temp_dir / file_path.name
-                    upload_path_in_repo = "./"
-                # 复制文件到临时目录
-                import shutil
-                shutil.copy2(file_path, target_file)
-                # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-                commit_message = message or "Upload folder using atomgit client"
-                hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
-                upload_kwargs = dict(
-                    repo_id=repo_id,
-                    folder_path=str(temp_dir),
-                    path_in_repo=upload_path_in_repo,
-                    token=credentials['token'],
-                    commit_message=commit_message,
-                )
-                if repo_type is not None:
-                    upload_kwargs['repo_type'] = repo_type
-                if revision is not None:
-                    upload_kwargs['revision'] = revision
-                if ignore_patterns:
-                    upload_kwargs['ignore_patterns'] = ignore_patterns
-                upload_folder(**upload_kwargs)
+            commit_message = message or "Upload folder using atomgit client"
+            # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
 
-                return True
+            try:
+                # 路径2（推荐）：直接 upload_file，无本地拷贝
+                if hf_upload_file is not None and not ignore_patterns:
+                    # upload_file 需要完整的 path_in_repo（含文件名）
+                    remote_file_path = f"{pipr}/{file_path.name}" if pipr else file_path.name
+                    file_kwargs = dict(
+                        path_or_fileobj=str(file_path),
+                        path_in_repo=remote_file_path,
+                        repo_id=repo_id,
+                        token=credentials['token'],
+                        commit_message=commit_message,
+                    )
+                    if repo_type is not None:
+                        file_kwargs['repo_type'] = repo_type
+                    if revision is not None:
+                        file_kwargs['revision'] = revision
+                    hf_upload_file(**file_kwargs)
+                    return True
+
+                # 路径1（回退）：upload_folder + 临时目录拷贝（旧实现）
+                # 触发条件：HF 版本过旧无 upload_file，或用户传了 ignore_patterns
+                temp_dir = Path.cwd() / ".tmp_upload"
+                temp_dir.mkdir(exist_ok=True)
+                try:
+                    if pipr:
+                        target_file = temp_dir / pipr / file_path.name
+                        target_file.parent.mkdir(parents=True, exist_ok=True)
+                        upload_path_in_repo = f"{pipr}/"
+                    else:
+                        target_file = temp_dir / file_path.name
+                        upload_path_in_repo = "./"
+                    import shutil
+                    shutil.copy2(file_path, target_file)
+                    upload_kwargs = dict(
+                        repo_id=repo_id,
+                        folder_path=str(temp_dir),
+                        path_in_repo=upload_path_in_repo,
+                        token=credentials['token'],
+                        commit_message=commit_message,
+                    )
+                    if repo_type is not None:
+                        upload_kwargs['repo_type'] = repo_type
+                    if revision is not None:
+                        upload_kwargs['revision'] = revision
+                    if ignore_patterns:
+                        upload_kwargs['ignore_patterns'] = ignore_patterns
+                    upload_folder(**upload_kwargs)
+                    return True
+                finally:
+                    import shutil
+                    if temp_dir.exists():
+                        shutil.rmtree(temp_dir)
             finally:
                 # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
                 _set_progress_bar(True)
-                # 清理临时目录
-                import shutil
-                if temp_dir.exists():
-                    shutil.rmtree(temp_dir)
         except Exception as e:
             print(f"上传文件失败: {e}")
             return False

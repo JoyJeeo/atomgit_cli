@@ -47,7 +47,13 @@ def fake_upload_folder(**kwargs):
     return "fake-commit-url"
 
 
+# 替换 api 模块内导入的两个底层上传入口名字（方法内调用的是模块全局名）：
+# - upload_folder（目录上传 + 文件回退路径）
+# - hf_upload_file（单文件上传主路径，v1.0.5 起新增）
+# 单文件主路径走 hf_upload_file，传入 path_in_repo 含完整文件名（如 "sub/file.bin"），
+# 故本测试对其断言已适配为完整路径形式。
 api_mod.upload_folder = fake_upload_folder
+api_mod.hf_upload_file = fake_upload_folder
 
 # stub 鉴权
 cfg_mod.config.is_logged_in = lambda: True
@@ -67,47 +73,48 @@ def main():
 
         runner = CliRunner()
         with runner.isolated_filesystem():
-            # --- T1: 文件上传，不指定 path_in_repo → 根目录 "./" ---
+            # --- T1: 文件上传，不指定 path_in_repo → path_in_repo=文件名 ---
+            # 注意：单文件走 hf_upload_file，path_in_repo 为完整文件名（非目录前缀）
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo"])
             check("T1 文件-默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T1 文件-默认 path_in_repo='./'",
-                      captured[0]["path_in_repo"] == "./",
+                check("T1 文件-默认 path_in_repo='file.bin'",
+                      captured[0]["path_in_repo"] == "file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
-            # --- T2: 文件上传，--path-in-repo sub/ ---
+            # --- T2: 文件上传，--path-in-repo sub/ → 'sub/file.bin' ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "--path-in-repo", "sub/"])
             check("T2 文件-sub exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T2 文件 path_in_repo 规范为 'sub/'",
-                      captured[0]["path_in_repo"] == "sub/",
+                check("T2 文件 path_in_repo='sub/file.bin'",
+                      captured[0]["path_in_repo"] == "sub/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
-            # --- T3: 文件上传，--path-in-repo 多层 a/b/c ---
+            # --- T3: 文件上传，--path-in-repo 多层 a/b/c → 'a/b/c/file.bin' ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "--path-in-repo", "a/b/c"])
             check("T3 文件-多层 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T3 文件 path_in_repo 规范为 'a/b/c/'",
-                      captured[0]["path_in_repo"] == "a/b/c/",
+                check("T3 文件 path_in_repo='a/b/c/file.bin'",
+                      captured[0]["path_in_repo"] == "a/b/c/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
-            # --- T4: 文件上传，--path-in-repo ./extra/（带 ./ 前缀，应被规整） ---
+            # --- T4: 文件上传，--path-in-repo ./extra/（带 ./ 前缀，应被规整） → 'extra/file.bin' ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "--path-in-repo", "./extra/"])
             check("T4 文件-带./ exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T4 './extra/' 规范为 'extra/'",
-                      captured[0]["path_in_repo"] == "extra/",
+                check("T4 './extra/' 规范为 'extra/file.bin'",
+                      captured[0]["path_in_repo"] == "extra/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
             # --- T5: 文件上传，--path-in-repo ../ （路径穿越，应被拒绝） ---
@@ -142,15 +149,15 @@ def main():
                       captured[0]["path_in_repo"] == "./",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
-            # --- T8: -p 短选项别名 ---
+            # --- T8: -p 短选项别名（单文件，走 hf_upload_file） ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "-p", "short/"])
             check("T8 -p短选项 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T8 -p 等价 --path-in-repo",
-                      captured[0]["path_in_repo"] == "short/",
+                check("T8 -p 等价 --path-in-repo（'short/file.bin'）",
+                      captured[0]["path_in_repo"] == "short/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
             # --- T9: 临时目录清理（文件上传分支会复制到 .tmp_upload）---

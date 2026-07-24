@@ -48,7 +48,12 @@ def fake_upload_folder(**kwargs):
     return "fake-commit-url"
 
 
+# 替换 api 模块内导入的两个底层上传入口名字（方法内调用的是模块全局名）：
+# - upload_folder（目录上传 + 文件回退路径）
+# - hf_upload_file（单文件上传主路径，v1.0.5 起新增）
+# 两入口均透传 repo_type，故共用同一桩函数即可。
 api_mod.upload_folder = fake_upload_folder
+api_mod.hf_upload_file = fake_upload_folder
 
 # stub 鉴权
 cfg_mod.config.is_logged_in = lambda: True
@@ -131,7 +136,7 @@ def main():
             check("T6 非法repo_type被拒(非0)", r.exit_code != 0, f"exit={r.exit_code}")
             check("T6 非法repo_type未调用HF", len(captured) == 0, f"calls={len(captured)}")
 
-            # --- T7: --repo-type 与 --path-in-repo 组合 ---
+            # --- T7: --repo-type 与 --path-in-repo 组合（单文件走 hf_upload_file） ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
@@ -142,8 +147,8 @@ def main():
                 check("T7 repo_type=dataset",
                       captured[0]["repo_type"] == "dataset",
                       f"repo_type={captured[0]['repo_type']!r}")
-                check("T7 path_in_repo='sub/'",
-                      captured[0]["path_in_repo"] == "sub/",
+                check("T7 path_in_repo='sub/file.bin'",
+                      captured[0]["path_in_repo"] == "sub/file.bin",
                       f"path_in_repo={captured[0]['path_in_repo']!r}")
 
             # --- T8: 临时目录清理（文件分支会复制到 .tmp_upload） ---

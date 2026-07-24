@@ -44,8 +44,11 @@ def fake_upload_folder(**kwargs):
     return "fake-commit-url"
 
 
-# 替换 api 模块内导入的 HF upload_folder 名字（方法内调用的是模块全局名）
+# 替换 api 模块内导入的两个底层上传入口名字（方法内调用的是模块全局名）：
+# - upload_folder（目录上传 + 文件回退路径）
+# - hf_upload_file（单文件上传主路径，v1.0.5 起新增）
 api_mod.upload_folder = fake_upload_folder
+api_mod.hf_upload_file = fake_upload_folder
 
 # stub 鉴权，让 upload 通过前置登录校验（同一 Config 单例，cli.py 也用同一对象）
 # 同样因 __init__.py 的 `from .config import config` 把子模块名遮蔽为实例，
