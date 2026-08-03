@@ -423,16 +423,40 @@ def create_repository(
     参数:
         repo_id (str): 仓库ID
         token (str, 可选): 认证token
-        private (bool, 可选): 是否为私有仓库，默认False
-        repo_type (str, 可选): 仓库类型，默认"model"
+        private (bool, 可选): 是否为私有仓库。AtomGit 当前只允许已验证的
+                              私有创建语义，必须显式设为 True
+        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset
         exist_ok (bool, 可选): 如果仓库已存在是否报错，默认False
-        其他参数: 主要用于Space类型仓库
+        其他参数: 为签名兼容保留；AtomGit 不支持 Space 创建，传入时会拒绝
     
     返回:
         str: 仓库的URL
     """
     # 标准化仓库ID
     normalized_repo_id = _normalize_repo_id(repo_id)
+
+    if not private:
+        raise ValueError(
+            "AtomGit 当前无法可靠验证公开仓库语义；请设置 private=True"
+        )
+    if repo_type not in ("model", "dataset"):
+        raise ValueError("repo_type 仅支持 model 或 dataset")
+    space_options = {
+        "space_sdk": space_sdk,
+        "space_hardware": space_hardware,
+        "space_storage": space_storage,
+        "space_sleep_time": space_sleep_time,
+        "space_secrets": space_secrets,
+        "space_variables": space_variables,
+    }
+    unsupported_space_options = [
+        name for name, value in space_options.items() if value is not None
+    ]
+    if unsupported_space_options:
+        raise ValueError(
+            "AtomGit 不支持 Space 仓库参数: "
+            + ", ".join(unsupported_space_options)
+        )
     
     # 如果没有提供token，尝试使用保存的token
     if token is None:

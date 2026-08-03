@@ -4,6 +4,68 @@ Status: `completed`
 
 ## Identity
 
+- Local Issue: `SDK-CREATE-VISIBILITY`
+- Title: `Align SDK repository creation with verified AtomGit semantics`
+- Type: `bug`, `sdk`, `compatibility`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `d92fa76`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The CLI rejects public creation because AtomGit public semantics cannot be
+reliably verified, but `atomgit_hub.create_repository` still defaults to a
+public call and can report false success. It also accepts Space-only options
+that the AtomGit product does not support and silently drops them.
+
+## Scope
+
+In scope: require private model/dataset creation in the SDK, explicitly reject
+unsupported public, repository-type, and Space semantics before a remote call,
+bind valid calls to the HF 1.1.7 signature, and update the SDK docstring.
+
+Out of scope: remote verification, repo ID normalization, exception hierarchy,
+CLI changes, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Public SDK creation fails clearly without invoking HF.
+- Private model and dataset creation forwards token, type, privacy, and
+  `exist_ok` through a strict HF signature fake.
+- Invalid repository types and every Space-only option fail before HF.
+- Existing public function parameters remain present for compatibility.
+- Focused and complete offline tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation, tests, affected SDK documentation,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- SDK creation now matches the CLI's verified service boundary: only private
+  model/dataset repositories are allowed; public and Space semantics are
+  rejected before token lookup or HF invocation.
+- `tests/test_sdk_create_contract.py` binds valid calls to the installed HF
+  1.1.7 signature and covers public creation, both supported types, invalid
+  types, all six retained Space parameters, token, privacy, and `exist_ok`.
+- Focused test passed 21/21; the existing CLI visibility regression remained
+  green. All 25 offline scripts, `python -m compileall -q .`, and
+  `git diff --check` passed with isolated user state.
+- Independent review found no blocking correctness, compatibility, security,
+  or scope issue. Public function parameter names remain available while
+  unsupported behavior is explicit. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-006
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-006`
 - Title: `Restore SDK Hugging Face timeout state`
 - Type: `bug`, `sdk`, `compatibility`
