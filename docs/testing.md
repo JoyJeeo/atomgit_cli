@@ -67,6 +67,10 @@ git diff --check
 直接约束当前安装的 `huggingface-hub==1.1.7` 真实签名。禁止用无约束
 `**kwargs` fake 掩盖真实 API 不接受的参数。
 
+运行 `python tests/test_hf_api_contract.py` 可验证当前锁定版本、普通上传、
+下载、建仓、`HfApi` 认证和 large-folder 调用签名。该测试只绑定函数签名，
+不会发起网络请求。
+
 ### 打包冒烟测试
 
 在隔离环境构建并安装 wheel，然后验证：

@@ -4,6 +4,69 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-002`
+- Title: `Add locked Hugging Face API contract tests`
+- Type: `testing`, `compatibility`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: `yuto` at `0c05cb7`
+- Delivery mode: sequential backlog delivery authorized by the maintainer;
+  cohesive local commit and branch push are authorized after verification.
+
+## User Impact And Evidence
+
+Permissive `**kwargs` fakes previously accepted arguments rejected by the
+locked `huggingface-hub==1.1.7`, including `token` passed directly to
+`HfApi.upload_large_folder`. Existing tests cover that repaired path but do
+not provide one authoritative contract check for upload, download, create,
+and large-folder call signatures.
+
+## Scope
+
+In scope: offline tests binding representative AtomGit calls against the real
+installed HF 1.1.7 signatures, including a negative large-folder token case;
+test documentation and evidence.
+
+Out of scope: production behavior changes, dependency upgrades, remote
+AtomGit operations, pytest migration, and other roadmap items.
+
+## Acceptance Criteria
+
+- The test asserts the locked HF Hub and datasets versions.
+- Representative upload-file, upload-folder, snapshot-download,
+  file-download, create-repo, HfApi authentication, and large-folder calls
+  bind to the installed callable signatures.
+- Passing `token` to `upload_large_folder` is proven invalid while passing it
+  to `HfApi` construction is valid.
+- Focused and complete offline tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local source/test/documentation changes, isolated offline
+  tests, cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added `tests/test_hf_api_contract.py`, which binds ten positive and negative
+  checks to the installed `huggingface-hub==1.1.7` and `datasets==4.4.1`
+  contracts without network access.
+- Focused verification: `python tests/test_hf_api_contract.py` passed 10/10.
+- Complete verification: all 21 `tests/test_*.py` scripts passed in an
+  isolated HOME; `python -m compileall -q .` and `git diff --check` passed.
+- Documentation now records the offline dependency-contract command and its
+  no-network boundary.
+- Independent review found no blocking correctness, compatibility, security,
+  or scope issue. Residual risk: signature binding does not prove AtomGit
+  remote semantics. Verdict: `APPROVED`.
+
+# Delivery History
+
+Status: `completed`
+
+## Identity
+
 - GitHub Issue: `#1`
 - Title: `[P1] Resumable upload timeout must cancel worker and report failure`
 - Type: `bug`, `compatibility`
