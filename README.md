@@ -46,14 +46,19 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 ```bash
 git clone https://atomgit.com/gitcode-ai/atomgit_cli.git
 cd atomgit_cli
-pip install -e .
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python -m pip install -e .
 ```
 
 ### 使用pip安装（如果已发布）
 
 ```bash
-pip install atomgit
+python -m pip install atomgit
 ```
+
+该命令安装 PyPI 上的上游发行版，不代表本仓库 `yuto` 分支。`yuto` 独立分发
+方案见 [docs/release.md](docs/release.md)。
 
 ### 虚拟环境推荐
 
@@ -152,7 +157,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
 | `--revision <name>` | 目标分支/版本（如 `dev`、`v1.0`），默认 main |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
-| `--resumable` | 启用断点续传/分块上传（仅目录，走 HF `upload_large_folder`，中断可续传） |
+| `--resumable` | 目录大文件上传接口；当前 `yuto` 版本存在已知兼容性缺陷 |
 | `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
 
 #### 进阶示例
@@ -171,6 +176,12 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 ```
 
 > ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m` 不生效（会产生多次提交）；`--repo-type` 必填，未指定时默认 `model`。
+
+> 当前 `yuto` 版本已确认存在兼容性问题：锁定的
+> `huggingface-hub==1.1.7` 不接受传给 `upload_large_folder()` 方法的
+> `token` 参数，因此 `--resumable` 暂不能视为可用能力。`--revision dev` 的
+> AtomGit 远端分支行为也尚未完成验证。详见
+> [上传实现分析](docs/upload_command_analysis.md)。
 
 #### 错误处理
 
@@ -530,6 +541,9 @@ git remote add origin https://atomgit.com/username/repo-name.git
 
 ```
 atomgit/
+├── AGENTS.md           # 仓库级 AI 开发指令
+├── .ai/                # AI 开发、测试、评审与任务规范
+├── docs/               # 架构、开发、测试和发布文档
 ├── __init__.py          # 包初始化，导出SDK接口
 ├── __main__.py          # 主入口
 ├── cli.py               # CLI命令定义
@@ -551,11 +565,15 @@ atomgit/
 git clone https://atomgit.com/gitcode-ai/atomgit_cli.git
 cd atomgit_cli
 
+# 激活项目约定环境
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+
 # 安装依赖
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 # 开发模式安装
-pip install -e .
+python -m pip install -e .
 
 # 测试CLI功能
 atomgit --help
@@ -572,32 +590,35 @@ python tests/test_upload_ignore.py          # 忽略模式
 python tests/test_upload_resumable.py       # 断点续传
 python tests/test_upload_file_no_copy.py    # 单文件无拷贝
 python tests/test_upload_error_classify.py  # 错误分类
+python tests/test_upload_error_handling.py  # 错误处理集成
 ```
+
+现有测试是自执行 Python 脚本，不是 pytest 收集用例。完整测试说明见
+[docs/testing.md](docs/testing.md)。
 
 ## Python版本兼容性
 
-本项目支持Python 3.8+版本，包括：
+`setup.py` 声明支持 Python 3.8+，列出的目标版本包括：
 
-- ✅ Python 3.8
-- ✅ Python 3.9  
-- ✅ Python 3.10
-- ✅ Python 3.11
-- ✅ Python 3.12
-- ✅ Python 3.13
+- Python 3.8
+- Python 3.9
+- Python 3.10
+- Python 3.11
+- Python 3.12
+- Python 3.13
 
-### 兼容性测试
+当前仓库尚无 `test_compatibility.py` 或 `PYTHON_COMPATIBILITY.md`。Python
+版本声明来自打包元数据；完整版本矩阵仍需通过隔离环境和 wheel 冒烟测试建立。
 
-运行兼容性测试：
+## 项目文档
 
-```bash
-python test_compatibility.py
-```
-
-详细兼容性信息请参考 [PYTHON_COMPATIBILITY.md](PYTHON_COMPATIBILITY.md)
+文档入口见 [docs/README.md](docs/README.md)，包括当前架构、开发流程、测试规范、
+`yuto` 分支关系和独立发布目标。
 
 ## 许可证
 
-MIT License
+打包元数据声明为 MIT License。仓库当前缺少独立 `LICENSE` 文件，正式对外分发
+前需要项目所有者确认版权主体并补齐许可证文本。
 
 ## 贡献
 
@@ -615,4 +636,4 @@ MIT License
 
 - 邮箱：support@atomgit.com
 - 项目地址：https://atomgit.com/gitcode-ai/atomgit_cli
-- 问题报告：https://atomgit.com/gitcode-ai/atomgit_cli/issues 
+- 问题报告：https://atomgit.com/gitcode-ai/atomgit_cli/issues

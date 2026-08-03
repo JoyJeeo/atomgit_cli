@@ -22,10 +22,22 @@ from huggingface_hub import (
 
 try:
     from .config import config
-    from .utils import normalize_path_in_repo, parse_ignore_patterns
+    from .utils import (
+        is_auth_error,
+        normalize_path_in_repo,
+        parse_ignore_patterns,
+        run_download_with_retry,
+        sanitized_download_error,
+    )
 except ImportError:
     from config import config
-    from utils import normalize_path_in_repo, parse_ignore_patterns
+    from utils import (
+        is_auth_error,
+        normalize_path_in_repo,
+        parse_ignore_patterns,
+        run_download_with_retry,
+        sanitized_download_error,
+    )
 
 try:
     # 单文件上传专用：直接以 path_or_fileobj 上传，避免本地拷贝
@@ -35,8 +47,21 @@ except ImportError:  # 老版本兜底
 
 try:
     # huggingface_hub >= 0.14 提供的进度条程序化开关
-    from huggingface_hub.utils import enable_progress_bars, disable_progress_bars
+    from huggingface_hub.utils import (
+        are_progress_bars_disabled,
+        disable_progress_bars,
+        enable_progress_bars,
+    )
+    try:
+        from huggingface_hub.utils.tqdm import progress_bar_states
+    except ImportError:
+        progress_bar_states = None
 except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可用
+    progress_bar_states = None
+
+    def are_progress_bars_disabled(*args, **kwargs):
+        return False
+
     def enable_progress_bars(*args, **kwargs):
         pass
 
@@ -62,6 +87,25 @@ def _set_progress_bar(enabled: bool) -> None:
     except Exception:
         # 进度条控制不应影响上传主流程
         pass
+
+
+def _capture_progress_bar_state():
+    if progress_bar_states is not None:
+        return dict(progress_bar_states)
+    return are_progress_bars_disabled()
+
+
+def _restore_progress_bar_state(state) -> None:
+    if progress_bar_states is not None and isinstance(state, dict):
+        progress_bar_states.clear()
+        progress_bar_states.update(state)
+        return
+    _set_progress_bar(not state)
+
+
+def _upload_repo_type(repo_type: str = None) -> str:
+    """Map AtomGit dataset uploads to its shared model transfer route."""
+    return "model" if repo_type == "dataset" else repo_type
 
 
 def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
@@ -263,7 +307,8 @@ class HuggingFaceAPI:
                 print(f"上传路径不合法: {e}")
                 return False
 
-            # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
+            original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+            original_progress_state = _capture_progress_bar_state()
             _set_progress_bar(progress_bar)
 
             commit_message = message or "Upload folder using atomgit client"
@@ -282,8 +327,9 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    if repo_type is not None:
-                        file_kwargs['repo_type'] = repo_type
+                    upload_repo_type = _upload_repo_type(repo_type)
+                    if upload_repo_type is not None:
+                        file_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         file_kwargs['revision'] = revision
                     hf_upload_file(**file_kwargs)
@@ -310,8 +356,9 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    if repo_type is not None:
-                        upload_kwargs['repo_type'] = repo_type
+                    upload_repo_type = _upload_repo_type(repo_type)
+                    if upload_repo_type is not None:
+                        upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         upload_kwargs['revision'] = revision
                     if ignore_patterns:
@@ -323,8 +370,8 @@ class HuggingFaceAPI:
                     if temp_dir.exists():
                         shutil.rmtree(temp_dir)
             finally:
-                # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
-                _set_progress_bar(True)
+                hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+                _restore_progress_bar_state(original_progress_state)
         except Exception as e:
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
             print(f"上传文件失败[{err_type}]: {e}")
@@ -379,7 +426,8 @@ class HuggingFaceAPI:
                 print(f"上传路径不合法: {e}")
                 return False
 
-            # 显式设置 HF Hub 进度条状态（进程级，try/finally 中恢复默认开启）
+            original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+            original_progress_state = _capture_progress_bar_state()
             _set_progress_bar(progress_bar)
 
             try:
@@ -388,12 +436,11 @@ class HuggingFaceAPI:
 
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
-                    eff_repo_type = repo_type or "model"
+                    eff_repo_type = _upload_repo_type(repo_type) or "model"
                     lf_kwargs = dict(
                         repo_id=repo_id,
                         folder_path=str(dir_path),
                         repo_type=eff_repo_type,
-                        token=credentials['token'],
                     )
                     if revision is not None:
                         lf_kwargs['revision'] = revision
@@ -406,7 +453,7 @@ class HuggingFaceAPI:
                         print("⚠ 注意：resumable 模式不支持 path_in_repo，"
                               "如需子目录请本地自行组织目录结构")
                     # 构造带端点/token 的 HfApi 实例（endpoint 已由环境变量重定向）
-                    hf_api = HfApi()
+                    hf_api = HfApi(token=credentials['token'])
                     hf_api.upload_large_folder(**lf_kwargs)
                 else:
                     # 仓库内目标前缀：空 → "./"（根目录）
@@ -418,8 +465,9 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    if repo_type is not None:
-                        upload_kwargs['repo_type'] = repo_type
+                    upload_repo_type = _upload_repo_type(repo_type)
+                    if upload_repo_type is not None:
+                        upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         upload_kwargs['revision'] = revision
                     if ignore_patterns:
@@ -428,8 +476,8 @@ class HuggingFaceAPI:
 
                 return True
             finally:
-                # 恢复 HF Hub 进度条为默认开启状态，避免污染同进程后续调用
-                _set_progress_bar(True)
+                hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+                _restore_progress_bar_state(original_progress_state)
 
         except Exception as e:
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
@@ -452,18 +500,18 @@ class HuggingFaceAPI:
             # 首先尝试不使用token下载（适用于公开仓库）
             credentials = config.get_credentials()
             try:
-                snapshot_download(
-                    repo_id=normalized_repo_id,
-                    local_dir=str(local_path),
-                    force_download=force_download,  # 根据用户选择决定是否强制下载
-                    token=credentials['token'] if credentials and 'token' in credentials else None
+                run_download_with_retry(
+                    lambda: snapshot_download(
+                        repo_id=normalized_repo_id,
+                        local_dir=str(local_path),
+                        force_download=force_download,
+                        token=credentials['token'] if credentials and 'token' in credentials else None,
+                    )
                 )
                 print(f"✅ 仓库下载成功")
                 return True
             except Exception as e:
-                error_msg = str(e)                
-                # 其他类型的错误（如仓库不存在）
-                print(f"仓库下载失败: {error_msg}")
+                print(f"仓库下载失败: {sanitized_download_error(e)}")
                 return False
         except Exception as e:
             print(f"下载仓库失败: {e}")
@@ -483,35 +531,38 @@ class HuggingFaceAPI:
             
             # 首先尝试不使用token下载（适用于公开仓库）
             try:
-                hf_hub_download(
-                    repo_id=normalized_repo_id,
-                    filename=filename,
-                    local_dir=str(local_path)
+                run_download_with_retry(
+                    lambda: hf_hub_download(
+                        repo_id=normalized_repo_id,
+                        filename=filename,
+                        local_dir=str(local_path),
+                    )
                 )
                 print(f"✅ 文件下载成功")
                 return True
             except Exception as e:
-                error_msg = str(e)
-                print(f"公开下载失败: {error_msg}")
+                print(f"公开下载失败: {sanitized_download_error(e)}")
                 
                 # 检查是否是认证问题
-                if "403" in error_msg or "FORBIDDEN" in error_msg or "no scopes" in error_msg:
+                if is_auth_error(e):
                     print("检测到认证问题，尝试使用token下载...")
                     
                     # 如果公开下载失败，尝试使用token下载
                     credentials = config.get_credentials()
                     if credentials:
                         try:
-                            hf_hub_download(
-                                repo_id=normalized_repo_id,
-                                filename=filename,
-                                local_dir=str(local_path),
-                                token=credentials['token']
+                            run_download_with_retry(
+                                lambda: hf_hub_download(
+                                    repo_id=normalized_repo_id,
+                                    filename=filename,
+                                    local_dir=str(local_path),
+                                    token=credentials['token'],
+                                )
                             )
                             print(f"✅ 下载完成")
                             return True
                         except Exception as token_e:
-                            print(f"下载失败: {token_e}")
+                            print(f"下载失败: {sanitized_download_error(token_e)}")
                             return False
                     else:
                         print("未找到登录凭证，无法尝试私有仓库下载")
@@ -519,7 +570,7 @@ class HuggingFaceAPI:
                         return False
                 else:
                     # 其他类型的错误（如仓库不存在、文件不存在）
-                    print(f"文件下载失败: {error_msg}")
+                    print(f"文件下载失败: {sanitized_download_error(e)}")
                     return False
             
         except Exception as e:
@@ -542,4 +593,4 @@ class HuggingFaceAPI:
 
 
 # 全局API实例
-api = HuggingFaceAPI() 
+api = HuggingFaceAPI()

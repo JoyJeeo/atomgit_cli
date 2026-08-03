@@ -231,6 +231,7 @@ $RECYCLE.BIN/
 # Project-specific ignores
 downloads/
 temp/
+tmp/
 test_*/
 .cache/
 logs/

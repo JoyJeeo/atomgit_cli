@@ -19,7 +19,12 @@ import atomgit  # noqa: F401  触发包初始化
 # 覆盖为 HuggingFaceAPI 实例，因此必须用 sys.modules 取真正的 api 模块。
 api_mod = sys.modules["atomgit.api"]
 from atomgit.cli import cli
-from huggingface_hub.utils import are_progress_bars_disabled
+from huggingface_hub import constants as hf_constants
+from huggingface_hub.utils import (
+    are_progress_bars_disabled,
+    disable_progress_bars,
+    enable_progress_bars,
+)
 
 results = []
 
@@ -32,15 +37,20 @@ def check(name, cond, detail=""):
 
 # 假的 HF upload_folder：捕获调用参数 + 调用瞬间的进度条状态
 captured = []
+raise_upload_error = False
 
 
 def fake_upload_folder(**kwargs):
+    global raise_upload_error
     captured.append({
         "repo_id": kwargs.get("repo_id"),
         "folder_path": kwargs.get("folder_path"),
         "commit_message": kwargs.get("commit_message"),
         "pb_disabled_at_call": are_progress_bars_disabled(),
+        "timeout_at_call": hf_constants.DEFAULT_REQUEST_TIMEOUT,
     })
+    if raise_upload_error:
+        raise RuntimeError("simulated upload failure")
     return "fake-commit-url"
 
 
@@ -59,6 +69,8 @@ cfg_mod.config.get_credentials = lambda: {"token": "fake-token-0123456789"}
 
 
 def main():
+    global raise_upload_error
+
     with tempfile.TemporaryDirectory() as td:
         tdpath = Path(td)
         # 准备一个单文件 + 一个目录
@@ -106,13 +118,83 @@ def main():
                 check("T4 文件 --no-progress-bar 确实禁用", captured[0]["pb_disabled_at_call"] is True,
                       f"disabled={captured[0]['pb_disabled_at_call']}")
 
-            # --- Test 5: 上传结束后进度条应恢复默认开启（不污染进程后续调用）---
-            check("T5 上传后进度条恢复开启", are_progress_bars_disabled() is False,
+            # --- Test 5: 默认初始状态在调用后保持开启 ---
+            check("T5 上传后保留原始开启状态", are_progress_bars_disabled() is False,
                   f"disabled={are_progress_bars_disabled()}")
 
-            # --- Test 6: .tmp_upload 临时目录已被清理 ---
+            # --- Test 6: 调用前禁用时，调用后仍应禁用 ---
+            disable_progress_bars()
+            captured.clear()
+            r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
+                                    "--repo-id", "user/repo"])
+            check("T6 原始禁用状态下上传 exit=0", r.exit_code == 0,
+                  f"exit={r.exit_code}")
+            check("T6 调用期间按默认选项开启进度条",
+                  captured and captured[0]["pb_disabled_at_call"] is False)
+            check("T6 调用后恢复原始禁用状态",
+                  are_progress_bars_disabled() is True,
+                  f"disabled={are_progress_bars_disabled()}")
+            enable_progress_bars()
+
+            # --- Test 7: 目录成功路径恢复 timeout ---
+            original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+            captured.clear()
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--timeout", "17"])
+            check("T7 目录 timeout 调用 exit=0", r.exit_code == 0,
+                  f"exit={r.exit_code}")
+            check("T7 调用期间 timeout=17",
+                  captured and captured[0]["timeout_at_call"] == 17,
+                  f"timeout={captured[0]['timeout_at_call'] if captured else None}")
+            check("T7 目录成功后恢复 timeout",
+                  hf_constants.DEFAULT_REQUEST_TIMEOUT == original_timeout,
+                  f"timeout={hf_constants.DEFAULT_REQUEST_TIMEOUT}")
+
+            # --- Test 8: 文件异常路径恢复 timeout 与原始禁用状态 ---
+            disable_progress_bars()
+            captured.clear()
+            raise_upload_error = True
+            r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
+                                    "--repo-id", "user/repo", "--timeout", "19"])
+            raise_upload_error = False
+            check("T8 文件异常 exit!=0", r.exit_code != 0, f"exit={r.exit_code}")
+            check("T8 文件异常后恢复 timeout",
+                  hf_constants.DEFAULT_REQUEST_TIMEOUT == original_timeout,
+                  f"timeout={hf_constants.DEFAULT_REQUEST_TIMEOUT}")
+            check("T8 文件异常后恢复禁用状态",
+                  are_progress_bars_disabled() is True)
+            enable_progress_bars()
+
+            # --- Test 9: 目录异常路径恢复 timeout 与原始开启状态 ---
+            captured.clear()
+            raise_upload_error = True
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--timeout", "23", "--no-progress-bar"])
+            raise_upload_error = False
+            check("T9 目录异常 exit!=0", r.exit_code != 0, f"exit={r.exit_code}")
+            check("T9 目录异常后恢复 timeout",
+                  hf_constants.DEFAULT_REQUEST_TIMEOUT == original_timeout,
+                  f"timeout={hf_constants.DEFAULT_REQUEST_TIMEOUT}")
+            check("T9 目录异常后恢复开启状态",
+                  are_progress_bars_disabled() is False)
+
+            # --- Test 10: 命名进度组状态也应原样恢复 ---
+            disable_progress_bars("downloads")
+            enable_progress_bars("uploads")
+            captured.clear()
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--no-progress-bar"])
+            check("T10 命名状态上传 exit=0", r.exit_code == 0,
+                  f"exit={r.exit_code}")
+            check("T10 恢复 downloads 禁用状态",
+                  are_progress_bars_disabled("downloads") is True)
+            check("T10 恢复 uploads 启用状态",
+                  are_progress_bars_disabled("uploads") is False)
+            enable_progress_bars()
+
+            # --- Test 11: .tmp_upload 临时目录已被清理 ---
             leftover = Path.cwd() / ".tmp_upload"
-            check("T6 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
+            check("T11 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

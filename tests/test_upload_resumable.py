@@ -48,14 +48,32 @@ def fake_upload_folder(**kwargs):
 
 # 捕获：upload_large_folder 调用（替代 HfApi 实例上的方法）
 ulf_captured = []
+hfa_init_captured = []
 
 
 class FakeHfApi:
-    def __init__(self, *args, **kwargs):
-        self._init_kwargs = kwargs
+    """Match the locked HF 1.1.7 signatures used by the resumable path."""
 
-    def upload_large_folder(self, **kwargs):
-        ulf_captured.append(dict(kwargs))
+    def __init__(self, endpoint=None, token=None, library_name=None,
+                 library_version=None, user_agent=None, headers=None):
+        hfa_init_captured.append({"endpoint": endpoint, "token": token})
+
+    def upload_large_folder(self, repo_id, folder_path, *, repo_type,
+                            revision=None, private=None, allow_patterns=None,
+                            ignore_patterns=None, num_workers=None,
+                            print_report=True, print_report_every=60):
+        ulf_captured.append({
+            "repo_id": repo_id,
+            "folder_path": folder_path,
+            "repo_type": repo_type,
+            "revision": revision,
+            "private": private,
+            "allow_patterns": allow_patterns,
+            "ignore_patterns": ignore_patterns,
+            "num_workers": num_workers,
+            "print_report": print_report,
+            "print_report_every": print_report_every,
+        })
         return None
 
 
@@ -84,7 +102,7 @@ def main():
         runner = CliRunner()
         with runner.isolated_filesystem():
             # --- T1: 目录上传，默认走 upload_folder（不传 resumable） ---
-            uf_captured.clear(); ulf_captured.clear()
+            uf_captured.clear(); ulf_captured.clear(); hfa_init_captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo"])
             check("T1 默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             check("T1 默认走 upload_folder", len(uf_captured) == 1 and len(ulf_captured) == 0,
@@ -105,8 +123,11 @@ def main():
                 check("T2 folder_path=原目录",
                       call.get("folder_path") == str(sub),
                       f"folder_path={call.get('folder_path')}")
-                check("T2 传了 token", "token" in call and call["token"],
-                      f"token={'有' if call.get('token') else '无'}")
+                check("T2 upload_large_folder 未传 token", "token" not in call)
+                check("T2 HfApi 构造器传入 token",
+                      len(hfa_init_captured) == 1
+                      and bool(hfa_init_captured[0]["token"]),
+                      f"init_calls={len(hfa_init_captured)}")
 
             # --- T3: --resumable --repo-type dataset ---
             uf_captured.clear(); ulf_captured.clear()
@@ -114,8 +135,8 @@ def main():
                                     "--resumable", "--repo-type", "dataset"])
             check("T3 dataset exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if ulf_captured:
-                check("T3 repo_type=dataset",
-                      ulf_captured[0].get("repo_type") == "dataset",
+                check("T3 dataset 使用 model 传输路由",
+                      ulf_captured[0].get("repo_type") == "model",
                       f"repo_type={ulf_captured[0].get('repo_type')!r}")
 
             # --- T4: --resumable --revision dev --ignore *.tmp --num-workers 4 ---

@@ -36,11 +36,14 @@ except ImportError:
 
 try:
     from .config import config
+    from .utils import run_download_with_retry, sanitized_download_error
 except ImportError:
     try:
         from config import config
+        from utils import run_download_with_retry, sanitized_download_error
     except ImportError:
         from atomgit.config import config
+        from atomgit.utils import run_download_with_retry, sanitized_download_error
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -168,16 +171,14 @@ def snapshot_download(
     
     try:
         # 使用token下载
-        result = hf_snapshot_download(**{k: v for k, v in kwargs.items() if v is not None})
+        result = run_download_with_retry(
+            lambda: hf_snapshot_download(
+                **{k: v for k, v in kwargs.items() if v is not None}
+            )
+        )
         return result
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}。请检查token是否正确，或使用 'atomgit login' 重新登录。")
-        elif "404" in error_msg:
-            raise Exception(f"仓库不存在：{repo_id}。请检查仓库名称是否正确。")
-        else:
-            raise Exception(f"下载失败：{error_msg}")
+        raise Exception(sanitized_download_error(e)) from None
 
 
 def hub_download_url(
@@ -257,16 +258,14 @@ def download_file(
         kwargs['force_download'] = force_download
     
     try:
-        result = hf_hub_download(**{k: v for k, v in kwargs.items() if v is not None})
+        result = run_download_with_retry(
+            lambda: hf_hub_download(
+                **{k: v for k, v in kwargs.items() if v is not None}
+            )
+        )
         return result
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}")
-        elif "404" in error_msg:
-            raise Exception(f"文件不存在：{repo_id}/{filename}")
-        else:
-            raise Exception(f"下载失败：{error_msg}")
+        raise Exception(sanitized_download_error(e)) from None
 
 
 def upload_folder(
@@ -486,9 +485,52 @@ def load_dataset(
     if cache_dir is None:
         cache_dir = HF_DATASETS_CACHE
     
-    # 构建参数字典
+    snapshot_kwargs = {
+        'repo_id': normalized_path,
+        'repo_type': 'dataset',
+        'token': token,
+        'revision': revision,
+    }
+    if cache_dir is not None:
+        snapshot_kwargs['cache_dir'] = str(cache_dir)
+
+    def collect_patterns(value):
+        if isinstance(value, str):
+            return [value] if not os.path.isabs(value) and '://' not in value else []
+        if isinstance(value, dict):
+            patterns = []
+            for item in value.values():
+                patterns.extend(collect_patterns(item))
+            return patterns
+        if isinstance(value, (list, tuple)):
+            patterns = []
+            for item in value:
+                patterns.extend(collect_patterns(item))
+            return patterns
+        return []
+
+    allow_patterns = collect_patterns(data_files)
+    if data_dir is not None:
+        allow_patterns = [
+            f"{data_dir.rstrip('/')}/{pattern.lstrip('/')}"
+            for pattern in allow_patterns
+        ]
+    if allow_patterns:
+        snapshot_kwargs['allow_patterns'] = allow_patterns
+
+    try:
+        local_dataset_path = run_download_with_retry(
+            lambda: hf_snapshot_download(
+                **{k: v for k, v in snapshot_kwargs.items() if v is not None}
+            )
+        )
+    except Exception as e:
+        raise Exception(sanitized_download_error(e)) from None
+
+    # datasets 4.4.1 cannot discover AtomGit repositories directly, but it can
+    # infer supported formats from a local Hub snapshot.
     load_kwargs = {
-        'path': normalized_path,
+        'path': str(local_dataset_path),
         'cache_dir': str(cache_dir) if cache_dir else None,
         'streaming': streaming,
     }
@@ -502,11 +544,6 @@ def load_dataset(
         load_kwargs['data_files'] = data_files
     if split is not None:
         load_kwargs['split'] = split
-    if token is not None:
-        load_kwargs['token'] = token
-    if revision is not None:
-        load_kwargs['revision'] = revision
-    
     # 合并额外的关键字参数
     load_kwargs.update(kwargs)
     

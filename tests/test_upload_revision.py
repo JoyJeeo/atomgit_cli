@@ -130,8 +130,8 @@ def main():
                 check("T5 revision=dev",
                       captured[0]["revision"] == "dev",
                       f"revision={captured[0]['revision']!r}")
-                check("T5 repo_type=dataset",
-                      captured[0]["repo_type"] == "dataset",
+                check("T5 dataset 使用 model 传输路由",
+                      captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
                 check("T5 path_in_repo='sub/file.bin'",
                       captured[0]["path_in_repo"] == "sub/file.bin",

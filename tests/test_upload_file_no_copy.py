@@ -109,8 +109,8 @@ def main():
                                    "--repo-type", "dataset", "--revision", "dev"])
             check("T3 dataset+dev exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if uf_captured:
-                check("T3 repo_type=dataset",
-                      uf_captured[0].get("repo_type") == "dataset",
+                check("T3 dataset 使用 model 传输路由",
+                      uf_captured[0].get("repo_type") == "model",
                       f"repo_type={uf_captured[0].get('repo_type')!r}")
                 check("T3 revision=dev",
                       uf_captured[0].get("revision") == "dev",

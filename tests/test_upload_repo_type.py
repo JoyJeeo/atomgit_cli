@@ -81,15 +81,15 @@ def main():
                       captured[0]["repo_type"] is None,
                       f"repo_type={captured[0]['repo_type']!r}")
 
-            # --- T2: 文件上传，--repo-type dataset → 传 dataset ---
+            # --- T2: AtomGit dataset 使用共享的 model 传输路由 ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "--repo-type", "dataset"])
             check("T2 文件-dataset exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T2 文件 repo_type=dataset",
-                      captured[0]["repo_type"] == "dataset",
+                check("T2 文件 dataset 映射为 model 传输路由",
+                      captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
 
             # --- T3: 文件上传，--repo-type model → 传 model ---
@@ -103,15 +103,15 @@ def main():
                       captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
 
-            # --- T4: 目录上传，--repo-type dataset → 传 dataset ---
+            # --- T4: dataset 目录也使用共享的 model 传输路由 ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub),
                                     "--repo-id", "user/repo",
                                     "--repo-type", "dataset"])
             check("T4 目录-dataset exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T4 目录 repo_type=dataset",
-                      captured[0]["repo_type"] == "dataset",
+                check("T4 目录 dataset 映射为 model 传输路由",
+                      captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
                 check("T4 目录 folder_path=原目录",
                       captured[0]["folder_path"] == str(sub),
@@ -124,8 +124,8 @@ def main():
                                     "-r", "dataset"])
             check("T5 -r短选项 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T5 -r 等价 --repo-type",
-                      captured[0]["repo_type"] == "dataset",
+                check("T5 -r 应用 dataset 兼容映射",
+                      captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
 
             # --- T6: 非法 repo_type 被 Click 拒绝（choice 校验） ---
@@ -144,8 +144,8 @@ def main():
                                     "--path-in-repo", "sub/"])
             check("T7 组合 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
-                check("T7 repo_type=dataset",
-                      captured[0]["repo_type"] == "dataset",
+                check("T7 dataset 使用 model 传输路由",
+                      captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
                 check("T7 path_in_repo='sub/file.bin'",
                       captured[0]["path_in_repo"] == "sub/file.bin",

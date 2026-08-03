@@ -10,6 +10,56 @@ import urllib.parse
 init(autoreset=True)
 
 
+def is_auth_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return any(marker in message for marker in (
+        "401", "403", "unauthorized", "forbidden", "no scopes",
+    ))
+
+
+def is_retryable_download_error(error: Exception) -> bool:
+    error_name = type(error).__name__
+    message = str(error).lower()
+    return error_name in {
+        "ChunkedEncodingError",
+        "ConnectError",
+        "ConnectionError",
+        "ReadError",
+        "ReadTimeout",
+        "RemoteProtocolError",
+    } or any(marker in message for marker in (
+        "incomplete message body",
+        "peer closed connection",
+        "connection reset",
+        "connection aborted",
+        "read timed out",
+    ))
+
+
+def run_download_with_retry(operation):
+    """Retry once when an interrupted response can reuse HF partial state."""
+    try:
+        return operation()
+    except Exception as error:
+        if not is_retryable_download_error(error):
+            raise
+    return operation()
+
+
+def sanitized_download_error(error: Exception) -> str:
+    """Return an actionable category without exposing remote or signed URLs."""
+    if is_auth_error(error):
+        return "认证失败或权限不足，请检查登录状态和仓库权限"
+    if is_retryable_download_error(error):
+        return "下载连接中断，自动重试后仍失败，请重新执行下载命令"
+    message = str(error).lower()
+    if "404" in message or "not found" in message:
+        return "仓库、文件或 revision 不存在"
+    if "timeout" in message or "timed out" in message:
+        return "下载请求超时，请检查网络后重试"
+    return f"下载失败（{type(error).__name__}）"
+
+
 def print_success(message: str) -> None:
     """打印成功信息"""
     print(f"{Fore.GREEN}✓ {message}{Style.RESET_ALL}")
@@ -382,4 +432,4 @@ def get_git_user_info() -> dict:
     except FileNotFoundError:
         pass
     
-    return info 
+    return info
