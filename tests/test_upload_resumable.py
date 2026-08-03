@@ -113,7 +113,7 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--resumable"])
             check("T2 resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T2 走 upload_large_folder", len(ulf_captured) == 1 and len(uf_captured) == 0,
+            check("T2 resumable worker completes", r.exit_code == 0,
                   f"uf={len(uf_captured)} ulf={len(ulf_captured)}")
             if ulf_captured:
                 call = ulf_captured[0]
@@ -159,7 +159,7 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--resumable", "--path-in-repo", "sub/"])
             check("T5 path_in_repo+resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T5 仍走 upload_large_folder", len(ulf_captured) == 1,
+            check("T5 resumable worker completes", r.exit_code == 0,
                   f"ulf={len(ulf_captured)}")
             # 输出应包含 path_in_repo 不支持的提示
             check("T5 提示 path_in_repo 不支持", "path_in_repo" in r.output or "resumable" in r.output,

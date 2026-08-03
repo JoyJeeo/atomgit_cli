@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import urllib.request
 import urllib.error
+import multiprocessing
 
 # 设置Hugging Face Hub的API端点为AtomGit
 os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
@@ -106,6 +107,19 @@ def _restore_progress_bar_state(state) -> None:
 def _upload_repo_type(repo_type: str = None) -> str:
     """Map AtomGit dataset uploads to its shared model transfer route."""
     return "model" if repo_type == "dataset" else repo_type
+
+
+def _run_resumable_upload(token, kwargs, result_queue):
+    """Run HF's resumable uploader in an isolated child process.
+
+    The child is deliberately short-lived so a timed-out transfer can be
+    terminated without leaving worker threads running in the CLI process.
+    """
+    try:
+        HfApi(token=token).upload_large_folder(**kwargs)
+        result_queue.put((True, None))
+    except BaseException as exc:
+        result_queue.put((False, (type(exc).__name__, str(exc))))
 
 
 def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
@@ -452,9 +466,35 @@ class HuggingFaceAPI:
                         # upload_large_folder 不支持 path_in_repo，显式提示
                         print("⚠ 注意：resumable 模式不支持 path_in_repo，"
                               "如需子目录请本地自行组织目录结构")
-                    # 构造带端点/token 的 HfApi 实例（endpoint 已由环境变量重定向）
-                    hf_api = HfApi(token=credentials['token'])
-                    hf_api.upload_large_folder(**lf_kwargs)
+                    # 在隔离进程中运行，超时后可终止 HF 内部 worker，避免
+                    # upload_large_folder 阻塞 CLI 或错误返回成功。
+                    methods = multiprocessing.get_all_start_methods()
+                    ctx = multiprocessing.get_context(
+                        "fork" if "fork" in methods else "spawn"
+                    )
+                    result_queue = ctx.Queue()
+                    process = ctx.Process(
+                        target=_run_resumable_upload,
+                        args=(credentials['token'], lf_kwargs, result_queue),
+                    )
+                    process.daemon = True
+                    process.start()
+                    process.join(upload_timeout)
+                    if process.is_alive():
+                        process.terminate()
+                        process.join(2)
+                        raise TimeoutError(
+                            f"resumable upload timed out after {upload_timeout}s"
+                        )
+                    try:
+                        ok, error = result_queue.get(timeout=1)
+                    except Exception as exc:
+                        raise RuntimeError(
+                            "resumable upload worker exited without a result"
+                        ) from exc
+                    if not ok:
+                        name, message = error
+                        raise RuntimeError(f"{name}: {message}")
                 else:
                     # 仓库内目标前缀：空 → "./"（根目录）
                     upload_path_in_repo = pipr + "/" if pipr else "./"
