@@ -99,13 +99,15 @@ atomgit login
   -> config.set_credentials(token)
   -> setup_git_credentials(token)
   -> 写入 ~/.atomgit/git-credential-atomgit
-  -> 修改两个 AtomGit host 的全局 Git helper 配置
+  -> 备份两个 AtomGit host 原有的全局 Git helper 配置
+  -> 用空 helper + AtomGit helper 建立域名专属隔离链
 ```
 
 风险：
 
 - 配置目录和 token 文件分别强制为 `0700` 和 `0600`（Windows 权限语义由系统决定）；
-- Git helper 修改用户全局 Git 配置；
+- Git helper 修改用户全局 Git 配置；原值保存在权限受限且不写入本次登录
+  token 的 `git-helper-state.json`，logout 时事务性恢复；
 - 登录 API 和生成的 helper 使用的 Authorization 形式不同；
 - 多处异常被吞掉，诊断信息有限。
 

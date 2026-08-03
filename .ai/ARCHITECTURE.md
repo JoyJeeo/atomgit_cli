@@ -55,6 +55,10 @@ or covered by shared contract tests.
   module import.
 - Hugging Face progress-bar control and request timeout are process-global.
 - Git credential-helper installation modifies user-global Git configuration.
+- Git helper setup stores the previous host-specific values in the restrictive
+  `~/.atomgit/git-helper-state.json` without writing the current login token,
+  installs an empty reset plus the AtomGit helper for each AtomGit host, and
+  restores the previous values on logout.
 - Tokens are persisted locally and must never enter logs or fixtures.
 
 ## Repository ID Rules

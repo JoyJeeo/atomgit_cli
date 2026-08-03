@@ -17,8 +17,8 @@
 - 单文件直接上传；
 - 上传错误分类。
 
-登录、下载、建仓、Python SDK、Git credential helper、配置权限和 wheel 安装
-目前缺少同等级自动化覆盖。
+配置权限和 Git credential helper 隔离已有独立的临时 HOME 测试。完整登录网络
+交互、建仓、部分下载路径、Python SDK 和 wheel 安装仍缺少同等级自动化覆盖。
 
 ## 环境
 
