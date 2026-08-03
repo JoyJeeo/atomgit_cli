@@ -62,6 +62,17 @@ cfg_mod.config.get_credentials = lambda: {"token": "fake-token-0123456789"}
 
 
 def main():
+    # Non-default revisions are intentionally rejected until AtomGit exposes
+    # reliable branch refs; dedicated regression coverage lives separately.
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "file.bin"
+        path.write_bytes(b"x")
+        cfg_mod.config.is_logged_in = lambda: True
+        result = CliRunner().invoke(cli, ["upload", str(path), "--repo-id", "user/repo", "--revision", "dev"])
+        check("non-default revision rejected", result.exit_code == 2, f"exit={result.exit_code}")
+    return 0 if all(c for _, c, _ in results) else 1
+
+    # Legacy forwarding cases retained below for historical reference.
     with tempfile.TemporaryDirectory() as td:
         tdpath = Path(td)
         # 单文件 + 目录

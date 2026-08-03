@@ -199,6 +199,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     if timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
         sys.exit(2)
+    if revision not in (None, "", "main"):
+        print_error("AtomGit 当前仅支持默认 revision main，非默认分支不会被创建；已拒绝上传")
+        sys.exit(2)
     if num_workers is not None and num_workers <= 0:
         print_error("并发 worker 数必须大于 0")
         sys.exit(2)

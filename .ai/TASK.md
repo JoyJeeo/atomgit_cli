@@ -235,3 +235,11 @@ Out of scope:
   metadata subtree; user-created nested `.cache` files remain counted.
 - Added `tests/test_resumable_stats.py`; focused/full offline tests, compileall,
   and diff check passed.
+
+## Issue #10 Delivery
+
+- AtomGit currently ignores non-default branch refs; CLI now rejects any
+  non-empty revision other than `main` before upload, preventing silent writes
+  to the default branch.
+- Added `tests/test_revision_rejection.py`; updated revision contract coverage.
+- Focused and full offline tests, compileall, and diff check passed.
