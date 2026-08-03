@@ -485,7 +485,10 @@ if __name__ == "__main__":
 
 ## 配置文件
 
-配置文件保存在 `~/.atomgit/config.json`，包含用户认证信息和其他设置。
+配置文件保存在 `~/.atomgit/config.json`，包含用户认证信息和其他设置。Git
+集成还会使用 `~/.atomgit/git-helper-state.json` 保存登录前两个 AtomGit 域名的
+helper 配置；该状态文件不会写入本次登录 token，并使用 `0600` 权限。既有
+helper 值会按原样保存，因此不应在 Git helper 命令中内嵌秘密。
 
 ## API端点配置
 
@@ -524,8 +527,13 @@ git remote add origin https://atomgit.com/username/repo-name.git
 
 - 凭证配置仅对 `atomgit.com` 和 `hub.atomgit.com` 域名生效
 - token 安全存储在本地配置文件中
-- 不影响其他Git仓库的认证配置
-- `atomgit logout` 时自动清除凭证配置
+- 登录期间会重置这两个域名继承的 helper 链，避免 token 被系统通用 helper
+  额外保存
+- 不影响其他 Git 仓库的认证配置
+- 登录前已有的 AtomGit 域名 helper 会按原顺序备份，并在 `atomgit logout`
+  时恢复
+- 如果恢复 Git 配置失败，logout 会以非零状态退出；修复 Git 配置后再次运行
+  `atomgit logout` 会重试残留状态，即使 token 已在首次执行时清除
 
 ### 注意事项
 
@@ -601,6 +609,7 @@ python tests/test_upload_resumable.py       # 断点续传
 python tests/test_upload_file_no_copy.py    # 单文件无拷贝
 python tests/test_upload_error_classify.py  # 错误分类
 python tests/test_upload_error_handling.py  # 错误处理集成
+python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 ```
 
 现有测试是自执行 Python 脚本，不是 pytest 收集用例。完整测试说明见

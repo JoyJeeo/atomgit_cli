@@ -35,7 +35,12 @@ conda activate atomgit_cli
 
 登录成功后，CLI 会为 `atomgit.com` 和 `hub.atomgit.com` 注册全局 Git
 credential helper，使 Git HTTPS 操作能够复用保存的 token。因为它会修改用户
-全局状态，自动化测试默认不应在真实 HOME 下执行。
+全局状态，自动化测试默认不应在真实 HOME 下执行。登录期间，这两个域名会用
+空 helper 条目重置继承的通用 helper 链，避免 token 被系统 keychain 等其他
+helper 再次保存。原有的域名专属 helper 值会原样保存到权限受限状态文件，但
+不会写入本次登录 token，并在 logout 时按原顺序恢复；其他域名不受影响。
+如果恢复失败，logout 会返回非零；解决 Git 配置问题后可再次执行 logout，CLI
+会根据残留状态文件重试恢复，即使当前已经显示为未登录。
 
 ## 未登录可以下载吗？
 

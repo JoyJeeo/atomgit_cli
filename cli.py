@@ -79,13 +79,26 @@ def login(token):
 @cli.command()
 def logout():
     """退出登录"""
-    if config.is_logged_in():
+    was_logged_in = config.is_logged_in()
+    config_dir = Path.home() / '.atomgit'
+    has_git_state = any(
+        (config_dir / filename).exists()
+        for filename in ('git-helper-state.json', 'git-credential-atomgit')
+    )
+
+    if was_logged_in:
         config.clear_credentials()
-        
-        # 清除Git凭证配置
-        if check_git_available():
-            clear_git_credentials()
-        
+
+    # A prior failed logout can leave helper state after the token is gone.
+    if (was_logged_in or has_git_state) and check_git_available():
+        if not clear_git_credentials():
+            print_error(
+                "登录 token 已清除，但 Git 凭证配置恢复失败；"
+                "请修复 Git 配置后重新运行 'atomgit logout'"
+            )
+            sys.exit(1)
+
+    if was_logged_in:
         print_success("已退出登录")
     else:
         print_info("当前未登录")

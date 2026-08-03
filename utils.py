@@ -1,6 +1,8 @@
 import os
 import sys
 import subprocess
+import json
+import tempfile
 from pathlib import Path
 from typing import Optional, List
 from colorama import Fore, Style, init
@@ -8,6 +10,11 @@ import urllib.parse
 
 # 初始化colorama
 init(autoreset=True)
+
+
+_GIT_CREDENTIAL_HOSTS = ("atomgit.com", "hub.atomgit.com")
+_GIT_HELPER_STATE_VERSION = 1
+_GIT_HELPER_STATE_FILENAME = "git-helper-state.json"
 
 
 def is_auth_error(error: Exception) -> bool:
@@ -248,16 +255,141 @@ def get_relative_path(file_path: Path, base_path: Path) -> str:
         return str(file_path)
 
 
+def _git_helper_key(host: str) -> str:
+    return f"credential.https://{host}.helper"
+
+
+def _get_global_git_values(key: str) -> List[str]:
+    result = subprocess.run(
+        ["git", "config", "--global", "--get-all", key],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 1:
+        return []
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f"无法读取 Git 配置: {key}")
+    return result.stdout.splitlines()
+
+
+def _set_global_git_values(key: str, values: List[str]) -> None:
+    if values:
+        commands = [
+            ["git", "config", "--global", "--replace-all", key, values[0]],
+            *(
+                ["git", "config", "--global", "--add", key, value]
+                for value in values[1:]
+            ),
+        ]
+    else:
+        commands = [["git", "config", "--global", "--unset-all", key]]
+
+    for command in commands:
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            if not values and not _get_global_git_values(key):
+                return
+            raise RuntimeError(
+                result.stderr.strip() or f"无法更新 Git 配置: {key}"
+            )
+
+
+def _restore_global_git_values(values_by_host) -> None:
+    failures = []
+    for host in _GIT_CREDENTIAL_HOSTS:
+        try:
+            _set_global_git_values(
+                _git_helper_key(host), list(values_by_host.get(host, []))
+            )
+        except Exception as error:
+            failures.append(f"{host}: {error}")
+    if failures:
+        raise RuntimeError("; ".join(failures))
+
+
+def _write_bytes_atomic(path: Path, content: bytes, mode: int) -> None:
+    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "wb") as stream:
+            stream.write(content)
+        os.replace(temporary_path, path)
+        path.chmod(mode)
+    except Exception:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        temporary_path.unlink(missing_ok=True)
+        raise
+
+
+def _write_helper_state(path: Path, values_by_host) -> None:
+    payload = {
+        "version": _GIT_HELPER_STATE_VERSION,
+        "hosts": {
+            host: list(values_by_host.get(host, []))
+            for host in _GIT_CREDENTIAL_HOSTS
+        },
+    }
+    content = json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
+    _write_bytes_atomic(path, content, 0o600)
+
+
+def _load_helper_state(path: Path):
+    if not path.exists():
+        return None
+    path.chmod(0o600)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"Git 凭证配置备份无法读取: {error}") from error
+
+    hosts = payload.get("hosts")
+    if (
+        payload.get("version") != _GIT_HELPER_STATE_VERSION
+        or not isinstance(hosts, dict)
+    ):
+        raise RuntimeError("Git 凭证配置备份格式不受支持")
+    for host in _GIT_CREDENTIAL_HOSTS:
+        values = hosts.get(host)
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) for value in values
+        ):
+            raise RuntimeError("Git 凭证配置备份内容无效")
+    return {host: list(hosts[host]) for host in _GIT_CREDENTIAL_HOSTS}
+
+
+def _legacy_cleanup_values(values: List[str], helper_value: str) -> List[str]:
+    cleaned = []
+    for value in values:
+        if value == helper_value:
+            if cleaned and cleaned[-1] == "":
+                cleaned.pop()
+            continue
+        cleaned.append(value)
+    return cleaned
+
+
 def setup_git_credentials(token: str) -> bool:
     """配置Git凭证助手，使用保存的token"""
+    config_dir = Path.home() / '.atomgit'
+    credential_helper_path = config_dir / 'git-credential-atomgit'
+    state_path = config_dir / _GIT_HELPER_STATE_FILENAME
+    previous_values = None
+    previous_helper = None
+    previous_helper_mode = None
+    created_state = False
     try:
         # 获取配置目录
-        config_dir = Path.home() / '.atomgit'
-        config_dir.mkdir(exist_ok=True)
+        config_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        config_dir.chmod(0o700)
         
         # 创建凭证助手脚本
-        credential_helper_path = config_dir / 'git-credential-atomgit'
-        
+        if credential_helper_path.exists():
+            previous_helper = credential_helper_path.read_bytes()
+            previous_helper_mode = credential_helper_path.stat().st_mode & 0o777
+
         # 创建凭证助手脚本内容
         helper_script = '''#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
@@ -343,63 +475,87 @@ def main():
 if __name__ == '__main__':
     main()
 '''
-        
-        # 写入脚本文件
-        with open(credential_helper_path, 'w', encoding='utf-8') as f:
-            f.write(helper_script)
-        
-        # 设置脚本为可执行
-        credential_helper_path.chmod(0o755)
-        
-        # 配置Git使用我们的凭证助手（为两个域名都配置）
-        git_hosts = ['atomgit.com', 'hub.atomgit.com']
-        commands = []
-        
-        for host in git_hosts:
-            commands.append(['git', 'config', '--global', f'credential.https://{host}.helper', f'!{credential_helper_path}'])
-        
-        for cmd in commands:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode != 0:
-                print_warning(f"配置Git命令失败: {' '.join(cmd)}")
-                print_warning(f"错误信息: {result.stderr}")
-                return False
+
+        previous_values = {
+            host: _get_global_git_values(_git_helper_key(host))
+            for host in _GIT_CREDENTIAL_HOSTS
+        }
+        original_values = _load_helper_state(state_path)
+        if original_values is None:
+            _write_helper_state(state_path, previous_values)
+            created_state = True
+
+        _write_bytes_atomic(
+            credential_helper_path, helper_script.encode("utf-8"), 0o755
+        )
+        managed_values = ["", f"!{credential_helper_path}"]
+        for host in _GIT_CREDENTIAL_HOSTS:
+            _set_global_git_values(_git_helper_key(host), managed_values)
         
         print_success(f"Git凭证助手配置成功，现在可以直接使用git命令访问AtomGit仓库")
         return True
         
     except Exception as e:
+        configuration_restored = True
+        if previous_values is not None:
+            try:
+                _restore_global_git_values(previous_values)
+            except Exception as rollback_error:
+                configuration_restored = False
+                print_error(f"Git凭证配置回滚失败: {rollback_error}")
+        if configuration_restored:
+            try:
+                if previous_helper is None:
+                    credential_helper_path.unlink(missing_ok=True)
+                else:
+                    _write_bytes_atomic(
+                        credential_helper_path,
+                        previous_helper,
+                        previous_helper_mode or 0o755,
+                    )
+                if created_state:
+                    state_path.unlink(missing_ok=True)
+            except Exception as rollback_error:
+                print_error(f"Git凭证文件回滚失败: {rollback_error}")
         print_error(f"配置Git凭证助手失败: {e}")
         return False
 
 
 def clear_git_credentials() -> bool:
     """清除Git凭证配置"""
+    config_dir = Path.home() / '.atomgit'
+    credential_helper_path = config_dir / 'git-credential-atomgit'
+    state_path = config_dir / _GIT_HELPER_STATE_FILENAME
+    current_values = None
     try:
-        # 移除Git配置（清除两个域名的配置）
-        git_hosts = ['atomgit.com', 'hub.atomgit.com']
-        commands = []
-        
-        for host in git_hosts:
-            commands.append(['git', 'config', '--global', '--unset', f'credential.https://{host}.helper'])
-        
-        for cmd in commands:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            # 忽略不存在的配置项错误
-            if result.returncode != 0 and "not found" not in result.stderr:
-                print_warning(f"清除Git配置命令失败: {' '.join(cmd)}")
-                print_warning(f"错误信息: {result.stderr}")
-        
-        # 删除凭证助手脚本
-        config_dir = Path.home() / '.atomgit'
-        credential_helper_path = config_dir / 'git-credential-atomgit'
+        current_values = {
+            host: _get_global_git_values(_git_helper_key(host))
+            for host in _GIT_CREDENTIAL_HOSTS
+        }
+        restored_values = _load_helper_state(state_path)
+        if restored_values is None:
+            helper_value = f"!{credential_helper_path}"
+            restored_values = {
+                host: _legacy_cleanup_values(values, helper_value)
+                for host, values in current_values.items()
+            }
+
+        _restore_global_git_values(restored_values)
+        current_values = None
+
         if credential_helper_path.exists():
             credential_helper_path.unlink()
-        
+        state_path.unlink(missing_ok=True)
+
         print_success(f"Git凭证配置已清除")
         return True
         
     except Exception as e:
+        if current_values is not None:
+            try:
+                _restore_global_git_values(current_values)
+            except Exception as rollback_error:
+                print_error(f"Git凭证清理回滚失败: {rollback_error}")
         print_error(f"清除Git凭证配置失败: {e}")
         return False
 

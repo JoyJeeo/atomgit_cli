@@ -1,94 +1,139 @@
-# Current Release Contract
+# Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
-## Release Identity
+## Identity
 
-- ID: maintainer-authorized release task, 2026-08-03
-- Package version: `1.0.5+yuto.1`
-- Current tag: `v1.0.5-yuto.1`
-- Historical tags: `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.5`
-- Channel: GitHub Release on `JoyJeeo/atomgit_cli`
-- Release type: formal GitHub Release, package status remains Beta
-- Human owner and copyright holder: JoyJeeo
-- License: Apache License 2.0
+- GitHub Issue: `#13`
+- Title: `[P1] AtomGit credential helper does not isolate inherited Git helpers`
+- Type: `security`, `bug`
+- Priority: `P1`
+- Branch: `codex/issue-13-credential-helper-isolation`
+- Base: `yuto` at `22db026311be589cf5481daa9ccbe51d4a9328f1`
+- Delivery mode: authorized self-accepted branch delivery
+
+## User Impact And Evidence
+
+After `atomgit login`, Git combines the AtomGit host-specific helper with an
+inherited generic helper. A live private `git ls-remote` invoked the macOS
+`osxkeychain` store path and emitted `failed to store: -60006`. A normal user
+environment could therefore copy the AtomGit token into an unrelated helper.
+
+The current logout implementation also unsets the complete host-specific key,
+so it cannot preserve values that existed before AtomGit login.
+
+## Current And Expected Behavior
+
+- Current: setup writes one host-specific helper value for each AtomGit host;
+  inherited generic helpers remain active.
+- Current: logout deletes the host-specific helper key rather than restoring
+  the user's prior values.
+- Expected: AtomGit hosts use an exclusive helper chain owned by AtomGit while
+  logged in, unrelated hosts remain unchanged, and logout restores the exact
+  prior user-global values.
+- Expected: a partial setup failure rolls back both AtomGit host keys.
 
 ## Scope
 
-- Add the approved license and align package metadata with the `yuto` source.
-- Give the current package an identity distinguishable from upstream PyPI.
-- Correct release-facing documentation that describes already fixed defects.
-- Build wheel and source artifacts for every installable version node and
-  generate SHA-256 checksums. Preserve `v1.0.0` as a source-only archive
-  because its immutable packaging cannot pass the installation contract.
-- Verify every published wheel in an isolated environment before publication.
-- Create annotated tags at the exact historical version commits and the release
-  commit, then create GitHub Releases with assets and notes.
-- Verify the current release again from downloaded public artifacts.
+In scope:
 
-## Historical Mapping
+- `utils.py` Git credential-helper setup and cleanup behavior;
+- `cli.py` logout failure propagation and retry of residual helper state;
+- restrictive persistence of the prior host-specific helper state without
+  writing the current login token;
+- rollback for partial setup failure;
+- isolated offline tests using temporary HOME and Git config files;
+- affected Git-integration documentation.
 
-- `v1.0.0`: `61a28a51e8e145bb2ea821d2acf408d6af00d40e`
-- `v1.0.1`: `1c499d51e4eec5636e51a2c2ba387bbae002cd6b`
-- `v1.0.2`: `08ba91dfadf0a0f95192618256871a33d8a67d52`
-- `v1.0.3`: `4e1e093f6b31cafa1034778a7d5c12180f2a3c2d`
-- `v1.0.5`: `86fc7096810df27baff5a0a8b03ff752b6dec181`
+Out of scope:
+
+- Issue #8 username lookup authentication and fallback behavior;
+- token/config storage policy outside helper-chain state;
+- upload, download, repository, SDK, dependency, version, or release changes;
+- changes to the user's real Git configuration or keychain.
+
+## Compatibility
+
+- Preserve the `setup_git_credentials(token) -> bool` and
+  `clear_git_credentials() -> bool` interfaces.
+- Support Python 3.8+ and the installed Git configuration semantics.
+- Preserve unrelated Git configuration and all pre-existing multi-valued
+  AtomGit host helper entries in order.
+- Never persist or print the token in helper-state metadata or test fixtures.
+
+## Acceptance Criteria
+
+- An inherited generic helper is not invoked for AtomGit lookup, store, or
+  erase after setup.
+- The inherited helper remains active for an unrelated host.
+- Setup installs an empty reset entry followed by the AtomGit-owned helper for
+  both `atomgit.com` and `hub.atomgit.com`.
+- Logout restores exact pre-existing user-global helper values for both hosts.
+- A partial two-host setup failure restores the pre-operation state.
+- Repeated login does not replace the original backup with AtomGit-owned state.
+- Helper state is stored with restrictive permissions and contains no token.
+- Logout returns nonzero on helper restoration failure and can retry residual
+  state after the login token has already been cleared.
+- Existing offline tests, `python -m compileall -q .`, and `git diff --check`
+  pass in the `atomgit_cli` conda environment.
+
+## Required Tests
+
+- Focused offline credential-helper integration script with isolated `HOME`
+  and `GIT_CONFIG_GLOBAL`, with the real system config explicitly disabled.
+- Existing 12 offline test scripts.
+- No live AtomGit request is required for implementation acceptance; the
+  previously authorized private-repository evidence remains the live baseline.
 
 ## Permissions
 
-- The maintainer explicitly authorized Apache-2.0 licensing, version changes,
-  annotated tags, tag pushes, and formal GitHub Releases.
-- The maintainer explicitly required all existing Issues to remain open and
-  otherwise unchanged.
-- PyPI publication, AtomGit repository publication, Issue transitions, remote
-  deletion, and history rewriting are not authorized.
-
-## Required Evidence
-
-- Three public version values and package metadata agree.
-- Complete offline suite, compileall, and diff checks pass.
-- Each publishable wheel reports the expected version and passes CLI/module
-  import smoke tests after isolated installation. Historical versions that
-  cannot pass remain source-only archives with the failure documented.
-- Every installable release includes wheel, source archive, and `SHA256SUMS`;
-  the documented `v1.0.0` source-only exception includes its source archive,
-  license, dependency reference, and checksums but no supported wheel.
-- The current release artifact is downloaded and reverified after publication.
-- Independent release review returns `APPROVED` before tags or Releases are
-  created.
+- Authorized: local source, test, documentation, and `TASK.md` edits; isolated
+  temporary Git configuration; local task branch creation; cohesive commit and
+  push of this task branch after self-verification; pull request creation,
+  merge into `yuto`, and closure of Issue #13 after successful delivery.
+- Not authorized: real global Git/keychain mutation, AtomGit remote writes, tag,
+  release, or PyPI.
 
 ## Delivery Record
 
-- Implementation: license, version identity, metadata, changelog, and current
-  behavior documentation updated on the release branch.
-- Offline validation: all 12 test scripts, compileall, and diff checks passed.
-- Current build: `1.0.5+yuto.1` wheel and sdist built; a clean virtual
-  environment passed `atomgit --version`, both help entry points, and imports
-  for `atomgit` and `atomgit_hub`. The wheel contains the Apache-2.0 license.
-- Historical builds: `v1.0.1`, `v1.0.2`, `v1.0.3`, and `v1.0.5` built and
-  passed the same isolated wheel smoke tests.
-- Reproducibility: all published wheels were reproduced byte-for-byte with the
-  same full build pipeline and commit epoch. Deterministic `git archive` source
-  packages were generated twice and compared byte-for-byte for every tag;
-  setuptools sdists were excluded because their archive timestamps varied.
-- `v1.0.0` exception: its committed package metadata contains no dependencies,
-  and top-level `import atomgit_hub` fails even after installing the intended
-  dependencies. Preserve the tag but publish it only as a clearly marked
-  source-history archive; do not attach a wheel as a supported artifact.
-- Independent review: initial `REQUEST CHANGES` for the `v1.0.0` artifact
-  contract and README checksum instructions; both findings were corrected.
-  Re-review found no blocking issues and returned `APPROVED`.
-- Tags: annotated `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.5`, and
-  `v1.0.5-yuto.1` tags were pushed and verified against their contracted
-  commits. No existing tag was moved or rewritten.
-- Releases: all six GitHub Releases were created. Historical Releases are not
-  Latest; `v1.0.5-yuto.1` is the formal Latest Release and is neither Draft nor
-  Pre-release: https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.5-yuto.1
-- Post-release verification: all four public assets were downloaded from
-  GitHub, `SHA256SUMS` passed, and the downloaded wheel passed the version,
-  both CLI help entry points, and both import checks in a new virtual
-  environment.
-- Issue state: Issues #1, #3, #4, #5, #6, and #7 were checked after release and
-  remain Open as explicitly required by the maintainer.
-- PyPI, AtomGit publication, Issue transitions, remote deletion, and history
-  rewriting were not performed.
+- Regression evidence: `python tests/test_git_credentials_isolation.py`
+  failed on the previous implementation because setup could not replace
+  existing multi-valued helpers and installed neither a reset nor backup.
+- Implementation: setup now stores the original two-host values in a `0600`
+  state file without writing the current login token, installs an empty reset
+  plus the owned helper,
+  preserves the original backup on repeated login, and rolls back partial
+  configuration failures. Cleanup transactionally restores the original
+  values and includes a legacy owned-helper cleanup path.
+- Documentation: README, FAQ, human architecture/testing guidance, and the AI
+  architecture specification describe helper isolation and restoration.
+- Focused offline test: `python tests/test_git_credentials_isolation.py` passed
+  33/33 assertions using temporary HOME/global config and a fake inherited
+  helper. The real system config is explicitly disabled. Coverage includes
+  repeated setup, lookup/store/erase isolation, exact restoration, partial
+  setup failure, failed rollback recovery, cleanup-file failure recovery, and
+  CLI logout failure/retry behavior.
+- Full offline tests: all 13 `tests/test_*.py` scripts passed with zero
+  failures in the `atomgit_cli` conda environment after review fixes.
+- Static checks: `python -m compileall -q .` and `git diff --check` passed.
+- Credential scan: no real token pattern or `ATOMGIT_TEST_TOKEN` reference was
+  found in changed implementation, test, or documentation files.
+- Live test: the pre-fix evidence was followed by an authorized post-fix
+  private `git ls-remote`. Login,
+  private remote read, and logout exited 0; the inherited generic helper
+  remained configured but produced no keychain/store diagnostic, and owned
+  helper/state files were removed.
+- DoD audit: implementation, focused regression, documentation, complete
+  offline suite, compileall, diff check, credential scan, and scope checks
+  passed. Human acceptance remains pending.
+- Independent review: initial verdict `REQUEST CHANGES`. It found that setup
+  could discard recovery files after a failed rollback and that cleanup could
+  restore managed config after deleting the helper. Both findings were fixed
+  with persistent-failure tests. Re-review then found a Unix-only `os.fchmod`
+  call in the atomic writer; it was removed while retaining private `mkstemp`
+  creation and post-replace `chmod`. The final review checked the complete
+  diff, failure paths, test isolation, documentation, live evidence, and
+  credential scan; no blocking findings remained. Verdict: `APPROVED`.
+- Human acceptance: maintainer waived manual acceptance and authorized
+  self-accepted commit/push, PR merge, and Issue closure after the recorded
+  tests and review.
