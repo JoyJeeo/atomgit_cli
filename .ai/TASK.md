@@ -1,6 +1,6 @@
 # Current Release Contract
 
-Status: `active`
+Status: `completed`
 
 ## Release Identity
 
@@ -78,6 +78,17 @@ Status: `active`
 - Independent review: initial `REQUEST CHANGES` for the `v1.0.0` artifact
   contract and README checksum instructions; both findings were corrected.
   Re-review found no blocking issues and returned `APPROVED`.
-- Tags and Releases: ready for authorized publication; no tag or Release exists
-  yet at the time of this record.
-- Post-release verification: pending.
+- Tags: annotated `v1.0.0`, `v1.0.1`, `v1.0.2`, `v1.0.3`, `v1.0.5`, and
+  `v1.0.5-yuto.1` tags were pushed and verified against their contracted
+  commits. No existing tag was moved or rewritten.
+- Releases: all six GitHub Releases were created. Historical Releases are not
+  Latest; `v1.0.5-yuto.1` is the formal Latest Release and is neither Draft nor
+  Pre-release: https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.5-yuto.1
+- Post-release verification: all four public assets were downloaded from
+  GitHub, `SHA256SUMS` passed, and the downloaded wheel passed the version,
+  both CLI help entry points, and both import checks in a new virtual
+  environment.
+- Issue state: Issues #1, #3, #4, #5, #6, and #7 were checked after release and
+  remain Open as explicitly required by the maintainer.
+- PyPI, AtomGit publication, Issue transitions, remote deletion, and history
+  rewriting were not performed.
