@@ -251,3 +251,13 @@ Out of scope:
   success. Private creation remains supported and forwards the requested type.
 - Added `tests/test_create_visibility.py`; focused/full offline tests,
   compileall, and diff check passed.
+
+## Issue #3 Delivery
+
+- Remote evidence shows AtomGit dataset LFS batch uploads return 404. Dataset
+  resumable uploads are now rejected before any remote call with an actionable
+  ordinary-upload alternative; existing small-file dataset compatibility is
+  preserved.
+- Added `tests/test_dataset_lfs_guard.py`; updated resumable contract coverage.
+- Full offline tests, compileall, and diff check passed. No live write was
+  required because the service limitation was already established remotely.

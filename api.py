@@ -436,6 +436,10 @@ class HuggingFaceAPI:
                 print("未找到登录凭证")
                 return False
 
+            if resumable and repo_type == "dataset":
+                print("AtomGit dataset 暂不支持 resumable/LFS 大文件上传，请改用普通目录上传")
+                return False
+
             # 规范化 path_in_repo
             try:
                 pipr = normalize_path_in_repo(path_in_repo)

@@ -133,7 +133,7 @@ def main():
             uf_captured.clear(); ulf_captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--resumable", "--repo-type", "dataset"])
-            check("T3 dataset exit=0", r.exit_code == 0, f"exit={r.exit_code}")
+            check("T3 dataset resumable rejected", r.exit_code == 1, f"exit={r.exit_code}")
             if ulf_captured:
                 check("T3 dataset 使用 model 传输路由",
                       ulf_captured[0].get("repo_type") == "model",
