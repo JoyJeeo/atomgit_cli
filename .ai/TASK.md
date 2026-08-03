@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -85,7 +85,8 @@ closure. No release or PyPI publication.
   check passed.
 - Review: independent review found no blocking findings; validation is
   side-effect free and preserves existing interfaces.
-- Delivery: pending commit, push, PR merge, and Issue #11 closure.
+- Delivery: commit `91fc12a` pushed; PR #17 merged into `yuto`; Issue #11 was
+  already closed remotely. No release was created.
 
 <!-- Previous Issue #13 delivery record retained below for historical context. -->
 
