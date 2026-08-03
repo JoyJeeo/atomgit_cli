@@ -66,7 +66,8 @@ closure. No release or PyPI publication.
 - Review: independent diff review found no blocking correctness, security,
   compatibility, or scope findings. Residual risk is limited to platform
   multiprocessing behavior and requires future live validation.
-- Delivery: pending commit, push, PR merge, and Issue #1 closure.
+- Delivery: commit `57bb20d` pushed; PR #15 merged into `yuto` as merge commit
+  `949e8c9`; Issue #1 was already closed remotely and no release was created.
 
 <!-- Previous Issue #13 delivery record retained below for historical context. -->
 
