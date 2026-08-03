@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""Offline validation tests for upload timeout and worker options."""
+import tempfile
+from pathlib import Path
+from click.testing import CliRunner
+import atomgit  # noqa: F401
+from atomgit.cli import cli
+import sys
+
+api_mod = sys.modules["atomgit.api"]
+cfg_mod = sys.modules["atomgit.config"]
+cfg_mod.config.is_logged_in = lambda: True
+
+
+def main():
+    with tempfile.TemporaryDirectory() as td:
+        folder = Path(td) / "folder"
+        folder.mkdir()
+        (folder / "file.txt").write_text("x")
+        runner = CliRunner()
+        original = api_mod.api.upload_directory
+        calls = []
+        api_mod.api.upload_directory = lambda *a, **kw: calls.append(kw) or True
+        try:
+            cases = [
+                ([str(folder), "--repo-id", "user/repo", "--timeout", "0"], "超时时间"),
+                ([str(folder), "--repo-id", "user/repo", "--timeout", "-1"], "超时时间"),
+                ([str(folder), "--repo-id", "user/repo", "--resumable", "--num-workers", "0"], "worker"),
+                ([str(folder), "--repo-id", "user/repo", "--resumable", "--num-workers", "-2"], "worker"),
+            ]
+            passed = 0
+            for args, marker in cases:
+                result = runner.invoke(cli, ["upload", *args])
+                ok = result.exit_code == 2 and marker in result.output.lower()
+                print(f"[{'PASS' if ok else 'FAIL'}] {' '.join(args)}")
+                passed += ok
+            valid = runner.invoke(cli, ["upload", str(folder), "--repo-id", "user/repo", "--timeout", "1", "--resumable", "--num-workers", "1"])
+            ok = valid.exit_code == 0 and len(calls) == 1
+            print(f"[{'PASS' if ok else 'FAIL'}] valid positive options accepted")
+            passed += ok
+            print(f"summary: {passed}/5 passed")
+            return 0 if passed == 5 else 1
+        finally:
+            api_mod.api.upload_directory = original
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

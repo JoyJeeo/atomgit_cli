@@ -196,6 +196,12 @@ def create(repo_name, repo_type, private):
               help='断点续传模式的并发 worker 数（仅 --resumable 生效）')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
     """上传文件或目录到仓库"""
+    if timeout_sec <= 0:
+        print_error("上传超时时间必须大于 0 秒")
+        sys.exit(2)
+    if num_workers is not None and num_workers <= 0:
+        print_error("并发 worker 数必须大于 0")
+        sys.exit(2)
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
         sys.exit(1)
