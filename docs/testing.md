@@ -17,8 +17,9 @@
 - 单文件直接上传；
 - 上传错误分类。
 
-配置权限和 Git credential helper 隔离已有独立的临时 HOME 测试。完整登录网络
-交互、建仓、部分下载路径、Python SDK 和 wheel 安装仍缺少同等级自动化覆盖。
+token 校验、持久化、损坏配置恢复、logout、配置权限和 Git credential helper
+隔离均有临时 HOME 离线测试。真实登录网络交互、部分建仓/下载远程路径和 wheel
+安装自动化仍需单独覆盖。
 
 ## 环境
 

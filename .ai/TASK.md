@@ -4,6 +4,66 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-010`
+- Title: `Complete offline login and configuration tests`
+- Type: `testing`, `security`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `498d16f`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+Permission and Git-helper tests exist, but token validation, login persistence,
+identity rejection, corrupt JSON recovery, and ordinary logout credential
+clearing lack one isolated offline contract suite.
+
+## Scope
+
+In scope: add offline coverage using temporary HOME/config paths and network
+fakes for validation, persistence/reload, corrupt config, login failure, and
+logout clearing while preserving existing permission/helper tests.
+
+Out of scope: live identity requests, real HOME/Git changes, new login
+features, exception redesign, and remote writes.
+
+## Acceptance Criteria
+
+- Short/invalid and identity-failed tokens are not persisted.
+- A verified token persists, reloads, and clears without appearing in output.
+- Corrupt JSON loads as logged out and can be repaired by a later save.
+- CLI logout clears credentials without requiring Git when no helper state
+  exists.
+- Pytest, focused scripts, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local tests and affected documentation, cohesive commit, and
+  push of the current branch.
+- Not authorized: live AtomGit requests, real credential/Git changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added an isolated lifecycle test covering fresh state, persistence/reload,
+  logout, corrupt JSON recovery, short tokens, identity rejection, verified
+  login, output redaction, and CLI logout without Git.
+- Focused login/config test passed 11/11 and existing permission coverage
+  passed 6/6. `python -m pytest` collected and passed 27/27 cases;
+  `python -m compileall -q .` and `git diff --check` passed.
+- Documentation now distinguishes complete offline login/config coverage from
+  separately authorized live identity verification.
+- Independent review found no blocking security, isolation, compatibility, or
+  scope issue. No real token, HOME, Git config, or network endpoint was used.
+  Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-009
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-009`
 - Title: `Provide a standard isolated pytest suite`
 - Type: `testing`
