@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -134,6 +134,9 @@ Out of scope:
   creation and post-replace `chmod`. The final review checked the complete
   diff, failure paths, test isolation, documentation, live evidence, and
   credential scan; no blocking findings remained. Verdict: `APPROVED`.
+- Delivery: commit `581545d` was pushed on the task branch; PR #14 was merged
+  into `yuto` as merge commit `429f16a9a45b33b873c019ffcaaf26756ddfac04`.
+  Issue #13 was closed after merge. No tag or Release was created.
 - Human acceptance: maintainer waived manual acceptance and authorized
   self-accepted commit/push, PR merge, and Issue closure after the recorded
   tests and review.
