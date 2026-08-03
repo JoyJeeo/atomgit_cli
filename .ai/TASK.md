@@ -4,6 +4,65 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-006`
+- Title: `Restore SDK Hugging Face timeout state`
+- Type: `bug`, `sdk`, `compatibility`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `e5fe541`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+`atomgit_hub.upload_folder` overwrites HF's process-global
+`DEFAULT_REQUEST_TIMEOUT` but never restores it. One SDK upload therefore
+changes unrelated later HF operations in the same Python process.
+
+## Scope
+
+In scope: restore the exact prior timeout after successful and failed SDK
+uploads, add focused offline coverage, and preserve existing parameter and
+temporary-resource behavior.
+
+Out of scope: CLI progress behavior, a concurrency architecture redesign,
+stable exception classes, remote writes, and dependency upgrades.
+
+## Acceptance Criteria
+
+- The requested timeout is visible during the HF upload call.
+- The previous timeout is restored after success and HF failure.
+- Existing SDK upload lifetime and parameter tests remain green.
+- Complete offline tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation, tests, affected documentation,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Regression coverage observes the requested SDK timeout during both success
+  and failure and proves the previous process-global value is restored.
+- Implementation restores `DEFAULT_REQUEST_TIMEOUT` in the outer `finally`
+  before temporary-resource cleanup; preflight failures do not mutate it.
+- Focused timeout test passed 7/7, and the affected SDK lifetime/parameter
+  suites passed 11/11 and 14/14. All 24 offline scripts,
+  `python -m compileall -q .`, and `git diff --check` passed with isolated
+  user state.
+- Independent review found no blocking issue. Concurrent SDK uploads still
+  share HF's process-global timeout by dependency design; this documented
+  architectural limitation is not a state-leak regression. Verdict:
+  `APPROVED`.
+
+# Completed Issue ROADMAP-005
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-005`
 - Title: `Honor supported SDK upload parameters`
 - Type: `bug`, `sdk`, `compatibility`

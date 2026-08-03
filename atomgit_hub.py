@@ -336,6 +336,8 @@ def upload_folder(
     import shutil
 
     temporary_directory = None
+    hf_constants = None
+    original_timeout = None
     try:
         if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
             # 如果要上传到根目录，直接使用源文件夹
@@ -396,6 +398,8 @@ def upload_folder(
             else:
                 raise Exception(f"上传失败：{error_msg}")
     finally:
+        if hf_constants is not None and original_timeout is not None:
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         if temporary_directory is not None:
             temporary_directory.cleanup()
 
