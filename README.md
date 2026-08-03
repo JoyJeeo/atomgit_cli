@@ -17,7 +17,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 - 🎨 彩色终端输出
 - 📊 上传进度条（可禁用）
 - 🔧 配置文件管理
-- 🧩 **上传能力增强（v1.0.5）**：
+- 🧩 **上传能力增强（v1.0.5+yuto.1）**：
   - 进度条开关（`--no-progress-bar`）
   - 仓库内目标路径（`-p/--path-in-repo`）
   - 仓库类型选择（`-r/--repo-type model|dataset`）
@@ -44,14 +44,26 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 ### 从源码安装
 
 ```bash
-git clone https://atomgit.com/gitcode-ai/atomgit_cli.git
+git clone https://github.com/JoyJeeo/atomgit_cli.git
 cd atomgit_cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate atomgit_cli
 python -m pip install -e .
 ```
 
-### 使用pip安装（如果已发布）
+### 从 GitHub Release 安装 yuto 版本
+
+从 `v1.0.5-yuto.1` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
+完整校验后安装：
+
+```bash
+shasum -a 256 -c SHA256SUMS
+python -m pip install atomgit-1.0.5+yuto.1-py3-none-any.whl
+```
+
+发布页：<https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.5-yuto.1>
+
+### 使用 PyPI 安装上游版本
 
 ```bash
 python -m pip install atomgit
@@ -157,7 +169,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
 | `--revision <name>` | 目标分支/版本（如 `dev`、`v1.0`），默认 main |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
-| `--resumable` | 目录大文件上传接口；当前 `yuto` 版本存在已知兼容性缺陷 |
+| `--resumable` | 目录大文件断点续传接口，重复同一命令可复用本地上传状态 |
 | `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
 
 #### 进阶示例
@@ -177,10 +189,8 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 
 > ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m` 不生效（会产生多次提交）；`--repo-type` 必填，未指定时默认 `model`。
 
-> 当前 `yuto` 版本已确认存在兼容性问题：锁定的
-> `huggingface-hub==1.1.7` 不接受传给 `upload_large_folder()` 方法的
-> `token` 参数，因此 `--resumable` 暂不能视为可用能力。`--revision dev` 的
-> AtomGit 远端分支行为也尚未完成验证。详见
+> 当前实现通过 `HfApi(token=...)` 认证，并已完成 404 MB 文件的真实中断、恢复
+> 和 SHA-256 校验。`--revision dev` 的 AtomGit 远端分支行为仍未完成验证。详见
 > [上传实现分析](docs/upload_command_analysis.md)。
 
 #### 错误处理
@@ -562,7 +572,7 @@ atomgit/
 
 ```bash
 # 克隆项目
-git clone https://atomgit.com/gitcode-ai/atomgit_cli.git
+git clone https://github.com/JoyJeeo/atomgit_cli.git
 cd atomgit_cli
 
 # 激活项目约定环境
@@ -617,8 +627,7 @@ python tests/test_upload_error_handling.py  # 错误处理集成
 
 ## 许可证
 
-打包元数据声明为 MIT License。仓库当前缺少独立 `LICENSE` 文件，正式对外分发
-前需要项目所有者确认版权主体并补齐许可证文本。
+本项目由 JoyJeeo 以 [Apache License 2.0](LICENSE) 授权。
 
 ## 贡献
 
@@ -634,6 +643,6 @@ python tests/test_upload_error_handling.py  # 错误处理集成
 
 ## 联系我们
 
-- 邮箱：support@atomgit.com
-- 项目地址：https://atomgit.com/gitcode-ai/atomgit_cli
-- 问题报告：https://atomgit.com/gitcode-ai/atomgit_cli/issues
+- 邮箱：JoyJeeo@163.com
+- 项目地址：https://github.com/JoyJeeo/atomgit_cli
+- 问题报告：https://github.com/JoyJeeo/atomgit_cli/issues

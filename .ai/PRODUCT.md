@@ -6,7 +6,7 @@
 - CLI command: `atomgit`
 - Python imports: `atomgit` and compatibility module `atomgit_hub`
 - Development mainline: `yuto`
-- Current package version: `1.0.5`
+- Current package version: `1.0.5+yuto.1`
 
 ## Users
 
@@ -47,10 +47,11 @@ every remote path is verified; known status follows the interface list.
   single-file repository subdirectory.
 - Implemented and covered mainly by offline mocks: progress control, ignore
   parsing, repository type, revision forwarding, and upload error categories.
-- Confirmed broken with the locked dependency: resumable upload authentication.
-- Not yet established by valid remote tests: dataset upload, new model/dataset
-  repository creation, revision branch behavior, and multi-level repository ID
-  consistency.
+- Verified remotely: resumable upload authentication and interruption recovery,
+  dataset transfer through the AtomGit-compatible model route, credential
+  permissions, `load_dataset`, and interrupted-download recovery.
+- Not yet established by valid remote tests: revision branch behavior and
+  multi-level repository ID consistency.
 - Known SDK defects: non-root upload temporary-directory lifetime, ignored
   upload parameters, and leaked timeout state.
 

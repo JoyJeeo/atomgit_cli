@@ -44,6 +44,6 @@ SDK。项目复用 Hugging Face Hub 协议能力，并将端点切换到 AtomGit
 
 ## 当前重点
 
-当前阶段优先恢复已经宣传但尚未可靠工作的能力，包括 resumable、revision、
-SDK 子目录上传和全局状态恢复；随后将现有自执行测试迁移为标准测试体系，补齐
-建仓、下载、Git helper、SDK 和安装包验证。
+resumable、dataset 传输、凭据权限、数据集加载、CLI 全局状态和下载中断恢复已
+完成实现与验证。下一阶段重点是 revision 远端语义、多层 repo ID、SDK 上传一致
+性、标准测试体系和版本化安装脚本。

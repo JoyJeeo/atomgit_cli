@@ -31,13 +31,14 @@ def read_requirements():
 
 setup(
     name='atomgit',
-    version='1.0.5',
-    author='AtomGit CLI Team',
-    author_email='sa@atomgit.com',
+    version='1.0.5+yuto.1',
+    author='JoyJeeo',
+    author_email='JoyJeeo@163.com',
     description='AtomGit模型文件上传下载CLI工具',
     long_description=read_readme(),
     long_description_content_type='text/markdown',
-    url='https://atomgit.com/gitcode-ai/atomgit_cli',
+    url='https://github.com/JoyJeeo/atomgit_cli',
+    license='Apache-2.0',
     packages=['atomgit'],
     package_dir={'atomgit': '.'},
     py_modules=['atomgit_hub'],
@@ -51,7 +52,6 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.8',
@@ -66,7 +66,7 @@ setup(
     ],
     keywords='transformers huggingface model dataset upload download cli',
     project_urls={
-        'Bug Reports': 'https://atomgit.com/gitcode-ai/atomgit_cli/issues',
-        'Source': 'https://atomgit.com/gitcode-ai/atomgit_cli',
+        'Bug Reports': 'https://github.com/JoyJeeo/atomgit_cli/issues',
+        'Source': 'https://github.com/JoyJeeo/atomgit_cli',
     },
-) 
+)

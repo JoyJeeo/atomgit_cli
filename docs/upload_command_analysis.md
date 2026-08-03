@@ -1,6 +1,6 @@
 # `atomgit upload` 当前实现分析
 
-> 本文基于 `yuto` 分支版本 1.0.5 的当前源码。它同时记录已实现参数和已知缺陷，
+> 本文基于 `yuto` 分支版本 1.0.5+yuto.1 的当前源码。它同时记录已实现参数和已知缺陷，
 > 避免把 CLI 帮助中的能力直接等同于远程验证通过。
 
 ## 1. 命令接口
@@ -91,30 +91,22 @@ cli.upload
 
 ## 5. Resumable 目录上传
 
-resumable 分支计划调用：
+resumable 分支调用：
 
 ```text
-HfApi().upload_large_folder(
+HfApi(token=保存的_token).upload_large_folder(
     repo_id=...,
     folder_path=...,
     repo_type=model-or-dataset,
-    token=...,
     revision=...,
     ignore_patterns=...,
     num_workers=...,
 )
 ```
 
-当前锁定的 `huggingface-hub==1.1.7` 中，`token` 应传给 `HfApi(token=...)`
-构造函数，`upload_large_folder()` 方法本身不接受 `token`。因此当前
-`--resumable` 会在调用阶段失败：
-
-```text
-HfApi.upload_large_folder() got an unexpected keyword argument 'token'
-```
-
-这是已经确认的兼容性缺陷。现有 fake 接受宽松参数，因此旧测试没有发现真实
-签名问题。
+当前锁定的 `huggingface-hub==1.1.7` 要求把 `token` 传给 `HfApi(token=...)`
+构造函数，`upload_large_folder()` 方法本身不接收 `token`。实现和严格签名测试
+均遵守该契约。
 
 HF large-folder 模式的其他限制：
 
@@ -123,17 +115,14 @@ HF large-folder 模式的其他限制：
 - repo type 必填，CLI 未指定时补为 `model`；
 - 续传元数据由 HF 写入上传目录下的缓存位置。
 
-修复参数问题后仍需通过真实的“中断 -> 再次执行 -> 文件校验”测试，才能声明
-断点续传完成。
+真实 404 MB 文件测试已完成“中断 -> 再次执行 -> 下载回读”，文件大小和
+SHA-256 均一致。
 
 ## 6. 进度条和 timeout
 
-上传前调用 `_set_progress_bar(progress_bar)`，退出上传分支时恢复为开启状态。
-由于 HF 的进度条开关是进程级全局状态，并发调用仍需谨慎。
-
-timeout 通过覆盖 `hf_constants.DEFAULT_REQUEST_TIMEOUT` 实现。当前代码没有保存并
-恢复原值，所以一次上传会永久改变同一 Python 进程后续 HF 请求的 timeout。
-注释中的“临时修改”与实际行为不一致，这是已知缺陷。
+上传前保存完整进度条状态和 `hf_constants.DEFAULT_REQUEST_TIMEOUT`，退出上传
+分支时在 `finally` 中恢复调用前状态。由于这些仍是进程级全局值，并发调用需
+谨慎。
 
 ## 7. Repo ID
 
@@ -171,13 +160,11 @@ API 方法打印类型和建议后返回 `False`，CLI 再以非零状态退出�
 - resumable 参数构造；
 - 错误分类。
 
-这些测试没有证明：
+离线契约与远程测试还验证了 resumable 的真实 HF 签名、dataset 上传路由、
+CLI 全局状态恢复以及大文件中断恢复。这些测试仍没有证明：
 
-- resumable 与真实 HF 签名兼容；
 - revision 会在 AtomGit 创建或写入目标远端分支；
-- 合法 dataset 仓库端到端上传成功；
 - 多层 repo ID 上传成功；
-- timeout 在同一进程中正确恢复；
 - ignore 在真实远端确实排除了文件。
 
 远程测试应拆分每项能力并执行上传、下载回读和内容校验，详见

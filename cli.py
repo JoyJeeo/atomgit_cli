@@ -41,7 +41,7 @@ except ImportError:
 
 
 @click.group()
-@click.version_option(version='1.0.5')
+@click.version_option(version='1.0.5+yuto.1')
 def cli():
     """AtomGit CLI - 基于Transformers和Hugging Face Hub的AtomGit平台模型文件上传下载工具"""
     pass
@@ -358,4 +358,4 @@ def config_show():
 
 
 if __name__ == '__main__':
-    cli() 
+    cli()

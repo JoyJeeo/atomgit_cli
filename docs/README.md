@@ -22,8 +22,8 @@
 - AI Issue 生命周期、实现/Review/修复 Prompt 和人工验收规则见
   [`.ai/WORKFLOW.md`](../.ai/WORKFLOW.md)。
 
-## 已知文档缺口
+## 发布状态
 
-- README 声明 MIT License，`setup.py` 也使用 MIT classifier，但仓库当前没有独立
-  `LICENSE` 文件。正式对外分发前应由项目所有者确认版权主体并补齐许可证文本。
-- README 的上游 PyPI 安装说明不代表 `yuto` 独立版本；独立安装渠道仍在规划中。
+- `yuto` 独立版本使用 `1.0.5+yuto.1` 包版本和 `v1.0.5-yuto.1` Git tag。
+- GitHub Release 提供 wheel、源码包和 `SHA256SUMS`；PyPI 仍代表上游渠道。
+- 项目由 JoyJeeo 以 Apache License 2.0 授权。

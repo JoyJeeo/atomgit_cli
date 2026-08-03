@@ -1,6 +1,6 @@
 # AtomGit CLI 当前架构
 
-> 本文描述 `yuto` 分支版本 1.0.5 的当前源码事实。已知缺陷会明确标注，不能把
+> 本文描述 `yuto` 分支版本 1.0.5+yuto.1 的当前源码事实。已知缺陷会明确标注，不能把
 > 设计目标当作已验证能力。
 
 ## 1. 项目形态
@@ -83,7 +83,7 @@ HF_HOME=~/.cache/atomgit
 ```
 
 这些是导入时副作用。HF 进度条和 `DEFAULT_REQUEST_TIMEOUT` 也是进程级全局
-状态。当前上传实现会恢复进度条，但不会恢复 timeout，这是已知缺陷。
+状态。CLI 上传会在成功和失败路径恢复调用前的完整状态。
 
 ## 5. 配置和登录
 
@@ -104,7 +104,7 @@ atomgit login
 
 风险：
 
-- token 文件没有在代码中显式强制 `0600`；
+- 配置目录和 token 文件分别强制为 `0700` 和 `0600`（Windows 权限语义由系统决定）；
 - Git helper 修改用户全局 Git 配置；
 - 登录 API 和生成的 helper 使用的 Authorization 形式不同；
 - 多处异常被吞掉，诊断信息有限。
@@ -128,11 +128,13 @@ atomgit upload PATH
 
 已知问题：
 
-- resumable 把 `token` 传给 `upload_large_folder()`，与 HF 1.1.7 真实签名不兼容；
 - 上传和建仓没有统一调用 CLI 的多层 repo ID 转换；
-- timeout 修改后没有恢复；
 - `.tmp_upload` 是当前工作目录下的共享临时目录，回退路径有并发风险；
 - `revision` 参数已透传，但 AtomGit 远端 `dev` 分支行为尚未验证成功。
+
+resumable 通过 `HfApi(token=...)` 认证，已使用真实 404 MB 文件验证中断、恢复和
+最终 SHA-256。dataset 上传在保留业务类型的同时使用 AtomGit 可用的共享 model
+传输路由。
 
 ## 7. 下载
 
@@ -193,7 +195,7 @@ CLI 下载调用该转换，但 CLI 上传和建仓直接传原始 ID。SDK 的�
 - 现有 9 个 `tests/test_upload_*.py` 文件是自执行脚本，不是 pytest 用例；
 - 它们主要用 fake 验证上传参数，没有覆盖大部分远程行为；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
-- 包名和版本为 `atomgit==1.0.5`；
+- 包名和版本为 `atomgit==1.0.5+yuto.1`；
 - `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；
 - `deploy.sh twine` 是真实 PyPI 写操作，不能作为日常验证运行。
 

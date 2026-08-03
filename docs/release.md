@@ -40,28 +40,26 @@ python -m pip install -e .
 `deploy.sh twine` 面向原有 PyPI 发布流程，需要发布 token，并会执行外部写
 操作。只有得到明确发布授权后才能运行。
 
-当前 `yuto` 与上游包版本都可能显示为 `1.0.5`，用户无法只凭版本判断安装
-来源。因此在独立分发建立前，不应把 PyPI 的 `atomgit` 默认视为 `yuto`
-版本。
+PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` 版本。
 
-## yuto 独立分发目标
+## yuto 独立分发
 
-推荐建立与上游 PyPI 区分的安装渠道：
+`yuto` 使用与上游 PyPI 区分的 GitHub Release 渠道：
 
-1. 使用可识别的版本，例如 `1.0.5+yuto.1` 或后续正式版本策略。
+1. 包版本使用 `1.0.5+yuto.1`，Git tag 使用 `v1.0.5-yuto.1`。
 2. 创建 GitHub Release，并上传 wheel 和源码归档。
 3. 为每个产物发布 SHA256。
 4. 提供仓库自有 `install.sh`，默认下载固定 Release，而不是不断变化的分支。
 5. 安装脚本支持显式版本，并验证校验和。
 
-预期用户入口可以是：
+后续版本化安装脚本的预期入口可以是：
 
 ```bash
 curl -fsSL <raw-install-script-url> | bash
 ```
 
-但在安装脚本、Release 和校验和真正创建前，这只是目标设计，不是当前可用
-安装方式。
+安装脚本尚未实现；当前用户应从固定 GitHub Release 下载 wheel，并使用随附的
+`SHA256SUMS` 校验后安装。
 
 ## 发布门禁
 
