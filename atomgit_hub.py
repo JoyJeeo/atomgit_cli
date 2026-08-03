@@ -326,51 +326,56 @@ def upload_folder(
     import tempfile
     import shutil
 
-    if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
-        # 如果要上传到根目录，直接使用源文件夹
-        upload_path = str(folder_path)
-    else:
-        # 如果要上传到特定路径，需要重新组织目录结构
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
+    temporary_directory = None
+    try:
+        if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
+            # 如果要上传到根目录，直接使用源文件夹
+            upload_path = str(folder_path)
+        else:
+            # 如果要上传到特定路径，需要重新组织目录结构
+            temporary_directory = tempfile.TemporaryDirectory()
+            temp_path = Path(temporary_directory.name)
+
             # 创建目标路径
             target_path = temp_path / path_in_repo.strip('./')
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # 复制整个目录树
             shutil.copytree(folder_path, target_path, dirs_exist_ok=True)
-            
-            upload_path = str(temp_path)
-    # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-    from huggingface_hub import constants as hf_constants
-    
-    # 保存原始超时配置
-    original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-    
-    # 临时修改超时配置
-    hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
-    
-    try:
-        # 使用huggingface_hub的upload_folder上传
-        commit_msg = commit_message or f"Upload folder {folder_path.name}"
-        result = hf_upload_folder(
-            repo_id=normalized_repo_id,
-            folder_path=upload_path,
-            token=token,
-            commit_message=commit_msg
-        )
-        
-        return result
 
-    except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}")
-        elif "404" in error_msg:
-            raise Exception(f"仓库不存在：{repo_id}")
-        else:
-            raise Exception(f"上传失败：{error_msg}")
+            upload_path = str(temp_path)
+        # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
+        from huggingface_hub import constants as hf_constants
+
+        # 保存原始超时配置
+        original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+
+        # 临时修改超时配置
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+
+        try:
+            # 使用huggingface_hub的upload_folder上传
+            commit_msg = commit_message or f"Upload folder {folder_path.name}"
+            result = hf_upload_folder(
+                repo_id=normalized_repo_id,
+                folder_path=upload_path,
+                token=token,
+                commit_message=commit_msg
+            )
+
+            return result
+
+        except Exception as e:
+            error_msg = str(e)
+            if "401" in error_msg or "403" in error_msg:
+                raise Exception(f"认证失败：{error_msg}")
+            elif "404" in error_msg:
+                raise Exception(f"仓库不存在：{repo_id}")
+            else:
+                raise Exception(f"上传失败：{error_msg}")
+    finally:
+        if temporary_directory is not None:
+            temporary_directory.cleanup()
 
 
 def create_repository(

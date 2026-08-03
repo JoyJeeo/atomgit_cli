@@ -4,6 +4,68 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-004`
+- Title: `Fix SDK subdirectory upload lifetime`
+- Type: `bug`, `sdk`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `ad05141`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+For a non-root `path_in_repo`, `atomgit_hub.upload_folder` creates a temporary
+directory inside a context manager but calls HF only after that context has
+already deleted the directory. The advertised SDK subdirectory upload cannot
+reliably read its upload source.
+
+## Scope
+
+In scope: keep the reorganized upload directory alive for the complete HF
+call, clean it on success and failure, and add an offline regression test.
+
+Out of scope: SDK parameter forwarding, timeout restoration, exception API
+redesign, CLI upload behavior, remote writes, and dependency changes.
+
+## Acceptance Criteria
+
+- The non-root temporary upload tree exists and contains the source content
+  while `hf_upload_folder` executes.
+- The temporary tree is removed after both success and HF failure.
+- Root uploads continue using the original directory without a copy.
+- Focused and complete offline tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation, tests, documentation if affected,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Regression: the previous implementation deleted a non-root temporary tree
+  before the HF call. `tests/test_sdk_upload_lifetime.py` now verifies the
+  tree and nested content exist during use.
+- Implementation: the SDK holds the temporary directory through the complete
+  upload and deterministically cleans it after success, HF failure, and local
+  preparation failure; root uploads continue using the source directory.
+- Focused verification passed 11/11. All 22 offline test scripts,
+  `python -m compileall -q .`, and `git diff --check` passed in the required
+  conda environment with isolated user state.
+- Independent review initially found cleanup depended on object destruction
+  when `copytree` failed. The preparation path was moved under `finally` and a
+  regression case was added. Re-review found no blocking issues. The known
+  SDK timeout leak remains explicitly out of scope for the next Issue.
+  Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-002
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-002`
 - Title: `Add locked Hugging Face API contract tests`
 - Type: `testing`, `compatibility`
