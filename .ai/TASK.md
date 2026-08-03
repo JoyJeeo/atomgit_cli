@@ -4,6 +4,71 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-005`
+- Title: `Honor supported SDK upload parameters`
+- Type: `bug`, `sdk`, `compatibility`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `de612ab`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The public SDK accepts `repo_type`, `revision`, `commit_description`, and
+`ignore_patterns` but silently drops all four. This creates behavior drift
+from the CLI and makes supported-looking calls behave differently from their
+documented contract.
+
+## Scope
+
+In scope: pass supported arguments to the locked HF upload API; map dataset
+uploads to AtomGit's verified model transfer route; reject non-main revisions
+consistently with the CLI; update the SDK docstring and add strict offline
+regression coverage.
+
+Out of scope: timeout restoration, stable exception classes, repo ID
+normalization redesign, CLI changes, remote writes, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Model/dataset type, main revision, commit description, and ignore patterns
+  have explicit tested behavior at the HF boundary.
+- Unsupported non-main revisions fail before any HF call.
+- The fake binds received arguments to the real HF 1.1.7 signature.
+- Existing public parameter names remain compatible.
+- Focused and complete offline tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation, tests, affected SDK documentation,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Regression coverage proves the SDK previously dropped public upload
+  parameters; the strict fake now binds every call to HF 1.1.7's real
+  `upload_folder` signature.
+- Implementation forwards model type, main revision, commit description, and
+  ignore patterns; dataset transfers use AtomGit's verified model route.
+  Unsupported repo types and non-main revisions fail before any HF call.
+- The SDK docstring now states supported repository/revision values and the
+  correct 300-second timeout default.
+- Focused test passed 14/14. All 23 offline test scripts,
+  `python -m compileall -q .`, and `git diff --check` passed with isolated
+  user state.
+- Independent review found one P2 input-boundary gap for arbitrary repo types;
+  validation and regression coverage were added. Re-review found no blocking
+  issues. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-004
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-004`
 - Title: `Fix SDK subdirectory upload lifetime`
 - Type: `bug`, `sdk`

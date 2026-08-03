@@ -194,7 +194,7 @@ def hub_download_url(
         repo_id (str): 仓库ID
         filename (str): 文件名
         revision (str, 可选): 版本/分支/标签
-        repo_type (str, 可选): 仓库类型
+        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset
     
     返回:
         str: 文件的下载URL
@@ -288,12 +288,13 @@ def upload_folder(
         repo_id (str): 仓库ID
         token (str, 可选): 认证token
         repo_type (str, 可选): 仓库类型
-        revision (str, 可选): 分支名
+        revision (str, 可选): 分支名。AtomGit 当前仅支持默认分支 main；
+                              其他值会在上传前被拒绝
         commit_message (str, 可选): 提交消息
         commit_description (str, 可选): 提交描述
         path_in_repo (str, 可选): 在仓库中的路径，默认为根目录
         ignore_patterns (List[str], 可选): 要忽略的文件模式
-        upload_timeout (float, 可选): 上传超时时间（秒），默认60秒（1分钟）。
+        upload_timeout (float, 可选): 上传超时时间（秒），默认300秒（5分钟）。
                                       对于大文件，服务器处理响应可能需要较长时间。
     
     返回:
@@ -315,6 +316,14 @@ def upload_folder(
     
     if not folder_path.is_dir():
         raise NotADirectoryError(f"路径不是目录: {folder_path}")
+
+    if repo_type not in (None, "model", "dataset"):
+        raise ValueError("repo_type 仅支持 model 或 dataset")
+
+    if revision not in (None, "", "main"):
+        raise ValueError(
+            "AtomGit 当前仅支持默认 revision main，非默认分支不会被创建"
+        )
     
     # 如果没有提供token，尝试使用保存的token
     if token is None:
@@ -356,12 +365,25 @@ def upload_folder(
         try:
             # 使用huggingface_hub的upload_folder上传
             commit_msg = commit_message or f"Upload folder {folder_path.name}"
-            result = hf_upload_folder(
+            upload_kwargs = dict(
                 repo_id=normalized_repo_id,
                 folder_path=upload_path,
                 token=token,
-                commit_message=commit_msg
+                commit_message=commit_msg,
             )
+            if repo_type is not None:
+                # AtomGit 的 dataset 仓库保留业务类型，但当前上传传输
+                # 使用与 model 相同的兼容路由。
+                upload_kwargs["repo_type"] = (
+                    "model" if repo_type == "dataset" else repo_type
+                )
+            if revision:
+                upload_kwargs["revision"] = revision
+            if commit_description is not None:
+                upload_kwargs["commit_description"] = commit_description
+            if ignore_patterns:
+                upload_kwargs["ignore_patterns"] = ignore_patterns
+            result = hf_upload_folder(**upload_kwargs)
 
             return result
 
