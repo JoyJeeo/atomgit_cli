@@ -88,6 +88,16 @@ closure. No release or PyPI publication.
 - Delivery: commit `91fc12a` pushed; PR #17 merged into `yuto`; Issue #11 was
   already closed remotely. No release was created.
 
+## Issue #8 Delivery
+
+- Fixed generated Git helper identity authentication to use the raw token
+  header shared by login; failed identity lookup now returns no credential
+  instead of `atomgit-user`.
+- Added `tests/test_git_helper_identity.py`; focused test and all offline test
+  scripts passed, as did compileall and diff check.
+- Review found no blocking findings. Commit/PR delivery is authorized; no
+  release or PyPI publication.
+
 <!-- Previous Issue #13 delivery record retained below for historical context. -->
 
 ## Historical Issue #13

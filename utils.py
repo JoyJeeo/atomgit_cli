@@ -412,7 +412,7 @@ def get_atomgit_username(token):
         req = urllib.request.Request(
             api_url,
             headers={
-                'Authorization': f'token {token}',
+                'Authorization': token,
                 'User-Agent': 'atomgit-cli',
                 'Accept': 'application/json'
             }
@@ -425,10 +425,8 @@ def get_atomgit_username(token):
                 if login:
                     return login
     except Exception:
-        pass
-    
-    # API调用失败时返回默认用户名
-    return 'atomgit-user'
+        return None
+    return None
 
 def main():
     operation = sys.argv[1] if len(sys.argv) > 1 else 'get'
@@ -457,11 +455,10 @@ def main():
                     if token:
                         # 获取真实的AtomGit用户名
                         username = get_atomgit_username(token)
-                        
-                        # 输出认证信息
-                        print(f'username={username}')
-                        print(f'password={token}')
-                        return
+                        if username:
+                            print(f'username={username}')
+                            print(f'password={token}')
+                            return
                 except Exception:
                     pass
     
