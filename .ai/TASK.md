@@ -4,15 +4,73 @@ Status: `completed`
 
 ## Identity
 
-- GitHub Issue: `#13`
-- Title: `[P1] AtomGit credential helper does not isolate inherited Git helpers`
-- Type: `security`, `bug`
+- GitHub Issue: `#1`
+- Title: `[P1] Resumable upload timeout must cancel worker and report failure`
+- Type: `bug`, `compatibility`
 - Priority: `P1`
-- Branch: `codex/issue-13-credential-helper-isolation`
-- Base: `yuto` at `22db026311be589cf5481daa9ccbe51d4a9328f1`
+- Branch: `codex/issue-1-resumable-recovery`
+- Base: `yuto` at `0f8a678`
 - Delivery mode: authorized self-accepted branch delivery
 
 ## User Impact And Evidence
+
+The resumable directory upload called `upload_large_folder` directly. When
+the underlying worker exceeded `upload_timeout`, the CLI waited for it and
+could return success even though the requested timeout had elapsed. The new
+regression test reproduced a 0.25s worker completing after a 0.05s timeout.
+
+## Current And Expected Behavior
+
+- Current: resumable uploads can block beyond the configured timeout and report
+  success after the worker finishes.
+- Expected: the upload is bounded by `upload_timeout`; an expired transfer is
+  terminated and reported as failure, while successful transfers preserve
+  authentication and upload options.
+
+## Scope
+
+In scope: resumable upload execution, timeout cancellation, worker result
+propagation, and offline regression coverage.
+
+Out of scope: HF transfer protocol changes, ordinary uploads, remote writes,
+or release work.
+
+## Acceptance Criteria
+
+- A slow resumable worker returns failure within the configured timeout.
+- The worker is terminated after timeout and cannot later turn the operation
+  into success.
+- A successful worker returns success and keeps the existing token/API path.
+- Existing resumable CLI options and all offline tests remain green.
+
+## Required Tests
+
+- `python tests/test_resumable_recovery.py`
+- `python tests/test_upload_resumable.py`
+- all `tests/test_*.py`, `python -m compileall -q .`, and `git diff --check`.
+
+## Permissions
+
+Authorized: local implementation/tests, commit, push, PR merge, and Issue #1
+closure. No release or PyPI publication.
+
+## Delivery Record
+
+- Regression: focused test failed before the fix (5 checks, timeout returned
+  success and exceeded the bound).
+- Implementation: resumable upload now runs in an isolated multiprocessing
+  worker, joins for the requested timeout, terminates expired workers, and
+  propagates worker failures without exposing token data.
+- Verification: focused test 5/5; resumable CLI test 13/13; all offline test
+  scripts passed; compileall and diff check passed.
+- Review: independent diff review found no blocking correctness, security,
+  compatibility, or scope findings. Residual risk is limited to platform
+  multiprocessing behavior and requires future live validation.
+- Delivery: pending commit, push, PR merge, and Issue #1 closure.
+
+<!-- Previous Issue #13 delivery record retained below for historical context. -->
+
+## Historical Issue #13
 
 After `atomgit login`, Git combines the AtomGit host-specific helper with an
 inherited generic helper. A live private `git ls-remote` invoked the macOS
