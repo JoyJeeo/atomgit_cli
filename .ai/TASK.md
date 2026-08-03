@@ -4,6 +4,68 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-008`
+- Title: `Replace shared single-file upload fallback directory`
+- Type: `bug`, `security`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `bbce9ff`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+When single-file upload falls back to `upload_folder`, it creates the fixed
+`.tmp_upload` directory in the caller's working directory. Concurrent commands
+can overwrite or delete each other's content, and interrupted processes can
+leave user-visible artifacts.
+
+## Scope
+
+In scope: use a unique system temporary directory for every fallback call,
+preserve upload layout and cleanup on success/failure, and add offline
+regression coverage.
+
+Out of scope: default direct `upload_file`, SDK upload behavior, ignore
+semantics, remote writes, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Every fallback invocation uses a unique directory outside the working tree.
+- The source content and `path_in_repo` layout exist during the HF call.
+- Temporary directories are removed after success and failure.
+- Existing direct-upload behavior and complete offline tests remain green.
+
+## Permissions
+
+- Authorized: local implementation, tests, affected documentation,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Replaced the fixed working-directory `.tmp_upload` fallback with a unique
+  `TemporaryDirectory` per call while preserving repository layout and HF
+  arguments.
+- Regression test passed 12/12 and proves content lifetime, uniqueness,
+  cleanup after success/failure, and absence of a working-tree fallback.
+  Existing direct-file and ignore suites passed 14/14 and 22/22.
+- Updated API, architecture, and upload-analysis documentation to describe
+  the unique temporary-resource contract.
+- All 26 offline scripts, `python -m compileall -q .`, and
+  `git diff --check` passed with isolated user state.
+- Independent review found no blocking implementation issue and identified
+  stale architecture text, which was corrected before re-review. Residual
+  abrupt-process cleanup is limited to normal operating-system temporary-file
+  semantics. Verdict: `APPROVED`.
+
+# Completed Issue SDK-CREATE-VISIBILITY
+
+Status: `completed`
+
+## Identity
+
 - Local Issue: `SDK-CREATE-VISIBILITY`
 - Title: `Align SDK repository creation with verified AtomGit semantics`
 - Type: `bug`, `sdk`, `compatibility`

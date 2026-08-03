@@ -290,9 +290,8 @@ class HuggingFaceAPI:
         """上传单个文件 - 使用Hugging Face Hub SDK
 
         优先使用 HF ``upload_file`` 直接以文件路径上传，避免旧实现中
-        "先 copy 到 ``.tmp_upload`` 再上传"的额外本地拷贝开销；仅在
-        HF 版本过旧（无 ``upload_file``）时回退到 ``upload_folder``
-        + 临时目录拷贝的旧行为。
+        "先复制再上传"的额外本地拷贝开销；仅在 HF 版本过旧（无
+        ``upload_file``）时回退到 ``upload_folder`` + 唯一系统临时目录。
 
         Args:
             path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
@@ -354,9 +353,9 @@ class HuggingFaceAPI:
 
                 # 路径1（回退）：upload_folder + 临时目录拷贝（旧实现）
                 # 触发条件：HF 版本过旧无 upload_file，或用户传了 ignore_patterns
-                temp_dir = Path.cwd() / ".tmp_upload"
-                temp_dir.mkdir(exist_ok=True)
-                try:
+                import tempfile
+                with tempfile.TemporaryDirectory(prefix="atomgit-upload-") as temp_name:
+                    temp_dir = Path(temp_name)
                     if pipr:
                         target_file = temp_dir / pipr / file_path.name
                         target_file.parent.mkdir(parents=True, exist_ok=True)
@@ -382,10 +381,6 @@ class HuggingFaceAPI:
                         upload_kwargs['ignore_patterns'] = ignore_patterns
                     upload_folder(**upload_kwargs)
                     return True
-                finally:
-                    import shutil
-                    if temp_dir.exists():
-                        shutil.rmtree(temp_dir)
             finally:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
                 _restore_progress_bar_state(original_progress_state)

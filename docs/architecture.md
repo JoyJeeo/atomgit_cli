@@ -131,7 +131,7 @@ atomgit upload PATH
 已知问题：
 
 - 上传和建仓没有统一调用 CLI 的多层 repo ID 转换；
-- `.tmp_upload` 是当前工作目录下的共享临时目录，回退路径有并发风险；
+- 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
 - `revision` 参数已透传，但 AtomGit 远端 `dev` 分支行为尚未验证成功。
 
 resumable 通过 `HfApi(token=...)` 认证，已使用真实 404 MB 文件验证中断、恢复和
