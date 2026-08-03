@@ -228,3 +228,10 @@ Out of scope:
 - Human acceptance: maintainer waived manual acceptance and authorized
   self-accepted commit/push, PR merge, and Issue closure after the recorded
   tests and review.
+
+## Issue #12 Delivery
+
+- Resumable upload statistics exclude only the root `.cache/huggingface`
+  metadata subtree; user-created nested `.cache` files remain counted.
+- Added `tests/test_resumable_stats.py`; focused/full offline tests, compileall,
+  and diff check passed.

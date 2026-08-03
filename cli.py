@@ -254,8 +254,8 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             sys.exit(1)
 
     elif path.is_dir():
-        file_count = count_files_in_directory(path)
-        dir_size = format_file_size(get_directory_size(path))
+        file_count = count_files_in_directory(path, exclude_resumable_metadata=resumable)
+        dir_size = format_file_size(get_directory_size(path, exclude_resumable_metadata=resumable))
 
         print_info(f"正在上传目录: {path}")
         print_info(f"文件数量: {file_count}")

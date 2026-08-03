@@ -190,24 +190,34 @@ def format_file_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} {size_names[i]}"
 
 
-def get_directory_size(dir_path: Path) -> int:
+def _is_resumable_metadata(path: Path, root: Path) -> bool:
+    """Return whether a file belongs to HF's resumable metadata subtree."""
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    parts = relative.parts
+    return len(parts) >= 2 and parts[0] == ".cache" and parts[1] == "huggingface"
+
+
+def get_directory_size(dir_path: Path, exclude_resumable_metadata: bool = False) -> int:
     """获取目录大小"""
     total_size = 0
     try:
         for file_path in dir_path.rglob('*'):
-            if file_path.is_file():
+            if file_path.is_file() and not (exclude_resumable_metadata and _is_resumable_metadata(file_path, dir_path)):
                 total_size += get_file_size(file_path)
     except OSError:
         pass
     return total_size
 
 
-def count_files_in_directory(dir_path: Path) -> int:
+def count_files_in_directory(dir_path: Path, exclude_resumable_metadata: bool = False) -> int:
     """统计目录中的文件数量"""
     count = 0
     try:
         for file_path in dir_path.rglob('*'):
-            if file_path.is_file():
+            if file_path.is_file() and not (exclude_resumable_metadata and _is_resumable_metadata(file_path, dir_path)):
                 count += 1
     except OSError:
         pass
