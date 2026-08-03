@@ -67,6 +67,10 @@ Status: `active`
   for `atomgit` and `atomgit_hub`. The wheel contains the Apache-2.0 license.
 - Historical builds: `v1.0.1`, `v1.0.2`, `v1.0.3`, and `v1.0.5` built and
   passed the same isolated wheel smoke tests.
+- Reproducibility: all published wheels were reproduced byte-for-byte with the
+  same full build pipeline and commit epoch. Deterministic `git archive` source
+  packages were generated twice and compared byte-for-byte for every tag;
+  setuptools sdists were excluded because their archive timestamps varied.
 - `v1.0.0` exception: its committed package metadata contains no dependencies,
   and top-level `import atomgit_hub` fails even after installing the intended
   dependencies. Preserve the tag but publish it only as a clearly marked
@@ -74,5 +78,6 @@ Status: `active`
 - Independent review: initial `REQUEST CHANGES` for the `v1.0.0` artifact
   contract and README checksum instructions; both findings were corrected.
   Re-review found no blocking issues and returned `APPROVED`.
-- Tags and Releases: pending.
+- Tags and Releases: ready for authorized publication; no tag or Release exists
+  yet at the time of this record.
 - Post-release verification: pending.
