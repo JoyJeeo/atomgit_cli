@@ -4,6 +4,70 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-009`
+- Title: `Provide a standard isolated pytest suite`
+- Type: `testing`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `7554857`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The repository's self-executing test scripts are not collected by pytest and
+several patch process-global objects at import time. Maintainers must run a
+custom shell loop, and naïve pytest collection could allow tests to contaminate
+one another.
+
+## Scope
+
+In scope: add a Python-3.8-compatible development test dependency, configure
+pytest to collect an isolated subprocess matrix, preserve every existing
+script and exit assertion, isolate HOME/Git state per case, and document one
+standard offline command.
+
+Out of scope: rewriting every legacy assertion into native pytest functions,
+behavior changes, remote tests, and dependency upgrades outside test tooling.
+
+## Acceptance Criteria
+
+- `python -m pytest` collects one case for every self-executing test script.
+- Each case runs in a separate process with isolated HOME and Git config.
+- A failing script exposes captured stdout/stderr and fails pytest.
+- The development dependency remains compatible with Python 3.8.
+- Pytest, direct-script compatibility, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local test/tooling/documentation changes, installation of the
+  declared test dependency in `atomgit_cli`, cohesive commit, and branch push.
+- Not authorized: AtomGit remote writes, real credential changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added `requirements-dev.txt` with `pytest>=7.4,<8.4`, preserving Python 3.8
+  compatibility, plus explicit pytest configuration and a dynamic subprocess
+  matrix for every `tests/test_*.py` script.
+- Every case receives an isolated HOME, global Git config path, disabled
+  system Git config, separate Python process, captured diagnostics, and a
+  bounded timeout. Legacy direct-script execution remains available.
+- Installed pytest 8.3.5 in the required conda environment.
+- `python -m pytest` collected and passed 26/26 cases in 917.01 seconds.
+  `python -m compileall -q .` and `git diff --check` passed.
+- Updated AI testing rules, maintainer testing guidance, README, and
+  architecture facts to make pytest the standard complete offline command.
+- Independent review found no blocking collection, isolation, credential, or
+  compatibility issue. The suite reports pytest case counts separately from
+  legacy internal assertion totals. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-008
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-008`
 - Title: `Replace shared single-file upload fallback directory`
 - Type: `bug`, `security`

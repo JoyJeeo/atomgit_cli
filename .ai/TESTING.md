@@ -64,17 +64,19 @@ download.
 
 ## Current Repository Tests
 
-The existing `tests/test_upload_*.py` files are executable scripts with custom
-assertions, not standard pytest tests. Until migration, run every script and
-honor its exit code. Do not report `pytest` coverage for tests pytest did not
-collect.
+The existing `tests/test_*.py` files retain their self-executing custom
+assertions for compatibility. `tests/pytest_offline_scripts.py` collects each
+script as a separate pytest case and runs it in an isolated subprocess with a
+temporary HOME and Git configuration. Report the collected pytest case count,
+not internal custom assertion totals, as the pytest test count.
 
 ## Required Checks
 
 For a focused change, run the affected test scripts first. Before completion,
-run all available offline tests plus:
+run the complete isolated suite plus:
 
 ```bash
+python -m pytest
 python -m compileall -q .
 git diff --check
 ```

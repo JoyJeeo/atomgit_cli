@@ -2,9 +2,9 @@
 
 ## 当前状态
 
-仓库当前的 `tests/test_upload_*.py` 是可直接执行的 Python 测试脚本，内部使用
-自定义 `check()` 聚合断言，并通过进程退出码表示结果。它们不是标准 pytest
-测试，因此不能用 pytest 收集数量或覆盖率代表这些脚本已经运行。
+仓库保留可直接执行的 `tests/test_*.py` 测试脚本，内部使用自定义 `check()`
+聚合断言，并通过进程退出码表示结果。`pytest_offline_scripts.py` 会把每个脚本
+收集为独立 pytest case，并在隔离子进程、临时 HOME 和临时 Git 配置中运行。
 
 现有测试主要覆盖上传参数透传：
 
@@ -26,6 +26,7 @@
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate atomgit_cli
 python -m pip install -e .
+python -m pip install -r requirements-dev.txt
 ```
 
 测试不得读取真实的 `~/.atomgit/config.json`。离线测试应替换配置访问并使用
@@ -33,7 +34,13 @@ python -m pip install -e .
 
 ## 运行现有测试
 
-逐个执行所有现有脚本，并以退出码为准：
+标准完整离线命令：
+
+```bash
+python -m pytest
+```
+
+需要诊断单个旧脚本时，仍可直接运行并以退出码为准：
 
 ```bash
 for test_file in tests/test_*.py; do

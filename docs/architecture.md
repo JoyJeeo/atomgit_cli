@@ -41,7 +41,7 @@ atomgit_cli/
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
 ├── utils.py              # 校验、格式化和 Git helper
-├── tests/                # 当前为自执行上传测试脚本
+├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
 ├── requirements.txt      # 运行依赖
 └── deploy.sh             # 本地构建、安装和 PyPI 发布脚本
@@ -194,8 +194,8 @@ CLI 下载调用该转换，但 CLI 上传和建仓直接传原始 ID。SDK 的�
 
 ## 10. 测试和打包
 
-- 现有 9 个 `tests/test_upload_*.py` 文件是自执行脚本，不是 pytest 用例；
-- 它们主要用 fake 验证上传参数，没有覆盖大部分远程行为；
+- 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；
+- 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
 - 包名和版本为 `atomgit==1.0.5+yuto.1`；
 - `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；

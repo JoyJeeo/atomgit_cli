@@ -612,8 +612,8 @@ python tests/test_upload_error_handling.py  # 错误处理集成
 python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 ```
 
-现有测试是自执行 Python 脚本，不是 pytest 收集用例。完整测试说明见
-[docs/testing.md](docs/testing.md)。
+现有自执行脚本由隔离 pytest 矩阵统一收集。安装开发依赖后运行
+`python -m pytest`；完整说明见 [docs/testing.md](docs/testing.md)。
 
 ## Python版本兼容性
 
