@@ -260,6 +260,9 @@ class HuggingFaceAPI:
                     private: bool = False) -> bool:
         """创建仓库 - 使用Hugging Face Hub SDK"""
         try:
+            if not private:
+                print("AtomGit 当前无法可靠验证公开仓库语义；请使用 --private 创建私有仓库")
+                return False
             credentials = config.get_credentials()
             if not credentials:
                 print("❌ 未找到登录凭证")

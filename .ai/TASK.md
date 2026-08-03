@@ -243,3 +243,11 @@ Out of scope:
   to the default branch.
 - Added `tests/test_revision_rejection.py`; updated revision contract coverage.
 - Focused and full offline tests, compileall, and diff check passed.
+
+## Issue #9 Delivery
+
+- AtomGit public repository semantics are not reliable in the observed remote
+  service; `create_repo(private=False)` now rejects instead of reporting false
+  success. Private creation remains supported and forwards the requested type.
+- Added `tests/test_create_visibility.py`; focused/full offline tests,
+  compileall, and diff check passed.
