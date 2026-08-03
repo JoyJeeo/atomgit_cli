@@ -178,7 +178,7 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
 - `repo_type`、`revision`、`commit_description`、`ignore_patterns` 形参没有传给
   HF `upload_folder`；
 - 保存的 timeout 没有恢复；
-- 部分旧 snapshot 参数依赖 HF 兼容装饰器，只产生弃用警告；
+- 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
 - SDK 普遍用通用 `Exception` 包装错误。
 
 ## 9. Repo ID 转换

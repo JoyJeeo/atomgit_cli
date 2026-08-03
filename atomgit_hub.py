@@ -9,6 +9,7 @@ AtomGit Hub SDK - 类似huggingface_hub的SDK接口
 """
 
 import os
+import warnings
 from typing import Optional, Union, List, Dict, Any
 from pathlib import Path
 
@@ -151,16 +152,28 @@ def snapshot_download(
         kwargs['local_dir'] = str(local_dir)
     if token is not None:
         kwargs['token'] = token
+
+    legacy_options = []
+    if local_dir_use_symlinks != "auto":
+        legacy_options.append("local_dir_use_symlinks")
+    if proxies is not None:
+        legacy_options.append("proxies")
+    if resume_download:
+        legacy_options.append("resume_download")
+    if legacy_options:
+        warnings.warn(
+            "huggingface-hub 1.1.7 no longer accepts and AtomGit ignores: "
+            + ", ".join(legacy_options),
+            FutureWarning,
+            stacklevel=2,
+        )
     
     # 其他参数
     kwargs.update({
-        'local_dir_use_symlinks': local_dir_use_symlinks,
         'library_name': library_name or "atomgit_hub",
         'library_version': library_version,
         'user_agent': user_agent,
-        'proxies': proxies,
         'etag_timeout': etag_timeout,
-        'resume_download': resume_download,
         'force_download': force_download,
         'local_files_only': local_files_only,
         'allow_patterns': allow_patterns,

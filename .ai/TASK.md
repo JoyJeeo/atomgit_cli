@@ -4,6 +4,72 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-011`
+- Title: `Add strict CLI and SDK download contract coverage`
+- Type: `testing`, `cli`, `sdk`, `compatibility`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `49796e3`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+Download interruption recovery is tested, but token selection, CLI directory
+and force behavior, SDK argument forwarding, and HF 1.1.7 signature binding
+are not. The SDK snapshot wrapper still forwards removed legacy HF arguments
+through a compatibility decorator, hiding drift from the real signature.
+
+## Scope
+
+In scope: strict offline download tests for CLI/API/SDK public/private token
+selection, local directories, force, revision/pattern options, errors, and
+legacy snapshot option handling; stop passing removed options to HF while
+preserving public compatibility parameters with warnings when meaningful.
+
+Out of scope: live public/private repositories, multi-level repo ID policy,
+new download features, stable exception hierarchy, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Anonymous calls omit tokens and authenticated calls use explicit/stored
+  tokens at the correct boundary.
+- CLI default/explicit directories and `--force` are observable and tested.
+- SDK snapshot/file calls bind to real HF 1.1.7 signatures.
+- Removed legacy snapshot options are not forwarded; non-default use warns.
+- Deterministic failures remain nonzero/actionable and existing recovery tests
+  stay green.
+- Pytest, focused scripts, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation, tests, affected documentation, cohesive
+  commit, and push of the current branch.
+- Not authorized: live AtomGit requests, real credential/Git changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added strict SDK snapshot/file, CLI-facing API, and Click command coverage
+  for stored/explicit/anonymous token selection, revision, patterns, local
+  directories, force behavior, result propagation, and failure guidance.
+- Removed legacy `local_dir_use_symlinks`, `proxies`, and `resume_download`
+  from calls into HF 1.1.7 while preserving public compatibility parameters;
+  non-default legacy use emits one actionable `FutureWarning`.
+- Focused download contract passed 24/24 and interruption recovery remained
+  12/12. `python -m pytest` collected and passed 28/28 cases;
+  `python -m compileall -q .` and `git diff --check` passed.
+- Architecture documentation now describes current legacy-option behavior.
+- Independent review found no blocking compatibility, token, path, error, or
+  scope issue. Live public/private access remains a separately authorized
+  acceptance matrix. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-010
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-010`
 - Title: `Complete offline login and configuration tests`
 - Type: `testing`, `security`
