@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 ## Identity
 
@@ -68,6 +68,24 @@ closure. No release or PyPI publication.
   multiprocessing behavior and requires future live validation.
 - Delivery: commit `57bb20d` pushed; PR #15 merged into `yuto` as merge commit
   `949e8c9`; Issue #1 was already closed remotely and no release was created.
+
+## Active Issue #11
+
+- Title: `[P1] Validate positive timeout and worker counts before starting uploads`
+- Type: `bug`, `cli`; Priority: `P1`
+- Branch: `codex/issue-11-upload-validation`; Base: `yuto` at `cedbc80`
+- Scope: validate `--timeout` and `--num-workers` before upload execution;
+  add offline CLI regression coverage. No remote writes or release.
+- Acceptance: non-positive values exit 2 with actionable output; positive
+  values remain accepted; existing offline suite remains green.
+- Regression: new `tests/test_upload_validation.py` covers four invalid cases
+  and one valid case; pre-fix invalid timeout cases reached upload execution.
+- Implementation: `cli.upload` rejects timeout <= 0 and worker counts <= 0.
+- Verification: focused test 5/5; all `tests/test_*.py`, compileall, and diff
+  check passed.
+- Review: independent review found no blocking findings; validation is
+  side-effect free and preserves existing interfaces.
+- Delivery: pending commit, push, PR merge, and Issue #11 closure.
 
 <!-- Previous Issue #13 delivery record retained below for historical context. -->
 
