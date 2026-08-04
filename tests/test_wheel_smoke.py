@@ -25,6 +25,7 @@ SOURCE_FILES = (
     "LICENSE",
     "CHANGELOG.md",
     "MANIFEST.in",
+    "install.sh",
 )
 results = []
 

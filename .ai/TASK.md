@@ -4,6 +4,73 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-022`
+- Title: `Add a versioned checksummed installer`
+- Type: `distribution`, `security`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `e5d422f`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The yuto Release provides wheel and SHA256SUMS assets, but users must download,
+verify, and install them manually. There is no safe fixed-version installer,
+and a naïve script could silently target system Python or skip integrity
+verification.
+
+## Scope
+
+In scope: POSIX installer with fixed/default version selection, exact Release
+asset URLs, SHA-256 verification, active-conda detection, `python -m pip`,
+temporary cleanup, actionable failures, offline fake-Release tests, and user
+documentation.
+
+Out of scope: publishing a new Release asset, PyPI, Windows PowerShell,
+automatic conda creation, remote AtomGit operations, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Default and explicit valid versions resolve immutable Release assets.
+- Wheel installation occurs only after the exact asset checksum passes.
+- Missing conda, downloader, checksum tool, asset, or valid checksum fails
+  without invoking pip.
+- The installer uses the active conda Python and cleans temporary files.
+- Offline tests cover success, corrupt checksum, invalid version, and missing
+  conda without network or installation.
+- Pytest, shell syntax, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local installer/tests/documentation changes, offline local-file
+  simulations, cohesive commit, and push of the current branch.
+- Not authorized: Release modification/publication, real package installation
+  by the test, remote writes, merge, or PyPI upload.
+
+## Delivery Record
+
+- Added executable `install.sh` with default/explicit version selection,
+  immutable GitHub Release asset paths, exact SHA-256 entry verification,
+  active-conda Python enforcement, `python -m pip`, and trap-based cleanup.
+- Added the installer to the source manifest and documented the curl/local
+  invocation, security behavior, and default release.
+- Offline local-Release tests passed 14/14, covering default/explicit success,
+  exact pip target, corrupt checksum, invalid version, missing conda, and help;
+  no real installation or network was used.
+- Wheel smoke remained 9/9. `python -m pytest` passed 31/31,
+  `sh -n install.sh`, `python -m compileall -q .`, and `git diff --check`
+  passed. ShellCheck was not installed and therefore not run.
+- Independent review requested source-manifest inclusion and explicit valid
+  version success coverage; both were added. Re-review found no blocking
+  integrity, environment, cleanup, or scope issue. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-014
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-014`
 - Title: `Automate wheel installation smoke testing`
 - Type: `testing`, `distribution`

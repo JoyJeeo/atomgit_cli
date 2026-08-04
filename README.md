@@ -53,6 +53,12 @@ python -m pip install -e .
 
 ### 从 GitHub Release 安装 yuto 版本
 
+激活目标 conda 环境后，可使用固定版本和 SHA-256 校验安装器：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
+```
+
 从 `v1.0.5-yuto.1` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
 完整校验后安装：
 
