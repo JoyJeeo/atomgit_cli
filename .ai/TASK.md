@@ -4,6 +4,76 @@ Status: `completed`
 
 ## Identity
 
+- Local Issue: `BACKLOG-STATE-CLOSEOUT`
+- Title: `Synchronize development status and remove dead surfaces`
+- Type: `documentation`, `testing`, `maintainability`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `3302b48`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The roadmap still presents completed local work as wholly pending, testing and
+architecture documents retain several pre-fix statements, README says wheel
+smoke is absent, and `cli.py` contains a fully commented-out repository-info
+command that has no task-owned behavior or tests.
+
+## Scope
+
+In scope: add an evidence-based roadmap status summary; correct remaining
+development-line documentation; delete commented dead CLI code; scan links,
+markers, generated artifacts, credentials, and final diff; do not rewrite
+immutable release notes.
+
+Out of scope: implementing repository info, remote acceptance, Python-version
+matrix execution, merging, releasing, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Roadmap clearly distinguishes completed local work from permission-gated
+  remote acceptance without renumbering candidate Issues.
+- Current documentation has no known stale claims for implemented fixes.
+- Commented-out replacement/feature code is absent from CLI source.
+- Link, marker, credential, artifact, pytest, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local documentation/dead-code cleanup, read-only audits,
+  cohesive commit, and branch push.
+- Not authorized: runtime feature work, remote operations, merge, release, or
+  PyPI publication.
+
+## Delivery Record
+
+- Roadmap status now distinguishes locally completed work, existing live
+  evidence, and acceptance that still requires exact remote-write permission.
+- README and architecture/testing guidance now match the automated wheel
+  smoke, revision rejection, and remaining remote-test boundaries.
+- Removed the fully commented-out and unregistered `repo info` implementation;
+  no public command or runtime behavior changed.
+- Full offline verification: `python -m pytest` passed 35/35 tests in the
+  `atomgit_cli` conda environment; `python -m compileall -q .` and
+  `git diff --check` passed.
+- Repository audit: local Markdown links resolve, the changed diff contains no
+  credential pattern, and no task-unrelated generated artifact was added.
+- Independent review: no findings. The complete closeout diff stays within the
+  Issue scope and does not overstate live-service evidence. Verdict: `APPROVED`.
+- Residual evidence: the declared Python 3.8-3.13 range has not been exercised
+  as a full version matrix. Disposable live create/upload/download acceptance
+  remains blocked on exact AtomGit credential, repository, operation, and
+  cleanup authorization.
+- Human acceptance: the user's instruction explicitly authorizes sequential
+  development, verification, commit, and push. Merge, release, publication,
+  and live AtomGit writes remain unauthorized.
+
+# Completed Issue DEPLOY-TOOLING-SAFETY
+
+Status: `completed`
+
+## Identity
+
 - Local Issue: `DEPLOY-TOOLING-SAFETY`
 - Title: `Make deployment tooling conda-explicit and token-safe`
 - Type: `distribution`, `security`

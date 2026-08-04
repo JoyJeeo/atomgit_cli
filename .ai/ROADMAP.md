@@ -13,6 +13,27 @@ the corresponding remote Issues are explicitly created.
 4. Stabilize behavior before building an independent `yuto` distribution.
 5. Treat credentials, global Git configuration, and releases as high risk.
 
+## Current Development Status
+
+This summary describes the `codex/close-development-backlog` development line
+after local implementation and offline review. It does not authorize merge,
+release, remote writes, or Issue transitions.
+
+- Completed with local regression/contract evidence: #001-#014, #018, and
+  #020-#026. The development line includes strict HF contracts, SDK parity,
+  shared repo-ID/runtime policy, isolated pytest, wheel smoke, credential
+  safety, stable SDK exceptions, release artifacts, and a checksummed
+  installer.
+- Existing remote evidence partially or substantially covers #015-#018:
+  model/dataset transfer, private dataset behavior, path placement, and real
+  resumable interruption/recovery. A repeatable disposable-repository
+  lifecycle still requires exact remote-write and cleanup authorization.
+- Permission-gated acceptance remains for #017 and #019: live ignore-pattern
+  absence, multi-level create/upload mapping, and the anonymous-public /
+  anonymous-private-failure / authenticated-private download matrix.
+- Non-main revision is intentionally rejected rather than pending implicit
+  support; it must not be re-enabled without new AtomGit service evidence.
+
 ## Milestone A: v1.0.5-yuto Stability
 
 ### Issue #001 - Fix resumable upload authentication

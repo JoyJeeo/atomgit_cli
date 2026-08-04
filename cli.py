@@ -146,30 +146,6 @@ def create(repo_name, repo_type, private):
         sys.exit(1)
 
 
-# @repo.command()
-# @click.argument('repo_id')
-# def info(repo_id):
-#     """显示仓库信息"""
-#     if not config.is_logged_in():
-#         print_error("请先登录：atomgit login")
-#         sys.exit(1)
-    
-#     if not validate_repo_name(repo_id):
-#         print_error("仓库ID格式不正确，应为: username/repo-name")
-#         sys.exit(1)
-    
-#     repo_info = api.get_repo_info(repo_id)
-#     if repo_info:
-#         print_info(f"仓库名称: {repo_info.get('name', '未知')}")
-#         print_info(f"仓库类型: {repo_info.get('type', '未知')}")
-#         print_info(f"描述: {repo_info.get('description', '无')}")
-#         print_info(f"是否私有: {'是' if repo_info.get('private', False) else '否'}")
-#         print_info(f"创建时间: {repo_info.get('created_at', '未知')}")
-#     else:
-#         print_error(f"无法获取仓库 {repo_id} 的信息")
-#         sys.exit(1)
-
-
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')

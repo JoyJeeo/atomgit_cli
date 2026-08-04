@@ -638,8 +638,9 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 - Python 3.12
 - Python 3.13
 
-当前仓库尚无 `test_compatibility.py` 或 `PYTHON_COMPATIBILITY.md`。Python
-版本声明来自打包元数据；完整版本矩阵仍需通过隔离环境和 wheel 冒烟测试建立。
+当前 wheel 已在项目 Python 3.10 conda 环境中通过自动化隔离安装和入口冒烟。
+仓库尚无覆盖 Python 3.8–3.13 的完整 CI/conda 版本矩阵，因此这些版本除当前
+环境外仍属于打包兼容声明，而不是逐版本运行证据。
 
 ## 项目文档
 

@@ -17,9 +17,9 @@
 - 单文件直接上传；
 - 上传错误分类。
 
-token 校验、持久化、损坏配置恢复、logout、配置权限和 Git credential helper
-隔离均有临时 HOME 离线测试。真实登录网络交互、部分建仓/下载远程路径和 wheel
-安装自动化仍需单独覆盖。
+token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
+隔离和 wheel 安装均有临时 HOME/venv 离线测试。真实登录网络交互以及建仓、下载
+权限矩阵等远程路径仍需单独授权覆盖。
 
 ## 环境
 

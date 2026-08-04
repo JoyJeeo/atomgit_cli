@@ -136,7 +136,7 @@ atomgit upload PATH
 
 - 上传、下载和建仓共享多层 repo ID 转换；远程写入仍需受控验收；
 - 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
-- `revision` 参数已透传，但 AtomGit 远端 `dev` 分支行为尚未验证成功。
+- 非 `main` revision 已根据远程证据明确拒绝，避免静默写入默认分支。
 
 resumable 通过 `HfApi(token=...)` 认证，已使用真实 404 MB 文件验证中断、恢复和
 最终 SHA-256。dataset 上传在保留业务类型的同时使用 AtomGit 可用的共享 model
