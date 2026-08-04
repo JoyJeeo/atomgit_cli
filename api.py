@@ -202,6 +202,53 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     return "未知错误", f"{type(e).__name__}: {msg}"
 
 
+def _classify_create_repo_error(e: Exception) -> tuple:
+    """把 HF Hub 建仓异常归类为 (error_type, hint) 二元组，供上层给出语义化提示。
+
+    覆盖以下典型情形（基于 huggingface_hub 错误类型与文本特征）：
+      - 认证失败 (401/403, 无效 token 或权限不足)
+      - 请求参数错误 (BadRequestError / 400)
+      - 超时 / 网络连接
+      - 其他未知错误
+
+    返回 (error_type, hint)，其中 hint 是给用户的可执行建议。
+    """
+    msg = str(e)
+    ename = type(e).__name__
+
+    # 认证失败：401/403 或 token 无效/无权限
+    if (
+        "401" in msg
+        or "403" in msg
+        or "unauthorized" in msg.lower()
+        or "forbidden" in msg.lower()
+        or "token not found" in msg.lower()
+        or "no scopes" in msg.lower()
+    ):
+        return (
+            "认证失败",
+            "登录凭证无效或已过期。请使用 'atomgit login' 重新登录获取有效 token，再重试创建。",
+        )
+
+    # 请求参数错误
+    if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
+        return (
+            "请求参数错误",
+            "仓库参数不合法。请检查 repo_name 格式（username/repo-name）与 --type 取值。",
+        )
+
+    # 超时
+    if "timeout" in msg.lower() or "timed out" in msg.lower() or ename == "TimeoutError":
+        return "请求超时", "请求超时。请检查网络后重试。"
+
+    # 网络连接
+    if "connection" in msg.lower() or "connectionerror" in ename.lower() or "resolve" in msg.lower():
+        return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
+
+    # 其他
+    return "未知错误", f"{type(e).__name__}: {msg}"
+
+
 class HuggingFaceAPI:
     """AtomGit API 客户端，完全基于Hugging Face Hub SDK"""
     
@@ -283,6 +330,9 @@ class HuggingFaceAPI:
             )
             return True
         except Exception as e:
+            err_type, hint = _classify_create_repo_error(e)
+            print(f"创建仓库失败[{err_type}]: {e}")
+            print(f"💡 建议: {hint}")
             return False
     
     def upload_folder(self, file_path: Path, repo_id: str,
