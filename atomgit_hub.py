@@ -140,6 +140,11 @@ def _normalize_repo_id(repo_id: str) -> str:
     return normalize_repo_id(repo_id)
 
 
+def _atomgit_repo_type(repo_type: Optional[str]) -> Optional[str]:
+    """Map dataset create/transfer calls to AtomGit's shared model route."""
+    return "model" if repo_type == "dataset" else repo_type
+
+
 def _get_token() -> Optional[str]:
     """获取保存的认证token"""
     try:
@@ -461,9 +466,7 @@ def upload_folder(
             if repo_type is not None:
                 # AtomGit 的 dataset 仓库保留业务类型，但当前上传传输
                 # 使用与 model 相同的兼容路由。
-                upload_kwargs["repo_type"] = (
-                    "model" if repo_type == "dataset" else repo_type
-                )
+                upload_kwargs["repo_type"] = _atomgit_repo_type(repo_type)
             if revision:
                 upload_kwargs["revision"] = revision
             if commit_description is not None:
@@ -504,7 +507,8 @@ def create_repository(
         token (str, 可选): 认证token
         private (bool, 可选): 是否为私有仓库。AtomGit 当前只允许已验证的
                               私有创建语义，必须显式设为 True
-        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset
+        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset；dataset
+                              使用 AtomGit 的共享 model 兼容路由创建
         exist_ok (bool, 可选): 如果仓库已存在是否报错，默认False
         其他参数: 为签名兼容保留；AtomGit 不支持 Space 创建，传入时会拒绝
     
@@ -550,7 +554,7 @@ def create_repository(
             repo_id=normalized_repo_id,
             token=token,
             private=private,
-            repo_type=repo_type,
+            repo_type=_atomgit_repo_type(repo_type),
             exist_ok=exist_ok,
         )
         return result

@@ -1,5 +1,139 @@
 # Current Issue Contract
 
+# Completed Issue LIVE-REMOTE-ACCEPTANCE-015-019
+
+Status: `completed`
+
+## Identity
+
+- Local Issue: `LIVE-REMOTE-ACCEPTANCE-015-019`
+- Title: `Run controlled AtomGit repository acceptance matrix`
+- Type: `testing`, `compatibility`, `security`
+- Priority: `P1`
+- Branch: `codex/live-atomgit-acceptance` (local only)
+- Base: `yuto` at `61b4bce`
+- Delivery mode: record evidence and any minimal acceptance fix in one local
+  Issue branch; after verification, commit locally, merge into `yuto`, and push
+  only `yuto`.
+
+## User Impact And Evidence
+
+Offline contracts cover repository-ID normalization, ignore forwarding,
+private creation, and token selection, but the remaining roadmap acceptance
+requires real AtomGit evidence. The maintainer supplied a dedicated token via
+`ATOMGIT_TEST_TOKEN`, model/dataset test repositories, a large-file directory,
+and explicit create/upload/download/delete authorization.
+
+## Scope
+
+In scope: controlled live model/dataset repository probes; multi-level logical
+repository create/upload/download behavior; isolated ignore-pattern absence;
+anonymous public success, anonymous private failure, and authenticated private
+success; checksums where files are transferred; cleanup of objects created by
+this run; minimal code/test/documentation fixes only if live evidence exposes a
+task-bound defect.
+
+Out of scope: non-`main` revision support, release/PyPI operations, unrelated
+roadmap work, reading the maintainer's real AtomGit config, or deleting any
+repository outside the two fixed test names and failed multi-level probes.
+
+## Authorized Live Resources
+
+- Credential source: process environment variable `ATOMGIT_TEST_TOKEN`; never
+  print, persist in the repository, or place it in command arguments.
+- Fixed model repository: `weixin_52273949/test_model`; explicitly designated
+  disposable for delete/recreate/cleanup in this run.
+- Fixed dataset repository: `weixin_52273949/test_datasets`; explicitly
+  designated disposable for delete/recreate/cleanup in this run.
+- Multi-level logical test names may use a unique run suffix below the
+  `weixin_52273949/test_model/` or `weixin_52273949/test_datasets/` prefixes;
+  record the normalized physical ID before any write.
+- Large-file source directory:
+  `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli/tmp`.
+- Explicitly authorized operations: create, upload, download, and cleanup
+  deletion for this acceptance run.
+
+## Acceptance Criteria
+
+- Every remote operation records repo type, logical and physical ID, auth mode,
+  exit/result status, and observable remote state without exposing credentials.
+- A multi-level model or dataset ID has create and upload evidence, or a
+  precisely classified service limitation with no false success.
+- An ignored sentinel is absent remotely and after download while retained
+  control files are present.
+- Anonymous public download succeeds; anonymous private download fails; the
+  same private content downloads successfully with the supplied token.
+- Downloaded content checksums match uploaded content where applicable.
+- Both fixed disposable repositories and every other object created by the run
+  are cleaned and cleanup is independently verified.
+- Offline pytest, compileall, diff check, credential scan, and independent
+  review pass before delivery.
+
+## Permissions
+
+- Authorized: isolated local test assets and credential HOME, AtomGit live
+  create/upload/download/delete within the resources above, local source/test/
+  documentation/TASK edits, local commit, local merge into `yuto`, and push of
+  `yuto` only.
+- Not authorized: pushing the Issue branch, changing real user credentials or
+  Git configuration, deleting unrelated/pre-existing repositories, merge into
+  `main`, release, or PyPI publication.
+
+## Delivery Record
+
+- Credential safety: every live process read the dedicated token only from
+  `ATOMGIT_TEST_TOKEN`, used an isolated temporary HOME, suppressed raw request
+  output, and never read the maintainer's real AtomGit configuration.
+- Baseline: the supplied token matched `weixin_52273949`. Both fixed test
+  repositories were initially public, empty, and visible through AtomGit's
+  dataset metadata route. Random missing-repository controls returned 404.
+- Multi-level evidence: logical model and dataset IDs normalized respectively
+  to `weixin_52273949-test_model/live-accept-20260804-01` and
+  `weixin_52273949-test_datasets/live-accept-20260804-01`. Create and upload
+  returned 401/nonzero because the account lacks those physical namespaces;
+  both IDs remained 404 on model and dataset routes, so no false success or
+  residue occurred.
+- Public-create evidence: HF `private=False` returned success but the resulting
+  repository was actually private. The client therefore continues to reject
+  unverified public creation. A controlled native visibility update supplied a
+  genuinely public download sample.
+- Path/ignore evidence: CLI directory upload exited 0. Git refs, native
+  contents, Hub file listing, and resolve URLs confirmed retained files under
+  `acceptance/run-20260804-01`; `*.tmp` and `logs/*` sentinels were absent.
+  Anonymous public download exited 0 and its control-file SHA-256 matched.
+- Private matrix: anonymous private download exited 1 with no control file;
+  authenticated download exited 0 and its SHA-256 matched the upload source.
+- Live defect and fix: AtomGit's HF dataset create route returned 401 while its
+  shared model route created a writable private AI repository. CLI API and SDK
+  creation now map logical dataset requests to that compatible route, matching
+  existing dataset upload behavior. Strict API and SDK contract tests require
+  the mapped call while preserving the public dataset interface.
+- Post-fix live regression: CLI private dataset create exited 0; readiness and
+  private state were verified; the first CLI upload exited 0; anonymous
+  download exited 1; authenticated download exited 0 with matching SHA-256;
+  cleanup returned 204.
+- Cleanup: both fixed repositories and both normalized multi-level physical IDs
+  ended as 404 on model and dataset Hub routes; fixed repositories also returned
+  404 through the native repository API. No remote test object remains.
+- Focused offline verification: API create contract 22/22, SDK create contract
+  21/21, visibility contract, and locked HF signature contract passed.
+- Full offline verification: `python -m pytest` passed 35/35 tests;
+  `python -m compileall -q .`, `git diff --check`, and the credential-pattern
+  scan passed in the `atomgit_cli` conda environment.
+- Large-file rerun was not needed: this Issue's new model/private/ignore/matrix
+  evidence used checksum controls, while the existing authorized 399/404 MB
+  resumable interruption and recovery evidence remains applicable. The supplied
+  `tmp` files were not modified.
+- Independent review: initial verdict `REQUEST CHANGES` for a P2 SDK docstring
+  placed on `hub_download_url` instead of `create_repository`. The text was
+  moved, checks reran, and re-review found no remaining issues. Final verdict:
+  `APPROVED`.
+- Human acceptance: the maintainer explicitly authorized the named test
+  repositories, environment token, create/upload/download/delete operations,
+  cleanup, local Issue delivery, merge into `yuto`, and push of `yuto` only.
+
+# Completed Issue BACKLOG-STATE-CLOSEOUT
+
 Status: `completed`
 
 ## Identity

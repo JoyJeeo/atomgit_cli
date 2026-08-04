@@ -50,7 +50,11 @@ def main():
             )
             check(f"private {repo_type} result preserved", bool(result))
             call = calls[-1]
-            check(f"private {repo_type} type forwarded", call["repo_type"] == repo_type)
+            expected_type = "model" if repo_type == "dataset" else repo_type
+            check(
+                f"private {repo_type} uses compatible create route",
+                call["repo_type"] == expected_type,
+            )
             check(f"private {repo_type} privacy forwarded", call["private"] is True)
             check(f"private {repo_type} exist_ok forwarded", call["exist_ok"] is True)
             check(f"private {repo_type} token forwarded", call["token"] == "fake-token")

@@ -196,8 +196,10 @@ org/namespace/repo -> org-namespace/repo
 ```
 
 create、文件/目录 upload、snapshot/file download、URL 构造和 dataset loading
-均使用同一映射。公开示例的匿名只读探测已验证转换后 URL；创建和上传仍需显式
-授权的远程写验收，离线一致性不能替代远程证据。
+均使用同一映射。公开示例的匿名只读探测已验证转换后 URL。2026-08-04 的受控
+写入验收确认客户端会把多层 ID 转成预期物理 ID，并在测试账号不具备对应
+`owner-namespace` 权限时对 create/upload 返回非零且不留下仓库；成功写入仍要求
+账号属于转换后的物理命名空间。
 
 ## 10. 测试和打包
 

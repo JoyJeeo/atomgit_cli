@@ -105,8 +105,8 @@ def _restore_progress_bar_state(state) -> None:
     _set_progress_bar(not state)
 
 
-def _upload_repo_type(repo_type: str = None) -> str:
-    """Map AtomGit dataset uploads to its shared model transfer route."""
+def _atomgit_repo_type(repo_type: str = None) -> str:
+    """Map dataset create/transfer calls to AtomGit's shared model route."""
     return "model" if repo_type == "dataset" else repo_type
 
 
@@ -240,7 +240,7 @@ class HuggingFaceAPI:
                     repo_name: str,
                     repo_type: str = "model", 
                     private: bool = False) -> bool:
-        """创建仓库 - 使用Hugging Face Hub SDK"""
+        """创建仓库；dataset 通过 AtomGit 的共享 model 兼容路由创建。"""
         try:
             if not private:
                 print("AtomGit 当前无法可靠验证公开仓库语义；请使用 --private 创建私有仓库")
@@ -253,7 +253,7 @@ class HuggingFaceAPI:
             create_repo(
                 repo_id=self._normalize_repo_id(repo_name),
                 token=credentials['token'],
-                repo_type=repo_type,
+                repo_type=_atomgit_repo_type(repo_type),
                 private=private,
                 exist_ok=True
             )
@@ -328,7 +328,7 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    upload_repo_type = _upload_repo_type(repo_type)
+                    upload_repo_type = _atomgit_repo_type(repo_type)
                     if upload_repo_type is not None:
                         file_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
@@ -357,7 +357,7 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    upload_repo_type = _upload_repo_type(repo_type)
+                    upload_repo_type = _atomgit_repo_type(repo_type)
                     if upload_repo_type is not None:
                         upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
@@ -440,7 +440,7 @@ class HuggingFaceAPI:
 
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
-                    eff_repo_type = _upload_repo_type(repo_type) or "model"
+                    eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     lf_kwargs = dict(
                         repo_id=self._normalize_repo_id(repo_id),
                         folder_path=str(dir_path),
@@ -495,7 +495,7 @@ class HuggingFaceAPI:
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
-                    upload_repo_type = _upload_repo_type(repo_type)
+                    upload_repo_type = _atomgit_repo_type(repo_type)
                     if upload_repo_type is not None:
                         upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
