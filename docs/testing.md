@@ -89,6 +89,9 @@ git diff --check
 - `import atomgit`
 - `import atomgit_hub`
 
+`python tests/test_wheel_smoke.py` 会从临时源码副本离线构建 wheel，并安装到
+临时 venv；该脚本也包含在标准 pytest 矩阵中，不会在工作树生成构建产物。
+
 ### AtomGit 远程测试
 
 远程测试默认关闭，只有用户明确授权后才运行。必须使用：

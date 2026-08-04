@@ -34,7 +34,7 @@ def test_offline_script(script_path, tmp_path):
         env=environment,
         capture_output=True,
         text=True,
-        timeout=60,
+        timeout=180 if script_path.name == "test_wheel_smoke.py" else 60,
     )
 
     assert result.returncode == 0, (

@@ -4,6 +4,68 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-014`
+- Title: `Automate wheel installation smoke testing`
+- Type: `testing`, `distribution`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `dcfc810`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The release wheel was manually verified, but the repository lacks a repeatable
+offline test that catches broken package layout, console entry points, module
+entry points, or top-level compatibility imports before a future release.
+
+## Scope
+
+In scope: build a wheel from a temporary source copy without isolation/network,
+install it into a temporary venv, verify version/help/import contracts, keep
+the repository free of artifacts, and integrate it into pytest.
+
+Out of scope: publication, release creation, dependency upgrades, sdist
+reproducibility, and live AtomGit operations.
+
+## Acceptance Criteria
+
+- The test builds and installs the current wheel entirely in temporary paths.
+- `atomgit --version`, `atomgit --help`, `python -m atomgit --help`,
+  `import atomgit`, and `import atomgit_hub` succeed from the installed wheel.
+- Reported package/module versions match `1.0.5+yuto.1`.
+- No build artifacts appear in the repository.
+- Pytest, focused smoke, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local tests/tooling/documentation changes, temporary build and
+  venv creation, cohesive commit, and push of the current branch.
+- Not authorized: publication, release/tag changes, remote writes, merge, or
+  PyPI upload.
+
+## Delivery Record
+
+- Added an offline smoke that copies release inputs to a temporary source,
+  builds one wheel without build isolation, installs it without dependencies
+  into a temporary venv, and verifies both CLI entry points and imports.
+- The import check proves `atomgit` and `atomgit_hub` resolve inside the venv,
+  reports version `1.0.5+yuto.1`, and snapshots existing ignored artifact
+  state to prove the test does not modify the repository.
+- Added Python-3.8-compatible build, wheel, and conditional tomli development
+  dependencies. The first focused run exposed missing conda-local tomli; after
+  declaring/installing it, final focused smoke passed 9/9.
+- `python -m pytest` collected and passed 30/30 cases in 22.11 seconds;
+  `python -m compileall -q .` and `git diff --check` passed.
+- Independent review requested installed-module provenance verification; it
+  was added and re-reviewed with no blocking findings. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-012
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-012`
 - Title: `Complete repository creation contract tests`
 - Type: `testing`, `cli`, `sdk`
