@@ -1,27 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
 import click
 import sys
 from pathlib import Path
 from getpass import getpass
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    from runtime import configure_hf_environment
+
+configure_hf_environment()
 
 try:
     from .config import config
     from .api import api
     from .utils import (
         print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, get_directory_size,
+        validate_repo_name, validate_repo_type, is_supported_upload_revision,
+        get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
@@ -32,7 +30,8 @@ except ImportError:
     from api import api
     from utils import (
         print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, get_directory_size,
+        validate_repo_name, validate_repo_type, is_supported_upload_revision,
+        get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
@@ -147,30 +146,6 @@ def create(repo_name, repo_type, private):
         sys.exit(1)
 
 
-# @repo.command()
-# @click.argument('repo_id')
-# def info(repo_id):
-#     """显示仓库信息"""
-#     if not config.is_logged_in():
-#         print_error("请先登录：atomgit login")
-#         sys.exit(1)
-    
-#     if not validate_repo_name(repo_id):
-#         print_error("仓库ID格式不正确，应为: username/repo-name")
-#         sys.exit(1)
-    
-#     repo_info = api.get_repo_info(repo_id)
-#     if repo_info:
-#         print_info(f"仓库名称: {repo_info.get('name', '未知')}")
-#         print_info(f"仓库类型: {repo_info.get('type', '未知')}")
-#         print_info(f"描述: {repo_info.get('description', '无')}")
-#         print_info(f"是否私有: {'是' if repo_info.get('private', False) else '否'}")
-#         print_info(f"创建时间: {repo_info.get('created_at', '未知')}")
-#     else:
-#         print_error(f"无法获取仓库 {repo_id} 的信息")
-#         sys.exit(1)
-
-
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')
@@ -185,7 +160,7 @@ def create(repo_name, repo_type, private):
               type=click.Choice(['model', 'dataset']), default=None,
               help='仓库类型 (model/dataset)，默认按 model 处理')
 @click.option('--revision', 'revision', default=None,
-              help='上传目标分支/版本（如 "dev" 或 "v1.0"），默认提交到默认分支(通常为main)')
+              help='上传 revision；AtomGit 当前仅接受默认分支 main，其他值会拒绝')
 @click.option('--ignore', '-i', 'ignore', default=None,
               help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
                    '仅对目录上传有意义')
@@ -199,7 +174,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     if timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
         sys.exit(2)
-    if revision not in (None, "", "main"):
+    if not is_supported_upload_revision(revision):
         print_error("AtomGit 当前仅支持默认 revision main，非默认分支不会被创建；已拒绝上传")
         sys.exit(2)
     if num_workers is not None and num_workers <= 0:

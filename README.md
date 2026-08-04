@@ -21,7 +21,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
   - 进度条开关（`--no-progress-bar`）
   - 仓库内目标路径（`-p/--path-in-repo`）
   - 仓库类型选择（`-r/--repo-type model|dataset`）
-  - 目标分支/版本（`--revision`）
+  - 默认分支兼容参数（`--revision main`；其他值会拒绝）
   - 忽略文件模式（`-i/--ignore`）
   - 断点续传/分块上传（`--resumable`、`--num-workers`）
   - 单文件上传无本地拷贝（直接走 `upload_file`）
@@ -52,6 +52,12 @@ python -m pip install -e .
 ```
 
 ### 从 GitHub Release 安装 yuto 版本
+
+激活目标 conda 环境后，可使用固定版本和 SHA-256 校验安装器：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
+```
 
 从 `v1.0.5-yuto.1` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
 完整校验后安装：
@@ -147,7 +153,7 @@ git pull origin main
 atomgit upload ./your-model-dir --repo-id your-username/your-model-name
 
 # 上传数据集目录
-atomgit upload ./your-dataset-dir --repo-id your-username/your-dataset-name
+atomgit upload ./your-dataset-dir --repo-id your-username/your-dataset-name -r dataset
 
 # 上传单个文件（v1.0.5 起直接上传，无本地拷贝开销）
 atomgit upload ./model.bin --repo-id your-username/your-model-name
@@ -167,7 +173,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `--no-progress-bar` | 禁用进度条（日志/CI 场景） |
 | `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
-| `--revision <name>` | 目标分支/版本（如 `dev`、`v1.0`），默认 main |
+| `--revision <name>` | 当前仅接受默认分支 `main`；其他值退出 2，不会上传 |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
 | `--resumable` | 目录大文件断点续传接口，重复同一命令可复用本地上传状态 |
 | `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
@@ -175,9 +181,9 @@ atomgit upload <path> --repo-id <id> [options]
 #### 进阶示例
 
 ```bash
-# 上传到仓库内 sub/ 目录、dataset 类型、dev 分支，忽略 .tmp 文件
+# 上传到仓库内 sub/ 目录、dataset 类型，忽略 .tmp 文件
 atomgit upload ./data --repo-id user/my-dataset \
-  -p sub/ -r dataset --revision dev -i "*.tmp"
+  -p sub/ -r dataset -i "*.tmp"
 
 # 大目录断点续传（中断后再次执行同一命令即可续传）
 atomgit upload ./large-model --repo-id user/large-model \
@@ -190,7 +196,8 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 > ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m` 不生效（会产生多次提交）；`--repo-type` 必填，未指定时默认 `model`。
 
 > 当前实现通过 `HfApi(token=...)` 认证，并已完成 404 MB 文件的真实中断、恢复
-> 和 SHA-256 校验。`--revision dev` 的 AtomGit 远端分支行为仍未完成验证。详见
+> 和 SHA-256 校验。AtomGit 不会创建请求的非默认分支，因此当前 CLI 在任何远程
+> 调用前拒绝非 `main` revision。详见
 > [上传实现分析](docs/upload_command_analysis.md)。
 
 #### 错误处理
@@ -241,8 +248,8 @@ atomgit whoami
 #### 创建仓库
 
 ```bash
-# 创建 model 仓库
-atomgit repo create your-username/your-repo --type model
+# 创建私有 model 仓库
+atomgit repo create your-username/your-repo --type model --private
 
 # 创建私有 dataset 仓库
 atomgit repo create your-username/your-dataset --type dataset --private
@@ -282,7 +289,12 @@ from atomgit_hub import (
 #### 下载整个仓库（推荐用法）
 
 ```python
-from atomgit_hub import snapshot_download
+from atomgit_hub import (
+    snapshot_download,
+    AtomGitAuthenticationError,
+    AtomGitRepositoryNotFoundError,
+    AtomGitNetworkError,
+)
 
 # 基本用法：下载到指定目录
 snapshot_download(
@@ -331,23 +343,23 @@ print(f"下载链接: {url}")
 
 ### 3. SDK上传功能
 
-#### 上传单个文件
+#### 上传目录
 
 ```python
 from atomgit_hub import upload_folder
 
-# 基本上传
+# 基本目录上传
 upload_folder(
-    folder_path="./local-file.txt",
-    path_in_repo="remote-file.txt",
+    folder_path="./model-directory",
+    path_in_repo="./",
     repo_id="username/repo-name",
     commit_message="上传新文件"
 )
 
-# 上传到子目录
+# 将整个本地目录上传到仓库子目录
 upload_folder(
-    folder_path="./model.bin",
-    path_in_repo="models/pytorch_model.bin",
+    folder_path="./checkpoints",
+    path_in_repo="models/checkpoints",
     repo_id="username/my-model",
     commit_message="更新模型文件"
 )
@@ -380,20 +392,14 @@ else:
 ```python
 from atomgit_hub import create_repository
 
-# 创建公开仓库
-repo_url = create_repository(
-    repo_id="username/new-repo",
-    private=False,
-    repo_type="model"  # 或 "dataset"
-)
-print(f"仓库创建成功: {repo_url}")
-
 # 创建私有仓库
-create_repository(
+repo_url = create_repository(
     repo_id="username/private-repo",
     private=True,
+    repo_type="model",  # 或 "dataset"
     exist_ok=True  # 如果已存在不报错
 )
+print(f"仓库创建成功: {repo_url}")
 ```
 
 ### 5. 认证管理
@@ -425,14 +431,17 @@ try:
         local_dir="./model"
     )
     print(f"下载成功: {path}")
-except Exception as e:
-    if "401" in str(e) or "403" in str(e):
-        print("认证失败，请先使用 'atomgit login' 登录")
-    elif "404" in str(e):
-        print("仓库不存在，请检查仓库名称")
-    else:
-        print(f"下载失败: {e}")
+except AtomGitAuthenticationError:
+    print("认证失败，请先使用 'atomgit login' 登录")
+except AtomGitRepositoryNotFoundError:
+    print("仓库不存在，请检查仓库名称")
+except AtomGitNetworkError as error:
+    print(f"网络失败，可重试: {error}")
 ```
+
+SDK 还导出 `AtomGitRepositoryExistsError`、`AtomGitRevisionNotFoundError`、
+`AtomGitTimeoutError`、`AtomGitUnsupportedError` 和基类 `AtomGitError`。转换后的
+异常保留脱敏的原始 cause，便于日志和程序化处理。
 
 ### 7. 完整示例
 
@@ -458,6 +467,7 @@ def download_and_modify_model():
     create_repository(
         repo_id="my-user/modified-model",
         repo_type="model",
+        private=True,
         exist_ok=True
     )
     
@@ -467,11 +477,11 @@ def download_and_modify_model():
     with open(readme_path, "a") as f:
         f.write("\n\n## 修改说明\n\n这是基于原模型的修改版本。")
     
-    # 4. 上传修改后的文件
+    # 4. 上传修改后的目录
     print("上传修改后的文件...")
     upload_folder(
-        folder_path=readme_path,
-        path_in_repo="README.md",
+        folder_path=model_path,
+        path_in_repo="./",
         repo_id="my-user/modified-model",
         commit_message="更新README文档"
     )
@@ -567,6 +577,8 @@ atomgit/
 ├── cli.py               # CLI命令定义
 ├── api.py               # Hugging Face Hub API客户端
 ├── config.py            # 配置管理
+├── runtime.py           # 共享HF端点和缓存策略
+├── exceptions.py        # SDK异常类型
 ├── utils.py             # 工具函数（路径/忽略模式解析等）
 ├── atomgit_hub.py       # Python SDK接口
 ├── requirements.txt     # 依赖包
@@ -603,7 +615,7 @@ python -c "from atomgit_hub import snapshot_download; print('SDK导入成功')"
 python tests/test_upload_progress.py        # 进度条
 python tests/test_upload_path_in_repo.py    # 仓库内路径
 python tests/test_upload_repo_type.py       # 仓库类型
-python tests/test_upload_revision.py         # 目标分支
+python tests/test_revision_rejection.py      # 非 main revision 拒绝
 python tests/test_upload_ignore.py          # 忽略模式
 python tests/test_upload_resumable.py       # 断点续传
 python tests/test_upload_file_no_copy.py    # 单文件无拷贝
@@ -612,8 +624,8 @@ python tests/test_upload_error_handling.py  # 错误处理集成
 python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 ```
 
-现有测试是自执行 Python 脚本，不是 pytest 收集用例。完整测试说明见
-[docs/testing.md](docs/testing.md)。
+现有自执行脚本由隔离 pytest 矩阵统一收集。安装开发依赖后运行
+`python -m pytest`；完整说明见 [docs/testing.md](docs/testing.md)。
 
 ## Python版本兼容性
 
@@ -626,8 +638,9 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 - Python 3.12
 - Python 3.13
 
-当前仓库尚无 `test_compatibility.py` 或 `PYTHON_COMPATIBILITY.md`。Python
-版本声明来自打包元数据；完整版本矩阵仍需通过隔离环境和 wheel 冒烟测试建立。
+当前 wheel 已在项目 Python 3.10 conda 环境中通过自动化隔离安装和入口冒烟。
+仓库尚无覆盖 Python 3.8–3.13 的完整 CI/conda 版本矩阵，因此这些版本除当前
+环境外仍属于打包兼容声明，而不是逐版本运行证据。
 
 ## 项目文档
 

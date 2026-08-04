@@ -1,0 +1,5 @@
+-r requirements.txt
+build>=1.2,<2
+pytest>=7.4,<8.4
+tomli>=1.1; python_version < "3.11"
+wheel

@@ -127,6 +127,19 @@ def validate_repo_type(repo_type: str) -> bool:
     return repo_type in ['model', 'dataset']
 
 
+def is_supported_upload_revision(revision: Optional[str]) -> bool:
+    """Return whether AtomGit can safely target the requested upload revision."""
+    return revision in (None, "", "main")
+
+
+def normalize_repo_id(repo_id: str) -> str:
+    """Map AtomGit multi-level names to its HF-compatible repository ID."""
+    parts = repo_id.split('/')
+    if len(parts) < 3:
+        return repo_id
+    return f"{parts[0]}-{parts[1]}/{'/'.join(parts[2:])}"
+
+
 def normalize_path_in_repo(path_in_repo: Optional[str]) -> Optional[str]:
     """规范化和校验仓库内路径前缀（用于 upload 的 --path-in-repo）。
 

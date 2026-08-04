@@ -52,14 +52,17 @@ PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` �
 4. 提供仓库自有 `install.sh`，默认下载固定 Release，而不是不断变化的分支。
 5. 安装脚本支持显式版本，并验证校验和。
 
-后续版本化安装脚本的预期入口可以是：
+仓库提供版本化、校验和安装脚本。激活目标 conda 环境后可运行：
 
 ```bash
-curl -fsSL <raw-install-script-url> | bash
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
 ```
 
-安装脚本尚未实现；当前用户应从固定 GitHub Release 下载 wheel，并使用随附的
-`SHA256SUMS` 校验后安装。
+默认安装 `v1.0.5-yuto.1`；显式版本可用
+`sh install.sh --version 1.0.5-yuto.1`。脚本只从对应固定 GitHub Release
+下载 wheel 和 `SHA256SUMS`，校验成功后使用当前 conda 环境的
+`python -m pip` 安装。未激活 conda 或缺少校验工具时会停止，不会回退到系统
+Python。
 
 ## 发布门禁
 

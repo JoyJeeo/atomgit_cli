@@ -18,7 +18,7 @@ atomgit upload [OPTIONS] PATH
 | `--no-progress-bar` | 关闭 | 禁用 HF 上传进度条 |
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
-| `--revision` | 默认分支 | 目标 revision |
+| `--revision` | 默认分支 | 当前仅接受 `main`，其他值在远程调用前拒绝 |
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
 | `--resumable` | 关闭 | 目录使用 `upload_large_folder` |
 | `--num-workers` | HF 默认 | resumable worker 数 |
@@ -31,13 +31,14 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用上传传输路由�
 
 `cli.upload` 依次执行：
 
-1. 检查 `config.is_logged_in()`；
-2. 使用 `validate_repo_name` 校验 repo ID；
-3. 将 PATH 转为 `Path` 并区分文件或目录；
-4. 使用 `normalize_path_in_repo` 统一斜杠并拒绝 `..`；
-5. 使用 `parse_ignore_patterns` 拆分、去空和去重；
-6. 打印大小、文件数量和选择的参数；
-7. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
+1. 校验 timeout、worker 数和 revision（非 `main` 直接退出 2）；
+2. 检查 `config.is_logged_in()`；
+3. 使用 `validate_repo_name` 校验 repo ID；
+4. 将 PATH 转为 `Path` 并区分文件或目录；
+5. 使用 `normalize_path_in_repo` 统一斜杠并拒绝 `..`；
+6. 使用 `parse_ignore_patterns` 拆分、去空和去重；
+7. 打印大小、文件数量和选择的参数；
+8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
 `--resumable` 用于文件时会警告并忽略。`--ignore` 用于单文件时会警告，但仍
 传给 API 层并触发回退上传路径。
@@ -67,8 +68,8 @@ cli.upload
 - 当前 HF 版本没有 `upload_file`；
 - 用户传入非空 ignore patterns。
 
-回退路径在当前工作目录创建共享 `.tmp_upload`，复制文件后上传，并在 `finally`
-中删除。该设计存在并发冲突和异常进程残留风险，新实现不应继续扩展这种模式。
+回退路径为每次调用创建唯一系统临时目录，复制文件后上传，并在成功或失败时
+自动清理。临时内容只在 HF 调用期间存活，不会在当前工作目录创建共享目录。
 
 ## 4. 普通目录上传
 
@@ -126,11 +127,9 @@ SHA-256 均一致。
 
 ## 7. Repo ID
 
-`HuggingFaceAPI` 定义了多层 repo ID 转换，但上传方法没有调用它。上传当前将
-CLI 校验通过的原始 `repo_id` 直接交给 HF。下载则会调用转换。
-
-因此多层 ID 在上传中的实际支持状态不确定，不能仅根据
-`validate_repo_name` 允许多层格式就宣称可用。
+上传、下载、建仓、SDK URL 和 dataset loading 共享同一个多层 ID 映射：
+`org/namespace/repo -> org-namespace/repo`。匿名公开读取已验证该映射；上传和
+创建的远程写结果仍需显式授权后验收。
 
 ## 8. 错误处理
 
@@ -164,7 +163,7 @@ API 方法打印类型和建议后返回 `False`，CLI 再以非零状态退出�
 CLI 全局状态恢复以及大文件中断恢复。这些测试仍没有证明：
 
 - revision 会在 AtomGit 创建或写入目标远端分支；
-- 多层 repo ID 上传成功；
+- 多层 repo ID 的远程创建和上传成功；
 - ignore 在真实远端确实排除了文件。
 
 远程测试应拆分每项能力并执行上传、下载回读和内容校验，详见

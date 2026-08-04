@@ -6,14 +6,26 @@
 # pip install build twine
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+require_conda_python() {
+    if [ -z "${CONDA_PREFIX:-}" ] || [ ! -x "$CONDA_PREFIX/bin/python" ]; then
+        echo -e "${RED}✗ 请先激活目标 conda 环境${NC}"
+        exit 1
+    fi
+    PYTHON_BIN="$CONDA_PREFIX/bin/python"
+}
+
 # 构建函数
 build() {
+    require_conda_python
     echo -e "${GREEN}[BUILD]${NC} 开始构建..."
     
     # 清理旧的构建文件
@@ -22,7 +34,7 @@ build() {
     
     # 构建
     echo -e "${YELLOW}开始构建包...${NC}"
-    python -m build
+    "$PYTHON_BIN" -m build
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ 构建成功！${NC}"
@@ -36,6 +48,7 @@ build() {
 
 # 安装函数
 install() {
+    require_conda_python
     echo -e "${GREEN}[INSTALL]${NC} 开始安装..."
     
     # 检查 dist 目录是否存在
@@ -58,16 +71,16 @@ install() {
     
     # 卸载旧版本
     echo -e "${YELLOW}卸载旧版本...${NC}"
-    pip uninstall atomgit -y 2>/dev/null || true
+    "$PYTHON_BIN" -m pip uninstall atomgit -y 2>/dev/null || true
     
     # 安装新版本
     echo -e "${YELLOW}安装新版本...${NC}"
-    pip install "$WHL_FILE"
+    "$PYTHON_BIN" -m pip install "$WHL_FILE"
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ 安装成功！${NC}"
         echo -e "${GREEN}已安装版本：${NC}"
-        pip show atomgit | grep "Version\|Location"
+        "$PYTHON_BIN" -m pip show atomgit | grep "Version\|Location"
     else
         echo -e "${RED}✗ 安装失败！${NC}"
         exit 1
@@ -76,15 +89,13 @@ install() {
 
 # 上传到 PyPI 函数
 twine_upload() {
+    require_conda_python
     echo -e "${GREEN}[TWINE]${NC} 准备上传到 PyPI..."
     
     # 检查环境变量
     if [ -z "$atomgitsdktoken" ]; then
         echo -e "${RED}✗ 错误：未设置环境变量 atomgitsdktoken${NC}"
         echo -e "${YELLOW}请设置环境变量：${NC}"
-        echo -e "${YELLOW}  export atomgitsdktoken=\"your-token-here\"${NC}"
-        echo ""
-        echo -e "${YELLOW}提示：可以将以下内容添加到 ~/.bashrc 或 ~/.zshrc：${NC}"
         echo -e "${YELLOW}  export atomgitsdktoken=\"your-token-here\"${NC}"
         exit 1
     fi
@@ -118,7 +129,8 @@ twine_upload() {
     
     # 上传
     echo -e "${YELLOW}开始上传...${NC}"
-    twine upload dist/* -u "__token__" -p "$atomgitsdktoken"
+    TWINE_USERNAME="__token__" TWINE_PASSWORD="$atomgitsdktoken" \
+        "$PYTHON_BIN" -m twine upload dist/*
     
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}✓ 上传成功！${NC}"
@@ -139,6 +151,8 @@ show_help() {
     echo ""
     echo "环境变量:"
     echo "  atomgitsdktoken        PyPI 上传 token（使用 twine 时必需）"
+    echo ""
+    echo "build/install/twine 必须在已激活的 conda 环境中运行。"
 }
 
 # 主函数
@@ -167,4 +181,3 @@ main() {
 
 # 执行主函数
 main "$@"
-

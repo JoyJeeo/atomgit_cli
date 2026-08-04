@@ -18,7 +18,11 @@ try:
     from .cli import cli
     from .atomgit_hub import (
         snapshot_download, hub_download_url, download_file, 
-        upload_folder, create_repository
+        upload_folder, create_repository,
+        AtomGitError, AtomGitAuthenticationError,
+        AtomGitRepositoryNotFoundError, AtomGitRepositoryExistsError,
+        AtomGitRevisionNotFoundError, AtomGitTimeoutError,
+        AtomGitNetworkError, AtomGitUnsupportedError,
     )
 except ImportError:
     from config import config
@@ -26,11 +30,19 @@ except ImportError:
     from cli import cli
     from atomgit_hub import (
         snapshot_download, hub_download_url, download_file, 
-        upload_folder, create_repository
+        upload_folder, create_repository,
+        AtomGitError, AtomGitAuthenticationError,
+        AtomGitRepositoryNotFoundError, AtomGitRepositoryExistsError,
+        AtomGitRevisionNotFoundError, AtomGitTimeoutError,
+        AtomGitNetworkError, AtomGitUnsupportedError,
     )
 
 __all__ = [
     'config', 'api', 'cli',
     'snapshot_download', 'hub_download_url', 'download_file', 
-    'upload_folder', 'create_repository'
+    'upload_folder', 'create_repository',
+    'AtomGitError', 'AtomGitAuthenticationError',
+    'AtomGitRepositoryNotFoundError', 'AtomGitRepositoryExistsError',
+    'AtomGitRevisionNotFoundError', 'AtomGitTimeoutError',
+    'AtomGitNetworkError', 'AtomGitUnsupportedError',
 ]

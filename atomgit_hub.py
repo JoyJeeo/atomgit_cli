@@ -9,17 +9,19 @@ AtomGit Hub SDK - 类似huggingface_hub的SDK接口
 """
 
 import os
+import warnings
 from typing import Optional, Union, List, Dict, Any
 from pathlib import Path
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    try:
+        from runtime import configure_hf_environment
+    except ImportError:
+        from atomgit.runtime import configure_hf_environment
+
+configure_hf_environment()
 
 from huggingface_hub import snapshot_download as hf_snapshot_download
 from huggingface_hub import hf_hub_download, upload_folder as hf_upload_folder, create_repo
@@ -36,37 +38,106 @@ except ImportError:
 
 try:
     from .config import config
-    from .utils import run_download_with_retry, sanitized_download_error
+    from .exceptions import (
+        AtomGitAuthenticationError,
+        AtomGitError,
+        AtomGitNetworkError,
+        AtomGitRepositoryExistsError,
+        AtomGitRepositoryNotFoundError,
+        AtomGitRevisionNotFoundError,
+        AtomGitTimeoutError,
+        AtomGitUnsupportedError,
+    )
+    from .utils import (
+        is_auth_error,
+        is_retryable_download_error,
+        is_supported_upload_revision,
+        normalize_repo_id,
+        run_download_with_retry,
+    )
 except ImportError:
     try:
         from config import config
-        from utils import run_download_with_retry, sanitized_download_error
+        from exceptions import (
+            AtomGitAuthenticationError,
+            AtomGitError,
+            AtomGitNetworkError,
+            AtomGitRepositoryExistsError,
+            AtomGitRepositoryNotFoundError,
+            AtomGitRevisionNotFoundError,
+            AtomGitTimeoutError,
+            AtomGitUnsupportedError,
+        )
+        from utils import (
+            is_auth_error,
+            is_retryable_download_error,
+            is_supported_upload_revision,
+            normalize_repo_id,
+            run_download_with_retry,
+        )
     except ImportError:
         from atomgit.config import config
-        from atomgit.utils import run_download_with_retry, sanitized_download_error
+        from atomgit.exceptions import (
+            AtomGitAuthenticationError,
+            AtomGitError,
+            AtomGitNetworkError,
+            AtomGitRepositoryExistsError,
+            AtomGitRepositoryNotFoundError,
+            AtomGitRevisionNotFoundError,
+            AtomGitTimeoutError,
+            AtomGitUnsupportedError,
+        )
+        from atomgit.utils import (
+            is_auth_error,
+            is_retryable_download_error,
+            is_supported_upload_revision,
+            normalize_repo_id,
+            run_download_with_retry,
+        )
+
+
+def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGitError:
+    """Classify a dependency failure without echoing remote or signed URLs."""
+    name = type(error).__name__
+    message = str(error).lower()
+    authentication_failure = is_auth_error(error)
+    retryable_failure = is_retryable_download_error(error)
+    if any(
+        marker in message
+        for marker in ("http://", "https://", "token", "secret", "signature", "certificate")
+    ):
+        error.args = (f"{name} details redacted",)
+    target = f"：{repo_id}" if repo_id else ""
+    if authentication_failure:
+        return AtomGitAuthenticationError(
+            f"{operation}认证失败或权限不足{target}；请检查 token 和仓库权限"
+        )
+    if name == "RevisionNotFoundError" or (
+        "revision" in message and ("not found" in message or "404" in message)
+    ):
+        return AtomGitRevisionNotFoundError(
+            f"{operation}的 revision 不存在{target}"
+        )
+    if "409" in message or "already exists" in message or name == "RepositoryExistsError":
+        return AtomGitRepositoryExistsError(f"仓库已存在{target}")
+    if name in ("RepositoryNotFoundError", "EntryNotFoundError") or (
+        "404" in message or "not found" in message
+    ):
+        return AtomGitRepositoryNotFoundError(
+            f"{operation}的仓库或文件不存在{target}"
+        )
+    if name == "TimeoutError" or "timeout" in message or "timed out" in message:
+        return AtomGitTimeoutError(f"{operation}超时{target}；请检查网络或增大超时")
+    if retryable_failure:
+        return AtomGitNetworkError(f"{operation}网络连接失败{target}；请稍后重试")
+    if "unsupported" in message or "not supported" in message:
+        return AtomGitUnsupportedError(f"AtomGit 不支持请求的{operation}行为{target}")
+    return AtomGitError(f"{operation}失败{target}（{name}）")
 
 
 def _normalize_repo_id(repo_id: str) -> str:
-    """标准化仓库ID，处理三层格式转换"""
-    parts = repo_id.split('/')
-    
-    # 如果是三层格式（如 wuyw/Qwen3-Reranker/0.6B-test）
-    # 转换为特殊格式（如 wuyw-Qwen3-Reranker/0.6B-test）
-    if len(parts) >= 3:
-        # 只编码第一个斜杠，保留后面的斜杠
-        first_part = parts[0]
-        second_part = parts[1]
-        remaining_parts = parts[2:]
-        
-        # 构建新格式：第一部分-第二部分/其余部分
-        normalized = first_part + '-' + second_part
-        if remaining_parts:
-            normalized += '/' + '/'.join(remaining_parts)
-        
-        return normalized
-    
-    # 二层或单层格式直接返回
-    return repo_id
+    """标准化仓库 ID，兼容保留原有模块内辅助函数。"""
+    return normalize_repo_id(repo_id)
 
 
 def _get_token() -> Optional[str]:
@@ -151,16 +222,28 @@ def snapshot_download(
         kwargs['local_dir'] = str(local_dir)
     if token is not None:
         kwargs['token'] = token
+
+    legacy_options = []
+    if local_dir_use_symlinks != "auto":
+        legacy_options.append("local_dir_use_symlinks")
+    if proxies is not None:
+        legacy_options.append("proxies")
+    if resume_download:
+        legacy_options.append("resume_download")
+    if legacy_options:
+        warnings.warn(
+            "huggingface-hub 1.1.7 no longer accepts and AtomGit ignores: "
+            + ", ".join(legacy_options),
+            FutureWarning,
+            stacklevel=2,
+        )
     
     # 其他参数
     kwargs.update({
-        'local_dir_use_symlinks': local_dir_use_symlinks,
         'library_name': library_name or "atomgit_hub",
         'library_version': library_version,
         'user_agent': user_agent,
-        'proxies': proxies,
         'etag_timeout': etag_timeout,
-        'resume_download': resume_download,
         'force_download': force_download,
         'local_files_only': local_files_only,
         'allow_patterns': allow_patterns,
@@ -178,7 +261,7 @@ def snapshot_download(
         )
         return result
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载仓库", repo_id) from e
 
 
 def hub_download_url(
@@ -194,7 +277,7 @@ def hub_download_url(
         repo_id (str): 仓库ID
         filename (str): 文件名
         revision (str, 可选): 版本/分支/标签
-        repo_type (str, 可选): 仓库类型
+        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset
     
     返回:
         str: 文件的下载URL
@@ -265,7 +348,7 @@ def download_file(
         )
         return result
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载文件", repo_id) from e
 
 
 def upload_folder(
@@ -288,12 +371,13 @@ def upload_folder(
         repo_id (str): 仓库ID
         token (str, 可选): 认证token
         repo_type (str, 可选): 仓库类型
-        revision (str, 可选): 分支名
+        revision (str, 可选): 分支名。AtomGit 当前仅支持默认分支 main；
+                              其他值会在上传前被拒绝
         commit_message (str, 可选): 提交消息
         commit_description (str, 可选): 提交描述
         path_in_repo (str, 可选): 在仓库中的路径，默认为根目录
         ignore_patterns (List[str], 可选): 要忽略的文件模式
-        upload_timeout (float, 可选): 上传超时时间（秒），默认60秒（1分钟）。
+        upload_timeout (float, 可选): 上传超时时间（秒），默认300秒（5分钟）。
                                       对于大文件，服务器处理响应可能需要较长时间。
     
     返回:
@@ -315,62 +399,88 @@ def upload_folder(
     
     if not folder_path.is_dir():
         raise NotADirectoryError(f"路径不是目录: {folder_path}")
+
+    if repo_type not in (None, "model", "dataset"):
+        raise ValueError("repo_type 仅支持 model 或 dataset")
+
+    if not is_supported_upload_revision(revision):
+        raise AtomGitUnsupportedError(
+            "AtomGit 当前仅支持默认 revision main，非默认分支不会被创建"
+        )
     
     # 如果没有提供token，尝试使用保存的token
     if token is None:
         token = _get_token()
         if token is None:
-            raise Exception("上传需要认证token，请先使用 'atomgit login' 登录，或提供token参数。")
+            raise AtomGitAuthenticationError(
+                "上传需要认证 token；请先使用 'atomgit login' 登录或提供 token"
+            )
     
     # 直接使用原始目录，或者创建临时目录来重新组织结构
     import tempfile
     import shutil
 
-    if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
-        # 如果要上传到根目录，直接使用源文件夹
-        upload_path = str(folder_path)
-    else:
-        # 如果要上传到特定路径，需要重新组织目录结构
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
+    temporary_directory = None
+    hf_constants = None
+    original_timeout = None
+    try:
+        if path_in_repo == "./" or path_in_repo == "." or path_in_repo == "":
+            # 如果要上传到根目录，直接使用源文件夹
+            upload_path = str(folder_path)
+        else:
+            # 如果要上传到特定路径，需要重新组织目录结构
+            temporary_directory = tempfile.TemporaryDirectory()
+            temp_path = Path(temporary_directory.name)
+
             # 创建目标路径
             target_path = temp_path / path_in_repo.strip('./')
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # 复制整个目录树
             shutil.copytree(folder_path, target_path, dirs_exist_ok=True)
-            
-            upload_path = str(temp_path)
-    # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-    from huggingface_hub import constants as hf_constants
-    
-    # 保存原始超时配置
-    original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-    
-    # 临时修改超时配置
-    hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
-    
-    try:
-        # 使用huggingface_hub的upload_folder上传
-        commit_msg = commit_message or f"Upload folder {folder_path.name}"
-        result = hf_upload_folder(
-            repo_id=normalized_repo_id,
-            folder_path=upload_path,
-            token=token,
-            commit_message=commit_msg
-        )
-        
-        return result
 
-    except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}")
-        elif "404" in error_msg:
-            raise Exception(f"仓库不存在：{repo_id}")
-        else:
-            raise Exception(f"上传失败：{error_msg}")
+            upload_path = str(temp_path)
+        # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
+        from huggingface_hub import constants as hf_constants
+
+        # 保存原始超时配置
+        original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+
+        # 临时修改超时配置
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+
+        try:
+            # 使用huggingface_hub的upload_folder上传
+            commit_msg = commit_message or f"Upload folder {folder_path.name}"
+            upload_kwargs = dict(
+                repo_id=normalized_repo_id,
+                folder_path=upload_path,
+                token=token,
+                commit_message=commit_msg,
+            )
+            if repo_type is not None:
+                # AtomGit 的 dataset 仓库保留业务类型，但当前上传传输
+                # 使用与 model 相同的兼容路由。
+                upload_kwargs["repo_type"] = (
+                    "model" if repo_type == "dataset" else repo_type
+                )
+            if revision:
+                upload_kwargs["revision"] = revision
+            if commit_description is not None:
+                upload_kwargs["commit_description"] = commit_description
+            if ignore_patterns:
+                upload_kwargs["ignore_patterns"] = ignore_patterns
+            result = hf_upload_folder(**upload_kwargs)
+
+            return result
+
+        except Exception as e:
+            raise _sdk_error(e, "上传目录", repo_id) from e
+    finally:
+        if hf_constants is not None and original_timeout is not None:
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+        if temporary_directory is not None:
+            temporary_directory.cleanup()
 
 
 def create_repository(
@@ -392,22 +502,48 @@ def create_repository(
     参数:
         repo_id (str): 仓库ID
         token (str, 可选): 认证token
-        private (bool, 可选): 是否为私有仓库，默认False
-        repo_type (str, 可选): 仓库类型，默认"model"
+        private (bool, 可选): 是否为私有仓库。AtomGit 当前只允许已验证的
+                              私有创建语义，必须显式设为 True
+        repo_type (str, 可选): 仓库类型，仅支持 model 或 dataset
         exist_ok (bool, 可选): 如果仓库已存在是否报错，默认False
-        其他参数: 主要用于Space类型仓库
+        其他参数: 为签名兼容保留；AtomGit 不支持 Space 创建，传入时会拒绝
     
     返回:
         str: 仓库的URL
     """
     # 标准化仓库ID
     normalized_repo_id = _normalize_repo_id(repo_id)
+
+    if not private:
+        raise AtomGitUnsupportedError(
+            "AtomGit 当前无法可靠验证公开仓库语义；请设置 private=True"
+        )
+    if repo_type not in ("model", "dataset"):
+        raise ValueError("repo_type 仅支持 model 或 dataset")
+    space_options = {
+        "space_sdk": space_sdk,
+        "space_hardware": space_hardware,
+        "space_storage": space_storage,
+        "space_sleep_time": space_sleep_time,
+        "space_secrets": space_secrets,
+        "space_variables": space_variables,
+    }
+    unsupported_space_options = [
+        name for name, value in space_options.items() if value is not None
+    ]
+    if unsupported_space_options:
+        raise AtomGitUnsupportedError(
+            "AtomGit 不支持 Space 仓库参数: "
+            + ", ".join(unsupported_space_options)
+        )
     
     # 如果没有提供token，尝试使用保存的token
     if token is None:
         token = _get_token()
         if token is None:
-            raise Exception("创建仓库需要认证token，请先使用 'atomgit login' 登录，或提供token参数。")
+            raise AtomGitAuthenticationError(
+                "创建仓库需要认证 token；请先使用 'atomgit login' 登录或提供 token"
+            )
     
     try:
         result = create_repo(
@@ -419,16 +555,10 @@ def create_repository(
         )
         return result
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}")
-        elif "409" in error_msg or "exists" in error_msg.lower():
-            if exist_ok:
-                return f"https://atomgit.com/{repo_id}"
-            else:
-                raise Exception(f"仓库已存在：{repo_id}")
-        else:
-            raise Exception(f"创建仓库失败：{error_msg}")
+        converted = _sdk_error(e, "创建仓库", repo_id)
+        if isinstance(converted, AtomGitRepositoryExistsError) and exist_ok:
+            return f"https://atomgit.com/{repo_id}"
+        raise converted from e
 
 
 def load_dataset(
@@ -525,7 +655,7 @@ def load_dataset(
             )
         )
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载数据集", path) from e
 
     # datasets 4.4.1 cannot discover AtomGit repositories directly, but it can
     # infer supported formats from a local Hub snapshot.
@@ -552,18 +682,21 @@ def load_dataset(
         return dataset
     except Exception as e:
         error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}。请检查token是否正确，或使用 'atomgit login' 重新登录。")
-        elif "404" in error_msg:
-            raise Exception(f"数据集不存在：{path}。请检查数据集路径是否正确。")
-        elif "ImportError" in error_msg or "No module named" in error_msg:
+        if isinstance(e, ImportError) or "No module named" in error_msg:
             raise ImportError("数据集功能需要安装datasets库。请运行: pip install datasets")
-        else:
-            raise Exception(f"加载数据集失败：{error_msg}")
+        raise _sdk_error(e, "加载数据集", path) from e
 
 
 # 为了兼容性，导出常用函数
 __all__ = [
+    'AtomGitError',
+    'AtomGitAuthenticationError',
+    'AtomGitRepositoryNotFoundError',
+    'AtomGitRepositoryExistsError',
+    'AtomGitRevisionNotFoundError',
+    'AtomGitTimeoutError',
+    'AtomGitNetworkError',
+    'AtomGitUnsupportedError',
     'snapshot_download',
     'hub_download_url', 
     'download_file',

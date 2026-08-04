@@ -1,4 +1,3 @@
-import os
 from typing import Optional, Dict, Any
 from pathlib import Path
 import json
@@ -6,14 +5,12 @@ import urllib.request
 import urllib.error
 import multiprocessing
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    from runtime import configure_hf_environment
+
+configure_hf_environment()
 
 
 from huggingface_hub import (
@@ -25,6 +22,8 @@ try:
     from .config import config
     from .utils import (
         is_auth_error,
+        is_supported_upload_revision,
+        normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
         run_download_with_retry,
@@ -34,6 +33,8 @@ except ImportError:
     from config import config
     from utils import (
         is_auth_error,
+        is_supported_upload_revision,
+        normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
         run_download_with_retry,
@@ -184,27 +185,8 @@ class HuggingFaceAPI:
         pass
     
     def _normalize_repo_id(self, repo_id: str) -> str:
-        """标准化仓库ID，处理三层格式转换"""
-        parts = repo_id.split('/')
-        
-        # 如果是三层格式（如 hf_mirrors/Qwen/Qwen2.5-Coder-0.5B-Instruct）
-        # 转换为特殊格式（如 hf_mirrors-Qwen/Qwen2.5-Coder-0.5B-Instruct）
-        if len(parts) >= 3:
-            # 只编码第一个斜杠，保留后面的斜杠
-            first_part = parts[0]
-            second_part = parts[1]
-            remaining_parts = parts[2:]
-            
-            # 构建新格式：第一部分-第二部分/其余部分
-            normalized = first_part + '-' + second_part
-            if remaining_parts:
-                normalized += '/' + '/'.join(remaining_parts)
-            
-            print(f"三层仓库名称转换: {repo_id} -> {normalized}")
-            return normalized
-        
-        # 二层或单层格式直接返回
-        return repo_id
+        """标准化仓库 ID，兼容保留原有内部方法。"""
+        return normalize_repo_id(repo_id)
     
     def login(self, token: str) -> bool:
         """登录验证"""
@@ -269,7 +251,7 @@ class HuggingFaceAPI:
                 return False
             # 使用Hugging Face Hub SDK创建仓库
             create_repo(
-                repo_id=repo_name,
+                repo_id=self._normalize_repo_id(repo_name),
                 token=credentials['token'],
                 repo_type=repo_type,
                 private=private,
@@ -290,23 +272,24 @@ class HuggingFaceAPI:
         """上传单个文件 - 使用Hugging Face Hub SDK
 
         优先使用 HF ``upload_file`` 直接以文件路径上传，避免旧实现中
-        "先 copy 到 ``.tmp_upload`` 再上传"的额外本地拷贝开销；仅在
-        HF 版本过旧（无 ``upload_file``）时回退到 ``upload_folder``
-        + 临时目录拷贝的旧行为。
+        "先复制再上传"的额外本地拷贝开销；仅在 HF 版本过旧（无
+        ``upload_file``）时回退到 ``upload_folder`` + 唯一系统临时目录。
 
         Args:
             path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
                 否则文件会被放到该前缀下（如 ``sub/`` → ``sub/<文件名>``）。
             repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
                 默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
-                ``main``）；指定时若分支不存在会自动创建。注意：目标分支
-                不存在已有文件时，上传会从空状态开始。
+            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
+                CLI 会在调用本方法前拒绝其他值。
             ignore_patterns: 单文件上传路径下该参数仅会匹配 ``file_path.name``，
                 几乎不生效——主要对目录上传有意义。新实现（``upload_file``）
                 不支持该参数，传入时若非空会回退到 ``upload_folder`` 旧路径
                 以保留语义。
         """
+        if not is_supported_upload_revision(revision):
+            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            return False
         try:
             if not file_path.exists():
                 print(f"文件不存在: {file_path}")
@@ -329,6 +312,7 @@ class HuggingFaceAPI:
             _set_progress_bar(progress_bar)
 
             commit_message = message or "Upload folder using atomgit client"
+            normalized_repo_id = self._normalize_repo_id(repo_id)
             # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
             hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
 
@@ -340,7 +324,7 @@ class HuggingFaceAPI:
                     file_kwargs = dict(
                         path_or_fileobj=str(file_path),
                         path_in_repo=remote_file_path,
-                        repo_id=repo_id,
+                        repo_id=normalized_repo_id,
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
@@ -354,9 +338,9 @@ class HuggingFaceAPI:
 
                 # 路径1（回退）：upload_folder + 临时目录拷贝（旧实现）
                 # 触发条件：HF 版本过旧无 upload_file，或用户传了 ignore_patterns
-                temp_dir = Path.cwd() / ".tmp_upload"
-                temp_dir.mkdir(exist_ok=True)
-                try:
+                import tempfile
+                with tempfile.TemporaryDirectory(prefix="atomgit-upload-") as temp_name:
+                    temp_dir = Path(temp_name)
                     if pipr:
                         target_file = temp_dir / pipr / file_path.name
                         target_file.parent.mkdir(parents=True, exist_ok=True)
@@ -367,7 +351,7 @@ class HuggingFaceAPI:
                     import shutil
                     shutil.copy2(file_path, target_file)
                     upload_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=normalized_repo_id,
                         folder_path=str(temp_dir),
                         path_in_repo=upload_path_in_repo,
                         token=credentials['token'],
@@ -382,10 +366,6 @@ class HuggingFaceAPI:
                         upload_kwargs['ignore_patterns'] = ignore_patterns
                     upload_folder(**upload_kwargs)
                     return True
-                finally:
-                    import shutil
-                    if temp_dir.exists():
-                        shutil.rmtree(temp_dir)
             finally:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
                 _restore_progress_bar_state(original_progress_state)
@@ -412,8 +392,8 @@ class HuggingFaceAPI:
                 否则目录内容会被放到该前缀下。
             repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
                 默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
-                ``main``）；指定时若分支不存在会自动创建。
+            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
+                CLI 会在调用本方法前拒绝其他值。
             ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
                 ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
             resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF
@@ -426,6 +406,9 @@ class HuggingFaceAPI:
             num_workers: 仅 ``resumable=True`` 生效，并发 worker 数；为空时
                 由 HF 默认决定。
         """
+        if not is_supported_upload_revision(revision):
+            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            return False
         try:
             if not dir_path.exists() or not dir_path.is_dir():
                 print(f"目录不存在: {dir_path}")
@@ -459,7 +442,7 @@ class HuggingFaceAPI:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _upload_repo_type(repo_type) or "model"
                     lf_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=self._normalize_repo_id(repo_id),
                         folder_path=str(dir_path),
                         repo_type=eff_repo_type,
                     )
@@ -506,7 +489,7 @@ class HuggingFaceAPI:
                     # 仓库内目标前缀：空 → "./"（根目录）
                     upload_path_in_repo = pipr + "/" if pipr else "./"
                     upload_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=self._normalize_repo_id(repo_id),
                         folder_path=str(dir_path),
                         path_in_repo=upload_path_in_repo,
                         token=credentials['token'],

@@ -40,8 +40,10 @@ atomgit_cli/
 ├── api.py                # CLI 使用的 AtomGit/HF 包装层
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
+├── runtime.py            # 共享 HF endpoint/XET/cache 运行时策略
+├── exceptions.py         # 稳定 SDK 异常层次
 ├── utils.py              # 校验、格式化和 Git helper
-├── tests/                # 当前为自执行上传测试脚本
+├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
 ├── requirements.txt      # 运行依赖
 └── deploy.sh             # 本地构建、安装和 PyPI 发布脚本
@@ -74,7 +76,8 @@ atomgit = atomgit.cli:cli
 
 ## 4. 导入时全局配置
 
-`cli.py`、`api.py` 和 `atomgit_hub.py` 都会设置：
+`cli.py`、`api.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
+`runtime.configure_hf_environment()`，统一设置：
 
 ```text
 HF_ENDPOINT=https://hub.atomgit.com
@@ -82,8 +85,9 @@ HF_HUB_DISABLE_XET=1
 HF_HOME=~/.cache/atomgit
 ```
 
-这些是导入时副作用。HF 进度条和 `DEFAULT_REQUEST_TIMEOUT` 也是进程级全局
-状态。CLI 上传会在成功和失败路径恢复调用前的完整状态。
+这些仍是导入时副作用，但定义和缓存创建策略只有一处且可重复调用。HF 进度条和
+`DEFAULT_REQUEST_TIMEOUT` 也是进程级全局状态；CLI 与 SDK 上传会在成功和失败
+路径恢复调用前的状态。
 
 ## 5. 配置和登录
 
@@ -130,9 +134,9 @@ atomgit upload PATH
 
 已知问题：
 
-- 上传和建仓没有统一调用 CLI 的多层 repo ID 转换；
-- `.tmp_upload` 是当前工作目录下的共享临时目录，回退路径有并发风险；
-- `revision` 参数已透传，但 AtomGit 远端 `dev` 分支行为尚未验证成功。
+- 上传、下载和建仓共享多层 repo ID 转换；远程写入仍需受控验收；
+- 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
+- 非 `main` revision 已根据远程证据明确拒绝，避免静默写入默认分支。
 
 resumable 通过 `HfApi(token=...)` 认证，已使用真实 404 MB 文件验证中断、恢复和
 最终 SHA-256。dataset 上传在保留业务类型的同时使用 AtomGit 可用的共享 model
@@ -172,30 +176,33 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
 - `create_repository`
 - `load_dataset`
 
-已知问题：
+当前契约：
 
-- 非根 `path_in_repo` 上传时，临时目录在 HF 调用前已经退出并删除；
-- `repo_type`、`revision`、`commit_description`、`ignore_patterns` 形参没有传给
-  HF `upload_folder`；
-- 保存的 timeout 没有恢复；
-- 部分旧 snapshot 参数依赖 HF 兼容装饰器，只产生弃用警告；
-- SDK 普遍用通用 `Exception` 包装错误。
+- 非根 `path_in_repo` 的临时目录覆盖完整 HF 调用，并在所有路径清理；
+- `repo_type`、`revision`、`commit_description`、`ignore_patterns` 均有严格
+  参数契约；dataset 传输使用 AtomGit 兼容的 model 路由；
+- upload timeout 在成功和失败后恢复；
+- 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
+- SDK 使用公开的 `AtomGitError` 层次区分认证、仓库、revision、网络、超时和
+  不支持语义，并保留脱敏后的原始 cause。
 
 ## 9. Repo ID 转换
 
-代码存在两套 `_normalize_repo_id`。三层及以上 ID 会把前两个片段合并：
+所有 CLI API 与 SDK 边界共享 `utils.normalize_repo_id`。三层及以上 ID 会把
+前两个片段合并：
 
 ```text
 org/namespace/repo -> org-namespace/repo
 ```
 
-CLI 下载调用该转换，但 CLI 上传和建仓直接传原始 ID。SDK 的多数函数会转换。
-因此“校验允许多层 ID”不等于所有操作都支持，必须通过统一契约和远程测试修复。
+create、文件/目录 upload、snapshot/file download、URL 构造和 dataset loading
+均使用同一映射。公开示例的匿名只读探测已验证转换后 URL；创建和上传仍需显式
+授权的远程写验收，离线一致性不能替代远程证据。
 
 ## 10. 测试和打包
 
-- 现有 9 个 `tests/test_upload_*.py` 文件是自执行脚本，不是 pytest 用例；
-- 它们主要用 fake 验证上传参数，没有覆盖大部分远程行为；
+- 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；
+- 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
 - 包名和版本为 `atomgit==1.0.5+yuto.1`；
 - `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；
