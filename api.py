@@ -148,14 +148,27 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     if ename == "RevisionNotFoundError" or "revision" in msg.lower() and ("not found" in msg.lower() or "404" in msg):
         return "分支/版本不存在", f"目标分支不存在且无法自动创建。请检查 revision 是否正确。"
 
-    # 仓库不存在（HF 既定：含 404 与"私有但无权访问"两种语义；
-    # HF 1.1.7 上传预检 preupload 对不存在/不可访问的仓库返回 404）
+    # 受限仓库的可靠特征。HF 401 通用文案（"If you are trying to access a
+    # private or gated repo..."）也含 "gated" 一词，不能仅凭该词判定。
+    gated_markers = (
+        "cannot access gated repo" in msg.lower()
+        or "you are not on the authorized list" in msg.lower()
+        or "you are not in the authorized list" in msg.lower()
+        or "repo is gated" in msg.lower()
+        or "is gated" in msg.lower()
+    )
+
+    # 仓库不存在（HF 既定：404/401 或 "Repository Not Found"、"创建提交前仓库
+    # 必须已存在 / 检查 repo_id 与 repo_type" 等特征；preupload 预检对不存在
+    # 或不可访问的仓库返回 404/401）
     if (
         ename in ("RepositoryNotFoundError", "GatedRepoError")
-        or "Repository Not Found" in msg
+        or "repository not found" in msg.lower()
         or ("404" in msg and "not found" in msg.lower())
+        or "creating a commit assumes that the repo already exists" in msg.lower()
+        or "please make sure you specified the correct `repo_id` and `repo_type`" in msg.lower()
     ):
-        if ename == "GatedRepoError" or "gated" in msg.lower():
+        if ename == "GatedRepoError" or gated_markers:
             return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
         if "preupload" in msg.lower():
             return (
@@ -165,8 +178,8 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             )
         return "仓库不存在", f"仓库 {repo_id or ''} 不存在或为私有且无访问权限。请检查 repo_id/repo_type，或先 atomgit login。"
 
-    # 受限仓库（文本特征兜底：gated 但非 RepositoryNotFound 上下文）
-    if "gated" in msg.lower() and ("repo" in msg.lower() or "access" in msg.lower()):
+    # 受限仓库（文本特征兜底：仅限明确的 gated 语义）
+    if gated_markers:
         return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
 
     # 请求参数错误

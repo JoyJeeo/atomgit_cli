@@ -111,6 +111,10 @@ def main():
     )
     run_case("E7 文件-preupload 404 仓库不存在", exc_preupload, "仓库不存在", "repo create")
 
+    # --- 8. 401+Repository Not Found（HF 文案含 gated 通用词）---
+    exc_401_rnf = Exception("401 Client Error.\nRepository Not Found for url: 'https://hub.atomgit.com/api/models/weixin_52273949/test_model/preupload/main'.\nIf you are trying to access a private or gated repo, make sure you are authenticated.\nNote: Creating a commit assumes that the repo already exists. Please use `create_repo`.")
+    run_case("E8 文件-401 仓库不存在（gated 词不误判）", exc_401_rnf, "仓库不存在", "repo create")
+
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)
     print(f"汇总: {passed}/{len(results)} 通过")
