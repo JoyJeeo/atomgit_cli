@@ -105,6 +105,7 @@ def logout():
 
 @cli.command()
 def whoami():
+    """显示当前登录用户"""
     if not config.is_logged_in():
         print_warning("请先登录：atomgit login")
         sys.exit(1)
