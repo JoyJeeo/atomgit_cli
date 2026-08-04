@@ -78,7 +78,9 @@ and must not report creation or upload success.
 - Single file: prefer HF `upload_file` with a full remote filename.
 - Directory: use HF `upload_folder` with a normalized repository prefix.
 - Large directory: use `HfApi.upload_large_folder`; authenticate through the
-  `HfApi` instance according to the locked library signature.
+  `HfApi` instance according to the locked library signature. Logical dataset
+  resumable uploads use the same verified AtomGit model compatibility route as
+  dataset creation and ordinary transfer.
 - Temporary directories must remain alive until the dependent HF call returns
   and must be cleaned in `finally` or a context manager.
 

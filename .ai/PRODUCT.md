@@ -47,9 +47,10 @@ every remote path is verified; known status follows the interface list.
   single-file repository subdirectory.
 - Implemented and covered mainly by offline mocks: progress control, ignore
   parsing, repository type, revision forwarding, and upload error categories.
-- Verified remotely: resumable upload authentication and interruption recovery,
-  dataset creation and transfer through the AtomGit-compatible model route,
-  credential permissions, `load_dataset`, and interrupted-download recovery.
+- Verified remotely: model and dataset resumable interruption/recovery with
+  399,300,506-byte checksum readback, dataset creation and transfer through the
+  AtomGit-compatible model route, credential permissions, `load_dataset`, and
+  interrupted-download recovery.
 - Non-default revision behavior is explicitly rejected because AtomGit does
   not expose the requested branch. Multi-level ID mapping is shared across
   operations; live create/upload returned 401 without false success when the

@@ -189,15 +189,21 @@ atomgit upload ./data --repo-id user/my-dataset \
 atomgit upload ./large-model --repo-id user/large-model \
   --resumable --num-workers 4 -t 1800
 
+# dataset 使用相同的断点续传接口，底层自动走 AtomGit 兼容路由
+atomgit upload ./large-dataset --repo-id user/large-dataset \
+  --repo-type dataset --resumable --num-workers 4 -t 1800
+
 # 单文件无本地拷贝，直接上传到仓库内指定路径
 atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 ```
 
-> ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m` 不生效（会产生多次提交）；`--repo-type` 必填，未指定时默认 `model`。
+> ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m`
+> 不生效（会产生多次提交）；HF 底层调用要求 `repo_type`，CLI 未指定时会自动
+> 使用 `model`。
 
-> 当前实现通过 `HfApi(token=...)` 认证，并已完成 404 MB 文件的真实中断、恢复
-> 和 SHA-256 校验。AtomGit 不会创建请求的非默认分支，因此当前 CLI 在任何远程
-> 调用前拒绝非 `main` revision。详见
+> 当前实现通过 `HfApi(token=...)` 认证，并已分别对 model 和 dataset 完成约
+> 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认
+> 分支，因此当前 CLI 在任何远程调用前拒绝非 `main` revision。详见
 > [上传实现分析](docs/upload_command_analysis.md)。
 
 #### 错误处理

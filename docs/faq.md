@@ -52,8 +52,9 @@ CLI 允许尝试下载公开仓库。私有仓库需要有效 token。是否真�
 ## resumable 当前是否可用？
 
 可以。当前实现通过 `HfApi(token=...)` 完成认证，不再把不兼容的 `token` 参数
-传给 `upload_large_folder()`。真实 404 MB 文件测试已验证中断后复用本地状态、
-继续上传，并通过下载回读 SHA-256 校验。
+传给 `upload_large_folder()`。2026-08-04 分别对私有 model 和 dataset 使用
+399,300,506 字节文件执行了 CLI 超时中断、同目录续传、下载回读；两者最终
+SHA-256 均一致。dataset 的用户类型保持不变，底层自动使用共享 model 兼容路由。
 
 ## `--revision dev` 是否已经验证？
 

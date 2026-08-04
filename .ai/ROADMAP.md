@@ -25,9 +25,10 @@ standing permission for future remote writes, release, or Issue transitions.
   safety, stable SDK exceptions, release artifacts, and a checksummed
   installer.
 - Controlled remote evidence now covers #015-#019: model and private-dataset
-  lifecycle, path placement, ignore absence, resumable interruption/recovery,
-  anonymous public success, anonymous private failure, authenticated private
-  success, SHA-256 readback, and verified cleanup.
+  lifecycle, path placement, ignore absence, model and dataset resumable
+  interruption/recovery with 399,300,506-byte SHA-256 readback, anonymous
+  public success, anonymous private failure, authenticated private success,
+  and verified cleanup.
 - Multi-level create/upload accurately normalized the logical IDs, returned
   nonzero on the service's 401 response, and left no repository behind. The
   supplied account lacks the normalized `weixin_52273949-test_model` and

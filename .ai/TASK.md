@@ -1,5 +1,124 @@
 # Current Issue Contract
 
+# Completed Issue LIVE-RESUMABLE-MODEL-DATASET
+
+Status: `completed`
+
+## Identity
+
+- Local Issue: `LIVE-RESUMABLE-MODEL-DATASET`
+- Title: `Validate CLI resumable upload for model and dataset repositories`
+- Type: `testing`, `compatibility`, `cli`
+- Priority: `P1`
+- Branch: `codex/resumable-model-dataset-validation` (local only)
+- Base: `yuto` at `eac59e3`
+- Delivery mode: run controlled live interruption/recovery, implement only a
+  directly evidenced compatibility fix, verify offline and live, commit
+  locally, merge into `yuto`, and push only `yuto`.
+
+## User Impact And Evidence
+
+Model resumable upload has prior 404 MB recovery evidence, while dataset
+resumable upload is currently rejected because an earlier AtomGit dataset/LFS
+route returned 404. Dataset creation now uses the shared model compatibility
+route, so the service limitation must be revalidated against repositories
+created by the current CLI before retaining or removing the guard.
+
+## Scope
+
+In scope: private model and dataset repositories at the two maintainer-provided
+test names; CLI-created repositories; one hard-linked approximately 399 MB test
+file; forced timeout/interruption; retained `.cache/huggingface` recovery
+metadata; resumed completion; authenticated download and SHA-256 comparison;
+dataset guard/service diagnosis; cleanup; minimal implementation/test/docs fix
+if current live evidence invalidates the guard.
+
+Out of scope: multi-level IDs, non-main revisions, unrelated upload behavior,
+real user configuration, release, PyPI, or files outside the provided test
+repository names and large-file source directory.
+
+## Authorized Live Resources
+
+- Credential source: `ATOMGIT_TEST_TOKEN`; never print it or place it in
+  command arguments.
+- Model repository: `weixin_52273949/test_model`.
+- Dataset repository: `weixin_52273949/test_datasets`.
+- Source file: the smallest regular file in repository `tmp` (approximately
+  399 MB); tests use a hard link in a temporary directory and do not modify the
+  source.
+- The request authorizes the create/upload/download/delete operations required
+  to validate both CLI resumable paths and clean them afterward.
+
+## Acceptance Criteria
+
+- Model CLI resumable upload is interrupted, leaves recovery metadata, resumes
+  successfully, downloads successfully, and matches source SHA-256.
+- Dataset current CLI behavior is observed first. If its guard fires, a direct
+  shared-route probe determines whether the service limitation still exists.
+- If the shared route supports dataset recovery, the CLI guard is removed with
+  strict regressions and the same interruption/resume/download/checksum matrix
+  passes through the CLI; otherwise the rejection remains with fresh evidence.
+- Timeout workers terminate without reporting success, and all temporary and
+  remote resources are cleaned and independently verified.
+- Focused and full offline tests, compileall, diff check, credential scan, and
+  independent review pass before delivery.
+
+## Permissions
+
+- Authorized: isolated HOME/test assets, the named live repositories,
+  create/upload/download/delete and timeout interruption, local source/test/
+  documentation/TASK edits, local commit, local merge into `yuto`, and push of
+  `yuto` only.
+- Not authorized: pushing the Issue branch, modifying real credentials or Git
+  configuration, other repositories, merge into `main`, release, or PyPI.
+
+## Delivery Record
+
+- Test asset: hard-linked the existing 399,300,506-byte `.bag` file into
+  temporary per-run directories. The source file and repository `tmp` contents
+  were not modified; authentication used only `ATOMGIT_TEST_TOKEN` with
+  isolated HOME state.
+- Repository setup: current CLI created private `test_model` and
+  `test_datasets` repositories successfully; Hub initialization completed and
+  the native API confirmed `private=True` with default branch `main`.
+- Model live evidence: the first CLI resumable invocation used a one-second
+  timeout, exited 1, and left three `.cache/huggingface` metadata files. The
+  second invocation reused the same directory, exited 0, and the remote file
+  list contained the large file. CLI download exited 0 and the downloaded
+  SHA-256 matched the source.
+- Dataset diagnosis: the pre-fix CLI exited 1 with its local unsupported guard.
+  A controlled shared-model-route probe then transferred approximately 35 MB
+  for 30 seconds, produced three recovery metadata files, and was explicitly
+  terminated without any former LFS 404. This proved the guard was stale for
+  repositories created through the current compatibility route.
+- Implementation: removed only the dataset resumable preflight rejection.
+  Dataset continues to use the public `repo_type=dataset` CLI contract while
+  `_atomgit_repo_type` supplies `model` to `upload_large_folder`.
+- Dataset live evidence after the fix: the first real
+  `--repo-type dataset --resumable` CLI call timed out after one second, exited
+  1, and left three metadata files. The second call reused the same directory,
+  exited 0, and the remote file existed. CLI download exited 0 and its
+  399,300,506-byte content had the same SHA-256 as the source.
+- Cleanup: native deletion returned 204 for both repositories. Native API,
+  model Hub, and dataset Hub verification then returned 404 for both names; no
+  remote repository or local temporary directory remains.
+- Regression coverage: replaced the obsolete rejection test with a synchronous
+  process-boundary contract proving dataset success, HfApi instance token,
+  model compatibility route, repo ID, main revision, ignore patterns, and
+  worker count. Focused dataset route tests passed 8/8; resumable CLI tests
+  passed 13/13; timeout/recovery tests passed 5/5; statistics and SDK timeout
+  suites passed.
+- Full offline verification: `python -m pytest` passed 36/36 tests;
+  `python -m compileall -q .`, `git diff --check`, local-link validation, and
+  credential-pattern scanning passed in the `atomgit_cli` conda environment.
+- Independent review: initial verdict `REQUEST CHANGES` for two P2 documentation
+  inaccuracies concerning CLI default repo type and the metadata directory.
+  Both were corrected; re-review found no remaining findings. Final verdict:
+  `APPROVED`.
+- Human acceptance: the maintainer explicitly requested model and dataset CLI
+  resumable validation, with emphasis on dataset, and authorized the named
+  test resources plus the established per-Issue local commit/merge/push flow.
+
 # Completed Issue FULL-CLI-VALIDATION
 
 Status: `completed`
