@@ -610,6 +610,15 @@ class HuggingFaceAPI:
                 )
                 print(f"✅ 仓库下载成功")
                 return True
+            except ValueError as e:
+                # huggingface_hub 1.1.7 的 snapshot_download 对空仓库会在
+                # tqdm.thread_map 内触发 CPython min() 空迭代器 ValueError，
+                # 导致误报"下载失败（ValueError）"。仓库本身可达但为空，
+                # 本地目录已创建，按成功处理并给出明确提示。
+                if "min() iterable argument is empty" in str(e):
+                    print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
+                    return True
+                raise
             except Exception as e:
                 print(f"仓库下载失败: {sanitized_download_error(e)}")
                 return False
