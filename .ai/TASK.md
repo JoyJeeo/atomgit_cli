@@ -4,6 +4,72 @@ Status: `completed`
 
 ## Identity
 
+- Local Issue: `DOC-CURRENT-BEHAVIOR`
+- Title: `Align user documentation and tests with current behavior`
+- Type: `documentation`, `testing`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `05e0664`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+README and maintainer documents still advertise non-main revisions, public
+creation, and SDK single-file use of a directory-only function, although the
+current code rejects or cannot perform those examples. The revision test also
+returns before a large retained block of obsolete assertions, so the source
+looks covered when it is unreachable.
+
+## Scope
+
+In scope: audit README/docs/current help against implementation; correct
+examples and limitations; remove unreachable historical revision test code;
+retain current regression coverage; update roadmap status facts without
+rewriting immutable release notes.
+
+Out of scope: new runtime behavior, remote acceptance, old tagged release
+contents, dependency upgrades, and release publication.
+
+## Acceptance Criteria
+
+- README examples execute against current directory-only SDK upload and
+  private-only creation contracts.
+- Revision documentation consistently states only main is supported.
+- Planned, implemented, and remotely verified behavior remain distinct.
+- No unreachable historical test implementation remains.
+- Pytest, compileall, document link/reference checks, and diff checks pass.
+
+## Permissions
+
+- Authorized: local documentation/test cleanup, cohesive commit, and branch
+  push.
+- Not authorized: runtime feature changes, remote operations, merge, release,
+  or PyPI publication.
+
+## Delivery Record
+
+- Corrected README upload/create/error/full-workflow examples for directory-
+  only SDK upload, private-only creation, dataset type, and main-only revision.
+- Updated FAQ, upload analysis, architecture, CLI help, and API docstrings to
+  state that non-main revisions are rejected before remote calls and that the
+  previously known SDK upload defects are fixed on the development line.
+- Deleted unreachable historical forwarding code in
+  `tests/test_upload_revision.py`; the dedicated current regression remains
+  `tests/test_revision_rejection.py` and passed.
+- Local Markdown link audit reported zero missing targets. `python -m pytest`
+  passed 33/33, compileall and diff checks passed.
+- Independent review found stale CLI help/API docstrings and a README import
+  mismatch; all were corrected. Immutable tagged release notes were left
+  unchanged. Re-review found no blocking documentation, test, or scope issue.
+  Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-025
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-025`
 - Title: `Define stable AtomGit SDK exception contracts`
 - Type: `sdk`, `compatibility`

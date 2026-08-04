@@ -278,9 +278,8 @@ class HuggingFaceAPI:
                 否则文件会被放到该前缀下（如 ``sub/`` → ``sub/<文件名>``）。
             repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
                 默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
-                ``main``）；指定时若分支不存在会自动创建。注意：目标分支
-                不存在已有文件时，上传会从空状态开始。
+            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
+                CLI 会在调用本方法前拒绝其他值。
             ignore_patterns: 单文件上传路径下该参数仅会匹配 ``file_path.name``，
                 几乎不生效——主要对目录上传有意义。新实现（``upload_file``）
                 不支持该参数，传入时若非空会回退到 ``upload_folder`` 旧路径
@@ -388,8 +387,8 @@ class HuggingFaceAPI:
                 否则目录内容会被放到该前缀下。
             repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
                 默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标分支/版本。为空时提交到 HF 默认分支（通常
-                ``main``）；指定时若分支不存在会自动创建。
+            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
+                CLI 会在调用本方法前拒绝其他值。
             ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
                 ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
             resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF

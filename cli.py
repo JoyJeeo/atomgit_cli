@@ -182,7 +182,7 @@ def create(repo_name, repo_type, private):
               type=click.Choice(['model', 'dataset']), default=None,
               help='仓库类型 (model/dataset)，默认按 model 处理')
 @click.option('--revision', 'revision', default=None,
-              help='上传目标分支/版本（如 "dev" 或 "v1.0"），默认提交到默认分支(通常为main)')
+              help='上传 revision；AtomGit 当前仅接受默认分支 main，其他值会拒绝')
 @click.option('--ignore', '-i', 'ignore', default=None,
               help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
                    '仅对目录上传有意义')

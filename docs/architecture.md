@@ -176,12 +176,12 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
 - `create_repository`
 - `load_dataset`
 
-已知问题：
+当前契约：
 
-- 非根 `path_in_repo` 上传时，临时目录在 HF 调用前已经退出并删除；
-- `repo_type`、`revision`、`commit_description`、`ignore_patterns` 形参没有传给
-  HF `upload_folder`；
-- 保存的 timeout 没有恢复；
+- 非根 `path_in_repo` 的临时目录覆盖完整 HF 调用，并在所有路径清理；
+- `repo_type`、`revision`、`commit_description`、`ignore_patterns` 均有严格
+  参数契约；dataset 传输使用 AtomGit 兼容的 model 路由；
+- upload timeout 在成功和失败后恢复；
 - 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
 - SDK 使用公开的 `AtomGitError` 层次区分认证、仓库、revision、网络、超时和
   不支持语义，并保留脱敏后的原始 cause。

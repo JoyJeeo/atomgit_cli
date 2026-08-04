@@ -18,7 +18,7 @@ atomgit upload [OPTIONS] PATH
 | `--no-progress-bar` | 关闭 | 禁用 HF 上传进度条 |
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
-| `--revision` | 默认分支 | 目标 revision |
+| `--revision` | 默认分支 | 当前仅接受 `main`，其他值在远程调用前拒绝 |
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
 | `--resumable` | 关闭 | 目录使用 `upload_large_folder` |
 | `--num-workers` | HF 默认 | resumable worker 数 |
@@ -31,13 +31,14 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用上传传输路由�
 
 `cli.upload` 依次执行：
 
-1. 检查 `config.is_logged_in()`；
-2. 使用 `validate_repo_name` 校验 repo ID；
-3. 将 PATH 转为 `Path` 并区分文件或目录；
-4. 使用 `normalize_path_in_repo` 统一斜杠并拒绝 `..`；
-5. 使用 `parse_ignore_patterns` 拆分、去空和去重；
-6. 打印大小、文件数量和选择的参数；
-7. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
+1. 校验 timeout、worker 数和 revision（非 `main` 直接退出 2）；
+2. 检查 `config.is_logged_in()`；
+3. 使用 `validate_repo_name` 校验 repo ID；
+4. 将 PATH 转为 `Path` 并区分文件或目录；
+5. 使用 `normalize_path_in_repo` 统一斜杠并拒绝 `..`；
+6. 使用 `parse_ignore_patterns` 拆分、去空和去重；
+7. 打印大小、文件数量和选择的参数；
+8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
 `--resumable` 用于文件时会警告并忽略。`--ignore` 用于单文件时会警告，但仍
 传给 API 层并触发回退上传路径。
