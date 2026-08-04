@@ -4,6 +4,71 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-024`
+- Title: `Centralize endpoint and normalization policy`
+- Type: `compatibility`, `sdk`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `13ac77a`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+Normalization is now shared, but `cli.py`, `api.py`, and `atomgit_hub.py`
+still duplicate import-time endpoint, XET, cache-directory, and environment
+mutation policy. Future changes can drift across CLI/package/standalone SDK
+imports.
+
+## Scope
+
+In scope: introduce one idempotent runtime policy module for endpoint/cache
+constants and environment setup; use it before HF imports in all entry paths;
+preserve current values and standalone compatibility; add offline tests and
+update architecture/package smoke inputs.
+
+Out of scope: removing all import-time side effects, changing endpoint/cache
+values, dependency upgrades, remote operations, and exception redesign.
+
+## Acceptance Criteria
+
+- Endpoint, XET setting, and cache path have one authoritative definition.
+- CLI, API, package SDK, and standalone SDK imports apply identical policy
+  before Hugging Face imports.
+- Repeated setup is idempotent and cache creation remains supported.
+- Wheel smoke proves the new module is packaged.
+- Pytest, focused tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation/tests/docs, temporary HOME tests, cohesive
+  commit, and push of the current branch.
+- Not authorized: remote operations, real credential/Git changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added `runtime.py` as the single endpoint, XET, HF cache, and cache-creation
+  policy; CLI, API, package SDK, and standalone SDK apply it before HF imports.
+- Existing values and import-time behavior are preserved while repeated setup
+  is idempotent. The shared multi-level normalization from ROADMAP-007 remains
+  the single repository-ID policy.
+- Focused runtime test passed 8/8 and wheel smoke passed 9/9, proving the new
+  module is packaged and both import surfaces work from the wheel.
+- `python -m pytest` collected and passed 33/33 cases in 21.75 seconds;
+  `python -m compileall -q .` and `git diff --check` passed.
+- Updated AI architecture, human architecture, and README module descriptions.
+- Independent review found no blocking import-order, standalone compatibility,
+  packaging, state, or scope issue. Removing all import-time mutation remains
+  a possible future architecture change, not required here. Verdict:
+  `APPROVED`.
+
+# Completed Issue ROADMAP-007
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-007`
 - Title: `Unify multi-level repository ID behavior`
 - Type: `bug`, `cli`, `sdk`, `compatibility`

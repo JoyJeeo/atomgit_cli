@@ -40,6 +40,7 @@ atomgit_cli/
 ├── api.py                # CLI 使用的 AtomGit/HF 包装层
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
+├── runtime.py            # 共享 HF endpoint/XET/cache 运行时策略
 ├── utils.py              # 校验、格式化和 Git helper
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
@@ -74,7 +75,8 @@ atomgit = atomgit.cli:cli
 
 ## 4. 导入时全局配置
 
-`cli.py`、`api.py` 和 `atomgit_hub.py` 都会设置：
+`cli.py`、`api.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
+`runtime.configure_hf_environment()`，统一设置：
 
 ```text
 HF_ENDPOINT=https://hub.atomgit.com
@@ -82,8 +84,9 @@ HF_HUB_DISABLE_XET=1
 HF_HOME=~/.cache/atomgit
 ```
 
-这些是导入时副作用。HF 进度条和 `DEFAULT_REQUEST_TIMEOUT` 也是进程级全局
-状态。CLI 上传会在成功和失败路径恢复调用前的完整状态。
+这些仍是导入时副作用，但定义和缓存创建策略只有一处且可重复调用。HF 进度条和
+`DEFAULT_REQUEST_TIMEOUT` 也是进程级全局状态；CLI 与 SDK 上传会在成功和失败
+路径恢复调用前的状态。
 
 ## 5. 配置和登录
 

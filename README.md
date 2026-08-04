@@ -573,6 +573,7 @@ atomgit/
 ├── cli.py               # CLI命令定义
 ├── api.py               # Hugging Face Hub API客户端
 ├── config.py            # 配置管理
+├── runtime.py           # 共享HF端点和缓存策略
 ├── utils.py             # 工具函数（路径/忽略模式解析等）
 ├── atomgit_hub.py       # Python SDK接口
 ├── requirements.txt     # 依赖包

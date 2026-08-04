@@ -21,6 +21,7 @@ SOURCE_FILES = (
     "utils.py",
     "setup.py",
     "requirements.txt",
+    "runtime.py",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",

@@ -35,6 +35,7 @@ or covered by shared contract tests.
   exit codes.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
+- `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
 - `config.py`: in-memory configuration plus persistence to
   `~/.atomgit/config.json`.
 - `utils.py`: validation, formatting, filesystem helpers, and Git credential
@@ -51,8 +52,8 @@ or covered by shared contract tests.
 
 ## Important State
 
-- `HF_ENDPOINT`, `HF_HUB_DISABLE_XET`, and `HF_HOME` are currently set during
-  module import.
+- `HF_ENDPOINT`, `HF_HUB_DISABLE_XET`, and `HF_HOME` are set through the shared
+  idempotent runtime policy before HF imports.
 - Hugging Face progress-bar control and request timeout are process-global.
 - Git credential-helper installation modifies user-global Git configuration.
 - Git helper setup stores the previous host-specific values in the restrictive

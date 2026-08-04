@@ -1,4 +1,3 @@
-import os
 from typing import Optional, Dict, Any
 from pathlib import Path
 import json
@@ -6,14 +5,12 @@ import urllib.request
 import urllib.error
 import multiprocessing
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    from runtime import configure_hf_environment
+
+configure_hf_environment()
 
 
 from huggingface_hub import (

@@ -13,14 +13,15 @@ import warnings
 from typing import Optional, Union, List, Dict, Any
 from pathlib import Path
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    try:
+        from runtime import configure_hf_environment
+    except ImportError:
+        from atomgit.runtime import configure_hf_environment
+
+configure_hf_environment()
 
 from huggingface_hub import snapshot_download as hf_snapshot_download
 from huggingface_hub import hf_hub_download, upload_folder as hf_upload_folder, create_repo

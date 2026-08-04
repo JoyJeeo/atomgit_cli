@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
 import click
 import sys
 from pathlib import Path
 from getpass import getpass
 
-# 设置Hugging Face Hub的API端点为AtomGit
-os.environ["HF_ENDPOINT"] = "https://hub.atomgit.com"
-# 禁用Xet协议，避免 xet-write-token 请求
-os.environ["HF_HUB_DISABLE_XET"] = "1"
-# 设置缓存目录
-cache_dir = os.path.expanduser("~/.cache/atomgit")
-os.makedirs(cache_dir, exist_ok=True)
-os.environ["HF_HOME"] = cache_dir
+try:
+    from .runtime import configure_hf_environment
+except ImportError:
+    from runtime import configure_hf_environment
+
+configure_hf_environment()
 
 try:
     from .config import config
