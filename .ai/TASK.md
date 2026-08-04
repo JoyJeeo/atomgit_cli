@@ -4,6 +4,67 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-012`
+- Title: `Complete repository creation contract tests`
+- Type: `testing`, `cli`, `sdk`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `250bf64`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+Visibility and SDK safety regressions exist, but the complete creation path
+lacks strict coverage for both repository types, stored tokens, `exist_ok`,
+missing login, invalid names/types, HF failures, and CLI exit codes.
+
+## Scope
+
+In scope: offline strict fakes and Click integration tests for supported
+private model/dataset creation and deterministic failure paths across API,
+CLI, and existing SDK contracts.
+
+Out of scope: live creation, public semantics changes, repo ID normalization,
+new create features, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Valid private model/dataset calls bind to HF 1.1.7 with exact arguments.
+- Missing credentials and dependency failures produce failure without false
+  success.
+- CLI login, repository-name/type validation, privacy, success, and failure
+  exit codes are tested.
+- Existing CLI visibility and SDK creation suites remain green.
+- Pytest, focused scripts, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local tests and affected documentation, cohesive commit, and
+  push of the current branch.
+- Not authorized: live AtomGit creation, real credential/Git changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added strict API and Click coverage for private model/dataset creation,
+  stored token, privacy, `exist_ok`, missing credentials, dependency failure,
+  login requirement, invalid names/types, public rejection, and CLI success/
+  failure exit codes.
+- Focused contract passed 22/22; existing CLI visibility and SDK creation
+  suites remained green at 1/1 and 21/21.
+- `python -m pytest` collected and passed 29/29 cases in 960.49 seconds;
+  `python -m compileall -q .` and `git diff --check` passed.
+- Independent review found no blocking strictness, token, type, exit-code,
+  compatibility, or scope issue. Live creation/type/privacy evidence remains
+  separately authorized work. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-011
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-011`
 - Title: `Add strict CLI and SDK download contract coverage`
 - Type: `testing`, `cli`, `sdk`, `compatibility`
