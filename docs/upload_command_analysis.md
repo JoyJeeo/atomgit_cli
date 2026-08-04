@@ -126,11 +126,9 @@ SHA-256 均一致。
 
 ## 7. Repo ID
 
-`HuggingFaceAPI` 定义了多层 repo ID 转换，但上传方法没有调用它。上传当前将
-CLI 校验通过的原始 `repo_id` 直接交给 HF。下载则会调用转换。
-
-因此多层 ID 在上传中的实际支持状态不确定，不能仅根据
-`validate_repo_name` 允许多层格式就宣称可用。
+上传、下载、建仓、SDK URL 和 dataset loading 共享同一个多层 ID 映射：
+`org/namespace/repo -> org-namespace/repo`。匿名公开读取已验证该映射；上传和
+创建的远程写结果仍需显式授权后验收。
 
 ## 8. 错误处理
 
@@ -164,7 +162,7 @@ API 方法打印类型和建议后返回 `False`，CLI 再以非零状态退出�
 CLI 全局状态恢复以及大文件中断恢复。这些测试仍没有证明：
 
 - revision 会在 AtomGit 创建或写入目标远端分支；
-- 多层 repo ID 上传成功；
+- 多层 repo ID 的远程创建和上传成功；
 - ignore 在真实远端确实排除了文件。
 
 远程测试应拆分每项能力并执行上传、下载回读和内容校验，详见

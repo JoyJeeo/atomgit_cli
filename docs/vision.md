@@ -45,5 +45,6 @@ SDK。项目复用 Hugging Face Hub 协议能力，并将端点切换到 AtomGit
 ## 当前重点
 
 resumable、dataset 传输、凭据权限、数据集加载、CLI 全局状态和下载中断恢复已
-完成实现与验证。下一阶段重点是 revision 远端语义、多层 repo ID、SDK 上传一致
-性、标准测试体系和版本化安装脚本。
+完成实现与验证。开发线还统一了多层 repo ID、SDK 上传契约、标准 pytest
+矩阵、wheel 冒烟和版本化安装脚本。下一阶段重点是受控远程写验收、稳定 SDK
+异常契约和端点策略维护。

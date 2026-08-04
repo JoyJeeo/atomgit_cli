@@ -82,7 +82,10 @@ ID is not sufficient if downstream operations transform it differently.
 - CLI and SDK duplicate endpoint, normalization, upload, and error behavior.
 - Global timeout changes are unsafe unless restored.
 - Mock upload objects can hide real HF signature incompatibilities.
-- Remote branch semantics may differ from Hugging Face Hub expectations.
+- Remote branch semantics differ from Hugging Face Hub expectations; current
+  upload interfaces reject non-main revisions.
+- Multi-level ID normalization is shared, but write behavior still needs
+  explicitly authorized remote acceptance evidence.
 - Configuration and credential-helper operations affect user-owned state.
 
 Do not perform a broad architectural rewrite as incidental work. Address these

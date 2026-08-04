@@ -37,37 +37,19 @@ except ImportError:
 
 try:
     from .config import config
-    from .utils import run_download_with_retry, sanitized_download_error
+    from .utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
 except ImportError:
     try:
         from config import config
-        from utils import run_download_with_retry, sanitized_download_error
+        from utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
     except ImportError:
         from atomgit.config import config
-        from atomgit.utils import run_download_with_retry, sanitized_download_error
+        from atomgit.utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
 
 
 def _normalize_repo_id(repo_id: str) -> str:
-    """标准化仓库ID，处理三层格式转换"""
-    parts = repo_id.split('/')
-    
-    # 如果是三层格式（如 wuyw/Qwen3-Reranker/0.6B-test）
-    # 转换为特殊格式（如 wuyw-Qwen3-Reranker/0.6B-test）
-    if len(parts) >= 3:
-        # 只编码第一个斜杠，保留后面的斜杠
-        first_part = parts[0]
-        second_part = parts[1]
-        remaining_parts = parts[2:]
-        
-        # 构建新格式：第一部分-第二部分/其余部分
-        normalized = first_part + '-' + second_part
-        if remaining_parts:
-            normalized += '/' + '/'.join(remaining_parts)
-        
-        return normalized
-    
-    # 二层或单层格式直接返回
-    return repo_id
+    """标准化仓库 ID，兼容保留原有模块内辅助函数。"""
+    return normalize_repo_id(repo_id)
 
 
 def _get_token() -> Optional[str]:

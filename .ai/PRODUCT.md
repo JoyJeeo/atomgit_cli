@@ -50,10 +50,13 @@ every remote path is verified; known status follows the interface list.
 - Verified remotely: resumable upload authentication and interruption recovery,
   dataset transfer through the AtomGit-compatible model route, credential
   permissions, `load_dataset`, and interrupted-download recovery.
-- Not yet established by valid remote tests: revision branch behavior and
-  multi-level repository ID consistency.
-- Known SDK defects: non-root upload temporary-directory lifetime, ignored
-  upload parameters, and leaked timeout state.
+- Non-default revision behavior is explicitly rejected because AtomGit does
+  not expose the requested branch; multi-level ID read mapping is verified
+  anonymously and shared across operations, while remote writes still require
+  opt-in acceptance evidence.
+- The previously known SDK upload lifetime, parameter-forwarding, and timeout
+  state defects are covered by offline regressions on the yuto development
+  line.
 
 ## Product Contracts
 

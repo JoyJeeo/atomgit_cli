@@ -4,6 +4,74 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-007`
+- Title: `Unify multi-level repository ID behavior`
+- Type: `bug`, `cli`, `sdk`, `compatibility`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `f56fe4d`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+Validation accepts IDs such as `hf_mirrors/Qwen/repo`, but downloads/SDK
+convert them to `hf_mirrors-Qwen/repo` while CLI create/upload pass the
+unconverted ID. Anonymous read-only probes on 2026-08-04 returned 404 for the
+raw public example and 200 for the converted form, confirming the advertised
+mapping without a remote write.
+
+## Scope
+
+In scope: define one shared multi-level normalization helper; apply it to CLI
+API create/upload/download and every SDK create/upload/download/URL/dataset
+boundary; remove diagnostic printing; add strict offline cross-operation
+contract tests and update behavior documentation.
+
+Out of scope: changing two-level IDs, remote writes, renaming existing remote
+repositories, endpoint centralization, and dependency upgrades.
+
+## Acceptance Criteria
+
+- One/two-level IDs remain unchanged; three-or-more-level IDs merge only the
+  first two components (`a/b/c/d -> a-b/c/d`).
+- Create, file upload, directory upload, snapshot/file download, URL creation,
+  and dataset loading all use the same normalized ID.
+- Normalization emits no CLI/SDK stdout noise.
+- Calls continue to bind to HF 1.1.7 signatures and existing tests stay green.
+- Pytest, focused scripts, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: anonymous read-only evidence, local implementation/tests/docs,
+  cohesive commit, and push of the current branch.
+- Not authorized: AtomGit remote writes, repository mutation, real credential
+  changes, merge, release, or PyPI publication.
+
+## Delivery Record
+
+- Anonymous read-only evidence: the documented raw public multi-level file URL
+  returned HTTP 404, while `hf_mirrors-Qwen/...` returned HTTP 200, confirming
+  the first-two-components mapping without credentials or mutation.
+- Added `utils.normalize_repo_id`; CLI API create/file upload/directory upload/
+  download and SDK snapshot/file/upload/create/URL/dataset boundaries now use
+  the same silent mapping.
+- Focused cross-operation test passed 23/23. `python -m pytest` collected and
+  passed 32/32 cases in 22.00 seconds; `python -m compileall -q .` and
+  `git diff --check` passed.
+- Updated product, AI architecture, human architecture, upload analysis, and
+  project vision to distinguish verified read mapping, offline consistency,
+  and still-unverified remote writes.
+- Independent review found no blocking target-selection, compatibility,
+  stdout, documentation, or scope issue. Remote create/upload acceptance
+  remains permission-gated. Verdict: `APPROVED`.
+
+# Completed Issue ROADMAP-022
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-022`
 - Title: `Add a versioned checksummed installer`
 - Type: `distribution`, `security`

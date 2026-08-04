@@ -130,7 +130,7 @@ atomgit upload PATH
 
 已知问题：
 
-- 上传和建仓没有统一调用 CLI 的多层 repo ID 转换；
+- 上传、下载和建仓共享多层 repo ID 转换；远程写入仍需受控验收；
 - 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
 - `revision` 参数已透传，但 AtomGit 远端 `dev` 分支行为尚未验证成功。
 
@@ -183,14 +183,16 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
 
 ## 9. Repo ID 转换
 
-代码存在两套 `_normalize_repo_id`。三层及以上 ID 会把前两个片段合并：
+所有 CLI API 与 SDK 边界共享 `utils.normalize_repo_id`。三层及以上 ID 会把
+前两个片段合并：
 
 ```text
 org/namespace/repo -> org-namespace/repo
 ```
 
-CLI 下载调用该转换，但 CLI 上传和建仓直接传原始 ID。SDK 的多数函数会转换。
-因此“校验允许多层 ID”不等于所有操作都支持，必须通过统一契约和远程测试修复。
+create、文件/目录 upload、snapshot/file download、URL 构造和 dataset loading
+均使用同一映射。公开示例的匿名只读探测已验证转换后 URL；创建和上传仍需显式
+授权的远程写验收，离线一致性不能替代远程证据。
 
 ## 10. 测试和打包
 

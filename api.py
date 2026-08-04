@@ -25,6 +25,7 @@ try:
     from .config import config
     from .utils import (
         is_auth_error,
+        normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
         run_download_with_retry,
@@ -34,6 +35,7 @@ except ImportError:
     from config import config
     from utils import (
         is_auth_error,
+        normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
         run_download_with_retry,
@@ -184,27 +186,8 @@ class HuggingFaceAPI:
         pass
     
     def _normalize_repo_id(self, repo_id: str) -> str:
-        """标准化仓库ID，处理三层格式转换"""
-        parts = repo_id.split('/')
-        
-        # 如果是三层格式（如 hf_mirrors/Qwen/Qwen2.5-Coder-0.5B-Instruct）
-        # 转换为特殊格式（如 hf_mirrors-Qwen/Qwen2.5-Coder-0.5B-Instruct）
-        if len(parts) >= 3:
-            # 只编码第一个斜杠，保留后面的斜杠
-            first_part = parts[0]
-            second_part = parts[1]
-            remaining_parts = parts[2:]
-            
-            # 构建新格式：第一部分-第二部分/其余部分
-            normalized = first_part + '-' + second_part
-            if remaining_parts:
-                normalized += '/' + '/'.join(remaining_parts)
-            
-            print(f"三层仓库名称转换: {repo_id} -> {normalized}")
-            return normalized
-        
-        # 二层或单层格式直接返回
-        return repo_id
+        """标准化仓库 ID，兼容保留原有内部方法。"""
+        return normalize_repo_id(repo_id)
     
     def login(self, token: str) -> bool:
         """登录验证"""
@@ -269,7 +252,7 @@ class HuggingFaceAPI:
                 return False
             # 使用Hugging Face Hub SDK创建仓库
             create_repo(
-                repo_id=repo_name,
+                repo_id=self._normalize_repo_id(repo_name),
                 token=credentials['token'],
                 repo_type=repo_type,
                 private=private,
@@ -328,6 +311,7 @@ class HuggingFaceAPI:
             _set_progress_bar(progress_bar)
 
             commit_message = message or "Upload folder using atomgit client"
+            normalized_repo_id = self._normalize_repo_id(repo_id)
             # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
             hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
 
@@ -339,7 +323,7 @@ class HuggingFaceAPI:
                     file_kwargs = dict(
                         path_or_fileobj=str(file_path),
                         path_in_repo=remote_file_path,
-                        repo_id=repo_id,
+                        repo_id=normalized_repo_id,
                         token=credentials['token'],
                         commit_message=commit_message,
                     )
@@ -366,7 +350,7 @@ class HuggingFaceAPI:
                     import shutil
                     shutil.copy2(file_path, target_file)
                     upload_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=normalized_repo_id,
                         folder_path=str(temp_dir),
                         path_in_repo=upload_path_in_repo,
                         token=credentials['token'],
@@ -454,7 +438,7 @@ class HuggingFaceAPI:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _upload_repo_type(repo_type) or "model"
                     lf_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=self._normalize_repo_id(repo_id),
                         folder_path=str(dir_path),
                         repo_type=eff_repo_type,
                     )
@@ -501,7 +485,7 @@ class HuggingFaceAPI:
                     # 仓库内目标前缀：空 → "./"（根目录）
                     upload_path_in_repo = pipr + "/" if pipr else "./"
                     upload_kwargs = dict(
-                        repo_id=repo_id,
+                        repo_id=self._normalize_repo_id(repo_id),
                         folder_path=str(dir_path),
                         path_in_repo=upload_path_in_repo,
                         token=credentials['token'],
