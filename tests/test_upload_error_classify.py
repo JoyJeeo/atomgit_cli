@@ -106,6 +106,16 @@ def main():
     check("U22 preupload 404 hint 提示先建仓", "repo create" in hint, f"hint='{hint}'")
     check("U23 preupload 404 hint 不回显远端 URL", "hub.atomgit.com" not in hint, f"hint='{hint}'")
 
+    # --- HF 401 仓库不存在文案（含 gated 通用词，不得误判为受限仓库）---
+    case("U24 401+Repository Not Found → 仓库不存在（非受限仓库）",
+         Exception("401 Client Error.\nRepository Not Found for url: https://hub.atomgit.com/api/models/user/repo/preupload/main.\nPlease make sure you specified the correct `repo_id` and `repo_type`.\nIf you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication\nNote: Creating a commit assumes that the repo already exists on the Huggingface Hub. Please use `create_repo` if it's not the case."),
+         "仓库不存在")
+    et, hint = classify(
+        Exception("401 Client Error.\nRepository Not Found for url: https://hub.atomgit.com/api/models/user/repo/preupload/main.\nPlease make sure you specified the correct `repo_id` and `repo_type`.\nIf you are trying to access a private or gated repo, make sure you are authenticated. For more details, see https://huggingface.co/docs/huggingface_hub/authentication\nNote: Creating a commit assumes that the repo already exists on the Huggingface Hub. Please use `create_repo` if it's not the case."),
+        repo_id="user/repo",
+    )
+    check("U25 401 文案含 gated 通用词但非受限仓库", "受限仓库" not in et and "repo create" in hint, f"type='{et}' hint='{hint}'")
+
     # --- 受限仓库 (gated) ---
     if _HF_ERR_OK:
         case("U5 GatedRepoError → 受限仓库",
