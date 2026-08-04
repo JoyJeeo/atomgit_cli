@@ -1,5 +1,99 @@
 # Current Issue Contract
 
+# Completed Issue FULL-CLI-VALIDATION
+
+Status: `completed`
+
+## Identity
+
+- Local Issue: `FULL-CLI-VALIDATION`
+- Title: `Exercise the complete AtomGit CLI command surface`
+- Type: `testing`, `cli`, `security`
+- Priority: `P1`
+- Branch: `codex/full-cli-validation` (local only)
+- Base: `yuto` at `c0a8f38`
+- Delivery mode: add missing offline command-level regressions, run the full
+  isolated and installed-wheel matrix, commit locally, merge into `yuto`, and
+  push only `yuto`.
+
+## User Impact And Evidence
+
+Upload, download, repository creation, logout, and wheel entry points have
+focused tests, but CLI `login`, `whoami`, and `config-show` lack complete
+command-level coverage. A full CLI validation must prove every advertised
+command without touching the maintainer's real HOME, Git configuration, or
+credentials.
+
+## Scope
+
+In scope: root and subcommand help; version; login success/failure and helper
+outcomes; logout; whoami logged-out/success/API-failure behavior; config-show
+logged-out/logged-in and Git integration states; existing repo create, upload,
+download, validation, credential, packaging, and installed-wheel tests; CLI
+coverage documentation.
+
+Out of scope: new CLI features, real AtomGit writes, reuse of the completed
+live-write authorization, real global Git mutation, dependency upgrades,
+release, or PyPI publication.
+
+## Acceptance Criteria
+
+- Every command listed by `atomgit --help` has a command-level success or
+  expected-failure regression, including authentication and state branches.
+- Login tests prove the token is never printed and Git-helper setup failures
+  remain nonfatal after successful platform authentication.
+- Whoami and config-show accurately distinguish logged-out, success, and
+  dependency/configuration failure states.
+- All tests use fakes plus temporary HOME/Git state and perform no network or
+  real credential-helper mutation.
+- The complete pytest matrix, isolated wheel build/install smoke, compileall,
+  diff check, link check, credential scan, and independent review pass.
+
+## Permissions
+
+- Authorized: local test/documentation/TASK edits, temporary HOME and Git
+  configuration, offline builds, local commit, local merge into `yuto`, and
+  push of `yuto` only.
+- Not authorized: pushing the Issue branch, AtomGit remote writes, changing
+  real credentials or Git configuration, merge into `main`, release, or PyPI.
+
+## Delivery Record
+
+- CLI inventory: root help advertises login, logout, whoami, repo/create,
+  upload, download, and config-show; root version reports `1.0.5+yuto.1`.
+- Added `tests/test_cli_surface.py` with 39 passing command-level assertions:
+  every root/subcommand help path, login authentication and helper outcomes,
+  logout idempotency, whoami logged-out/success/API-failure states, config-show
+  logged-out/logged-in/helper-present/helper-absent/inspection-failure states,
+  and token-output absence.
+- Existing focused suites continue to cover private model/dataset creation,
+  upload file/directory/resumable/options/validation/error paths, public and
+  private download selection, logout restoration failures, Git helper
+  isolation, and locked dependency signatures.
+- Expanded isolated wheel smoke to run all seven top-level commands plus
+  `repo create --help` after installation. Wheel build/install, console/module
+  entry points, imports, version, 12 help paths, and unchanged repository
+  artifacts passed 17/17 checks.
+- Full offline verification: `python -m pytest` passed 36/36 isolated scripts;
+  `python -m compileall -q .`, `git diff --check`, local-link validation, and
+  credential-pattern scanning passed in the `atomgit_cli` conda environment.
+- Safety: fakes and temporary HOME/Git state were used throughout. No network,
+  real AtomGit write, real credential file read, or real global Git mutation
+  occurred. The separately completed live create/upload/download matrix remains
+  the remote behavior evidence.
+- Finding and fix: full help inspection found that `whoami` was the only command
+  without descriptive help. Added `显示当前登录用户` and verified it in source
+  and installed-wheel entry points.
+- Independent review: initial verdict `REQUEST CHANGES` for the P3 missing
+  `whoami` description. After the help text and regression assertion were
+  added, re-review found no remaining findings. Final verdict: `APPROVED`.
+- Residual evidence: the installed-wheel run used the project Python 3.10 conda
+  environment; the declared Python 3.8-3.13 range was not rerun as a full
+  interpreter matrix.
+- Human acceptance: the maintainer requested full CLI validation and previously
+  authorized local Issue commit, local merge into `yuto`, and push of `yuto`
+  only under the per-Issue workflow.
+
 # Completed Issue LIVE-REMOTE-ACCEPTANCE-015-019
 
 Status: `completed`

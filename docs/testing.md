@@ -68,7 +68,9 @@ git diff --check
 ### CLI 集成测试
 
 使用 Click `CliRunner`，验证退出码、输出和传给 API 层的精确参数。文件和目录
-必须分别覆盖。
+必须分别覆盖。`tests/test_cli_surface.py` 还会枚举根命令公开的全部子命令，验证
+login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支；所有依赖
+均使用 fake，不访问真实 HOME、Git 配置或网络。
 
 ### 依赖契约测试
 
@@ -90,7 +92,8 @@ git diff --check
 - `import atomgit_hub`
 
 `python tests/test_wheel_smoke.py` 会从临时源码副本离线构建 wheel，并安装到
-临时 venv；该脚本也包含在标准 pytest 矩阵中，不会在工作树生成构建产物。
+临时 venv；安装后会逐一运行全部顶层命令及 `repo create` 的帮助入口。该脚本也
+包含在标准 pytest 矩阵中，不会在工作树生成构建产物。
 
 ### AtomGit 远程测试
 

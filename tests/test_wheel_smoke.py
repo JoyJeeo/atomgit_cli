@@ -126,6 +126,24 @@ def main():
                 "installed-wheel " + EXPECTED_VERSION,
             ),
         ]
+        for command in (
+            ("login",),
+            ("logout",),
+            ("whoami",),
+            ("repo",),
+            ("repo", "create"),
+            ("upload",),
+            ("download",),
+            ("config-show",),
+        ):
+            label = " ".join(command)
+            checks.append(
+                (
+                    f"installed {label} help",
+                    [atomgit_command, *command, "--help"],
+                    "Usage:",
+                )
+            )
         for name, command, marker in checks:
             result = run(command, root, environment)
             check(
