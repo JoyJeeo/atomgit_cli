@@ -22,6 +22,7 @@ try:
     from .config import config
     from .utils import (
         is_auth_error,
+        is_supported_upload_revision,
         normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
@@ -32,6 +33,7 @@ except ImportError:
     from config import config
     from utils import (
         is_auth_error,
+        is_supported_upload_revision,
         normalize_repo_id,
         normalize_path_in_repo,
         parse_ignore_patterns,
@@ -285,6 +287,9 @@ class HuggingFaceAPI:
                 不支持该参数，传入时若非空会回退到 ``upload_folder`` 旧路径
                 以保留语义。
         """
+        if not is_supported_upload_revision(revision):
+            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            return False
         try:
             if not file_path.exists():
                 print(f"文件不存在: {file_path}")
@@ -401,6 +406,9 @@ class HuggingFaceAPI:
             num_workers: 仅 ``resumable=True`` 生效，并发 worker 数；为空时
                 由 HF 默认决定。
         """
+        if not is_supported_upload_revision(revision):
+            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            return False
         try:
             if not dir_path.exists() or not dir_path.is_dir():
                 print(f"目录不存在: {dir_path}")

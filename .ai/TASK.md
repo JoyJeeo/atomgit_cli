@@ -4,6 +4,65 @@ Status: `completed`
 
 ## Identity
 
+- Local Issue: `API-REVISION-GUARD`
+- Title: `Enforce main-only upload revision at every API boundary`
+- Type: `bug`, `cli`, `sdk`, `compatibility`
+- Priority: `P1`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `f039a24`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+The Click command and SDK reject non-main revisions, but the exported
+`HuggingFaceAPI.upload_folder` and `upload_directory` methods still forward
+them directly. Python callers can bypass the safety guard and receive false
+success after AtomGit writes to main.
+
+## Scope
+
+In scope: one shared revision-support predicate used by CLI, CLI-facing API,
+and SDK upload boundaries; direct API file/directory regression tests; preserve
+each layer's existing error contract.
+
+Out of scope: implementing remote branches, download revisions, remote writes,
+exception redesign, and dependency upgrades.
+
+## Acceptance Criteria
+
+- Non-main revision is rejected before credentials, temporary resources, or HF
+  calls through CLI, API file, API directory, and SDK upload entry points.
+- Empty/None/main remain accepted according to each existing interface.
+- CLI exits 2, API returns false, and SDK raises `AtomGitUnsupportedError`.
+- Pytest, focused tests, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation/tests/docs, cohesive commit, and branch
+  push.
+- Not authorized: remote operations, merge, release, or PyPI publication.
+
+## Delivery Record
+
+- Added shared `is_supported_upload_revision` and applied it to Click, direct
+  API file/directory, and SDK upload boundaries.
+- Non-main values now fail before credentials, temporary resources, or HF:
+  Click exits 2, API returns false, and SDK raises the backward-compatible
+  `AtomGitUnsupportedError`/`ValueError` type.
+- Focused direct-boundary test passed 11/11 and existing CLI rejection test
+  passed. `python -m pytest` collected and passed 34/34 cases in 22.28 seconds;
+  compileall and diff checks passed.
+- Independent review found no blocking ordering, compatibility, side-effect,
+  output, or scope issue. Remote non-main support remains intentionally
+  unavailable until AtomGit service semantics change. Verdict: `APPROVED`.
+
+# Completed Issue DOC-CURRENT-BEHAVIOR
+
+Status: `completed`
+
+## Identity
+
 - Local Issue: `DOC-CURRENT-BEHAVIOR`
 - Title: `Align user documentation and tests with current behavior`
 - Type: `documentation`, `testing`

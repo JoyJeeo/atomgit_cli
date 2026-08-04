@@ -127,6 +127,11 @@ def validate_repo_type(repo_type: str) -> bool:
     return repo_type in ['model', 'dataset']
 
 
+def is_supported_upload_revision(revision: Optional[str]) -> bool:
+    """Return whether AtomGit can safely target the requested upload revision."""
+    return revision in (None, "", "main")
+
+
 def normalize_repo_id(repo_id: str) -> str:
     """Map AtomGit multi-level names to its HF-compatible repository ID."""
     parts = repo_id.split('/')

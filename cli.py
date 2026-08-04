@@ -18,7 +18,8 @@ try:
     from .api import api
     from .utils import (
         print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, get_directory_size,
+        validate_repo_name, validate_repo_type, is_supported_upload_revision,
+        get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
@@ -29,7 +30,8 @@ except ImportError:
     from api import api
     from utils import (
         print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, get_directory_size,
+        validate_repo_name, validate_repo_type, is_supported_upload_revision,
+        get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
@@ -196,7 +198,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     if timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
         sys.exit(2)
-    if revision not in (None, "", "main"):
+    if not is_supported_upload_revision(revision):
         print_error("AtomGit 当前仅支持默认 revision main，非默认分支不会被创建；已拒绝上传")
         sys.exit(2)
     if num_workers is not None and num_workers <= 0:
