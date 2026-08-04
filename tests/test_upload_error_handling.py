@@ -42,21 +42,29 @@ def make_raising(exc):
 
 def run_case(name, exc, expect_type_kw, expect_hint_kw, target="file"):
     """target: 'file' 走 upload_folder 单文件路径；'dir' 走 upload_directory。"""
+    import contextlib
+    import io
     # 桩两个入口，确保目标方法会调用到并抛异常
     api_mod.hf_upload_file = make_raising(exc)
     api_mod.upload_folder = make_raising(exc)
+    output = io.StringIO()
     with tempfile.TemporaryDirectory() as td:
         tdpath = Path(td)
         if target == "file":
             fp = tdpath / "a.bin"
             fp.write_bytes(b"x" * 10)
-            ok = api_mod.api.upload_folder(fp, "user/repo")
+            with contextlib.redirect_stdout(output):
+                ok = api_mod.api.upload_folder(fp, "user/repo")
         else:
             dp = tdpath / "d"
             dp.mkdir()
             (dp / "a.txt").write_text("a")
-            ok = api_mod.api.upload_directory(dp, "user/repo")
+            with contextlib.redirect_stdout(output):
+                ok = api_mod.api.upload_directory(dp, "user/repo")
+    text = output.getvalue()
     check(f"{name} 返回False", ok is False, f"ok={ok}")
+    check(f"{name} 输出含错误类型", expect_type_kw in text, f"found={expect_type_kw in text}")
+    check(f"{name} 输出含建议", expect_hint_kw in text, f"found={expect_hint_kw in text}")
 
 
 def main():
@@ -95,6 +103,13 @@ def main():
     # --- 6. 未知错误 ---
     exc_unknown = RuntimeError("totally unexpected boom")
     run_case("E6 目录-未知错误", exc_unknown, "未知错误", "", target="dir")
+
+    # --- 7. 上传预检 404（HF 1.1.7 对不存在仓库返回 preupload 404）---
+    exc_preupload = Exception(
+        "Client error '404 Not Found' for url "
+        "'https://hub.atomgit.com/api/models/weixin_52273949/test_model/preupload/main'"
+    )
+    run_case("E7 文件-preupload 404 仓库不存在", exc_preupload, "仓库不存在", "repo create")
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

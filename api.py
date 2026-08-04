@@ -148,10 +148,21 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     if ename == "RevisionNotFoundError" or "revision" in msg.lower() and ("not found" in msg.lower() or "404" in msg):
         return "分支/版本不存在", f"目标分支不存在且无法自动创建。请检查 revision 是否正确。"
 
-    # 仓库不存在（HF 既定：含 404 与"私有但无权访问"两种语义）
-    if ename in ("RepositoryNotFoundError", "GatedRepoError") or "Repository Not Found" in msg:
+    # 仓库不存在（HF 既定：含 404 与"私有但无权访问"两种语义；
+    # HF 1.1.7 上传预检 preupload 对不存在/不可访问的仓库返回 404）
+    if (
+        ename in ("RepositoryNotFoundError", "GatedRepoError")
+        or "Repository Not Found" in msg
+        or ("404" in msg and "not found" in msg.lower())
+    ):
         if ename == "GatedRepoError" or "gated" in msg.lower():
             return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
+        if "preupload" in msg.lower():
+            return (
+                "仓库不存在",
+                f"目标仓库 {repo_id or ''} 不存在或为私有且无访问权限。"
+                "请先使用 'atomgit repo create' 创建仓库，或检查 repo_id / repo_type。",
+            )
         return "仓库不存在", f"仓库 {repo_id or ''} 不存在或为私有且无访问权限。请检查 repo_id/repo_type，或先 atomgit login。"
 
     # 受限仓库（文本特征兜底：gated 但非 RepositoryNotFound 上下文）

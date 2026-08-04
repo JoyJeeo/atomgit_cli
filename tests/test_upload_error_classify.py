@@ -93,6 +93,19 @@ def main():
          Exception("Repository Not Found for url: https://hub.atomgit.com/..."),
          "仓库不存在")
 
+    # --- 上传预检 404（HF 1.1.7 对不存在/不可访问仓库返回 preupload 404）---
+    case("U21 preupload 404 → 仓库不存在",
+         Exception("Client error '404 Not Found' for url "
+                   "'https://hub.atomgit.com/api/models/user/repo/preupload/main'"),
+         "仓库不存在")
+    et, hint = classify(
+        Exception("Client error '404 Not Found' for url "
+                  "'https://hub.atomgit.com/api/models/user/repo/preupload/main'"),
+        repo_id="user/repo",
+    )
+    check("U22 preupload 404 hint 提示先建仓", "repo create" in hint, f"hint='{hint}'")
+    check("U23 preupload 404 hint 不回显远端 URL", "hub.atomgit.com" not in hint, f"hint='{hint}'")
+
     # --- 受限仓库 (gated) ---
     if _HF_ERR_OK:
         case("U5 GatedRepoError → 受限仓库",
