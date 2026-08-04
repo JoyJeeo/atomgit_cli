@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Strict offline repository creation contracts for API and CLI."""
 
+import contextlib
 import inspect
+import io
 import sys
 
 import atomgit  # noqa: F401
@@ -65,9 +67,34 @@ def main():
             raise RuntimeError("offline create failure")
 
         api_mod.create_repo = failing_create
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            dep_failed = api_mod.api.create_repo("user/repo", private=True) is False
+        check("API dependency failure is not false success", dep_failed)
+        dep_output = captured.getvalue()
         check(
-            "API dependency failure is not false success",
-            api_mod.api.create_repo("user/repo", private=True) is False,
+            "API dependency failure reports the real reason",
+            "offline create failure" in dep_output and "创建仓库失败" in dep_output,
+            f"output={dep_output!r}",
+        )
+
+        def auth_failing_create(**kwargs):
+            inspect.signature(real_create_repo).bind(**kwargs)
+            raise RuntimeError(
+                "401 Client Error. Unauthorized for url: "
+                "https://hub.atomgit.com/api/repos/create"
+            )
+
+        api_mod.create_repo = auth_failing_create
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            auth_failed = api_mod.api.create_repo("user/repo", private=True) is False
+        auth_output = captured.getvalue()
+        check("API auth failure is not false success", auth_failed)
+        check(
+            "API auth failure suggests re-login",
+            "认证失败" in auth_output and "atomgit login" in auth_output,
+            f"output={auth_output!r}",
         )
     finally:
         api_mod.create_repo = original_create
