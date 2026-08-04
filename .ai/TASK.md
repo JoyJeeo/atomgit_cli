@@ -4,6 +4,71 @@ Status: `completed`
 
 ## Identity
 
+- Local Issue: `DEPLOY-TOOLING-SAFETY`
+- Title: `Make deployment tooling conda-explicit and token-safe`
+- Type: `distribution`, `security`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `993a5f7`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+`deploy.sh` uses ambiguous bare `python`/`pip`, uninstalls packages through the
+PATH-selected pip, passes the PyPI token as a visible command argument, and
+suggests persisting it in shell startup files. These conflict with repository
+environment and credential-safety rules.
+
+## Scope
+
+In scope: require an active conda Python for mutating deployment commands; use
+`python -m pip/build/twine`; pass twine credentials through process environment;
+remove persistence guidance; add offline temporary-directory tests for help,
+environment rejection, build, and install command construction.
+
+Out of scope: actual build publication, real installation, release changes,
+remote upload, and replacing the legacy shell interface.
+
+## Acceptance Criteria
+
+- Build/install/twine fail clearly without an active conda Python.
+- All Python tooling is invoked through `$CONDA_PREFIX/bin/python -m ...`.
+- The token is absent from twine command arguments and no documentation
+  recommends shell startup persistence.
+- Offline fakes prove build/install command construction without changing the
+  real environment or repository artifacts.
+- Pytest, shell syntax, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local deployment script/tests/docs, temporary fake environments,
+  cohesive commit, and branch push.
+- Not authorized: actual install/upload/publication, remote operations, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Deployment commands now require `$CONDA_PREFIX/bin/python` and invoke build,
+  pip, and twine through `python -m`; help remains available without conda.
+- Twine receives credentials through `TWINE_USERNAME`/`TWINE_PASSWORD`, not
+  process arguments, and shell-startup token persistence guidance was removed.
+- The script changes to its own repository directory before dist cleanup,
+  preventing caller-directory deletion.
+- Offline temporary fake-environment test passed 13/13 for missing conda,
+  install, build, twine, argument/token behavior, and cleanup confinement.
+- `bash -n deploy.sh` passed. `python -m pytest` collected and passed 35/35
+  cases in 23.27 seconds; compileall and diff checks passed.
+- Independent review identified caller-dependent cleanup scope; script-root
+  anchoring and a regression were added. Re-review found no blocking token,
+  environment, deletion, compatibility, or scope issue. Verdict: `APPROVED`.
+
+# Completed Issue API-REVISION-GUARD
+
+Status: `completed`
+
+## Identity
+
 - Local Issue: `API-REVISION-GUARD`
 - Title: `Enforce main-only upload revision at every API boundary`
 - Type: `bug`, `cli`, `sdk`, `compatibility`
