@@ -69,6 +69,8 @@ every remote path is verified; known status follows the interface list.
 - User-facing failures should identify authentication, permission, repository,
   revision, request, timeout, or network causes when evidence allows it.
 - Existing command names and Python imports are compatibility surfaces.
+- SDK failures expose stable `AtomGitError` subclasses while remaining
+  compatible with callers that catch `Exception` or validation `ValueError`.
 
 ## Boundaries
 

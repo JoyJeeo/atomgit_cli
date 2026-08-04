@@ -62,7 +62,12 @@ def main():
                     upload_timeout=11,
                 )
             except Exception as error:
-                check("failure remains actionable", "offline upload failure" in str(error))
+                check(
+                    "failure remains actionable",
+                    isinstance(error, atomgit_hub.AtomGitError)
+                    and error.__cause__ is not None
+                    and "offline upload failure" in str(error.__cause__),
+                )
             else:
                 check("failure remains actionable", False, "no exception")
             check(

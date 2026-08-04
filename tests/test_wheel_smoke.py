@@ -18,6 +18,7 @@ SOURCE_FILES = (
     "atomgit_hub.py",
     "cli.py",
     "config.py",
+    "exceptions.py",
     "utils.py",
     "setup.py",
     "requirements.txt",

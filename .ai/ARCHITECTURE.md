@@ -36,6 +36,7 @@ or covered by shared contract tests.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
+- `exceptions.py`: stable public SDK failure hierarchy.
 - `config.py`: in-memory configuration plus persistence to
   `~/.atomgit/config.json`.
 - `utils.py`: validation, formatting, filesystem helpers, and Git credential

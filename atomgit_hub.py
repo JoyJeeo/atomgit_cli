@@ -38,14 +38,98 @@ except ImportError:
 
 try:
     from .config import config
-    from .utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
+    from .exceptions import (
+        AtomGitAuthenticationError,
+        AtomGitError,
+        AtomGitNetworkError,
+        AtomGitRepositoryExistsError,
+        AtomGitRepositoryNotFoundError,
+        AtomGitRevisionNotFoundError,
+        AtomGitTimeoutError,
+        AtomGitUnsupportedError,
+    )
+    from .utils import (
+        is_auth_error,
+        is_retryable_download_error,
+        normalize_repo_id,
+        run_download_with_retry,
+    )
 except ImportError:
     try:
         from config import config
-        from utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
+        from exceptions import (
+            AtomGitAuthenticationError,
+            AtomGitError,
+            AtomGitNetworkError,
+            AtomGitRepositoryExistsError,
+            AtomGitRepositoryNotFoundError,
+            AtomGitRevisionNotFoundError,
+            AtomGitTimeoutError,
+            AtomGitUnsupportedError,
+        )
+        from utils import (
+            is_auth_error,
+            is_retryable_download_error,
+            normalize_repo_id,
+            run_download_with_retry,
+        )
     except ImportError:
         from atomgit.config import config
-        from atomgit.utils import normalize_repo_id, run_download_with_retry, sanitized_download_error
+        from atomgit.exceptions import (
+            AtomGitAuthenticationError,
+            AtomGitError,
+            AtomGitNetworkError,
+            AtomGitRepositoryExistsError,
+            AtomGitRepositoryNotFoundError,
+            AtomGitRevisionNotFoundError,
+            AtomGitTimeoutError,
+            AtomGitUnsupportedError,
+        )
+        from atomgit.utils import (
+            is_auth_error,
+            is_retryable_download_error,
+            normalize_repo_id,
+            run_download_with_retry,
+        )
+
+
+def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGitError:
+    """Classify a dependency failure without echoing remote or signed URLs."""
+    name = type(error).__name__
+    message = str(error).lower()
+    authentication_failure = is_auth_error(error)
+    retryable_failure = is_retryable_download_error(error)
+    if any(
+        marker in message
+        for marker in ("http://", "https://", "token", "secret", "signature", "certificate")
+    ):
+        error.args = (f"{name} details redacted",)
+    target = f"：{repo_id}" if repo_id else ""
+    if authentication_failure:
+        return AtomGitAuthenticationError(
+            f"{operation}认证失败或权限不足{target}；请检查 token 和仓库权限"
+        )
+    if name == "RevisionNotFoundError" or (
+        "revision" in message and ("not found" in message or "404" in message)
+    ):
+        return AtomGitRevisionNotFoundError(
+            f"{operation}的 revision 不存在{target}"
+        )
+    if "409" in message or "already exists" in message or name == "RepositoryExistsError":
+        return AtomGitRepositoryExistsError(f"仓库已存在{target}")
+    if name in ("RepositoryNotFoundError", "EntryNotFoundError") or (
+        "404" in message or "not found" in message
+    ):
+        return AtomGitRepositoryNotFoundError(
+            f"{operation}的仓库或文件不存在{target}"
+        )
+    if name == "TimeoutError" or "timeout" in message or "timed out" in message:
+        return AtomGitTimeoutError(f"{operation}超时{target}；请检查网络或增大超时")
+    if retryable_failure:
+        return AtomGitNetworkError(f"{operation}网络连接失败{target}；请稍后重试")
+    if "unsupported" in message or "not supported" in message:
+        return AtomGitUnsupportedError(f"AtomGit 不支持请求的{operation}行为{target}")
+    return AtomGitError(f"{operation}失败{target}（{name}）")
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -174,7 +258,7 @@ def snapshot_download(
         )
         return result
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载仓库", repo_id) from e
 
 
 def hub_download_url(
@@ -261,7 +345,7 @@ def download_file(
         )
         return result
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载文件", repo_id) from e
 
 
 def upload_folder(
@@ -317,7 +401,7 @@ def upload_folder(
         raise ValueError("repo_type 仅支持 model 或 dataset")
 
     if revision not in (None, "", "main"):
-        raise ValueError(
+        raise AtomGitUnsupportedError(
             "AtomGit 当前仅支持默认 revision main，非默认分支不会被创建"
         )
     
@@ -325,7 +409,9 @@ def upload_folder(
     if token is None:
         token = _get_token()
         if token is None:
-            raise Exception("上传需要认证token，请先使用 'atomgit login' 登录，或提供token参数。")
+            raise AtomGitAuthenticationError(
+                "上传需要认证 token；请先使用 'atomgit login' 登录或提供 token"
+            )
     
     # 直接使用原始目录，或者创建临时目录来重新组织结构
     import tempfile
@@ -386,13 +472,7 @@ def upload_folder(
             return result
 
         except Exception as e:
-            error_msg = str(e)
-            if "401" in error_msg or "403" in error_msg:
-                raise Exception(f"认证失败：{error_msg}")
-            elif "404" in error_msg:
-                raise Exception(f"仓库不存在：{repo_id}")
-            else:
-                raise Exception(f"上传失败：{error_msg}")
+            raise _sdk_error(e, "上传目录", repo_id) from e
     finally:
         if hf_constants is not None and original_timeout is not None:
             hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
@@ -432,7 +512,7 @@ def create_repository(
     normalized_repo_id = _normalize_repo_id(repo_id)
 
     if not private:
-        raise ValueError(
+        raise AtomGitUnsupportedError(
             "AtomGit 当前无法可靠验证公开仓库语义；请设置 private=True"
         )
     if repo_type not in ("model", "dataset"):
@@ -449,7 +529,7 @@ def create_repository(
         name for name, value in space_options.items() if value is not None
     ]
     if unsupported_space_options:
-        raise ValueError(
+        raise AtomGitUnsupportedError(
             "AtomGit 不支持 Space 仓库参数: "
             + ", ".join(unsupported_space_options)
         )
@@ -458,7 +538,9 @@ def create_repository(
     if token is None:
         token = _get_token()
         if token is None:
-            raise Exception("创建仓库需要认证token，请先使用 'atomgit login' 登录，或提供token参数。")
+            raise AtomGitAuthenticationError(
+                "创建仓库需要认证 token；请先使用 'atomgit login' 登录或提供 token"
+            )
     
     try:
         result = create_repo(
@@ -470,16 +552,10 @@ def create_repository(
         )
         return result
     except Exception as e:
-        error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}")
-        elif "409" in error_msg or "exists" in error_msg.lower():
-            if exist_ok:
-                return f"https://atomgit.com/{repo_id}"
-            else:
-                raise Exception(f"仓库已存在：{repo_id}")
-        else:
-            raise Exception(f"创建仓库失败：{error_msg}")
+        converted = _sdk_error(e, "创建仓库", repo_id)
+        if isinstance(converted, AtomGitRepositoryExistsError) and exist_ok:
+            return f"https://atomgit.com/{repo_id}"
+        raise converted from e
 
 
 def load_dataset(
@@ -576,7 +652,7 @@ def load_dataset(
             )
         )
     except Exception as e:
-        raise Exception(sanitized_download_error(e)) from None
+        raise _sdk_error(e, "下载数据集", path) from e
 
     # datasets 4.4.1 cannot discover AtomGit repositories directly, but it can
     # infer supported formats from a local Hub snapshot.
@@ -603,18 +679,21 @@ def load_dataset(
         return dataset
     except Exception as e:
         error_msg = str(e)
-        if "401" in error_msg or "403" in error_msg:
-            raise Exception(f"认证失败：{error_msg}。请检查token是否正确，或使用 'atomgit login' 重新登录。")
-        elif "404" in error_msg:
-            raise Exception(f"数据集不存在：{path}。请检查数据集路径是否正确。")
-        elif "ImportError" in error_msg or "No module named" in error_msg:
+        if isinstance(e, ImportError) or "No module named" in error_msg:
             raise ImportError("数据集功能需要安装datasets库。请运行: pip install datasets")
-        else:
-            raise Exception(f"加载数据集失败：{error_msg}")
+        raise _sdk_error(e, "加载数据集", path) from e
 
 
 # 为了兼容性，导出常用函数
 __all__ = [
+    'AtomGitError',
+    'AtomGitAuthenticationError',
+    'AtomGitRepositoryNotFoundError',
+    'AtomGitRepositoryExistsError',
+    'AtomGitRevisionNotFoundError',
+    'AtomGitTimeoutError',
+    'AtomGitNetworkError',
+    'AtomGitUnsupportedError',
     'snapshot_download',
     'hub_download_url', 
     'download_file',

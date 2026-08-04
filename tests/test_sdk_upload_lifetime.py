@@ -64,7 +64,12 @@ def main():
                     path_in_repo="models/",
                 )
             except Exception as error:
-                check("HF failure remains actionable", "offline failure" in str(error))
+                check(
+                    "HF failure remains actionable",
+                    isinstance(error, atomgit_hub.AtomGitError)
+                    and error.__cause__ is not None
+                    and "offline failure" in str(error.__cause__),
+                )
             else:
                 check("HF failure remains actionable", False, "no exception")
             check(

@@ -288,7 +288,12 @@ from atomgit_hub import (
 #### 下载整个仓库（推荐用法）
 
 ```python
-from atomgit_hub import snapshot_download
+from atomgit_hub import (
+    snapshot_download,
+    AtomGitAuthenticationError,
+    AtomGitRepositoryNotFoundError,
+    AtomGitNetworkError,
+)
 
 # 基本用法：下载到指定目录
 snapshot_download(
@@ -431,14 +436,17 @@ try:
         local_dir="./model"
     )
     print(f"下载成功: {path}")
-except Exception as e:
-    if "401" in str(e) or "403" in str(e):
-        print("认证失败，请先使用 'atomgit login' 登录")
-    elif "404" in str(e):
-        print("仓库不存在，请检查仓库名称")
-    else:
-        print(f"下载失败: {e}")
+except AtomGitAuthenticationError:
+    print("认证失败，请先使用 'atomgit login' 登录")
+except AtomGitRepositoryNotFoundError:
+    print("仓库不存在，请检查仓库名称")
+except AtomGitNetworkError as error:
+    print(f"网络失败，可重试: {error}")
 ```
+
+SDK 还导出 `AtomGitRepositoryExistsError`、`AtomGitRevisionNotFoundError`、
+`AtomGitTimeoutError`、`AtomGitUnsupportedError` 和基类 `AtomGitError`。转换后的
+异常保留脱敏的原始 cause，便于日志和程序化处理。
 
 ### 7. 完整示例
 
@@ -574,6 +582,7 @@ atomgit/
 ├── api.py               # Hugging Face Hub API客户端
 ├── config.py            # 配置管理
 ├── runtime.py           # 共享HF端点和缓存策略
+├── exceptions.py        # SDK异常类型
 ├── utils.py             # 工具函数（路径/忽略模式解析等）
 ├── atomgit_hub.py       # Python SDK接口
 ├── requirements.txt     # 依赖包

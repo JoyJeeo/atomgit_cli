@@ -41,6 +41,7 @@ atomgit_cli/
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
 ├── runtime.py            # 共享 HF endpoint/XET/cache 运行时策略
+├── exceptions.py         # 稳定 SDK 异常层次
 ├── utils.py              # 校验、格式化和 Git helper
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
@@ -182,7 +183,8 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
   HF `upload_folder`；
 - 保存的 timeout 没有恢复；
 - 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
-- SDK 普遍用通用 `Exception` 包装错误。
+- SDK 使用公开的 `AtomGitError` 层次区分认证、仓库、revision、网络、超时和
+  不支持语义，并保留脱敏后的原始 cause。
 
 ## 9. Repo ID 转换
 

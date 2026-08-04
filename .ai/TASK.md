@@ -4,6 +4,77 @@ Status: `completed`
 
 ## Identity
 
+- Planning Issue: `ROADMAP-025`
+- Title: `Define stable AtomGit SDK exception contracts`
+- Type: `sdk`, `compatibility`
+- Priority: `P2`
+- Branch: `codex/close-development-backlog`
+- Base: previous verified backlog commit `2486610`
+- Delivery mode: sequential backlog delivery; cohesive commit and branch push
+  are authorized after verification.
+
+## User Impact And Evidence
+
+SDK functions currently wrap most failures in undifferentiated `Exception`,
+often remove `__cause__`, and sometimes include raw dependency messages that
+may contain signed URLs. Applications cannot reliably handle authentication,
+repository, revision, timeout, or network failures.
+
+## Scope
+
+In scope: public backward-compatible `Exception` subclasses; one sanitized
+classifier; apply it to SDK snapshot/file download, upload, create, and dataset
+loading; preserve causes; retain existing validation exceptions and `exist_ok`
+behavior; add offline tests and SDK documentation.
+
+Out of scope: changing CLI boolean/error contracts, retry policy, remote
+operations, dependency upgrades, and a broad API rewrite.
+
+## Acceptance Criteria
+
+- Stable public exception types distinguish auth, not-found, exists, revision,
+  timeout, network, unsupported, and fallback SDK failures.
+- All remain subclasses of `Exception` and are exported by both import paths.
+- Converted failures preserve the original exception as `__cause__`.
+- Public messages are actionable and do not echo signed URLs/tokens.
+- Validation errors such as bad paths/types/revisions retain their standard
+  Python exception types.
+- Pytest, focused tests, wheel smoke, compileall, and diff checks pass.
+
+## Permissions
+
+- Authorized: local implementation/tests/SDK docs, cohesive commit, and push
+  of the current branch.
+- Not authorized: remote operations, real credential/Git changes, merge,
+  release, or PyPI publication.
+
+## Delivery Record
+
+- Added public `AtomGitError` subclasses for authentication, repository
+  not-found/exists, revision, timeout, network, and unsupported behavior;
+  package and standalone SDK imports export the same classes.
+- Snapshot/file download, upload, create, and dataset paths now classify and
+  chain failures. Sensitive cause messages are redacted before chaining so
+  full tracebacks cannot restore signed URLs or token-like content.
+- Existing `Exception`, `TimeoutError`, `ConnectionError`, and validation
+  `ValueError` catch compatibility is preserved where applicable; create
+  `exist_ok` behavior remains unchanged.
+- Focused exception suite passed 35/35; download recovery passed 12/12 and
+  affected upload/create suites passed. `python -m pytest` collected and
+  passed 34/34 cases in 21.34 seconds; compileall and diff checks passed.
+- Updated README error examples, product contract, architecture, wheel smoke
+  inputs, and module documentation.
+- Independent review found a traceback disclosure through raw `__cause__` and
+  a broken README import example; both were fixed. Re-review found no blocking
+  security, compatibility, exception, packaging, or scope issue. Verdict:
+  `APPROVED`.
+
+# Completed Issue ROADMAP-024
+
+Status: `completed`
+
+## Identity
+
 - Planning Issue: `ROADMAP-024`
 - Title: `Centralize endpoint and normalization policy`
 - Type: `compatibility`, `sdk`
