@@ -68,7 +68,10 @@ or covered by shared contract tests.
 The project accepts standard `owner/repo` IDs and advertises selected
 multi-level AtomGit names. Normalization must be consistent across create,
 upload, download, URL generation, and dataset loading. A validator accepting an
-ID is not sufficient if downstream operations transform it differently.
+ID is not sufficient if downstream operations transform it differently. A
+multi-level write also requires permission on the normalized physical
+`owner-namespace/repo` namespace; the client must surface authorization failure
+and must not report creation or upload success.
 
 ## Upload Paths
 

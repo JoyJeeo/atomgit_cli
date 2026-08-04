@@ -48,12 +48,12 @@ every remote path is verified; known status follows the interface list.
 - Implemented and covered mainly by offline mocks: progress control, ignore
   parsing, repository type, revision forwarding, and upload error categories.
 - Verified remotely: resumable upload authentication and interruption recovery,
-  dataset transfer through the AtomGit-compatible model route, credential
-  permissions, `load_dataset`, and interrupted-download recovery.
+  dataset creation and transfer through the AtomGit-compatible model route,
+  credential permissions, `load_dataset`, and interrupted-download recovery.
 - Non-default revision behavior is explicitly rejected because AtomGit does
-  not expose the requested branch; multi-level ID read mapping is verified
-  anonymously and shared across operations, while remote writes still require
-  opt-in acceptance evidence.
+  not expose the requested branch. Multi-level ID mapping is shared across
+  operations; live create/upload returned 401 without false success when the
+  test account lacked the mapped physical namespaces.
 - The previously known SDK upload lifetime, parameter-forwarding, and timeout
   state defects are covered by offline regressions on the yuto development
   line.

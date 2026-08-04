@@ -15,22 +15,29 @@ the corresponding remote Issues are explicitly created.
 
 ## Current Development Status
 
-This summary describes the `codex/close-development-backlog` development line
-after local implementation and offline review. It does not authorize merge,
-release, remote writes, or Issue transitions.
+This summary describes `yuto` after local implementation, offline review, and
+the explicitly authorized 2026-08-04 AtomGit acceptance run. It does not grant
+standing permission for future remote writes, release, or Issue transitions.
 
 - Completed with local regression/contract evidence: #001-#014, #018, and
   #020-#026. The development line includes strict HF contracts, SDK parity,
   shared repo-ID/runtime policy, isolated pytest, wheel smoke, credential
   safety, stable SDK exceptions, release artifacts, and a checksummed
   installer.
-- Existing remote evidence partially or substantially covers #015-#018:
-  model/dataset transfer, private dataset behavior, path placement, and real
-  resumable interruption/recovery. A repeatable disposable-repository
-  lifecycle still requires exact remote-write and cleanup authorization.
-- Permission-gated acceptance remains for #017 and #019: live ignore-pattern
-  absence, multi-level create/upload mapping, and the anonymous-public /
-  anonymous-private-failure / authenticated-private download matrix.
+- Controlled remote evidence now covers #015-#019: model and private-dataset
+  lifecycle, path placement, ignore absence, resumable interruption/recovery,
+  anonymous public success, anonymous private failure, authenticated private
+  success, SHA-256 readback, and verified cleanup.
+- Multi-level create/upload accurately normalized the logical IDs, returned
+  nonzero on the service's 401 response, and left no repository behind. The
+  supplied account lacks the normalized `weixin_52273949-test_model` and
+  `weixin_52273949-test_datasets` namespaces, so a successful multi-level write
+  remains conditional on membership in the mapped physical namespace rather
+  than an unverified client capability.
+- Live evidence confirmed that AtomGit's HF `private=False` create request can
+  report success while producing a private repository. Public creation remains
+  intentionally rejected; a controlled v5 visibility update supplied the
+  public download sample instead.
 - Non-main revision is intentionally rejected rather than pending implicit
   support; it must not be re-enabled without new AtomGit service evidence.
 

@@ -41,7 +41,11 @@ def main():
             )
             check(f"API private {repo_type} succeeds", result is True)
             call = calls[-1]
-            check(f"API private {repo_type} type forwarded", call["repo_type"] == repo_type)
+            expected_type = "model" if repo_type == "dataset" else repo_type
+            check(
+                f"API private {repo_type} uses compatible create route",
+                call["repo_type"] == expected_type,
+            )
             check(f"API private {repo_type} privacy forwarded", call["private"] is True)
             check(f"API private {repo_type} token forwarded", call["token"] == "fake-stored-token")
             check(f"API private {repo_type} is idempotent", call["exist_ok"] is True)
