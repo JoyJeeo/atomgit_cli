@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Strict offline download contracts across CLI, API, and SDK."""
 
+import contextlib
 import inspect
+import io
 import sys
 import tempfile
 import warnings
@@ -127,6 +129,39 @@ def main():
             )
             check("API stored token forwarded", api_calls[-1].get("token") == "fake-stored-token")
             check("API force forwarded", api_calls[-1].get("force_download") is True)
+
+            def empty_repo_download(**kwargs):
+                inspect.signature(real_snapshot_download).bind(**kwargs)
+                raise ValueError("min() iterable argument is empty")
+
+            api_mod.snapshot_download = empty_repo_download
+            captured = io.StringIO()
+            with contextlib.redirect_stdout(captured):
+                empty_ok = api_mod.api.download_repo("user/repo", Path(local_dir)) is True
+            empty_output = captured.getvalue()
+            check("API empty repo is not a download failure", empty_ok)
+            check(
+                "API empty repo gives a clear message",
+                "仓库为空" in empty_output,
+                f"output={empty_output!r}",
+            )
+
+            def other_value_error(**kwargs):
+                inspect.signature(real_snapshot_download).bind(**kwargs)
+                raise ValueError("unrelated value error")
+
+            api_mod.snapshot_download = other_value_error
+            captured = io.StringIO()
+            with contextlib.redirect_stdout(captured):
+                other_failed = api_mod.api.download_repo("user/repo", Path(local_dir)) is False
+            other_output = captured.getvalue()
+            check("API unrelated ValueError still fails", other_failed)
+            check(
+                "API unrelated ValueError is reported",
+                "unrelated value error" in other_output and "下载" in other_output,
+                f"output={other_output!r}",
+            )
+            api_mod.snapshot_download = strict_api_snapshot
     finally:
         api_mod.snapshot_download = original_api_snapshot
         api_mod.config.get_credentials = original_credentials
