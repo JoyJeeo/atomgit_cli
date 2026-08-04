@@ -23,9 +23,10 @@ atomgit upload [OPTIONS] PATH
 | `--resumable` | 关闭 | 目录使用 `upload_large_folder` |
 | `--num-workers` | HF 默认 | resumable worker 数 |
 
-AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用上传传输路由。CLI 仍
-使用 `dataset` 表达仓库业务类型，但底层上传调用映射到 model 路由，以
-避免 dataset LFS batch 端点返回 404。建仓类型和用户输入不会被改写。
+AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传输路由。CLI
+仍使用 `dataset` 表达仓库业务类型，但底层调用映射到 model 路由。2026-08-04
+的受控大文件探测确认共享路由可进入 LFS 上传并保留恢复元数据，因此不再沿用
+旧 dataset 端点的 404 拒绝保护；用户输入不会被改写。
 
 ## 2. CLI 前置处理
 
@@ -98,7 +99,7 @@ resumable 分支调用：
 HfApi(token=保存的_token).upload_large_folder(
     repo_id=...,
     folder_path=...,
-    repo_type=model-or-dataset,
+    repo_type=model,  # 用户选择 dataset 时也映射到共享兼容路由
     revision=...,
     ignore_patterns=...,
     num_workers=...,
@@ -107,7 +108,8 @@ HfApi(token=保存的_token).upload_large_folder(
 
 当前锁定的 `huggingface-hub==1.1.7` 要求把 `token` 传给 `HfApi(token=...)`
 构造函数，`upload_large_folder()` 方法本身不接收 `token`。实现和严格签名测试
-均遵守该契约。
+均遵守该契约。私有 model 和 dataset 已分别用 399,300,506 字节文件完成真实
+CLI 中断、恢复、下载与 SHA-256 验证。
 
 HF large-folder 模式的其他限制：
 

@@ -113,6 +113,8 @@ login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支�
 - 私有 dataset 匿名下载失败、认证下载成功且 SHA-256 一致；
 - `path_in_repo` 中保留文件存在，`*.tmp` 与 `logs/*` 哨兵远端不存在；
 - dataset 建仓和传输必须复用 AtomGit 的 model 兼容路由；
+- 私有 model 与 dataset 均以 399,300,506 字节文件完成 CLI 超时中断、恢复、
+  下载与 SHA-256 一致性验证；
 - HF `private=False` 创建会假成功为私有仓库，因此客户端继续拒绝公开建仓；
 - 多层 ID 被正确转换，但测试账号缺少转换后命名空间权限，create/upload 均以
   401 非零退出且未留下仓库；

@@ -138,9 +138,9 @@ atomgit upload PATH
 - 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
 - 非 `main` revision 已根据远程证据明确拒绝，避免静默写入默认分支。
 
-resumable 通过 `HfApi(token=...)` 认证，已使用真实 404 MB 文件验证中断、恢复和
-最终 SHA-256。dataset 上传在保留业务类型的同时使用 AtomGit 可用的共享 model
-传输路由。
+resumable 通过 `HfApi(token=...)` 认证。私有 model 和 dataset 均已使用真实
+399,300,506 字节文件验证中断、恢复和最终 SHA-256；dataset 在保留用户侧业务
+类型的同时使用 AtomGit 可用的共享 model 传输路由。
 
 ## 7. 下载
 
