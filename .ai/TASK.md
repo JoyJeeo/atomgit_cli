@@ -1,109 +1,89 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-REDIRECT-AUTH
+# Issue DOWNLOAD-PATH-TRAVERSAL
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-REDIRECT-AUTH`
-- Title: `Download redirects can forward the AtomGit bearer token to another origin`
-- Type: `security`, `cli`, `compatibility`
+- Local Issue: `DOWNLOAD-PATH-TRAVERSAL`
+- Title: `Remote repository filenames can escape the requested download directory`
+- Type: `security`, `cli`
 - Priority: `P0`
-- Branch: `codex/fix-download-redirect-auth` (local only)
+- Branch: `codex/fix-download-path-traversal` (local only)
 - Base: `yuto`
-- Delivery mode: implement and review locally, commit without the retired
-  `czx:` prefix, merge into `yuto`, and push only `yuto`.
+- Delivery mode: implement and review locally, commit, merge into `yuto`, and
+  push only `yuto`.
 
 ## Previous Issue (Closed)
 
-- `DOWNLOAD-REPO-INFO-404` was delivered in `61a215c`: CLI downloads bypass
-  the unsupported repo-info route, support nested non-ASCII filenames, and
-  passed the recorded model/dataset readback. The stale `in_progress` state is
-  closed by activation of this Issue.
+- `DOWNLOAD-REDIRECT-AUTH` was delivered by `ce4b1ae` and merged into `yuto`
+  by `b570b7c`. Cross-origin redirects no longer receive the bearer token.
 
 ## User Impact And Evidence
 
-`_download_atomgit_file` adds the saved bearer token to a reusable header map.
-Both urllib redirects and the raw UTF-8-path transport reuse that header map
-after a redirect changes scheme, host, or port. An offline two-server probe
-confirmed that a request redirected from `127.0.0.1` to `localhost` delivered
-`Authorization: Bearer probe-secret` to the second origin.
-
-A redirect controlled by a service response must not disclose an AtomGit token
-to an unrelated origin. HTTPS downloads must also not silently downgrade to
-plain HTTP.
+`download_repo` and `download_file` currently join server-provided names with
+the local root using `local_path / filename`. No containment validation rejects
+`../escape`, absolute paths, Windows drive/UNC paths, control characters, or an
+existing symlink that resolves outside the root. An offline probe confirmed
+that `../escape.bin` produced a destination outside the requested directory
+while the command reported success.
 
 ## Scope
 
 In scope:
 
-- define a shared redirect-origin policy for CLI direct downloads;
-- retain Authorization only for the original trusted origin;
-- strip Authorization on cross-origin redirects;
-- reject HTTPS-to-HTTP downgrade and unsupported schemes;
-- cover urllib and raw UTF-8-path download branches with offline regressions.
+- define one shared safe destination resolver for repository filenames;
+- reject absolute, parent-relative, Windows drive/UNC, backslash-separated,
+  empty-segment, and control-character filenames;
+- reject existing symlink components or destination symlinks that resolve
+  outside the selected download root;
+- apply the resolver to repository and single-file CLI download paths;
+- add offline regressions proving rejected names never reach the downloader.
 
-Out of scope:
-
-- destination path traversal, raw HTTP chunked framing, repository type
-  selection, existing-file skip semantics, SDK downloads, and remote writes.
-
-## Product Decisions
-
-- Existing destination files remain skipped by default.
-- `atomgit login --token` remains supported.
-- Remote tests may use only the maintainer-provided
-  `weixin_52273949/test_model` and `weixin_52273949/test_datasets` repositories.
-- Commit subjects no longer use the `czx:` prefix.
+Out of scope: redirect policy, raw HTTP framing, repository type resolution,
+and the approved default behavior of skipping existing safe files.
 
 ## Acceptance Criteria
 
-- Same-origin relative or absolute redirects retain the bearer token.
-- A redirect changing scheme, hostname, or port does not forward the bearer
-  token.
-- HTTPS-to-HTTP downgrade fails before contacting the downgraded target.
-- Redirect handling remains bounded and rejects unsupported URL schemes.
-- Direct downloads without a redirect remain compatible.
-- Focused download tests, the complete offline suite,
-  `python -m compileall -q .`, and `git diff --check` pass in the
-  `atomgit_cli` conda environment.
+- Every destination returned by the resolver is contained by the resolved
+  download root.
+- Malicious POSIX and Windows-style paths fail before directory creation or
+  file download outside the root.
+- Existing symlink escapes are rejected where the platform supports symlinks.
+- Normal nested ASCII and non-ASCII repository paths remain supported.
+- Focused download tests, the complete offline suite, compileall, and
+  `git diff --check` pass.
 
 ## Permissions
 
-- Authorized: local source/test/documentation edits, local task branch and
-  commits, local merge into `yuto`, and push of `yuto` only.
-- Authorized remote testing: only the two maintainer-provided test repositories
-  named above. This Issue requires no remote write.
-- Not authorized: pushing the task branch, using other remote repositories,
-  merging into `main`, release, or publication.
+- Authorized: local edits, local task branch and commits, local merge into
+  `yuto`, and push of `yuto` only.
+- Authorized remote tests: only `weixin_52273949/test_model` and
+  `weixin_52273949/test_datasets`; this Issue requires no remote write.
+- Not authorized: pushing the task branch, other remote repositories, `main`,
+  release, or publication.
 
 ## Delivery Record
 
-- Implementation: `_AtomGitRedirectHandler` now applies a shared origin policy
-  to urllib downloads; the raw UTF-8-path transport applies the same policy at
-  every redirect. Scheme, hostname, or port changes permanently remove the
-  Authorization header. HTTPS-to-HTTP redirects, URL credentials, missing
-  hosts, and unsupported schemes are rejected. Raw redirect lookup also uses
-  the normalized lowercase `location` response-header key.
-- Regression evidence: the new isolated two-server test failed before the fix
-  because the second origin received `Bearer fake-download-token-never-print`;
-  the raw branch also failed to recognize its lowercase location header.
-- Focused offline tests: download redirect security, download contract, and
-  download recovery scripts passed as 3 pytest cases.
-- Complete offline suite: `python -m pytest` passed 37/37 in 31.70 seconds in
-  the `atomgit_cli` conda environment.
+- Implementation: `_safe_download_destination` rejects empty, absolute,
+  parent-relative, dot-segment, Windows drive/UNC, backslash-separated, and
+  control-character names. It resolves existing symlinks and requires the
+  destination to remain under the resolved download root. Repository downloads
+  validate the complete file list before starting the first transfer; the same
+  resolver protects single-file downloads.
+- Regression evidence: before the fix, all 14 initial safety assertions failed;
+  traversal, absolute, Windows, control-character, and symlink paths reached the
+  downloader, and `../escape.bin` was reported as successfully downloaded.
+- Focused offline tests: download path security, download contract, and repo-ID
+  contract passed as 3 pytest cases.
+- Complete offline suite: `python -m pytest` passed 38/38 in 32.87 seconds.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Authorized read-only live check: downloaded `config.json` from
-  `weixin_52273949/test_model`; result was successful, the temporary file
-  existed, and its size was 77 bytes. No token was printed and no remote state
-  changed.
-- Independent review: first pass requested a P2 test-strengthening change for
-  same-origin absolute redirects and cross-origin redirect chains. Both tests
-  were added and passed. Fresh review found no open findings: `APPROVED`.
-- Remaining risk: the live check proves compatibility with the current test
-  repository path but cannot exercise every possible future CDN redirect
-  topology. The offline matrix covers origin changes and downgrade rejection.
-- Human acceptance: accepted; the maintainer authorized completion of the full
-  development plan through tests, commits, local merges, and pushes of `yuto`.
-- Commit/merge/push: authorized for this completed Issue.
+- Authorized read-only live check: `sub/中文样本.csv` downloaded successfully
+  from `weixin_52273949/test_model`, remained inside the temporary root, and
+  had size 31 bytes.
+- Independent review: no open findings; `APPROVED`. Residual risk is limited to
+  a local attacker racing a symlink replacement after validation; existing
+  symlink escapes are rejected and final file replacement remains atomic.
+- Human acceptance: standing acceptance granted for the approved full plan.
+- Commit/merge/push: authorized.

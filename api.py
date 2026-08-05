@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urljoin, urlsplit
 import os
 import shutil
@@ -160,6 +160,35 @@ def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) ->
     if last_error is not None:
         raise last_error
     return "model", []
+
+
+def _safe_download_destination(local_root: Path, filename: str) -> Path:
+    """Resolve a repository filename without allowing it to escape local_root."""
+    if not isinstance(filename, str) or not filename:
+        raise ValueError("仓库文件名为空或格式无效")
+    if "\\" in filename:
+        raise ValueError(f"仓库文件名包含不安全的反斜杠路径: {filename!r}")
+    if any(ord(character) < 32 or ord(character) == 127 for character in filename):
+        raise ValueError(f"仓库文件名包含控制字符: {filename!r}")
+
+    raw_parts = filename.split("/")
+    if any(part in ("", ".", "..") for part in raw_parts):
+        raise ValueError(f"仓库文件名包含不安全的路径片段: {filename!r}")
+
+    posix_path = PurePosixPath(filename)
+    windows_path = PureWindowsPath(filename)
+    if posix_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+        raise ValueError(f"仓库文件名不能是绝对路径: {filename!r}")
+
+    resolved_root = Path(local_root).resolve()
+    destination = resolved_root.joinpath(*raw_parts).resolve(strict=False)
+    try:
+        destination.relative_to(resolved_root)
+    except ValueError as error:
+        raise ValueError(
+            f"仓库文件路径超出下载目录: {filename!r}"
+        ) from error
+    return destination
 
 
 def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str:
@@ -858,8 +887,11 @@ class HuggingFaceAPI:
                 print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
                 return True
 
-            for filename in files:
-                dest = local_path / filename
+            destinations = [
+                (filename, _safe_download_destination(local_path, filename))
+                for filename in files
+            ]
+            for filename, dest in destinations:
                 if dest.exists() and not force_download:
                     print(f"⏭ 已存在，跳过: {filename}")
                     continue
@@ -889,7 +921,7 @@ class HuggingFaceAPI:
                 print(f"✗ 文件不存在: {filename}")
                 return False
 
-            dest = local_path / filename
+            dest = _safe_download_destination(local_path, filename)
             if dest.exists() and not force_download:
                 print(f"⏭ 文件已存在，跳过: {filename}（--force 可覆盖）")
                 return True
