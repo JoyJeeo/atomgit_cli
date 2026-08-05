@@ -277,7 +277,10 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
 @click.option('--directory', '-d', type=click.Path(), 
               help='下载到指定目录')
 @click.option('--force', is_flag=True, help='强制覆盖已存在的文件')
-def download(repo_id, directory, force):
+@click.option('--repo-type', '-r', 'repo_type',
+              type=click.Choice(['model', 'dataset']), default=None,
+              help='明确仓库类型；不指定时自动探测 model/dataset')
+def download(repo_id, directory, force, repo_type):
     """下载仓库到本地（公开仓库无需登录）"""
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -315,7 +318,12 @@ def download(repo_id, directory, force):
     if not config.is_logged_in():
         print_info("当前未登录，尝试下载公开仓库...")
     
-    if api.download_repo(repo_id, local_path, force_download=force):
+    if api.download_repo(
+        repo_id,
+        local_path,
+        force_download=force,
+        repo_type=repo_type,
+    ):
         print_success(f"仓库下载成功: {local_path}")
     else:
         print_error(f"仓库下载失败: {repo_id}")

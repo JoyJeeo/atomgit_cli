@@ -55,6 +55,8 @@ def run_download_with_retry(operation):
 
 def sanitized_download_error(error: Exception) -> str:
     """Return an actionable category without exposing remote or signed URLs."""
+    if "仓库类型不明确" in str(error):
+        return "仓库类型不明确，请使用 --repo-type model 或 dataset"
     if is_auth_error(error):
         return "认证失败或权限不足，请检查登录状态和仓库权限"
     if is_retryable_download_error(error):

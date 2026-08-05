@@ -344,8 +344,8 @@ def main():
     original_logged_in = cli_mod.config.is_logged_in
     cli_calls = []
     cli_mod.config.is_logged_in = lambda: False
-    cli_mod.api.download_repo = lambda repo_id, local_path, force_download=False: (
-        cli_calls.append((repo_id, Path(local_path), force_download)) or True
+    cli_mod.api.download_repo = lambda repo_id, local_path, force_download=False, repo_type=None: (
+        cli_calls.append((repo_id, Path(local_path), force_download, repo_type)) or True
     )
     try:
         runner = CliRunner()
@@ -360,6 +360,12 @@ def main():
             check("CLI explicit force succeeds", explicit_result.exit_code == 0)
             check("CLI explicit directory forwarded", cli_calls[-1][1].name == "target")
             check("CLI force forwarded", cli_calls[-1][2] is True)
+            typed_result = runner.invoke(
+                cli_mod.cli,
+                ["download", "user/repo", "--repo-type", "dataset"],
+            )
+            check("CLI explicit repository type succeeds", typed_result.exit_code == 0)
+            check("CLI repository type forwarded", cli_calls[-1][3] == "dataset")
 
             cli_mod.api.download_repo = lambda *args, **kwargs: False
             failed = runner.invoke(cli_mod.cli, ["download", "user/repo", "-d", "failed"])

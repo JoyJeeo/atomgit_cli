@@ -141,24 +141,56 @@ def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) ->
     huggingface_hub 的 snapshot_download/hf_hub_download 第一步都会调用
     repo_info（GET /api/models/{repo}），AtomGit hub 未实现该路由（404），
     SDK 会在任何下载前中止。tree/list 与 resolve 路由已实现，因此在这里
-    列文件、再对每个文件直接走 resolve 下载。AtomGit 把 dataset 仓库映射到
-    共享的 model 路由，因此按 model/dataset 依次尝试，直到能列出文件。
+    列文件、再对每个文件直接走 resolve 下载。未显式指定类型时同时探测
+    model/dataset；若兼容路由返回不同内容，则要求调用方明确选择类型。
 
     返回 (effective_repo_type, files)；所有候选都失败时抛出最后一次错误。
     """
+    if repo_type not in (None, "model", "dataset"):
+        raise ValueError("repo_type 仅支持 model 或 dataset")
+
     api = HfApi(token=token)
-    candidates = [repo_type] if repo_type else [None, "dataset"]
-    last_error = None
-    for candidate in candidates:
+    if repo_type is not None:
+        candidate = None if repo_type == "model" else "dataset"
+        files = api.list_repo_files(repo_id, repo_type=candidate)
+        return repo_type, list(files)
+
+    successes = {}
+    errors = []
+    candidates = [("model", None), ("dataset", "dataset")]
+    for effective_type, candidate in candidates:
         try:
             files = api.list_repo_files(repo_id, repo_type=candidate)
         except Exception as error:
-            last_error = error
+            errors.append(error)
             continue
-        if files:
-            return ("dataset" if candidate == "dataset" else "model"), list(files)
-    if last_error is not None:
-        raise last_error
+        successes[effective_type] = list(files)
+
+    if successes:
+        model_files = successes.get("model")
+        dataset_files = successes.get("dataset")
+        if model_files and dataset_files:
+            if set(model_files) != set(dataset_files):
+                raise ValueError(
+                    "仓库类型不明确，请使用 --repo-type model 或 dataset"
+                )
+            return "model", model_files
+        if model_files:
+            return "model", model_files
+        if dataset_files:
+            return "dataset", dataset_files
+        if model_files is not None:
+            return "model", model_files
+        return "dataset", dataset_files or []
+
+    for error in errors:
+        if is_auth_error(error):
+            raise error
+    for error in errors:
+        if not _is_not_found_error(error):
+            raise error
+    if errors:
+        raise errors[-1]
     return "model", []
 
 
@@ -468,7 +500,7 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
 
 
 def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Path, token: str) -> None:
-    """Download one file via resolve URLs with model/dataset fallbacks.
+    """Download one file from the already-selected repository type.
 
     Standard percent-encoded URLs are tried first (HF Hub compatible). When the
     filename contains non-ASCII characters, raw UTF-8 byte URLs are tried after
@@ -490,14 +522,11 @@ def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Pa
             shutil.copyfileobj(resp, out)
         tmp.replace(dest)
 
-    fallback_type = "dataset" if repo_type == "model" else "model"
     url_specs = [
         (_atomgit_resolve_url(repo_id, repo_type, filename), False),
-        (_atomgit_resolve_url(repo_id, fallback_type, filename), False),
     ]
     if not filename.isascii():
         url_specs.append((_atomgit_resolve_url_raw(repo_id, repo_type, filename), True))
-        url_specs.append((_atomgit_resolve_url_raw(repo_id, fallback_type, filename), True))
     last_error = None
     for url, raw in url_specs:
         try:
