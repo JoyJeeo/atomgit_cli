@@ -231,6 +231,15 @@ atomgit download your-username/your-model-name
 atomgit download your-username/your-model-name -d ./models/
 ```
 
+当 model 与 dataset 路由需要明确区分时，可指定仓库类型：
+
+```bash
+atomgit download your-username/your-dataset -d ./data/ --repo-type dataset
+```
+
+未指定 `--repo-type` 时会安全探测两种路由；若两种路由返回不同内容，命令会
+要求显式选择，避免混合下载错误仓库的数据。
+
 ### 4. 其他命令
 
 #### 退出登录

@@ -1,80 +1,68 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-RAW-INTEGRITY
+# Issue DOWNLOAD-REPO-TYPE
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-RAW-INTEGRITY`
-- Title: `Raw UTF-8-path downloads can save HTTP framing as file content or accept truncated bodies`
-- Type: `bug`, `security`, `cli`, `compatibility`
+- Local Issue: `DOWNLOAD-REPO-TYPE`
+- Title: `Download type probing can misclassify empty repositories or mix model and dataset routes`
+- Type: `bug`, `cli`, `compatibility`
 - Priority: `P1`
-- Branch: `codex/fix-download-raw-integrity` (local only)
+- Branch: `codex/fix-download-repo-type` (local only)
 - Base: `yuto`
-- Delivery mode: implement and review locally, commit, merge into `yuto`, and
-  push only `yuto`.
 
 ## Previous Issue (Closed)
 
-- `DOWNLOAD-PATH-TRAVERSAL` was delivered by `24a3baf` and merged into `yuto`
-  by `e724c47`.
+- `DOWNLOAD-RAW-INTEGRITY` was delivered by `2a7d245` and merged by `09371a8`.
 
-## User Impact And Evidence
+## Evidence And Scope
 
-The raw socket fallback copies response bytes until EOF without interpreting
-HTTP body framing. An offline probe returned a valid chunked body containing
-`data`; the CLI saved `4\r\ndata\r\n0\r\n\r\n` and reported success. A response
-shorter than its Content-Length is likewise accepted. This path is used for
-nested non-ASCII AtomGit filenames.
+The automatic list helper discards a successful empty model result and raises a
+later dataset 404. Per-file resolve also falls back to the other repository
+type, which can return unrelated same-named content. The CLI exposes no way to
+select the intended type.
 
-## Scope
+In scope: add optional `download --repo-type`, preserve successful empty list
+results, define deterministic error precedence, reject genuinely ambiguous
+different model/dataset listings, bind resolve downloads to the selected type,
+and update tests/documentation.
 
-In scope: decode chunked bodies, enforce Content-Length, reject ambiguous or
-unsupported transfer framing, bound protocol line parsing, clean temporary
-files after failure, preserve atomic replacement, and add strict offline
-transport regressions.
-
-Out of scope: destination paths, redirect credential policy, repository type,
-and ordinary urllib response framing.
+Out of scope: existing-file skip behavior, SDK download semantics, and writes.
 
 ## Acceptance Criteria
 
-- Valid chunked and fixed-length bodies produce only their decoded content.
-- Truncated, malformed, conflicting, or unsupported framing fails without
-  replacing an existing destination and removes the `.part` file.
-- Close-delimited bodies remain supported.
-- Existing nested non-ASCII AtomGit downloads remain compatible.
-- Focused and full offline tests, compileall, and `git diff --check` pass.
+- Explicit type is forwarded and only that type is used.
+- Auto mode returns a successful empty repository when the other route fails.
+- Authentication errors are not hidden by a later 404.
+- Identical compatibility-route listings remain usable; different non-empty
+  listings require explicit type selection.
+- Resolve never switches repository type after listing.
+- Focused/full tests and required checks pass; both authorized repositories
+  retain read-only download compatibility.
 
-## Permissions
+## Permissions And Delivery
 
-- Authorized: local edits, commits, local merge into `yuto`, and push of
-  `yuto`; the task branch remains local-only.
-- Authorized remote tests: only `weixin_52273949/test_model` and
-  `weixin_52273949/test_datasets`; no remote write is needed.
-
-## Delivery Record
-
-- Implementation: the raw transport now bounds status/header parsing, rejects
-  malformed request/response headers, streams and decodes chunked bodies,
-  enforces strict decimal Content-Length, rejects ambiguous or unsupported
-  transfer framing, explicitly closes response streams and sockets, removes
-  stale/failed `.part` files, and atomically replaces the destination only
-  after a complete valid body.
-- Regression evidence: before the fix only 2/7 initial assertions passed;
-  chunk framing was saved as content and truncated, malformed, conflicting,
-  and unsupported responses were all accepted.
-- Focused offline tests: raw integrity, redirect security, and download
-  contract passed as 3 pytest cases. Added valid fixed/chunked/close-delimited,
-  malformed/truncated/conflicting framing, strict numeric syntax, chunk
-  extensions, trailers, old-destination preservation, and cleanup coverage.
-- Complete offline suite: `python -m pytest` passed 39/39 in 37.52 seconds.
-- Required checks: compileall and `git diff --check` passed.
-- Authorized read-only live check: nested `sub/中文样本.csv` downloaded from
-  `weixin_52273949/test_model` and retained its 31-byte content.
-- Independent review: first pass requested strict numeric syntax and explicit
-  response-stream closure. Both findings were fixed and retested. Fresh review
-  found no open findings: `APPROVED`.
+- Authorized: local edits/commits, local merge into `yuto`, push only `yuto`,
+  and read-only tests against the two maintainer-provided repositories.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Commit/merge/push: authorized.
+- Implementation: `download --repo-type model|dataset` is forwarded end to end;
+  explicit selection uses only that list/resolve route. Auto mode probes both,
+  preserves successful empty results, prioritizes authentication/non-404
+  failures, accepts identical compatibility listings, and rejects different
+  non-empty listings with actionable guidance.
+- Regression evidence: before implementation, 1/6 original repository-type
+  assertions passed. The final regression covers empty success, error
+  precedence, identical/different listings, explicit selection, sanitized
+  guidance, and resolve route isolation.
+- Focused offline tests: 4/4 pytest cases passed.
+- Complete offline suite: 40/40 passed in 38.63 seconds.
+- Required checks: `python -m compileall -q .` and `git diff --check` passed.
+- Authorized read-only live checks: explicit model download from
+  `weixin_52273949/test_model` and explicit dataset download from
+  `weixin_52273949/test_datasets` both succeeded.
+- Independent review: implementation, tests, documentation, compatibility,
+  and credential exposure reviewed; no open findings (`APPROVED`).
+- Human acceptance: standing acceptance granted for the approved full plan.
+- Commit/merge/push: authorized and pending.
