@@ -48,6 +48,16 @@ def main():
             repaired = json.loads(config_file.read_text(encoding="utf-8"))
             check("later save repairs corrupt JSON", repaired["token"] == "fake-repaired-token")
 
+            config_file.write_text("[]", encoding="utf-8")
+            wrong_shape = config_mod.Config()
+            check("non-object config loads logged out", not wrong_shape.is_logged_in())
+            wrong_shape.set_credentials("fake-shape-repaired-token")
+            shape_repaired = json.loads(config_file.read_text(encoding="utf-8"))
+            check(
+                "later save repairs non-object JSON",
+                shape_repaired == {"token": "fake-shape-repaired-token"},
+            )
+
     api = api_mod.HuggingFaceAPI()
     original_set = api_mod.config.set_credentials
     saved_tokens = []

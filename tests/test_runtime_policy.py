@@ -41,7 +41,8 @@ def main():
             check("endpoint policy applied", os.environ["HF_ENDPOINT"] == ATOMGIT_HF_ENDPOINT)
             check("XET policy applied", os.environ["HF_HUB_DISABLE_XET"] == ATOMGIT_DISABLE_XET)
             check("cache policy applied", os.environ["HF_HOME"] == str(expected_cache))
-            check("cache directory created", expected_cache.is_dir())
+            check("runtime setup does not create cache during import policy",
+                  not expected_cache.exists())
             check("repeated setup is idempotent", first == second == expected_cache)
 
         import atomgit.api as package_api  # noqa: F401
