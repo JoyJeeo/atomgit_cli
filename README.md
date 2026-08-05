@@ -288,7 +288,13 @@ atomgit repo create your-username/your-repo --type model --private
 
 # 创建私有 dataset 仓库
 atomgit repo create your-username/your-dataset --type dataset --private
+
+# 幂等自动化：仓库已存在时也返回成功
+atomgit repo create your-username/your-repo --type model --private --exist-ok
 ```
+
+默认情况下仓库已存在会返回失败，避免误报“新建成功”；仅在明确需要幂等行为时
+使用 `--exist-ok`，成功提示会显示“已存在或已创建”。
 
 ## SDK使用方法
 

@@ -24,6 +24,7 @@ def check(name, condition, detail=""):
 
 def main():
     original_create = api_mod.create_repo
+    original_exists = api_mod._atomgit_repo_exists
     original_credentials = api_mod.config.get_credentials
     calls = []
 
@@ -33,6 +34,7 @@ def main():
         return "https://atomgit.com/user/repo"
 
     api_mod.create_repo = strict_create
+    api_mod._atomgit_repo_exists = lambda repo_id, token: False
     api_mod.config.get_credentials = lambda: {"token": "fake-stored-token"}
     try:
         for repo_type in ("model", "dataset"):
@@ -50,7 +52,28 @@ def main():
             )
             check(f"API private {repo_type} privacy forwarded", call["private"] is True)
             check(f"API private {repo_type} token forwarded", call["token"] == "fake-stored-token")
-            check(f"API private {repo_type} is idempotent", call["exist_ok"] is True)
+            check(f"API private {repo_type} defaults non-idempotent", call["exist_ok"] is False)
+
+        check(
+            "API explicit exist_ok succeeds",
+            api_mod.api.create_repo(
+                "user/model-repo", private=True, exist_ok=True
+            )
+            is True,
+        )
+        check("API explicit exist_ok forwarded", calls[-1]["exist_ok"] is True)
+
+        before = len(calls)
+        api_mod._atomgit_repo_exists = lambda repo_id, token: True
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            existing_failed = (
+                api_mod.api.create_repo("user/model-repo", private=True) is False
+            )
+        check("API existing repository fails by default", existing_failed)
+        check("API existing repository makes no create call", len(calls) == before)
+        check("API existing repository gives exist-ok guidance", "--exist-ok" in captured.getvalue())
+        api_mod._atomgit_repo_exists = lambda repo_id, token: False
 
         before = len(calls)
         api_mod.config.get_credentials = lambda: None
@@ -100,6 +123,7 @@ def main():
         )
     finally:
         api_mod.create_repo = original_create
+        api_mod._atomgit_repo_exists = original_exists
         api_mod.config.get_credentials = original_credentials
 
     original_logged_in = cli_mod.config.is_logged_in
@@ -115,8 +139,8 @@ def main():
         check("CLI requires login", result.exit_code == 1 and "登录" in result.output)
 
         cli_mod.config.is_logged_in = lambda: True
-        cli_mod.api.create_repo = lambda name, repo_type, private: (
-            cli_calls.append((name, repo_type, private)) or private
+        cli_mod.api.create_repo = lambda name, repo_type, private, exist_ok=False: (
+            cli_calls.append((name, repo_type, private, exist_ok)) or private
         )
         invalid_name = runner.invoke(
             cli_mod.cli,
@@ -136,14 +160,25 @@ def main():
             ["repo", "create", "user/repo", "--type", "model"],
         )
         check("CLI public creation reports failure", public.exit_code == 1)
-        check("CLI public flag reaches API as false", cli_calls[-1] == ("user/repo", "model", False))
+        check("CLI public flag reaches API as false", cli_calls[-1] == ("user/repo", "model", False, False))
 
         private = runner.invoke(
             cli_mod.cli,
             ["repo", "create", "user/repo", "--type", "dataset", "--private"],
         )
         check("CLI private dataset succeeds", private.exit_code == 0)
-        check("CLI private dataset arguments forwarded", cli_calls[-1] == ("user/repo", "dataset", True))
+        check("CLI private dataset arguments forwarded", cli_calls[-1] == ("user/repo", "dataset", True, False))
+
+        idempotent = runner.invoke(
+            cli_mod.cli,
+            [
+                "repo", "create", "user/repo", "--type", "model",
+                "--private", "--exist-ok",
+            ],
+        )
+        check("CLI explicit exist-ok succeeds", idempotent.exit_code == 0)
+        check("CLI explicit exist-ok forwarded", cli_calls[-1] == ("user/repo", "model", True, True))
+        check("CLI exist-ok success is accurately described", "已存在" in idempotent.output)
 
         cli_mod.api.create_repo = lambda *args, **kwargs: False
         failed = runner.invoke(

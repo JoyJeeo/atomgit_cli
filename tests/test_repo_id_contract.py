@@ -75,6 +75,7 @@ def main():
 
     original_credentials = config.get_credentials
     original_create = api_mod.create_repo
+    original_exists = api_mod._atomgit_repo_exists
     original_file_upload = api_mod.hf_upload_file
     original_folder_upload = api_mod.upload_folder
     original_snapshot = api_mod.snapshot_download
@@ -83,6 +84,7 @@ def main():
     api_calls = {}
     config.get_credentials = lambda: {"token": "fake-token"}
     api_mod.create_repo = lambda **kwargs: api_calls.setdefault("create", kwargs)
+    api_mod._atomgit_repo_exists = lambda repo_id, token: False
     api_mod.hf_upload_file = lambda **kwargs: api_calls.setdefault("file", kwargs)
     api_mod.upload_folder = lambda **kwargs: api_calls.setdefault("folder", kwargs)
 
@@ -118,6 +120,7 @@ def main():
     finally:
         config.get_credentials = original_credentials
         api_mod.create_repo = original_create
+        api_mod._atomgit_repo_exists = original_exists
         api_mod.hf_upload_file = original_file_upload
         api_mod.upload_folder = original_folder_upload
         api_mod.snapshot_download = original_snapshot
