@@ -175,6 +175,70 @@ def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str
     return f"{endpoint}/{prefix}{repo_id}/resolve/main/{filename}"
 
 
+def _download_url_origin(url: str) -> tuple:
+    """Return a normalized origin after validating a download URL."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError as error:
+        raise urllib.error.URLError(f"invalid download URL: {error}") from error
+    scheme = parts.scheme.lower()
+    if scheme not in ("http", "https"):
+        raise urllib.error.URLError(
+            f"unsupported download redirect scheme: {scheme or '(empty)'}"
+        )
+    if not parts.hostname:
+        raise urllib.error.URLError("download redirect has no hostname")
+    if parts.username is not None or parts.password is not None:
+        raise urllib.error.URLError("download redirect must not contain credentials")
+    effective_port = port or (443 if scheme == "https" else 80)
+    return scheme, parts.hostname.rstrip(".").lower(), effective_port
+
+
+def _prepare_download_redirect(current_url: str, location: str, headers) -> tuple:
+    """Validate a redirect and remove credentials when its origin changes."""
+    target_url = urljoin(current_url, location)
+    current_origin = _download_url_origin(current_url)
+    target_origin = _download_url_origin(target_url)
+    if current_origin[0] == "https" and target_origin[0] != "https":
+        raise urllib.error.URLError("refusing HTTPS-to-HTTP download redirect")
+
+    redirected_headers = dict(headers)
+    if current_origin != target_origin:
+        redirected_headers = {
+            key: value
+            for key, value in redirected_headers.items()
+            if key.lower() != "authorization"
+        }
+    return target_url, redirected_headers
+
+
+class _AtomGitRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Apply AtomGit credential isolation to urllib redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target_url, redirected_headers = _prepare_download_redirect(
+            req.full_url, newurl, req.header_items()
+        )
+        redirected = super().redirect_request(
+            req, fp, code, msg, headers, target_url
+        )
+        if redirected is None:
+            return None
+        if not any(
+            key.lower() == "authorization" for key in redirected_headers
+        ):
+            redirected.remove_header("Authorization")
+            redirected.unredirected_hdrs.pop("Authorization", None)
+        return redirected
+
+
+def _atomgit_open_url(request, timeout=60):
+    """Open a direct download with the credential-safe redirect handler."""
+    opener = urllib.request.build_opener(_AtomGitRedirectHandler())
+    return opener.open(request, timeout=timeout)
+
+
 def _atomgit_raw_http_get(host, port, scheme, raw_path, headers, timeout):
     """Send a raw-socket GET and return (status, headers, body, socket)."""
     context = ssl.create_default_context()
@@ -214,36 +278,42 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
     the request target. This helper speaks HTTPS directly, follows redirects
     within a bounded limit, and streams the body to dest.
     """
-    parts = urlsplit(url)
+    current_url = url
+    current_headers = dict(headers)
+    _download_url_origin(current_url)
+    parts = urlsplit(current_url)
     host = parts.hostname
     port = parts.port or (443 if parts.scheme == "https" else 80)
     raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
     tmp = dest.with_name(dest.name + ".part")
     for _ in range(max_redirects + 1):
         status, response_headers, body, sock = _atomgit_raw_http_get(
-            host, port, parts.scheme, raw_path, headers, timeout
+            host, port, parts.scheme, raw_path, current_headers, timeout
         )
         try:
             if status in (301, 302, 303, 307, 308):
-                location = response_headers.get("Location")
+                location = response_headers.get("location")
                 if not location:
-                    raise urllib.error.HTTPError(url, status, "Redirect without Location", response_headers, None)
-                parts = urlsplit(urljoin(url, location))
+                    raise urllib.error.HTTPError(current_url, status, "Redirect without Location", response_headers, None)
+                current_url, current_headers = _prepare_download_redirect(
+                    current_url, location, current_headers
+                )
+                parts = urlsplit(current_url)
                 host = parts.hostname
                 port = parts.port or (443 if parts.scheme == "https" else 80)
                 raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
                 continue
             if status == 404:
-                raise urllib.error.HTTPError(url, 404, "Not Found", response_headers, None)
+                raise urllib.error.HTTPError(current_url, 404, "Not Found", response_headers, None)
             if not 200 <= status < 300:
-                raise urllib.error.HTTPError(url, status, "HTTP Error", response_headers, None)
+                raise urllib.error.HTTPError(current_url, status, "HTTP Error", response_headers, None)
             with open(tmp, "wb") as out:
                 shutil.copyfileobj(body, out)
             tmp.replace(dest)
             return
         finally:
             sock.close()
-    raise urllib.error.HTTPError(url, 302, "Too many redirects", {}, None)
+    raise urllib.error.HTTPError(current_url, 302, "Too many redirects", {}, None)
 
 
 def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Path, token: str) -> None:
@@ -265,7 +335,7 @@ def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Pa
             return
         tmp = dest.with_name(dest.name + ".part")
         req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=60) as resp, open(tmp, "wb") as out:
+        with _atomgit_open_url(req, timeout=60) as resp, open(tmp, "wb") as out:
             shutil.copyfileobj(resp, out)
         tmp.replace(dest)
 

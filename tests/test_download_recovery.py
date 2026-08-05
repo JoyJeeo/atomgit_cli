@@ -65,7 +65,7 @@ def main():
                     return False
 
             original_api_list = api_mod._atomgit_list_repo_files
-            original_urlopen = api_mod.urllib.request.urlopen
+            original_urlopen = api_mod._atomgit_open_url
             api_mod._atomgit_list_repo_files = lambda repo_id, token, repo_type=None: ("model", ["config.json"])
             urlopen_calls = []
 
@@ -78,7 +78,7 @@ def main():
                     )
                 return FakeHttpResponse(b"content")
 
-            api_mod.urllib.request.urlopen = interrupted_urlopen
+            api_mod._atomgit_open_url = interrupted_urlopen
             try:
                 check("T1 CLI repo retries interrupted response",
                       api_mod.api.download_repo("user/repo", root / "repo"))
@@ -86,7 +86,7 @@ def main():
                       str(len(urlopen_calls)))
             finally:
                 api_mod._atomgit_list_repo_files = original_api_list
-                api_mod.urllib.request.urlopen = original_urlopen
+                api_mod._atomgit_open_url = original_urlopen
 
             sdk_snapshot_calls = []
             atomgit_hub.hf_snapshot_download = interrupted_then_success(
