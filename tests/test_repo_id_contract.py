@@ -41,12 +41,25 @@ def main():
     original_file_upload = api_mod.hf_upload_file
     original_folder_upload = api_mod.upload_folder
     original_snapshot = api_mod.snapshot_download
+    original_api_list = api_mod._atomgit_list_repo_files
+    original_api_fetch = api_mod._download_atomgit_file
     api_calls = {}
     config.get_credentials = lambda: {"token": "fake-token"}
     api_mod.create_repo = lambda **kwargs: api_calls.setdefault("create", kwargs)
     api_mod.hf_upload_file = lambda **kwargs: api_calls.setdefault("file", kwargs)
     api_mod.upload_folder = lambda **kwargs: api_calls.setdefault("folder", kwargs)
-    api_mod.snapshot_download = lambda **kwargs: api_calls.setdefault("download", kwargs) or "/tmp/repo"
+
+    def fake_list(repo_id, token, repo_type=None):
+        api_calls.setdefault("download", {})["repo_id"] = repo_id
+        return "model", ["file.bin"]
+
+    def fake_fetch(repo_id, repo_type, filename, dest, token):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"content")
+
+    api_mod._atomgit_list_repo_files = fake_list
+    api_mod._download_atomgit_file = fake_fetch
+
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -71,6 +84,8 @@ def main():
         api_mod.hf_upload_file = original_file_upload
         api_mod.upload_folder = original_folder_upload
         api_mod.snapshot_download = original_snapshot
+        api_mod._atomgit_list_repo_files = original_api_list
+        api_mod._download_atomgit_file = original_api_fetch
 
     original_sdk_token = atomgit_hub._get_token
     original_sdk_snapshot = atomgit_hub.hf_snapshot_download

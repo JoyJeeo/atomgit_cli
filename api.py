@@ -1,6 +1,11 @@
 from typing import Optional, Dict, Any
 from pathlib import Path
+from urllib.parse import quote, urljoin, urlsplit
+import os
+import shutil
 import json
+import socket
+import ssl
 import urllib.request
 import urllib.error
 import multiprocessing
@@ -108,6 +113,181 @@ def _restore_progress_bar_state(state) -> None:
 def _atomgit_repo_type(repo_type: str = None) -> str:
     """Map dataset create/transfer calls to AtomGit's shared model route."""
     return "model" if repo_type == "dataset" else repo_type
+
+
+def _atomgit_hf_endpoint() -> str:
+    """AtomGit HF-compatible endpoint from the shared runtime policy."""
+    return os.environ.get("HF_ENDPOINT", "https://hub.atomgit.com")
+
+
+def _atomgit_resolve_url(repo_id: str, repo_type: str, filename: str) -> str:
+    """Build a direct resolve URL that bypasses the missing repo_info route."""
+    endpoint = _atomgit_hf_endpoint()
+    prefix = "datasets/" if repo_type == "dataset" else ""
+    # 文件名必须百分号编码（保留 / 分隔子目录），否则 urllib 发送
+    # 请求行时按 ASCII 编码，中文文件名会抛 UnicodeEncodeError。
+    encoded_filename = quote(filename, safe="/")
+    return f"{endpoint}/{prefix}{repo_id}/resolve/main/{encoded_filename}"
+
+
+def _is_not_found_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return "404" in message or "not found" in message
+
+
+def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
+    """List repo files without calling repo_info.
+
+    huggingface_hub 的 snapshot_download/hf_hub_download 第一步都会调用
+    repo_info（GET /api/models/{repo}），AtomGit hub 未实现该路由（404），
+    SDK 会在任何下载前中止。tree/list 与 resolve 路由已实现，因此在这里
+    列文件、再对每个文件直接走 resolve 下载。AtomGit 把 dataset 仓库映射到
+    共享的 model 路由，因此按 model/dataset 依次尝试，直到能列出文件。
+
+    返回 (effective_repo_type, files)；所有候选都失败时抛出最后一次错误。
+    """
+    api = HfApi(token=token)
+    candidates = [repo_type] if repo_type else [None, "dataset"]
+    last_error = None
+    for candidate in candidates:
+        try:
+            files = api.list_repo_files(repo_id, repo_type=candidate)
+        except Exception as error:
+            last_error = error
+            continue
+        if files:
+            return ("dataset" if candidate == "dataset" else "model"), list(files)
+    if last_error is not None:
+        raise last_error
+    return "model", []
+
+
+def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str:
+    """Build a resolve URL that keeps the raw UTF-8 filename bytes.
+
+    AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
+    filenames, but serves the same file when the raw UTF-8 bytes are sent in
+    the request target. urllib refuses to send raw non-ASCII paths, so this
+    variant is consumed by _atomgit_download_raw below.
+    """
+    endpoint = _atomgit_hf_endpoint()
+    prefix = "datasets/" if repo_type == "dataset" else ""
+    return f"{endpoint}/{prefix}{repo_id}/resolve/main/{filename}"
+
+
+def _atomgit_raw_http_get(host, port, scheme, raw_path, headers, timeout):
+    """Send a raw-socket GET and return (status, headers, body, socket)."""
+    context = ssl.create_default_context()
+    sock = socket.create_connection((host, port), timeout=timeout)
+    try:
+        if scheme == "https":
+            sock = context.wrap_socket(sock, server_hostname=host)
+        sock.settimeout(timeout)
+        sock.sendall(b"GET " + raw_path + b" HTTP/1.1\r\n")
+        sock.sendall(b"Host: " + host.encode("ascii") + b"\r\n")
+        for key, value in headers.items():
+            sock.sendall(key.encode("latin-1") + b": " + str(value).encode("utf-8") + b"\r\n")
+        sock.sendall(b"Connection: close\r\n\r\n")
+        body = sock.makefile("rb")
+        status_line = body.readline()
+        if not status_line:
+            raise urllib.error.URLError("empty response from " + str(host))
+        status = int(status_line.decode("latin-1").split(" ", 2)[1])
+        response_headers = {}
+        while True:
+            line = body.readline()
+            if line in (b"\r\n", b"\n", b""):
+                break
+            key, _, value = line.decode("latin-1").partition(":")
+            response_headers[key.strip().lower()] = value.strip()
+        return status, response_headers, body, sock
+    except Exception:
+        sock.close()
+        raise
+
+
+def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_redirects: int = 5) -> None:
+    """Download over HTTPS keeping non-ASCII path bytes raw.
+
+    AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
+    filenames, but serves the same file when the raw UTF-8 bytes are sent in
+    the request target. This helper speaks HTTPS directly, follows redirects
+    within a bounded limit, and streams the body to dest.
+    """
+    parts = urlsplit(url)
+    host = parts.hostname
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
+    tmp = dest.with_name(dest.name + ".part")
+    for _ in range(max_redirects + 1):
+        status, response_headers, body, sock = _atomgit_raw_http_get(
+            host, port, parts.scheme, raw_path, headers, timeout
+        )
+        try:
+            if status in (301, 302, 303, 307, 308):
+                location = response_headers.get("Location")
+                if not location:
+                    raise urllib.error.HTTPError(url, status, "Redirect without Location", response_headers, None)
+                parts = urlsplit(urljoin(url, location))
+                host = parts.hostname
+                port = parts.port or (443 if parts.scheme == "https" else 80)
+                raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
+                continue
+            if status == 404:
+                raise urllib.error.HTTPError(url, 404, "Not Found", response_headers, None)
+            if not 200 <= status < 300:
+                raise urllib.error.HTTPError(url, status, "HTTP Error", response_headers, None)
+            with open(tmp, "wb") as out:
+                shutil.copyfileobj(body, out)
+            tmp.replace(dest)
+            return
+        finally:
+            sock.close()
+    raise urllib.error.HTTPError(url, 302, "Too many redirects", {}, None)
+
+
+def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Path, token: str) -> None:
+    """Download one file via resolve URLs with model/dataset fallbacks.
+
+    Standard percent-encoded URLs are tried first (HF Hub compatible). When the
+    filename contains non-ASCII characters, raw UTF-8 byte URLs are tried after
+    a 404, which works around the AtomGit resolve route failing to decode
+    nested paths with non-ASCII filenames.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    headers = {"User-Agent": "atomgit-cli", "Accept": "*/*"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    def fetch_once(url: str, raw: bool = False) -> None:
+        if raw:
+            _atomgit_download_raw(url, dest, headers, timeout=60)
+            return
+        tmp = dest.with_name(dest.name + ".part")
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=60) as resp, open(tmp, "wb") as out:
+            shutil.copyfileobj(resp, out)
+        tmp.replace(dest)
+
+    fallback_type = "dataset" if repo_type == "model" else "model"
+    url_specs = [
+        (_atomgit_resolve_url(repo_id, repo_type, filename), False),
+        (_atomgit_resolve_url(repo_id, fallback_type, filename), False),
+    ]
+    if not filename.isascii():
+        url_specs.append((_atomgit_resolve_url_raw(repo_id, repo_type, filename), True))
+        url_specs.append((_atomgit_resolve_url_raw(repo_id, fallback_type, filename), True))
+    last_error = None
+    for url, raw in url_specs:
+        try:
+            run_download_with_retry(lambda: fetch_once(url, raw))
+            return
+        except Exception as error:
+            if _is_not_found_error(error):
+                last_error = error
+                continue
+            raise
+    raise last_error
 
 
 def _run_resumable_upload(token, kwargs, result_queue):
@@ -585,107 +765,72 @@ class HuggingFaceAPI:
             print(f"💡 建议: {hint}")
             return False
     
-    def download_repo(self, repo_id: str, local_path: Path = None, force_download: bool = False) -> bool:
-        """下载仓库 - 使用Hugging Face Hub SDK，支持公开仓库无需token和断点续传"""
+    def download_repo(self, repo_id: str, local_path: Path = None, force_download: bool = False, repo_type: str = None) -> bool:
+        """下载仓库到本地目录（公开仓库无需token）。
+
+        绕过 huggingface_hub 的 snapshot_download：AtomGit hub 未实现
+        repo_info 路由（GET /api/models/{repo} 返回 404），SDK 会在任何
+        下载前中止；这里改为 list_repo_files + resolve 逐文件下载。
+        """
         try:
-            # 标准化仓库ID（处理三层格式）
             normalized_repo_id = self._normalize_repo_id(repo_id)
-            
+
             if local_path is None:
                 local_path = Path.cwd() / repo_id.split('/')[-1]
-            
-            # 创建本地目录
+
             local_path.mkdir(parents=True, exist_ok=True)
-            
-            # 首先尝试不使用token下载（适用于公开仓库）
+
             credentials = config.get_credentials()
-            try:
-                run_download_with_retry(
-                    lambda: snapshot_download(
-                        repo_id=normalized_repo_id,
-                        local_dir=str(local_path),
-                        force_download=force_download,
-                        token=credentials['token'] if credentials and 'token' in credentials else None,
-                    )
-                )
-                print(f"✅ 仓库下载成功")
+            token = credentials['token'] if credentials and 'token' in credentials else None
+
+            effective_type, files = _atomgit_list_repo_files(normalized_repo_id, token, repo_type)
+            if not files:
+                print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
                 return True
-            except ValueError as e:
-                # huggingface_hub 1.1.7 的 snapshot_download 对空仓库会在
-                # tqdm.thread_map 内触发 CPython min() 空迭代器 ValueError，
-                # 导致误报"下载失败（ValueError）"。仓库本身可达但为空，
-                # 本地目录已创建，按成功处理并给出明确提示。
-                if "min() iterable argument is empty" in str(e):
-                    print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
-                    return True
-                raise
-            except Exception as e:
-                print(f"仓库下载失败: {sanitized_download_error(e)}")
-                return False
+
+            for filename in files:
+                dest = local_path / filename
+                if dest.exists() and not force_download:
+                    print(f"⏭ 已存在，跳过: {filename}")
+                    continue
+                _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
+                print(f"✓ 已下载: {filename}")
+            print("✅ 仓库下载成功")
+            return True
         except Exception as e:
-            print(f"下载仓库失败: {e}")
+            print(f"仓库下载失败: {sanitized_download_error(e)}")
             return False
-    
-    def download_file(self, repo_id: str, filename: str, local_path: Path = None, force_download: bool = False) -> bool:
-        """下载单个文件 - 使用Hugging Face Hub SDK，支持公开仓库无需token和断点续传"""
+
+    def download_file(self, repo_id: str, filename: str, local_path: Path = None, force_download: bool = False, repo_type: str = None) -> bool:
+        """下载单个文件到本地目录（公开仓库无需token）。"""
         try:
-            # 标准化仓库ID（处理三层格式）
             normalized_repo_id = self._normalize_repo_id(repo_id)
-            
+
             if local_path is None:
                 local_path = Path.cwd()
-            
-            # 创建本地目录
+
             local_path.mkdir(parents=True, exist_ok=True)
-            
-            # 首先尝试不使用token下载（适用于公开仓库）
-            try:
-                run_download_with_retry(
-                    lambda: hf_hub_download(
-                        repo_id=normalized_repo_id,
-                        filename=filename,
-                        local_dir=str(local_path),
-                    )
-                )
-                print(f"✅ 文件下载成功")
+
+            credentials = config.get_credentials()
+            token = credentials['token'] if credentials and 'token' in credentials else None
+
+            effective_type, files = _atomgit_list_repo_files(normalized_repo_id, token, repo_type)
+            if filename not in files:
+                print(f"✗ 文件不存在: {filename}")
+                return False
+
+            dest = local_path / filename
+            if dest.exists() and not force_download:
+                print(f"⏭ 文件已存在，跳过: {filename}（--force 可覆盖）")
                 return True
-            except Exception as e:
-                print(f"公开下载失败: {sanitized_download_error(e)}")
-                
-                # 检查是否是认证问题
-                if is_auth_error(e):
-                    print("检测到认证问题，尝试使用token下载...")
-                    
-                    # 如果公开下载失败，尝试使用token下载
-                    credentials = config.get_credentials()
-                    if credentials:
-                        try:
-                            run_download_with_retry(
-                                lambda: hf_hub_download(
-                                    repo_id=normalized_repo_id,
-                                    filename=filename,
-                                    local_dir=str(local_path),
-                                    token=credentials['token'],
-                                )
-                            )
-                            print(f"✅ 下载完成")
-                            return True
-                        except Exception as token_e:
-                            print(f"下载失败: {sanitized_download_error(token_e)}")
-                            return False
-                    else:
-                        print("未找到登录凭证，无法尝试私有仓库下载")
-                        print("💡 建议：如果这是私有仓库，请先使用 'atomgit login' 登录")
-                        return False
-                else:
-                    # 其他类型的错误（如仓库不存在、文件不存在）
-                    print(f"文件下载失败: {sanitized_download_error(e)}")
-                    return False
-            
+            _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
+            print("✅ 文件下载成功")
+            return True
         except Exception as e:
-            print(f"下载文件失败: {e}")
+            print(f"文件下载失败: {sanitized_download_error(e)}")
             return False
-    
+
+
     def get_repo_info(self, repo_id: str) -> Optional[Dict[str, Any]]:
         """获取仓库信息 - 此功能需要Hugging Face Hub SDK支持"""
         try:

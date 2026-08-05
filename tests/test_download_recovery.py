@@ -47,12 +47,46 @@ def main():
     try:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            cli_repo_calls = []
-            api_mod.snapshot_download = interrupted_then_success(cli_repo_calls, str(root))
-            check("T1 CLI repo retries interrupted response",
-                  api_mod.api.download_repo("user/repo", root / "repo"))
-            check("T2 CLI repo retries exactly once", len(cli_repo_calls) == 2,
-                  str(len(cli_repo_calls)))
+            class FakeHttpResponse:
+                def __init__(self, data):
+                    self._data = data
+
+                def read(self, size=-1):
+                    if size is None or size < 0:
+                        data, self._data = self._data, b""
+                        return data
+                    chunk, self._data = self._data[:size], self._data[size:]
+                    return chunk
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, exc_type, exc, tb):
+                    return False
+
+            original_api_list = api_mod._atomgit_list_repo_files
+            original_urlopen = api_mod.urllib.request.urlopen
+            api_mod._atomgit_list_repo_files = lambda repo_id, token, repo_type=None: ("model", ["config.json"])
+            urlopen_calls = []
+
+            def interrupted_urlopen(req, timeout=None):
+                urlopen_calls.append(str(req.full_url))
+                if len(urlopen_calls) == 1:
+                    raise RemoteProtocolError(
+                        "peer closed connection without sending complete message body "
+                        "https://lfs.example/file?certificate=signed-secret"
+                    )
+                return FakeHttpResponse(b"content")
+
+            api_mod.urllib.request.urlopen = interrupted_urlopen
+            try:
+                check("T1 CLI repo retries interrupted response",
+                      api_mod.api.download_repo("user/repo", root / "repo"))
+                check("T2 CLI repo retries exactly once", len(urlopen_calls) == 2,
+                      str(len(urlopen_calls)))
+            finally:
+                api_mod._atomgit_list_repo_files = original_api_list
+                api_mod.urllib.request.urlopen = original_urlopen
 
             sdk_snapshot_calls = []
             atomgit_hub.hf_snapshot_download = interrupted_then_success(
