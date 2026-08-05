@@ -218,7 +218,7 @@ def main():
             )
             # 回归：中文文件名必须做 URL 百分号编码，否则 urllib 发送请求行
             # 时抛 UnicodeEncodeError（下载 中文样本.csv 曾直接失败）
-            original_urlopen = api_mod.urllib.request.urlopen
+            original_urlopen = api_mod._atomgit_open_url
             seen_urls = []
 
             class FakeHttpResponse:
@@ -242,14 +242,14 @@ def main():
                 seen_urls.append(req.full_url)
                 return FakeHttpResponse()
 
-            api_mod.urllib.request.urlopen = recording_urlopen
+            api_mod._atomgit_open_url = recording_urlopen
             try:
                 original_api_fetch(
                     "user/repo", "dataset", "中文样本.csv",
                     Path(local_dir) / "中文样本.csv", "fake-token",
                 )
             finally:
-                api_mod.urllib.request.urlopen = original_urlopen
+                api_mod._atomgit_open_url = original_urlopen
             from urllib.parse import quote as _quote
             expected_suffix = "/resolve/main/" + _quote("中文样本.csv", safe="/")
             check(
@@ -278,7 +278,7 @@ def main():
                 raise api_mod.urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
 
             api_mod._atomgit_download_raw = fake_raw_download
-            api_mod.urllib.request.urlopen = not_found_urlopen
+            api_mod._atomgit_open_url = not_found_urlopen
             try:
                 raw_calls.clear()
                 original_api_fetch(
@@ -286,7 +286,7 @@ def main():
                     Path(local_dir) / "sub" / "中文样本.csv", "fake-token",
                 )
             finally:
-                api_mod.urllib.request.urlopen = original_urlopen
+                api_mod._atomgit_open_url = original_urlopen
                 api_mod._atomgit_download_raw = original_raw_download
             check(
                 "API nested Chinese file falls back to raw URL",
@@ -319,14 +319,14 @@ def main():
                 raise AssertionError("raw fallback must not run for ASCII names")
 
             api_mod._atomgit_download_raw = forbidden_raw
-            api_mod.urllib.request.urlopen = ok_urlopen
+            api_mod._atomgit_open_url = ok_urlopen
             try:
                 original_api_fetch(
                     "user/repo", "model", "config.json",
                     Path(local_dir) / "config.json", "fake-token",
                 )
             finally:
-                api_mod.urllib.request.urlopen = original_urlopen
+                api_mod._atomgit_open_url = original_urlopen
                 api_mod._atomgit_download_raw = original_raw_download
             check(
                 "API ASCII filename never uses raw fallback",

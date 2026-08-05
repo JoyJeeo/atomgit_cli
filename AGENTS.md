@@ -52,8 +52,8 @@ an ambiguous standalone `pip` when installing or inspecting packages.
 
 - Develop one Issue at a time; merge into `yuto` only after that Issue is
   complete and verified. Never develop multiple Issues simultaneously.
-- Prefix every commit subject with `czx:` (for example `czx: fix upload
-  timeout validation`) so this line's commits are distinguishable from others.
+- Use a concise conventional commit subject without the retired `czx:` prefix
+  (for example `fix(upload): validate upload timeout`).
 - Task branches are local-only: never push a development branch to the remote.
 - After implementation and tests pass, merge the task branch into `yuto`
   locally and push only the `yuto` branch.
