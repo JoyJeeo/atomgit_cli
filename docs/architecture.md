@@ -196,6 +196,10 @@ CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL
 org/namespace/repo -> org-namespace/repo
 ```
 
+ID 必须至少包含 `owner/repository` 两段；每段只接受 ASCII 字母、数字、`_`、
+`-`、`.`，但拒绝空段、`.`/`..` 点段、反斜杠、控制字符和所有 `%` 编码。
+百分号编码不会先解码，以免验证与实际请求对同一输入产生不同解释。
+
 create、文件/目录 upload、snapshot/file download、URL 构造和 dataset loading
 均使用同一映射。公开示例的匿名只读探测已验证转换后 URL。2026-08-04 的受控
 写入验收确认客户端会把多层 ID 转成预期物理 ID，并在测试账号不具备对应

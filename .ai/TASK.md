@@ -1,68 +1,66 @@
 # Current Issue Contract
 
-# Issue CONFIG-LIFECYCLE
+# Issue REPO-ID-CANONICALIZATION
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `CONFIG-LIFECYCLE`
-- Title: `Import-time config writes and non-atomic saves can break help or credentials`
-- Type: `bug`, `security`, `cli`
+- Local Issue: `REPO-ID-CANONICALIZATION`
+- Title: `Repository ID validation and normalization disagree on encoded or unsafe paths`
+- Type: `security`, `bug`, `cli`, `sdk`
 - Priority: `P1`
-- Branch: `codex/harden-config-lifecycle` (local only)
+- Branch: `codex/canonicalize-repo-ids` (local only)
 - Base: `yuto`
 
 ## Previous Issue (Closed)
 
-- `LOGIN-TOKEN-INPUT` was delivered by `0b78274` and merged by `d65ba00`.
+- `CONFIG-LIFECYCLE` was delivered by `660ef93` and merged by `19e9547`.
 
 ## Evidence And Scope
 
-The global Config constructor creates/chmods `~/.atomgit` during import and the
-runtime policy creates `~/.cache/atomgit`, so read-only commands such as
-`--help` can fail under an invalid or read-only HOME. Saving truncates
-`config.json` in place, so interruption or write failure can destroy the last
-valid credential state.
+CLI validation URL-decodes IDs but normalization forwards the original text, so
+`owner%2Frepo` validates as two segments yet is sent as one encoded segment.
+Dot segments, control characters, backslashes, and ambiguous percent encodings
+also lack one shared boundary for direct API/SDK calls.
 
-In scope: defer configuration I/O until access, make runtime environment setup
-path-only, keep read-only absent config access side-effect free, migrate
-existing credential permissions when loaded, write via a 0600 same-directory
-temporary file and atomic replacement, clean failed temporaries, and keep
-in-memory state consistent on failure.
+In scope: make validation and normalization use one strict ASCII repository-ID
+parser, reject encoded/empty/dot/control/backslash/invalid segments, require at
+least owner/repository, preserve the established multi-level mapping, and cover
+CLI/API/SDK helpers.
 
-Out of scope: changing JSON schema, token migration/encryption, Git-helper state,
-and cross-process locking.
+Out of scope: changing AtomGit's multi-level mapping, filenames/revisions, and
+remote repository naming policy beyond the existing allowed character set.
 
 ## Acceptance Criteria
 
-- Import and `--help` perform no config filesystem mutation and tolerate an
-  unusable HOME path.
-- Reading an absent config does not create `~/.atomgit`.
-- Existing config permission migration remains 0700/0600 when credentials load.
-- Failed replacement preserves old disk and in-memory state and leaves no temp.
-- Successful saves are atomic and retain 0600 permissions.
+- Safe two-level and multi-level IDs retain current normalized results.
+- Encoded separators/dot segments and any percent ambiguity are rejected.
+- Empty, dot, control, backslash, invalid-character, and single-segment IDs are
+  rejected consistently.
+- CLI validation returns false; API/SDK normalization raises a safe ValueError
+  before remote calls.
 - Focused/full tests and required checks pass.
 
 ## Permissions And Delivery
 
 - Authorized: local edits/commits, local merge into `yuto`, and push only
   `yuto`; task branches remain local-only.
-- Tests use isolated HOME directories; no live credentials are read or changed.
+- No remote test is required because all invalid cases must stop before I/O.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: Config now resolves paths at construction but loads only on
-  first access; absent reads and imports create nothing. Runtime policy sets
-  `HF_HOME` without creating it. Saves use a private same-directory temporary,
-  flush/fsync, atomic replace, failure cleanup, and persist-before-memory commit.
-  Non-object/corrupt JSON safely becomes logged-out state and is repairable.
-- Regression evidence: before implementation, import/constructor/absent-read/
-  no-mutation assertions failed, existing permissions mutated at construction,
-  and `--help` failed when HOME was unusable.
-- Focused tests: config lifecycle 15/15 assertions and 5/5 related pytest cases
-  passed.
-- Complete offline suite: 42/42 passed in 37.98 seconds.
+- Implementation: validation and normalization now share a literal ASCII parser
+  with one safe error. It requires owner/repository, rejects percent ambiguity,
+  unsafe path forms and invalid characters, and preserves established safe
+  two-level/multi-level mapping.
+- Regression evidence: before implementation, only 29/44 original extended
+  assertions passed; normalization accepted every unsafe input and validation
+  accepted encoded separators/dot segments.
+- Focused tests: repository-ID regression passed 66/66 assertions after adding
+  explicit API and SDK boundary checks; 6/6 related pytest cases passed.
+- Complete offline suite: 42/42 passed in 35.06 seconds before the final
+  assertion-only boundary expansion; the focused regression was rerun after it.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Independent review: no open findings (`APPROVED`). Cross-process write locking
-  and encrypted token storage remain explicitly out of scope.
+- Independent review: no open findings (`APPROVED`). The historical multi-level
+  physical-name mapping is intentionally unchanged.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.
