@@ -143,16 +143,13 @@ def main():
                       captured[0]["repo_type"] == "model",
                       f"repo_type={captured[0]['repo_type']!r}")
 
-            # --- T6: 单文件上传 + --ignore（应仍透传，但给出 warning） ---
+            # --- T6: 单文件上传 + --ignore（拒绝歧义组合） ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo",
                                     "--ignore", "*.tmp"])
-            check("T6 文件+ignore exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            if captured:
-                check("T6 文件 ignore_patterns 透传 ['*.tmp']",
-                      captured[0]["ignore_patterns"] == ["*.tmp"],
-                      f"ignore={captured[0]['ignore_patterns']!r}")
+            check("T6 文件+ignore exit=2", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T6 文件+ignore 不调用上传", not captured)
 
             # --- T7: 临时目录清理 ---
             leftover = Path.cwd() / ".tmp_upload"

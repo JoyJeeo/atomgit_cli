@@ -187,6 +187,10 @@ atomgit upload <path> --repo-id <id> [options]
 | `--resumable` | 目录大文件断点续传接口，重复同一命令可复用本地上传状态 |
 | `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
 
+冲突参数会在上传前以退出码 2 拒绝：`--resumable` 仅适用于目录，且不能与
+`--path-in-repo` 或 `--message` 同用；`--num-workers` 必须搭配
+`--resumable`；`--ignore` 仅适用于目录上传。
+
 #### 进阶示例
 
 ```bash

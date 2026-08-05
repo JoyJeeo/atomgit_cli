@@ -121,7 +121,7 @@ def main():
             check("T4 无 .tmp_upload 临时目录", not leftover.exists(),
                   f"exists={leftover.exists()}")
 
-            # --- T5: 单文件 + --ignore（回退到 upload_folder + 临时目录） ---
+            # --- T5: 单文件 + --ignore（CLI 拒绝歧义组合） ---
             uf_captured.clear(); ufold_captured.clear()
             # 先确保 .tmp_upload 不存在
             tp = Path.cwd() / ".tmp_upload"
@@ -130,9 +130,9 @@ def main():
                 _sh.rmtree(tp)
             r = runner.invoke(cli, ["upload", str(fpath), "--repo-id", "user/repo",
                                    "--ignore", "*.tmp"])
-            check("T5 ignore 回退 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T5 ignore 走 upload_folder",
-                  len(ufold_captured) == 1 and len(uf_captured) == 0,
+            check("T5 ignore rejected exit=2", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T5 ignore 不调用上传",
+                  len(ufold_captured) == 0 and len(uf_captured) == 0,
                   f"upload_file={len(uf_captured)} upload_folder={len(ufold_captured)}")
             # 回退路径会在执行中创建 .tmp_upload，结束后清理
             check("T5 回退后 .tmp_upload 已清理", not tp.exists(), f"exists={tp.exists()}")
