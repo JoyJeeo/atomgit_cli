@@ -240,6 +240,13 @@ atomgit download your-username/your-dataset -d ./data/ --repo-type dataset
 未指定 `--repo-type` 时会安全探测两种路由；若两种路由返回不同内容，命令会
 要求显式选择，避免混合下载错误仓库的数据。
 
+目标目录中已存在的文件默认直接跳过，不会校验大小或内容，也不代表断点续传。
+需要重新下载并覆盖已有文件时使用 `--force`：
+
+```bash
+atomgit download your-username/your-model-name -d ./models/ --force
+```
+
 ### 4. 其他命令
 
 #### 退出登录
