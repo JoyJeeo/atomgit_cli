@@ -182,7 +182,7 @@ def create(repo_name, repo_type, private):
                    '仅对目录上传有意义')
 @click.option('--resumable', is_flag=True, default=False,
               help='启用断点续传/分块上传模式（仅目录上传有效，走 HF upload_large_folder，'
-                   '中断后可自动续传；注意此模式下 path_in_repo 与 message 不生效）')
+                   '中断后可自动续传；不能与 --path-in-repo 或 --message 同用）')
 @click.option('--num-workers', 'num_workers', default=None, type=int,
               help='断点续传模式的并发 worker 数（仅 --resumable 生效）')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
@@ -196,10 +196,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     if num_workers is not None and num_workers <= 0:
         print_error("并发 worker 数必须大于 0")
         sys.exit(2)
-    if not config.is_logged_in():
-        print_error("请先登录：atomgit login")
-        sys.exit(1)
-
+    if num_workers is not None and not resumable:
+        print_error("--num-workers 仅能与 --resumable 同时使用")
+        sys.exit(2)
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
         sys.exit(1)
@@ -223,9 +222,28 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     ignore_patterns = parse_ignore_patterns(ignore)
 
     if path.is_file():
-        # 断点续传仅对目录上传有效
         if resumable:
-            print_warning("--resumable 仅对目录上传有效，对单文件上传已忽略")
+            print_error("--resumable 仅支持目录上传")
+            sys.exit(2)
+        if ignore_patterns:
+            print_error("--ignore 仅支持目录上传")
+            sys.exit(2)
+    elif path.is_dir():
+        if resumable and pipr:
+            print_error("--resumable 不支持 --path-in-repo")
+            sys.exit(2)
+        if resumable and message:
+            print_error("--resumable 不支持 --message")
+            sys.exit(2)
+    else:
+        print_error(f"不支持的路径类型: {path}")
+        sys.exit(1)
+
+    if not config.is_logged_in():
+        print_error("请先登录：atomgit login")
+        sys.exit(1)
+
+    if path.is_file():
         print_info(f"正在上传文件: {path}")
         file_size = format_file_size(path.stat().st_size)
         print_info(f"文件大小: {file_size}")
@@ -235,9 +253,6 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"仓库类型: {repo_type}")
         if revision:
             print_info(f"目标分支: {revision}")
-        if ignore_patterns:
-            print_warning("注意：--ignore 对单文件上传几乎不生效（仅匹配文件名），主要对目录上传有意义")
-
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
                              progress_bar=show_progress, path_in_repo=path_in_repo,
                              repo_type=repo_type, revision=revision,
@@ -281,11 +296,6 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
         else:
             print_error(f"目录上传失败: {path}")
             sys.exit(1)
-
-    else:
-        print_error(f"不支持的路径类型: {path}")
-        sys.exit(1)
-
 
 @cli.command()
 @click.argument('repo_id')

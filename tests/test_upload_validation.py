@@ -27,6 +27,9 @@ def main():
                 ([str(folder), "--repo-id", "user/repo", "--timeout", "-1"], "超时时间"),
                 ([str(folder), "--repo-id", "user/repo", "--resumable", "--num-workers", "0"], "worker"),
                 ([str(folder), "--repo-id", "user/repo", "--resumable", "--num-workers", "-2"], "worker"),
+                ([str(folder), "--repo-id", "user/repo", "--num-workers", "2"], "resumable"),
+                ([str(folder), "--repo-id", "user/repo", "--resumable", "--path-in-repo", "sub/"], "path-in-repo"),
+                ([str(folder), "--repo-id", "user/repo", "--resumable", "--message", "release"], "message"),
             ]
             passed = 0
             for args, marker in cases:
@@ -38,8 +41,20 @@ def main():
             ok = valid.exit_code == 0 and len(calls) == 1
             print(f"[{'PASS' if ok else 'FAIL'}] valid positive options accepted")
             passed += ok
-            print(f"summary: {passed}/5 passed")
-            return 0 if passed == 5 else 1
+            cfg_mod.config.is_logged_in = lambda: False
+            unauthenticated_conflict = runner.invoke(
+                cli,
+                ["upload", str(folder), "--repo-id", "user/repo", "--num-workers", "2"],
+            )
+            ok = (
+                unauthenticated_conflict.exit_code == 2
+                and "resumable" in unauthenticated_conflict.output.lower()
+                and len(calls) == 1
+            )
+            print(f"[{'PASS' if ok else 'FAIL'}] conflicts precede authentication")
+            passed += ok
+            print(f"summary: {passed}/9 passed")
+            return 0 if passed == 9 else 1
         finally:
             api_mod.api.upload_directory = original
 

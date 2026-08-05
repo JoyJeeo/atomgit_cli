@@ -154,24 +154,24 @@ def main():
                 check("T4 num_workers=4", call.get("num_workers") == 4,
                       f"num_workers={call.get('num_workers')!r}")
 
-            # --- T5: --resumable + path_in_repo → 给出提示但仍可上传 ---
+            # --- T5: --resumable + path_in_repo → 拒绝，避免静默上传根目录 ---
             uf_captured.clear(); ulf_captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--resumable", "--path-in-repo", "sub/"])
-            check("T5 path_in_repo+resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T5 resumable worker completes", r.exit_code == 0,
+            check("T5 path_in_repo+resumable exit=2", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T5 resumable worker not called", len(ulf_captured) == 0,
                   f"ulf={len(ulf_captured)}")
             # 输出应包含 path_in_repo 不支持的提示
             check("T5 提示 path_in_repo 不支持", "path_in_repo" in r.output or "resumable" in r.output,
                   f"output含提示={'path_in_repo' in r.output or 'resumable' in r.output}")
 
-            # --- T6: 单文件 + --resumable → 给 warning，走普通路径 ---
+            # --- T6: 单文件 + --resumable → 拒绝，不静默切换普通路径 ---
             uf_captured.clear(); ulf_captured.clear()
             r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
                                     "--repo-id", "user/repo", "--resumable"])
-            check("T6 文件+resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T6 文件走 upload_folder（非 large）",
-                  len(uf_captured) == 1 and len(ulf_captured) == 0,
+            check("T6 文件+resumable exit=2", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T6 文件不调用任何上传",
+                  len(uf_captured) == 0 and len(ulf_captured) == 0,
                   f"uf={len(uf_captured)} ulf={len(ulf_captured)}")
             check("T6 文件提示 resumable 仅目录有效",
                   "resumable" in r.output or "目录" in r.output,
