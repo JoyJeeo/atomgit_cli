@@ -194,6 +194,17 @@ def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) ->
     return "model", []
 
 
+def _atomgit_repo_exists(repo_id: str, token: str) -> bool:
+    """Probe AtomGit's shared repository tree before non-idempotent create."""
+    try:
+        HfApi(token=token).list_repo_files(repo_id, repo_type=None)
+        return True
+    except Exception as error:
+        if _is_not_found_error(error):
+            return False
+        raise
+
+
 def _safe_download_destination(local_root: Path, filename: str) -> Path:
     """Resolve a repository filename without allowing it to escape local_root."""
     if not isinstance(filename, str) or not filename:
@@ -748,7 +759,8 @@ class HuggingFaceAPI:
     def create_repo(self, 
                     repo_name: str,
                     repo_type: str = "model", 
-                    private: bool = False) -> bool:
+                    private: bool = False,
+                    exist_ok: bool = False) -> bool:
         """创建仓库；dataset 通过 AtomGit 的共享 model 兼容路由创建。"""
         try:
             if not private:
@@ -758,13 +770,20 @@ class HuggingFaceAPI:
             if not credentials:
                 print("❌ 未找到登录凭证")
                 return False
+            normalized_repo_id = self._normalize_repo_id(repo_name)
+            if not exist_ok and _atomgit_repo_exists(
+                normalized_repo_id, credentials['token']
+            ):
+                print("创建仓库失败[仓库已存在]")
+                print("💡 建议: 如需幂等创建，请显式使用 --exist-ok")
+                return False
             # 使用Hugging Face Hub SDK创建仓库
             create_repo(
-                repo_id=self._normalize_repo_id(repo_name),
+                repo_id=normalized_repo_id,
                 token=credentials['token'],
                 repo_type=_atomgit_repo_type(repo_type),
                 private=private,
-                exist_ok=True
+                exist_ok=exist_ok,
             )
             return True
         except Exception as e:

@@ -144,7 +144,9 @@ def repo():
 @click.option('--type', 'repo_type', type=click.Choice(['model', 'dataset']), 
               required=True, help='仓库类型 (model/dataset)')
 @click.option('--private', is_flag=True, help='创建私有仓库')
-def create(repo_name, repo_type, private):
+@click.option('--exist-ok', is_flag=True,
+              help='仓库已存在时仍返回成功（用于幂等自动化）')
+def create(repo_name, repo_type, private, exist_ok):
     """创建新仓库"""
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
@@ -155,8 +157,11 @@ def create(repo_name, repo_type, private):
         sys.exit(1)
     
     print_info(f"正在创建{repo_type}仓库: {repo_name}")
-    if api.create_repo(repo_name, repo_type, private):
-        print_success(f"仓库 {repo_name} 创建成功")
+    if api.create_repo(repo_name, repo_type, private, exist_ok=exist_ok):
+        if exist_ok:
+            print_success(f"仓库 {repo_name} 已存在或已创建")
+        else:
+            print_success(f"仓库 {repo_name} 创建成功")
     else:
         print_error(f"仓库 {repo_name} 创建失败")
         sys.exit(1)

@@ -45,6 +45,7 @@ def safe_output(name, operation):
 
 def main():
     original_create = api_mod.create_repo
+    original_exists = api_mod._atomgit_repo_exists
     original_upload_file = api_mod.hf_upload_file
     original_upload_folder = api_mod.upload_folder
     original_credentials = api_mod.config.get_credentials
@@ -52,6 +53,7 @@ def main():
     original_login_lookup = api_mod.api._get_login_user_by_token
     try:
         api_mod.config.get_credentials = lambda: {"token": "fake-stored-token"}
+        api_mod._atomgit_repo_exists = lambda repo_id, token: False
 
         def fail(*args, **kwargs):
             raise SENSITIVE_ERROR
@@ -92,6 +94,7 @@ def main():
         check("whoami has safe actionable message", "凭证" in whoami_text or "用户" in whoami_text)
     finally:
         api_mod.create_repo = original_create
+        api_mod._atomgit_repo_exists = original_exists
         api_mod.hf_upload_file = original_upload_file
         api_mod.upload_folder = original_upload_folder
         api_mod.config.get_credentials = original_credentials
