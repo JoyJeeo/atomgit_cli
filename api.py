@@ -629,7 +629,7 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
         return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
 
     # 其他
-    return "未知错误", f"{type(e).__name__}: {msg}"
+    return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
 
 
 def _classify_create_repo_error(e: Exception) -> tuple:
@@ -676,7 +676,7 @@ def _classify_create_repo_error(e: Exception) -> tuple:
         return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
 
     # 其他
-    return "未知错误", f"{type(e).__name__}: {msg}"
+    return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
 
 
 class HuggingFaceAPI:
@@ -698,7 +698,11 @@ class HuggingFaceAPI:
         if not user_info:
             print("❌ 获取用户信息失败")
             return False
-        config.set_credentials(token)
+        try:
+            config.set_credentials(token)
+        except Exception:
+            print("❌ 登录凭证保存失败，请检查配置目录权限后重试")
+            return False
         print("✅ Token已保存")
         return True
     
@@ -731,7 +735,11 @@ class HuggingFaceAPI:
             return None
 
     def get_login_user(self):
-        credentials = config.get_credentials()
+        try:
+            credentials = config.get_credentials()
+        except Exception:
+            print("❌ 登录凭证读取失败，请检查配置文件和目录权限")
+            return None
         if not credentials:
             print("❌ 未找到登录凭证")
             return None
@@ -761,7 +769,7 @@ class HuggingFaceAPI:
             return True
         except Exception as e:
             err_type, hint = _classify_create_repo_error(e)
-            print(f"创建仓库失败[{err_type}]: {e}")
+            print(f"创建仓库失败[{err_type}]")
             print(f"💡 建议: {hint}")
             return False
     
@@ -875,7 +883,7 @@ class HuggingFaceAPI:
                 _restore_progress_bar_state(original_progress_state)
         except Exception as e:
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
-            print(f"上传文件失败[{err_type}]: {e}")
+            print(f"上传文件失败[{err_type}]")
             print(f"💡 建议: {hint}")
             return False
 
@@ -1011,7 +1019,7 @@ class HuggingFaceAPI:
 
         except Exception as e:
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
-            print(f"上传目录失败[{err_type}]: {e}")
+            print(f"上传目录失败[{err_type}]")
             print(f"💡 建议: {hint}")
             return False
     

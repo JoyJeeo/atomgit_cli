@@ -73,8 +73,10 @@ def main():
         check("API dependency failure is not false success", dep_failed)
         dep_output = captured.getvalue()
         check(
-            "API dependency failure reports the real reason",
-            "offline create failure" in dep_output and "创建仓库失败" in dep_output,
+            "API dependency failure reports a safe category",
+            "offline create failure" not in dep_output
+            and "创建仓库失败[未知错误]" in dep_output
+            and "建议" in dep_output,
             f"output={dep_output!r}",
         )
 
