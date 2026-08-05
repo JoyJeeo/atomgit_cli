@@ -128,6 +128,15 @@ atomgit login
 
 系统会提示输入访问令牌（从AtomGit平台获取）。
 
+自动化场景可通过标准输入传入一行 token：
+
+```bash
+atomgit login --token-stdin < /path/to/protected-token-file
+```
+
+为兼容现有脚本，`atomgit login --token VALUE` 仍受支持，但参数值可能被 shell
+历史或进程查看工具记录；优先使用交互输入或 `--token-stdin`。两种参数不可同时使用。
+
 **🎉 Git集成功能**：登录成功后，工具会自动配置Git凭证助手，这样你就可以直接使用标准的Git命令来操作AtomGit仓库，无需再次输入token。凭证助手会自动从AtomGit API获取你的真实用户名用于Git认证：
 
 ```bash

@@ -56,6 +56,29 @@ def main():
     original_setup = cli_mod.setup_git_credentials
     token = "fake-cli-surface-token"
     try:
+        supplied_tokens = []
+        cli_mod.api.login = lambda supplied: supplied_tokens.append(supplied) or True
+        cli_mod.check_git_available = lambda: False
+        stdin_login = runner.invoke(
+            cli_mod.cli, ["login", "--token-stdin"], input=token + "\n"
+        )
+        check("login token stdin succeeds", stdin_login.exit_code == 0)
+        check("login token stdin forwards exact token", supplied_tokens == [token])
+        check("login token stdin does not echo token", token not in stdin_login.output)
+
+        supplied_tokens.clear()
+        conflicting = runner.invoke(
+            cli_mod.cli,
+            ["login", "--token", token, "--token-stdin"],
+            input="ignored-token\n",
+        )
+        check("login token modes are mutually exclusive", conflicting.exit_code == 2)
+        check("conflicting login makes no API call", supplied_tokens == [])
+
+        empty_stdin = runner.invoke(cli_mod.cli, ["login", "--token-stdin"], input="\n")
+        check("empty token stdin is a usage error", empty_stdin.exit_code == 2)
+        check("empty token stdin makes no API call", supplied_tokens == [])
+
         cli_mod.api.login = lambda supplied: False
         failed = runner.invoke(cli_mod.cli, ["login", "--token", token])
         check("login authentication failure exits nonzero", failed.exit_code == 1)

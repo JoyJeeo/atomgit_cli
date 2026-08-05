@@ -47,9 +47,24 @@ def cli():
 
 
 @cli.command()
-@click.option('--token', '-t', help='AtomGit访问令牌')
-def login(token):
+@click.option(
+    '--token', '-t',
+    help='AtomGit访问令牌（可能进入 shell 历史；优先使用交互输入或 --token-stdin）',
+)
+@click.option(
+    '--token-stdin', is_flag=True,
+    help='从标准输入读取一行访问令牌（适用于管道或重定向）',
+)
+def login(token, token_stdin):
     """登录到AtomGit平台"""
+    if token is not None and token_stdin:
+        raise click.UsageError("--token 与 --token-stdin 不能同时使用")
+
+    if token_stdin:
+        token = sys.stdin.readline().rstrip('\r\n')
+        if not token:
+            raise click.UsageError("--token-stdin 未读取到访问令牌")
+
     if not token:
         token = getpass('请输入访问令牌: ')
     
