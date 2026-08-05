@@ -1,62 +1,68 @@
 # Current Issue Contract
 
-# Issue LOGIN-TOKEN-INPUT
+# Issue CONFIG-LIFECYCLE
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `LOGIN-TOKEN-INPUT`
-- Title: `Login needs a safer non-interactive token input without removing --token`
-- Type: `security`, `cli`, `documentation`
+- Local Issue: `CONFIG-LIFECYCLE`
+- Title: `Import-time config writes and non-atomic saves can break help or credentials`
+- Type: `bug`, `security`, `cli`
 - Priority: `P1`
-- Branch: `codex/add-login-token-stdin` (local only)
+- Branch: `codex/harden-config-lifecycle` (local only)
 - Base: `yuto`
 
 ## Previous Issue (Closed)
 
-- `CLI-ERROR-REDACTION` was delivered by `e62ebb9` and merged by `5e270c5`.
+- `LOGIN-TOKEN-INPUT` was delivered by `0b78274` and merged by `d65ba00`.
 
 ## Evidence And Scope
 
-`login --token VALUE` is required for compatibility but command-line values can
-be retained in shell history or process listings. Interactive login is safe but
-there is no explicit pipe/redirection mode for automation.
+The global Config constructor creates/chmods `~/.atomgit` during import and the
+runtime policy creates `~/.cache/atomgit`, so read-only commands such as
+`--help` can fail under an invalid or read-only HOME. Saving truncates
+`config.json` in place, so interruption or write failure can destroy the last
+valid credential state.
 
-In scope: retain `--token`, document its exposure tradeoff, add mutually
-exclusive `--token-stdin`, reject missing stdin data safely, and verify that
-the token is neither echoed nor altered.
+In scope: defer configuration I/O until access, make runtime environment setup
+path-only, keep read-only absent config access side-effect free, migrate
+existing credential permissions when loaded, write via a 0600 same-directory
+temporary file and atomic replacement, clean failed temporaries, and keep
+in-memory state consistent on failure.
 
-Out of scope: removing/deprecating `--token`, environment-variable token input,
-credential storage format, and Git helper behavior.
+Out of scope: changing JSON schema, token migration/encryption, Git-helper state,
+and cross-process locking.
 
 ## Acceptance Criteria
 
-- Existing `login --token VALUE` remains supported.
-- `login --token-stdin` reads one token from stdin without echoing it.
-- Supplying both input modes or empty stdin exits with a usage error and makes
-  no login call.
-- Help/README recommend interactive or stdin input and warn about shell history.
+- Import and `--help` perform no config filesystem mutation and tolerate an
+  unusable HOME path.
+- Reading an absent config does not create `~/.atomgit`.
+- Existing config permission migration remains 0700/0600 when credentials load.
+- Failed replacement preserves old disk and in-memory state and leaves no temp.
+- Successful saves are atomic and retain 0600 permissions.
 - Focused/full tests and required checks pass.
 
 ## Permissions And Delivery
 
 - Authorized: local edits/commits, local merge into `yuto`, and push only
   `yuto`; task branches remain local-only.
-- No live login is required; the existing authenticated session was already
-  verified and tests inject a fake login API.
+- Tests use isolated HOME directories; no live credentials are read or changed.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: `--token-stdin` reads exactly one line and strips only line
-  terminators; it is mutually exclusive with the retained `--token`. Help and
-  README recommend interactive/stdin input and explain command-line exposure.
-- Regression evidence: the original CLI rejected `--token-stdin`; 44/46
-  extended CLI assertions passed before implementation and both new success/
-  forwarding assertions failed.
-- Focused tests: CLI regression 46/46 assertions and 3/3 relevant pytest cases
+- Implementation: Config now resolves paths at construction but loads only on
+  first access; absent reads and imports create nothing. Runtime policy sets
+  `HF_HOME` without creating it. Saves use a private same-directory temporary,
+  flush/fsync, atomic replace, failure cleanup, and persist-before-memory commit.
+  Non-object/corrupt JSON safely becomes logged-out state and is repairable.
+- Regression evidence: before implementation, import/constructor/absent-read/
+  no-mutation assertions failed, existing permissions mutated at construction,
+  and `--help` failed when HOME was unusable.
+- Focused tests: config lifecycle 15/15 assertions and 5/5 related pytest cases
   passed.
-- Complete offline suite: 42/42 passed in 39.14 seconds.
+- Complete offline suite: 42/42 passed in 37.98 seconds.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Independent review: no open findings (`APPROVED`). The token file/producer is
-  caller-managed; the CLI neither echoes nor persists stdin beyond normal login.
+- Independent review: no open findings (`APPROVED`). Cross-process write locking
+  and encrypted token storage remain explicitly out of scope.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.

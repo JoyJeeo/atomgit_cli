@@ -9,9 +9,8 @@ ATOMGIT_DISABLE_XET = "1"
 
 
 def configure_hf_environment() -> Path:
-    """Apply AtomGit's idempotent Hugging Face process environment."""
+    """Apply AtomGit's idempotent environment without import-time writes."""
     cache_dir = Path.home() / ".cache" / "atomgit"
-    cache_dir.mkdir(parents=True, exist_ok=True)
     os.environ["HF_ENDPOINT"] = ATOMGIT_HF_ENDPOINT
     os.environ["HF_HUB_DISABLE_XET"] = ATOMGIT_DISABLE_XET
     os.environ["HF_HOME"] = str(cache_dir)

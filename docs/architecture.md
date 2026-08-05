@@ -85,14 +85,15 @@ HF_HUB_DISABLE_XET=1
 HF_HOME=~/.cache/atomgit
 ```
 
-这些仍是导入时副作用，但定义和缓存创建策略只有一处且可重复调用。HF 进度条和
-`DEFAULT_REQUEST_TIMEOUT` 也是进程级全局状态；CLI 与 SDK 上传会在成功和失败
-路径恢复调用前的状态。
+导入时只设置这些进程环境变量，不创建缓存目录；真正使用 HF 缓存时由依赖按需
+创建。HF 进度条和 `DEFAULT_REQUEST_TIMEOUT` 也是进程级全局状态；CLI 与 SDK
+上传会在成功和失败路径恢复调用前的状态。
 
 ## 5. 配置和登录
 
-`Config` 在导入时创建 `~/.atomgit/` 并读取 `config.json`。token 以 JSON 保存，
-CLI 和 SDK 通过同一个全局配置实例读取。
+`Config` 在首次读取时才加载 `config.json`；导入和不存在配置时的只读访问不会
+创建 `~/.atomgit/`。写入使用同目录 0600 临时文件并原子替换，目录权限为 0700。
+token 以 JSON 保存，CLI 和 SDK 通过同一个全局配置实例读取。
 
 登录流程：
 
