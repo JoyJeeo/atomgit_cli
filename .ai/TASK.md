@@ -1,68 +1,61 @@
 # Current Issue Contract
 
-# Issue CREATE-EXIST-OK
+# Issue CONFIG-SHOW-GIT-STATUS
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `CREATE-EXIST-OK`
-- Title: `CLI create reports an existing repository as newly created`
-- Type: `bug`, `cli`, `api`
-- Priority: `P1`
-- Branch: `codex/fix-create-exist-ok` (local only)
+- Local Issue: `CONFIG-SHOW-GIT-STATUS`
+- Title: `config-show reports full Git integration when only one host is configured`
+- Type: `bug`, `cli`
+- Priority: `P2`
+- Branch: `codex/fix-config-show-helper-status` (local only)
 - Base: `yuto`
 
 ## Previous Issue (Closed)
 
-- `UPLOAD-OPTION-CONFLICTS` was delivered by `019c17b` and merged by `469a180`.
+- `CREATE-EXIST-OK` was delivered by `3dc1fb0` and merged by `028a832`.
 
 ## Evidence And Scope
 
-The CLI-facing API always passes `exist_ok=True` to Hugging Face create, so an
-already existing repository returns success and the CLI says it was created.
-The standalone SDK already exposes the correct default-false contract.
+`config-show` queries two AtomGit credential-helper keys but reports enabled when
+either host contains the managed helper. It also uses `git config --get`, while
+login installs a multi-value reset/helper chain.
 
-In scope: default CLI/API creation to `exist_ok=False`, add explicit CLI
-`--exist-ok`, forward it through the API, update tests/docs, and validate the
-two modes against the authorized existing model repository.
+In scope: inspect all helper values for both supported hosts, report full,
+partial (including configured/missing hosts), missing, and inspection failure,
+without displaying helper command values or tokens.
 
-Out of scope: public repository support, repository deletion, SDK behavior, and
-creating any new remote repository.
+Out of scope: repairing configuration, changing login/logout helper state, and
+checking unrelated Git hosts.
 
 ## Acceptance Criteria
 
-- Default CLI/API creation forwards `exist_ok=False`.
-- `--exist-ok` explicitly forwards true and preserves idempotent automation.
-- CLI success text distinguishes creation from already-existing acceptance.
-- Existing SDK default behavior remains unchanged.
-- Offline/full checks and authorized non-destructive live checks pass.
+- Full status requires both AtomGit hosts to contain the managed helper.
+- Partial status names configured and missing supported hosts.
+- Missing and command-failure states remain distinct.
+- No helper command or token value is printed.
+- Focused/full tests and required checks pass.
 
 ## Permissions And Delivery
 
 - Authorized: local edits/commits, local merge into `yuto`, and push only
   `yuto`; task branches remain local-only.
-- Live testing is limited to `weixin_52273949/test_model`; no new repository is
-  created and no content is modified.
+- Tests isolate and mock Git configuration; user Git state is not modified.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: CLI/API default to `exist_ok=False`; CLI adds explicit
-  `--exist-ok` and accurate “already exists or created” success text. Because
-  AtomGit itself returned success for an existing repository even with false,
-  default mode now performs an authenticated read-only tree preflight and does
-  not send create when the repository already exists.
-- Regression evidence: initial default forwarding assertions failed and the API
-  lacked `exist_ok`. The first live check proved forwarding alone insufficient:
-  both default and explicit modes returned true for the existing repository.
-- Focused tests: 6/6 related pytest cases passed, including strict dependency
-  signature binding, no-create existing behavior, CLI forwarding, and unchanged
-  SDK coverage.
-- Complete offline suite: 42/42 passed in 37.37 seconds.
+- Implementation: config-show now reads all global helper values through the
+  shared Git utility for both supported hosts. It reports dynamic full counts,
+  partial configured/missing host lists, missing, or inspection failure without
+  printing values. README documents the status meanings.
+- Regression evidence: the extended CLI regression initially passed 45/48;
+  full-format and both partial-state assertions failed because either host was
+  treated as full integration.
+- Focused tests: CLI surface passed 48/48 assertions and 3/3 related pytest
+  cases passed.
+- Complete offline suite: 42/42 passed in 35.26 seconds.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Authorized live check: on `weixin_52273949/test_model`, default existing mode
-  returned false without create; explicit exist-ok returned true. No repository
-  or content was created, deleted, or modified.
-- Independent review: no open findings (`APPROVED`). A create race between the
-  preflight and server call remains possible because the server ignores false;
-  eliminating it requires server-side conditional create semantics.
+- Independent review: no open findings (`APPROVED`). Tests mock all Git reads;
+  no user helper configuration was modified.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.

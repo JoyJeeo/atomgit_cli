@@ -23,7 +23,7 @@ try:
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns
+        parse_ignore_patterns, get_atomgit_git_helper_status
     )
 except ImportError:
     from config import config
@@ -35,7 +35,7 @@ except ImportError:
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns
+        parse_ignore_patterns, get_atomgit_git_helper_status
     )
 
 
@@ -366,23 +366,27 @@ def download(repo_id, directory, force, repo_type):
 def config_show():
     """显示配置信息"""
     if config.is_logged_in():
-        credentials = config.get_credentials()
         print_info(f"登录状态: 已登录")
         print_info(f"配置文件: {config.config_file}")
         
         # 简单检查Git集成状态
         if check_git_available():
             try:
-                import subprocess
-                # 检查任一域名的凭证助手配置
-                result1 = subprocess.run(['git', 'config', '--global', '--get', 'credential.https://atomgit.com.helper'], 
-                                       capture_output=True, text=True)
-                result2 = subprocess.run(['git', 'config', '--global', '--get', 'credential.https://hub.atomgit.com.helper'], 
-                                       capture_output=True, text=True)
-                
-                if ((result1.returncode == 0 and 'git-credential-atomgit' in result1.stdout) or 
-                    (result2.returncode == 0 and 'git-credential-atomgit' in result2.stdout)):
-                    print_info("Git集成: 已启用")
+                statuses = get_atomgit_git_helper_status()
+                configured = [host for host, enabled in statuses.items() if enabled]
+                missing = [host for host, enabled in statuses.items() if not enabled]
+                if not missing:
+                    print_info(
+                        f"Git集成: 已启用（{len(configured)}/{len(statuses)} 域名）"
+                    )
+                elif configured:
+                    print_info(
+                        "Git集成: 部分启用（已配置: "
+                        + ", ".join(configured)
+                        + "；缺少: "
+                        + ", ".join(missing)
+                        + "）"
+                    )
                 else:
                     print_info("Git集成: 未启用")
             except Exception:

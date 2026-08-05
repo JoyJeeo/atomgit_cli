@@ -297,6 +297,17 @@ def _get_global_git_values(key: str) -> List[str]:
     return result.stdout.splitlines()
 
 
+def get_atomgit_git_helper_status():
+    """Return managed-helper presence for each supported AtomGit host."""
+    return {
+        host: any(
+            'git-credential-atomgit' in value
+            for value in _get_global_git_values(_git_helper_key(host))
+        )
+        for host in _GIT_CREDENTIAL_HOSTS
+    }
+
+
 def _set_global_git_values(key: str, values: List[str]) -> None:
     if values:
         commands = [
