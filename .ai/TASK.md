@@ -1,61 +1,66 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-EXISTING-FILES
+# Issue CLI-ERROR-REDACTION
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-EXISTING-FILES`
-- Title: `Existing downloads are described as resumable although they are only skipped`
-- Type: `bug`, `cli`, `documentation`
-- Priority: `P1`
-- Branch: `codex/clarify-download-existing-files` (local only)
+- Local Issue: `CLI-ERROR-REDACTION`
+- Title: `Create and upload failures can expose remote credentials or signed URLs`
+- Type: `security`, `bug`, `cli`
+- Priority: `P0`
+- Branch: `codex/redact-cli-errors` (local only)
 - Base: `yuto`
 
 ## Previous Issue (Closed)
 
-- `DOWNLOAD-REPO-TYPE` was delivered by `6a344cd` and merged by `a278b45`.
+- `DOWNLOAD-EXISTING-FILES` was delivered by `b5e5538` and merged by `b1d23ae`.
 
 ## Evidence And Scope
 
-The CLI says an existing non-empty destination enables resumable mode, but the
-implementation only checks whether each path exists and skips it without size
-or checksum verification. This can falsely imply integrity or partial-transfer
-recovery.
+Create and upload exception handlers interpolate raw dependency exceptions into
+terminal output. Those exceptions may include Authorization values, access
+tokens, signed URLs, or query credentials. Unknown-error hints also repeat the
+raw message. Login/whoami must remain safe if credential storage/loading fails.
 
-In scope: preserve the maintainer-selected default of skipping existing files,
-state that skipped content is not verified, retain `--force` as the explicit
-overwrite mechanism, and align CLI/API output, tests, and README.
+In scope: remove raw exception text from create/upload output, ensure unknown
+classification hints are generic, safely contain login/whoami exceptions, add
+regressions with credential-shaped sentinels, and retain actionable categories.
 
-Out of scope: checksums, remote metadata, partial-file resume, and changing the
-default overwrite policy.
+Out of scope: changing operation semantics, download/SDK redaction already
+covered elsewhere, and Git-helper diagnostics.
 
 ## Acceptance Criteria
 
-- Default downloads skip existing paths without fetching them.
-- Output clearly says the skipped content was not verified and names `--force`.
-- No output describes download skipping as resumable behavior.
-- `--force` continues to fetch and replace existing paths.
+- Create, file upload, and directory upload never echo raw exception details.
+- Unknown error hints contain an actionable generic message, not the cause.
+- Login and whoami contain unexpected config/API exceptions without traceback
+  or credential-shaped output.
+- Existing categorized guidance and exit behavior remain intact.
 - Focused/full tests and required checks pass.
 
 ## Permissions And Delivery
 
 - Authorized: local edits/commits, local merge into `yuto`, and push only
   `yuto`; task branches remain local-only.
-- Remote validation is not required because the behavior is local and existing
-  live download compatibility was verified in the preceding Issue.
+- Remote validation is not required; the security boundary is verified using
+  deterministic injected exceptions and no live failure is induced.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: existing paths remain skipped by default, but CLI and API
-  output now explicitly say content is not verified and point to `--force`;
-  the misleading download-resume claim was removed and README matches.
-- Regression evidence: before the fix, 7/11 assertions passed; all four output
-  semantics assertions failed while skip/force mechanics already worked.
-- Focused regression: 11/11 assertions passed.
-- Complete offline suite: 41/41 passed in 39.09 seconds.
+- Implementation: create/file-upload/directory-upload now emit only fixed error
+  categories and actionable hints; unknown hints are generic. Login credential
+  save failures and whoami credential read failures are contained with safe
+  messages. README documents that raw dependency details are intentionally
+  hidden.
+- Regression evidence: before the fix, 13/20 security assertions passed; all
+  three remote-operation outputs exposed the sentinel and login/whoami allowed
+  injected credential errors to escape.
+- Focused tests: 8/8 relevant pytest cases passed; the dedicated redaction
+  script passed 20/20 assertions.
+- Complete offline suite: 42/42 passed in 40.04 seconds.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Independent review: no open findings (`APPROVED`). Residual behavior is
-  intentional: existence is the only default skip criterion; integrity checks
-  require a future explicitly scoped feature.
+- Independent review: no open findings (`APPROVED`). Tests cover credential
+  shaped exceptions without contacting a live service; live destructive error
+  injection was intentionally not performed.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.
