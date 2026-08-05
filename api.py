@@ -1044,7 +1044,7 @@ class HuggingFaceAPI:
             ]
             for filename, dest in destinations:
                 if dest.exists() and not force_download:
-                    print(f"⏭ 已存在，跳过: {filename}")
+                    print(f"⏭ 已存在，跳过（未校验内容；--force 可覆盖）: {filename}")
                     continue
                 _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
                 print(f"✓ 已下载: {filename}")
@@ -1074,7 +1074,7 @@ class HuggingFaceAPI:
 
             dest = _safe_download_destination(local_path, filename)
             if dest.exists() and not force_download:
-                print(f"⏭ 文件已存在，跳过: {filename}（--force 可覆盖）")
+                print(f"⏭ 文件已存在，跳过: {filename}（未校验内容；--force 可覆盖）")
                 return True
             _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
             print("✅ 文件下载成功")

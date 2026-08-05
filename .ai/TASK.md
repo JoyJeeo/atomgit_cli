@@ -1,68 +1,61 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-REPO-TYPE
+# Issue DOWNLOAD-EXISTING-FILES
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-REPO-TYPE`
-- Title: `Download type probing can misclassify empty repositories or mix model and dataset routes`
-- Type: `bug`, `cli`, `compatibility`
+- Local Issue: `DOWNLOAD-EXISTING-FILES`
+- Title: `Existing downloads are described as resumable although they are only skipped`
+- Type: `bug`, `cli`, `documentation`
 - Priority: `P1`
-- Branch: `codex/fix-download-repo-type` (local only)
+- Branch: `codex/clarify-download-existing-files` (local only)
 - Base: `yuto`
 
 ## Previous Issue (Closed)
 
-- `DOWNLOAD-RAW-INTEGRITY` was delivered by `2a7d245` and merged by `09371a8`.
+- `DOWNLOAD-REPO-TYPE` was delivered by `6a344cd` and merged by `a278b45`.
 
 ## Evidence And Scope
 
-The automatic list helper discards a successful empty model result and raises a
-later dataset 404. Per-file resolve also falls back to the other repository
-type, which can return unrelated same-named content. The CLI exposes no way to
-select the intended type.
+The CLI says an existing non-empty destination enables resumable mode, but the
+implementation only checks whether each path exists and skips it without size
+or checksum verification. This can falsely imply integrity or partial-transfer
+recovery.
 
-In scope: add optional `download --repo-type`, preserve successful empty list
-results, define deterministic error precedence, reject genuinely ambiguous
-different model/dataset listings, bind resolve downloads to the selected type,
-and update tests/documentation.
+In scope: preserve the maintainer-selected default of skipping existing files,
+state that skipped content is not verified, retain `--force` as the explicit
+overwrite mechanism, and align CLI/API output, tests, and README.
 
-Out of scope: existing-file skip behavior, SDK download semantics, and writes.
+Out of scope: checksums, remote metadata, partial-file resume, and changing the
+default overwrite policy.
 
 ## Acceptance Criteria
 
-- Explicit type is forwarded and only that type is used.
-- Auto mode returns a successful empty repository when the other route fails.
-- Authentication errors are not hidden by a later 404.
-- Identical compatibility-route listings remain usable; different non-empty
-  listings require explicit type selection.
-- Resolve never switches repository type after listing.
-- Focused/full tests and required checks pass; both authorized repositories
-  retain read-only download compatibility.
+- Default downloads skip existing paths without fetching them.
+- Output clearly says the skipped content was not verified and names `--force`.
+- No output describes download skipping as resumable behavior.
+- `--force` continues to fetch and replace existing paths.
+- Focused/full tests and required checks pass.
 
 ## Permissions And Delivery
 
-- Authorized: local edits/commits, local merge into `yuto`, push only `yuto`,
-  and read-only tests against the two maintainer-provided repositories.
+- Authorized: local edits/commits, local merge into `yuto`, and push only
+  `yuto`; task branches remain local-only.
+- Remote validation is not required because the behavior is local and existing
+  live download compatibility was verified in the preceding Issue.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: `download --repo-type model|dataset` is forwarded end to end;
-  explicit selection uses only that list/resolve route. Auto mode probes both,
-  preserves successful empty results, prioritizes authentication/non-404
-  failures, accepts identical compatibility listings, and rejects different
-  non-empty listings with actionable guidance.
-- Regression evidence: before implementation, 1/6 original repository-type
-  assertions passed. The final regression covers empty success, error
-  precedence, identical/different listings, explicit selection, sanitized
-  guidance, and resolve route isolation.
-- Focused offline tests: 4/4 pytest cases passed.
-- Complete offline suite: 40/40 passed in 38.63 seconds.
+- Implementation: existing paths remain skipped by default, but CLI and API
+  output now explicitly say content is not verified and point to `--force`;
+  the misleading download-resume claim was removed and README matches.
+- Regression evidence: before the fix, 7/11 assertions passed; all four output
+  semantics assertions failed while skip/force mechanics already worked.
+- Focused regression: 11/11 assertions passed.
+- Complete offline suite: 41/41 passed in 39.09 seconds.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Authorized read-only live checks: explicit model download from
-  `weixin_52273949/test_model` and explicit dataset download from
-  `weixin_52273949/test_datasets` both succeeded.
-- Independent review: implementation, tests, documentation, compatibility,
-  and credential exposure reviewed; no open findings (`APPROVED`).
+- Independent review: no open findings (`APPROVED`). Residual behavior is
+  intentional: existence is the only default skip criterion; integrity checks
+  require a future explicitly scoped feature.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.

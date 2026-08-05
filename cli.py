@@ -304,7 +304,7 @@ def download(repo_id, directory, force, repo_type):
             if force:
                 print_info("强制覆盖模式，将重新下载所有文件")
             else:
-                print_info("目录已存在，启用断点续传模式")
+                print_info("目录已存在；已有文件默认跳过（不校验内容，--force 可覆盖）")
     
     # 确保目录存在
     if not ensure_directory(local_path):
