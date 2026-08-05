@@ -9,7 +9,7 @@ from pathlib import Path
 
 import atomgit  # noqa: F401
 import atomgit_hub
-from atomgit.utils import normalize_repo_id
+from atomgit.utils import normalize_repo_id, validate_repo_name
 
 
 api_mod = sys.modules["atomgit.api"]
@@ -28,13 +28,50 @@ def check(name, condition, detail=""):
 def main():
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
-        single = normalize_repo_id("repo")
         two_level = normalize_repo_id("owner/repo")
         multi_level = normalize_repo_id(RAW_ID)
-    check("single-level ID unchanged", single == "repo")
     check("two-level ID unchanged", two_level == "owner/repo")
     check("multi-level ID maps first separator", multi_level == NORMALIZED_ID)
     check("normalization itself is silent", output.getvalue() == "")
+
+    invalid_ids = (
+        "repo",
+        "owner%2Frepo",
+        "owner/%2e%2e/repo",
+        "owner/../repo",
+        "owner/./repo",
+        "owner//repo",
+        "/owner/repo",
+        "owner/repo/",
+        "owner\\repo",
+        "owner/repo?token=secret",
+        "owner/repo\nnext",
+    )
+    for invalid_id in invalid_ids:
+        check(f"validation rejects unsafe ID {invalid_id!r}", not validate_repo_name(invalid_id))
+        try:
+            normalize_repo_id(invalid_id)
+            normalized_error = None
+        except ValueError as error:
+            normalized_error = str(error)
+        check(
+            f"normalization rejects unsafe ID {invalid_id!r}",
+            normalized_error == "仓库ID格式不正确，应为: username/repo-name",
+            repr(normalized_error),
+        )
+        for boundary_name, boundary in (
+            ("API", api_mod.api._normalize_repo_id),
+            ("SDK", atomgit_hub._normalize_repo_id),
+        ):
+            try:
+                boundary(invalid_id)
+                boundary_rejected = False
+            except ValueError:
+                boundary_rejected = True
+            check(
+                f"{boundary_name} boundary rejects unsafe ID {invalid_id!r}",
+                boundary_rejected,
+            )
 
     original_credentials = config.get_credentials
     original_create = api_mod.create_repo

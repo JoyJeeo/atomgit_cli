@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 from typing import Optional, List
 from colorama import Fore, Style, init
-import urllib.parse
 
 # 初始化colorama
 init(autoreset=True)
@@ -89,38 +88,39 @@ def print_info(message: str) -> None:
     print(f"{Fore.CYAN}ℹ {message}{Style.RESET_ALL}")
 
 
+_REPO_ID_ERROR = "仓库ID格式不正确，应为: username/repo-name"
+_REPO_SEGMENT_CHARS = frozenset(
+    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.'
+)
+
+
+def _repo_id_parts(repo_id: str) -> List[str]:
+    """Parse one unambiguous repository ID or raise a public-safe error."""
+    if not isinstance(repo_id, str):
+        raise ValueError(_REPO_ID_ERROR)
+    if any(ord(character) < 32 or ord(character) == 127 for character in repo_id):
+        raise ValueError(_REPO_ID_ERROR)
+    # Percent sequences are deliberately rejected instead of decoded: encoded
+    # separators/dot segments must not validate as one ID and execute as another.
+    if '%' in repo_id or '\\' in repo_id:
+        raise ValueError(_REPO_ID_ERROR)
+    parts = repo_id.split('/')
+    if len(parts) < 2 or any(
+        not part
+        or part in ('.', '..')
+        or any(character not in _REPO_SEGMENT_CHARS for character in part)
+        for part in parts
+    ):
+        raise ValueError(_REPO_ID_ERROR)
+    return parts
+
+
 def validate_repo_name(repo_name: str) -> bool:
-    """验证仓库名称格式"""
-    if not repo_name:
+    """Return whether a repository ID has one safe, literal interpretation."""
+    try:
+        _repo_id_parts(repo_name)
+    except ValueError:
         return False
-    
-    # 先解码URL编码
-    decoded_name = urllib.parse.unquote(repo_name)
-    
-    # 检查是否包含至少一个斜杠（在解码后的名称中）
-    if '/' not in decoded_name:
-        return False
-    
-    parts = decoded_name.split('/')
-    # 支持多层次仓库名称，至少需要2个部分，但可以有更多
-    # 允许hf_mirrors/Qwen/Qwen3-Reranker-0.6B这样的格式
-    if len(parts) < 2:
-        return False
-    
-    # 检查每个部分都不为空
-    for part in parts:
-        if not part:
-            return False
-    
-    # 检查字符是否合法（字母、数字、下划线、短横线、点号、斜杠）
-    # 对于原始名称，也允许%字符用于URL编码
-    allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.%/')
-    
-    # 验证原始名称的字符
-    for char in repo_name:
-        if char not in allowed_chars:
-            return False
-    
     return True
 
 
@@ -136,7 +136,7 @@ def is_supported_upload_revision(revision: Optional[str]) -> bool:
 
 def normalize_repo_id(repo_id: str) -> str:
     """Map AtomGit multi-level names to its HF-compatible repository ID."""
-    parts = repo_id.split('/')
+    parts = _repo_id_parts(repo_id)
     if len(parts) < 3:
         return repo_id
     return f"{parts[0]}-{parts[1]}/{'/'.join(parts[2:])}"
