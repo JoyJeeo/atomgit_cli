@@ -274,6 +274,10 @@ atomgit logout
 atomgit config-show
 ```
 
+Git 集成状态会分别检查 `atomgit.com` 与 `hub.atomgit.com`：两者都有托管 helper
+才显示“已启用”，只配置一个会显示“部分启用”并列出缺失域名；输出不会展示
+helper 命令或 token。
+
 #### 查看当前登录用户
 
 ```bash

@@ -162,7 +162,25 @@ def main():
 
         with patch("subprocess.run", side_effect=configured_helper):
             configured = runner.invoke(cli_mod.cli, ["config-show"])
-        check("config-show detects owned helper", "Git集成: 已启用" in configured.output)
+        check(
+            "config-show detects both owned helpers",
+            "Git集成: 已启用（2/2 域名）" in configured.output,
+        )
+
+        def partial_helper(command, **kwargs):
+            if "credential.https://atomgit.com.helper" in command:
+                return subprocess.CompletedProcess(
+                    command, 0, stdout="!/tmp/git-credential-atomgit\n", stderr=""
+                )
+            return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
+
+        with patch("subprocess.run", side_effect=partial_helper):
+            partial = runner.invoke(cli_mod.cli, ["config-show"])
+        check("config-show detects partial helper", "Git集成: 部分启用" in partial.output)
+        check(
+            "config-show names configured and missing hosts",
+            "atomgit.com" in partial.output and "hub.atomgit.com" in partial.output,
+        )
 
         def missing_helper(command, **kwargs):
             return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
