@@ -137,7 +137,7 @@ atomgit login --token-stdin < /path/to/protected-token-file
 为兼容现有脚本，`atomgit login --token VALUE` 仍受支持，但参数值可能被 shell
 历史或进程查看工具记录；优先使用交互输入或 `--token-stdin`。两种参数不可同时使用。
 
-**🎉 Git集成功能**：登录成功后，工具会自动配置Git凭证助手，这样你就可以直接使用标准的Git命令来操作AtomGit仓库，无需再次输入token。凭证助手会自动从AtomGit API获取你的真实用户名用于Git认证：
+**🎉 Git集成功能**：登录成功后，工具会自动配置Git凭证助手，这样你就可以直接使用标准的Git命令来操作AtomGit仓库，无需再次输入token。登录时验证的用户名会随 token 保存在权限受限的本地配置中，Git 凭证查询不再发起网络请求：
 
 ```bash
 # 登录后，这些Git命令将自动使用保存的token
@@ -540,7 +540,7 @@ if __name__ == "__main__":
 
 ## 配置文件
 
-配置文件保存在 `~/.atomgit/config.json`，包含用户认证信息和其他设置。Git
+配置文件保存在 `~/.atomgit/config.json`，包含 token、登录时验证的用户名和其他设置。Git
 集成还会使用 `~/.atomgit/git-helper-state.json` 保存登录前两个 AtomGit 域名的
 helper 配置；该状态文件不会写入本次登录 token，并使用 `0600` 权限。既有
 helper 值会按原样保存，因此不应在 Git helper 命令中内嵌秘密。
@@ -558,6 +558,8 @@ helper 值会按原样保存，因此不应在 Git helper 命令中内嵌秘密�
 ### 自动配置
 
 当你使用 `atomgit login` 登录成功后，工具会自动配置Git凭证，让你可以直接使用标准Git命令操作AtomGit仓库。
+从旧版本升级后请重新运行一次 `atomgit login`，以缓存已验证用户名并生成离线
+Git helper；缺少缓存用户名时 helper 不会返回 token。
 
 ### 支持的Git操作
 
@@ -582,6 +584,7 @@ git remote add origin https://atomgit.com/username/repo-name.git
 
 - 凭证配置仅对 `atomgit.com` 和 `hub.atomgit.com` 域名生效
 - token 安全存储在本地配置文件中
+- Git helper 只读取登录时缓存的用户名和 token，不调用远程身份 API
 - 登录期间会重置这两个域名继承的 helper 链，避免 token 被系统通用 helper
   额外保存
 - 不影响其他 Git 仓库的认证配置

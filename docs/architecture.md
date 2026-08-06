@@ -93,7 +93,8 @@ HF_HOME=~/.cache/atomgit
 
 `Config` 在首次读取时才加载 `config.json`；导入和不存在配置时的只读访问不会
 创建 `~/.atomgit/`。写入使用同目录 0600 临时文件并原子替换，目录权限为 0700。
-token 以 JSON 保存，CLI 和 SDK 通过同一个全局配置实例读取。
+token 和登录 API 已验证的非敏感 username 以 JSON 保存；公开
+`get_credentials()` 仍只返回 token，CLI 和 SDK 通过同一个全局配置实例读取。
 
 登录流程：
 
@@ -101,7 +102,7 @@ token 以 JSON 保存，CLI 和 SDK 通过同一个全局配置实例读取。
 atomgit login
   -> api.login(token)
   -> GET https://atomgit.com/api/v5/user
-  -> config.set_credentials(token)
+  -> config.set_credentials(token, username)
   -> setup_git_credentials(token)
   -> 写入 ~/.atomgit/git-credential-atomgit
   -> 备份两个 AtomGit host 原有的全局 Git helper 配置
@@ -113,7 +114,8 @@ atomgit login
 - 配置目录和 token 文件分别强制为 `0700` 和 `0600`（Windows 权限语义由系统决定）；
 - Git helper 修改用户全局 Git 配置；原值保存在权限受限且不写入本次登录
   token 的 `git-helper-state.json`，logout 时事务性恢复；
-- 登录 API 和生成的 helper 使用的 Authorization 形式不同；
+- 生成的 helper 只读本地已验证 username/token，不执行网络身份查询；旧配置需
+  重新 login 才能补齐 username；
 - 多处异常被吞掉，诊断信息有限。
 
 ## 6. 上传

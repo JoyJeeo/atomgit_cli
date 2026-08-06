@@ -5,6 +5,14 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 
+def _is_safe_credential_text(value: Any) -> bool:
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and not any(ord(character) < 32 or ord(character) == 127 for character in value)
+    )
+
+
 class Config:
     """配置管理类，用于管理用户认证信息和设置"""
     
@@ -73,10 +81,18 @@ class Config:
         self._save_config(updated)
         self._config = updated
     
-    def set_credentials(self, token: str) -> None:
-        """设置用户认证信息"""
+    def set_credentials(self, token: str, username: Optional[str] = None) -> None:
+        """Persist a token and its already-verified non-sensitive identity."""
+        if not _is_safe_credential_text(token):
+            raise ValueError("登录凭证格式不正确")
+        if username is not None and not _is_safe_credential_text(username):
+            raise ValueError("登录用户名格式不正确")
         updated = dict(self._ensure_loaded())
         updated['token'] = token
+        if username:
+            updated['username'] = username
+        else:
+            updated.pop('username', None)
         self._commit(updated)
     
     def get_credentials(self) -> Optional[Dict[str, str]]:
