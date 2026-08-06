@@ -1,98 +1,101 @@
 # Current Issue Contract
 
-# Issue ANONYMOUS-HF-TOKEN-ISOLATION
+# Issue CLI-SINGLE-FILE-DOWNLOAD
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `ANONYMOUS-HF-TOKEN-ISOLATION`
-- Title: `Anonymous CLI downloads may reuse an unrelated Hugging Face token`
-- Type: `security`, `bug`, `compatibility`
-- Priority: `P1`
-- Branch: `codex/isolate-anonymous-hf-token` (local only)
+- Local Issue: `CLI-SINGLE-FILE-DOWNLOAD`
+- Title: `Expose safe single-file repository download in the CLI`
+- Type: `cli`, `feature`
+- Priority: `P2`
+- Branch: `codex/add-download-file-cli` (local only)
 - Base: `yuto`
+- Previous Issue: `ANONYMOUS-HF-TOKEN-ISOLATION`, delivered by `5203c13`
+  and merged by `13f493d`.
 - Delivery mode: standing-authorized implementation, review, commit, local merge
-  into `yuto`, and push only `yuto`; the task branch remains local-only.
+  into `yuto`, and push only `yuto`; task branch remains local-only.
 
-## User Impact And Evidence
+## User Impact And Current Behavior
 
-When AtomGit credentials are absent, the CLI passes `token=None` to
-`huggingface_hub.HfApi`. In locked `huggingface-hub==1.1.7`, `None` means use
-the ambient Hugging Face token when one exists. Because AtomGit redirects the
-HF endpoint to `https://hub.atomgit.com`, an unrelated Hugging Face credential
-can therefore be attached to an anonymous AtomGit repository-list request.
+The CLI can download only an entire repository, although the CLI-facing API
+already provides the same safe list/resolve implementation for one file. Users
+must currently write Python or download every file when they know the exact
+repository path.
 
-Expected behavior: anonymous AtomGit download discovery must pass
-`token=False`, which explicitly disables implicit Hugging Face authentication;
-stored AtomGit credentials must still be forwarded unchanged.
+Expected behavior: `atomgit download-file REPO_ID FILENAME` downloads only the
+requested repository file, supports an explicit destination directory,
+model/dataset selection, default existing-file skip, and forced replacement.
 
 ## Scope
 
-In scope: the CLI-facing AtomGit file-list client used by repository and
-single-file downloads, a regression proving the locked dependency's `None`
-versus `False` behavior, an exact boundary test for anonymous and authenticated
-calls, and the smallest authoritative documentation update.
+In scope: one root CLI command, repository and destination validation, forwarding
+to `api.download_file`, anonymous/private guidance consistent with whole-repo
+download, CLI integration tests, root/help coverage, and README/architecture
+documentation.
 
-Out of scope: SDK token semantics, login storage, Git credential helpers,
-download behavior beyond credential selection, new CLI features, dependency
-changes, live remote writes, and every later approved feature Issue.
+Out of scope: SDK changes, checksum verification, resume, pruning, arbitrary
+revision selection, repository management, and changes to the existing transfer
+implementation.
 
 ## Compatibility Requirements
 
-- Preserve Python 3.8+ and `huggingface-hub==1.1.7` compatibility.
-- Preserve authenticated downloads and all public CLI/SDK signatures.
-- Never read, print, or persist a real token in tests or output.
+- Preserve current `atomgit download` behavior and all public Python signatures.
+- Reuse the safe target-path, credential-isolation, retry, and atomic replacement
+  behavior already enforced by `api.download_file`.
+- Preserve Python 3.8+ and locked dependency versions.
 
 ## Acceptance Criteria
 
-- Locked dependency evidence shows `HfApi(token=None)` may resolve ambient HF
-  credentials while `HfApi(token=False)` does not.
-- Anonymous CLI repository discovery constructs `HfApi(token=False)`.
-- Stored AtomGit credentials remain passed as the exact explicit token.
-- Repository and single-file download behavior otherwise remains unchanged.
-- Focused regression, complete offline suite, compileall, and diff checks pass.
-- Independent review reports no open P0/P1 findings.
+- Root help advertises `download-file` and command help describes its arguments
+  and options.
+- Valid calls forward exact repository ID, filename, destination directory,
+  force flag, and repository type to `api.download_file`.
+- The default destination is the current directory and nested repository paths
+  retain their directories below it.
+- Invalid repository IDs and file destinations fail before API access.
+- API failure exits nonzero and anonymous failure provides login guidance.
+- Focused and complete offline tests, compileall, and diff checks pass.
+- Independent review has no open P0/P1 findings.
 
 ## Permissions And Acceptance
 
-- Authorized: local source, tests, documentation, task metadata, task-branch
-  creation, conventional commit without `czx:` prefix, local merge into
-  `yuto`, and push only `yuto`; task branch must not be pushed.
-- Remote testing is not required for this credential-selection fix. The
-  standing live scope remains limited to the two supplied repositories and
-  grants no deletion, publication, or unrelated repository access.
-- Human acceptance: standing acceptance granted by the user's instruction to
-  complete development, testing, commits, and delivery in the recommended
-  order.
+- Authorized: local source/tests/docs/task metadata, task branch, conventional
+  commit without `czx:` prefix, local merge into `yuto`, and push only `yuto`.
+- Authorized live testing remains limited to read/download operations against
+  `weixin_52273949/test_model` and `weixin_52273949/test_datasets`; no remote
+  mutation or token output is allowed. A small-file live CLI read may be used.
+- Human acceptance: standing acceptance granted for the approved ordered plan.
 
 ## Evidence And Closure
 
-- Implementation: `_atomgit_list_repo_files` now converts only the absent/falsy
-  credential case to explicit `False`; configured AtomGit tokens pass through
-  unchanged. Architecture documentation records this isolation boundary.
-- Regression-before-fix evidence: `python tests/test_anonymous_token_isolation.py`
-  passed 5/6 checks and failed because the anonymous `HfApi` constructor
-  received `NoneType`; locked HF evidence simultaneously showed `None` added an
-  authorization header while `False` did not.
-- Focused offline regression: `python tests/test_anonymous_token_isolation.py`,
-  `python tests/test_download_contract.py`, and
-  `python tests/test_download_repo_type_resolution.py` passed 6/6, 45/45, and
-  7/7 custom checks respectively.
-- Complete offline suite: `python -m pytest -q` passed 44/44 isolated script
-  cases in 40.69 seconds in the `atomgit_cli` environment.
+- Implementation: root `download-file` command validates repository and local
+  directory, creates the destination, reports anonymous mode, and forwards the
+  exact file request to the existing safe `api.download_file` path. README and
+  architecture documentation now describe the command and its shared policy.
+- Regression-before-implementation: `python tests/test_cli_download_file.py`
+  failed because root help and command resolution had no `download-file` entry,
+  proving the missing CLI surface.
+- Focused offline tests: `python tests/test_cli_download_file.py`,
+  `python tests/test_cli_surface.py`, `python tests/test_download_contract.py`,
+  and `python tests/test_download_path_security.py` passed 15/15, 50/50, 45/45,
+  and 15/15 custom checks.
+- Complete offline suite: `python -m pytest -q` passed 45/45 isolated script
+  cases in 43.90 seconds in the `atomgit_cli` environment.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Live tests: not run; the regression is fully observable at the locked HF
-  client boundary and sending an unrelated credential remotely would be unsafe.
-- Independent review: no findings. The diff preserves explicit AtomGit tokens,
-  uses the locked HF client's documented `False` opt-out, restores the test
-  environment, changes no public API, and includes a regression that would fail
-  before the fix. Residual live-test risk is intentionally accepted because
-  remotely reproducing credential disclosure is neither necessary nor safe.
-  Verdict: `APPROVED`.
-- DoD/security: the final diff is Issue-scoped, contains only fake credential
-  values, changes no global runtime state, preserves Python 3.8 syntax, and has
-  no open P0/P1 finding. Human acceptance is covered by standing delivery
-  authorization.
+- Live read test: actual `python -m atomgit download-file` calls exited 0 and
+  created the requested files from only the authorized model and dataset test
+  repositories. Model `ignore_test/config.json` was 77 bytes and dataset
+  `sub/中文样本.csv` was 31 bytes; temporary local directories were removed.
+- Independent review: no findings. The new command delegates transfer and
+  filename containment to the already tested API, rejects invalid repositories
+  and non-directory destinations before remote access, preserves exact option
+  forwarding, and changes no existing interface. Offline and scoped live
+  evidence cover model, dataset, anonymous guidance, nested paths, failure
+  exits, and help text. Verdict: `APPROVED`.
+- DoD: implementation, focused regression, full suite, documentation, live
+  read-only evidence, compileall, and diff checks agree; no credential,
+  generated artifact, unrelated edit, or open P0/P1 finding is present.
 - Commit/merge/push: authorized; exact references will be reported from Git
   after execution.

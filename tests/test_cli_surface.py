@@ -33,6 +33,7 @@ def main():
         "repo",
         "upload",
         "download",
+        "download-file",
         "config-show",
     ):
         check(f"root help lists {command}", command in root_help.output)
@@ -43,7 +44,10 @@ def main():
         version.exit_code == 0 and "1.0.5+yuto.1" in version.output,
     )
 
-    for command in ("login", "logout", "whoami", "repo", "upload", "download", "config-show"):
+    for command in (
+        "login", "logout", "whoami", "repo", "upload", "download",
+        "download-file", "config-show",
+    ):
         result = runner.invoke(cli_mod.cli, [command, "--help"])
         check(f"{command} help succeeds", result.exit_code == 0, result.output[-200:])
         if command == "whoami":
