@@ -113,7 +113,7 @@ def main():
                 root,
                 "user/dataset",
                 repo_type="dataset",
-                revision="main",
+                revision="dev",
                 ignore_patterns=["*.tmp"],
                 resumable=True,
                 num_workers=3,
@@ -129,7 +129,7 @@ def main():
             call = upload_calls[0]
             check("dataset uses shared model route", call["repo_type"] == "model")
             check("repo id preserved", call["repo_id"] == "user/dataset")
-            check("main revision forwarded", call["revision"] == "main")
+            check("non-main revision forwarded", call["revision"] == "dev")
             check("ignore patterns forwarded", call["ignore_patterns"] == ["*.tmp"])
             check("worker count forwarded", call["num_workers"] == 3)
     finally:

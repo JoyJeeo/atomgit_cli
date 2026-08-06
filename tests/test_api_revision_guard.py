@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Direct API uploads cannot bypass the AtomGit main-only revision guard."""
+"""Direct API uploads accept safe refs and reject ambiguous revision names."""
 
 import sys
 import tempfile
@@ -25,7 +25,8 @@ def main():
     check("None revision supported", is_supported_upload_revision(None))
     check("empty revision supported", is_supported_upload_revision(""))
     check("main revision supported", is_supported_upload_revision("main"))
-    check("dev revision unsupported", not is_supported_upload_revision("dev"))
+    check("dev revision supported", is_supported_upload_revision("dev"))
+    check("malformed revision unsupported", not is_supported_upload_revision("bad..ref"))
 
     original_credentials = config.get_credentials
     original_file = api_mod.hf_upload_file
@@ -44,18 +45,22 @@ def main():
             (source_folder / "data.txt").write_text("data", encoding="utf-8")
 
             check(
-                "direct API file rejects dev",
+                "direct API file accepts dev",
                 api_mod.api.upload_folder(source_file, "user/repo", revision="dev")
-                is False,
+                is True,
             )
             check(
-                "direct API directory rejects dev",
+                "direct API directory accepts dev",
                 api_mod.api.upload_directory(
                     source_folder, "user/repo", revision="dev"
                 )
-                is False,
+                is True,
             )
-            check("rejected API calls never reach HF", not calls)
+            check("dev API calls reach both HF paths", [item[0] for item in calls] == ["file", "folder"])
+
+            before = len(calls)
+            check("direct API rejects malformed ref", api_mod.api.upload_folder(source_file, "user/repo", revision="bad..ref") is False)
+            check("malformed ref never reaches HF", len(calls) == before)
 
             check(
                 "direct API file accepts main",
@@ -69,7 +74,7 @@ def main():
                 )
                 is True,
             )
-            check("accepted API calls reach both HF paths", [item[0] for item in calls] == ["file", "folder"])
+            check("main API calls reach both HF paths", [item[0] for item in calls[-2:]] == ["file", "folder"])
 
             error = None
             try:

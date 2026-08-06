@@ -18,7 +18,7 @@ atomgit upload [OPTIONS] PATH
 | `--no-progress-bar` | 关闭 | 禁用 HF 上传进度条 |
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
-| `--revision` | 默认分支 | 当前仅接受 `main`，其他值在远程调用前拒绝 |
+| `--revision` | 默认分支 | CLI 接受已存在的安全分支名；需先显式创建 |
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
 | `--resumable` | 关闭 | 目录使用 `upload_large_folder` |
 | `--num-workers` | HF 默认 | resumable worker 数 |
@@ -32,7 +32,7 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 
 `cli.upload` 依次执行：
 
-1. 校验 timeout、worker 数、revision 和 worker/resumable 关系；
+1. 校验 timeout、worker 数、安全 revision 名和 worker/resumable 关系；
 2. 使用 `validate_repo_name` 校验 repo ID；
 3. 将 PATH 转为 `Path` 并区分文件或目录；
 4. 使用 `normalize_path_in_repo` 与 `parse_ignore_patterns` 规整参数；
@@ -168,7 +168,8 @@ API 方法打印类型和建议后返回 `False`，CLI 再以非零状态退出�
 离线契约与远程测试还验证了 resumable 的真实 HF 签名、dataset 上传路由、
 CLI 全局状态恢复以及大文件中断恢复。这些测试仍没有证明：
 
-- revision 会在 AtomGit 创建或写入目标远端分支；
+- CLI 先通过 `repo branch create` 的 V5 POST/GET 创建并验证分支，随后
+  revision 才会写入目标远端分支；SDK 仍只支持 main；
 - 多层 repo ID 的远程创建和上传成功；
 - ignore 在真实远端确实排除了文件。
 

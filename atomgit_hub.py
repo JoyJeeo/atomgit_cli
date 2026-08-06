@@ -51,7 +51,6 @@ try:
     from .utils import (
         is_auth_error,
         is_retryable_download_error,
-        is_supported_upload_revision,
         normalize_repo_id,
         run_download_with_retry,
     )
@@ -71,7 +70,6 @@ except ImportError:
         from utils import (
             is_auth_error,
             is_retryable_download_error,
-            is_supported_upload_revision,
             normalize_repo_id,
             run_download_with_retry,
         )
@@ -90,7 +88,6 @@ except ImportError:
         from atomgit.utils import (
             is_auth_error,
             is_retryable_download_error,
-            is_supported_upload_revision,
             normalize_repo_id,
             run_download_with_retry,
         )
@@ -408,7 +405,9 @@ def upload_folder(
     if repo_type not in (None, "model", "dataset"):
         raise ValueError("repo_type 仅支持 model 或 dataset")
 
-    if not is_supported_upload_revision(revision):
+    # SDK has no explicit branch-creation API, so preserve its verified
+    # main-only upload contract even though the CLI can create branches first.
+    if revision not in (None, "", "main"):
         raise AtomGitUnsupportedError(
             "AtomGit 当前仅支持默认 revision main，非默认分支不会被创建"
         )

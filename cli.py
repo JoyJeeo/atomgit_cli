@@ -227,6 +227,36 @@ def set_repository_visibility(repo_id, visibility):
         sys.exit(1)
 
 
+@repo.group(name='branch')
+def branch_commands():
+    """仓库分支管理"""
+    pass
+
+
+@branch_commands.command(name='create')
+@click.argument('repo_id')
+@click.argument('branch_name')
+@click.option('--from', 'source', default='main', show_default=True,
+              help='新分支的来源分支、标签或提交')
+def create_branch(repo_id, branch_name, source):
+    """显式创建并验证一个分支"""
+    if not config.is_logged_in():
+        print_error("请先登录：atomgit login")
+        sys.exit(1)
+    if not validate_repo_name(repo_id):
+        print_error("仓库ID格式不正确，应为: username/repo-name")
+        sys.exit(1)
+    if not branch_name or not is_supported_upload_revision(branch_name):
+        raise click.UsageError("分支名称不合法")
+    if not source or not is_supported_upload_revision(source):
+        raise click.UsageError("来源 revision 不合法")
+    if api.create_branch(repo_id, branch_name, source=source):
+        print_success(f"分支 {branch_name} 创建成功")
+    else:
+        print_error(f"分支 {branch_name} 创建失败")
+        sys.exit(1)
+
+
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')
@@ -241,7 +271,7 @@ def set_repository_visibility(repo_id, visibility):
               type=click.Choice(['model', 'dataset']), default=None,
               help='仓库类型 (model/dataset)，默认按 model 处理')
 @click.option('--revision', 'revision', default=None,
-              help='上传 revision；AtomGit 当前仅接受默认分支 main，其他值会拒绝')
+              help='上传到已存在的 revision；非 main 分支需先用 repo branch create 创建')
 @click.option('--ignore', '-i', 'ignore', default=None,
               help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
                    '仅对目录上传有意义')
@@ -256,7 +286,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
         print_error("上传超时时间必须大于 0 秒")
         sys.exit(2)
     if not is_supported_upload_revision(revision):
-        print_error("AtomGit 当前仅支持默认 revision main，非默认分支不会被创建；已拒绝上传")
+        print_error("上传 revision 名称不合法")
         sys.exit(2)
     if num_workers is not None and num_workers <= 0:
         print_error("并发 worker 数必须大于 0")

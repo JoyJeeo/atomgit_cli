@@ -70,6 +70,7 @@ atomgit = atomgit.cli:cli
 | `atomgit repo create` | 创建 model/dataset 仓库 | 是 |
 | `atomgit repo list` | 列出当前用户可访问的仓库 | 是 |
 | `atomgit repo visibility` | 修改并验证仓库公开/私有状态 | 是 |
+| `atomgit repo branch create` | 显式创建并验证仓库分支 | 是 |
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |

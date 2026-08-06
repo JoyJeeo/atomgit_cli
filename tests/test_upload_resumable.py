@@ -144,7 +144,7 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--resumable", "--revision", "dev",
                                     "--ignore", "*.tmp", "--num-workers", "4"])
-            check("T4 非默认 revision rejected", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T4 已存在非默认 revision accepted", r.exit_code == 0, f"exit={r.exit_code}")
             if ulf_captured:
                 call = ulf_captured[0]
                 check("T4 revision=dev", call.get("revision") == "dev",
