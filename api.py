@@ -140,27 +140,74 @@ def _is_not_found_error(error: Exception) -> bool:
     return "404" in message or "not found" in message
 
 
-def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15):
-    """Read one bounded JSON document from AtomGit's authenticated V5 API."""
+def _atomgit_v5_request_json(
+    method: str, path: str, token: str, body=None, timeout: int = 15
+):
+    """Exchange one bounded JSON document with AtomGit's V5 API."""
     if not token:
         raise ValueError("missing AtomGit credential")
     if not path.startswith("/") or "?" in path or "#" in path:
         raise ValueError("invalid AtomGit API path")
+    method = method.upper()
+    if method not in ("GET", "PATCH"):
+        raise ValueError("unsupported AtomGit API method")
+
+    data = None
+    headers = {
+        "PRIVATE-TOKEN": token,
+        "Accept": "application/json",
+        "User-Agent": "atomgit-cli",
+    }
+    if body is not None:
+        data = json.dumps(body, separators=(",", ":")).encode("utf-8")
+        headers["Content-Type"] = "application/json"
 
     request = urllib.request.Request(
         _ATOMGIT_V5_API_BASE + path,
-        headers={
-            "PRIVATE-TOKEN": token,
-            "Accept": "application/json",
-            "User-Agent": "atomgit-cli",
-        },
-        method="GET",
+        data=data,
+        headers=headers,
+        method=method,
     )
     with _atomgit_open_url(request, timeout=timeout) as response:
         payload = response.read(_ATOMGIT_V5_MAX_JSON_BYTES + 1)
     if len(payload) > _ATOMGIT_V5_MAX_JSON_BYTES:
         raise ValueError("AtomGit API response is too large")
+    if not payload:
+        return None
     return json.loads(payload.decode("utf-8"))
+
+
+def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15):
+    """Read one bounded JSON document from AtomGit's authenticated V5 API."""
+    return _atomgit_v5_request_json("GET", path, token, timeout=timeout)
+
+
+def _atomgit_v5_repo_path(repo_id: str) -> str:
+    """Build one encoded V5 repository path from the shared logical ID."""
+    normalized_repo_id = normalize_repo_id(repo_id)
+    owner, separator, repository = normalized_repo_id.partition("/")
+    if not separator or not owner or not repository:
+        raise ValueError("invalid repository ID")
+    return "/repos/{}/{}".format(
+        quote(owner, safe=""), quote(repository, safe="")
+    )
+
+
+def _repo_private_state(payload):
+    """Read a public/private state from one V5 repository response."""
+    if not isinstance(payload, dict):
+        return None
+    private = payload.get("private")
+    if isinstance(private, bool):
+        return private
+    visibility = payload.get("visibility")
+    if isinstance(visibility, str):
+        normalized = visibility.strip().lower()
+        if normalized == "private":
+            return True
+        if normalized == "public":
+            return False
+    return None
 
 
 def _sanitized_v5_api_error(error: Exception) -> str:
@@ -853,6 +900,28 @@ class HuggingFaceAPI:
         except Exception as error:
             print(f"获取仓库列表失败: {_sanitized_v5_api_error(error)}")
             return None
+
+    def set_repo_visibility(self, repo_id: str, private: bool) -> bool:
+        """Update and verify one repository's public/private state."""
+        try:
+            credentials = config.get_credentials()
+            if not credentials or not credentials.get('token'):
+                print("❌ 未找到登录凭证")
+                return False
+            if not isinstance(private, bool):
+                raise ValueError("private must be a boolean")
+            path = _atomgit_v5_repo_path(repo_id)
+            _atomgit_v5_request_json(
+                "PATCH", path, credentials['token'], {"private": private}
+            )
+            repository = _atomgit_v5_get_json(path, credentials['token'])
+            if _repo_private_state(repository) is not private:
+                print("仓库可见性验证失败：远端状态与请求不一致")
+                return False
+            return True
+        except Exception as error:
+            print(f"修改仓库可见性失败: {_sanitized_v5_api_error(error)}")
+            return False
     
     def create_repo(self, 
                     repo_name: str,
@@ -861,9 +930,6 @@ class HuggingFaceAPI:
                     exist_ok: bool = False) -> bool:
         """创建仓库；dataset 通过 AtomGit 的共享 model 兼容路由创建。"""
         try:
-            if not private:
-                print("AtomGit 当前无法可靠验证公开仓库语义；请使用 --private 创建私有仓库")
-                return False
             credentials = config.get_credentials()
             if not credentials:
                 print("❌ 未找到登录凭证")
@@ -876,13 +942,24 @@ class HuggingFaceAPI:
                 print("💡 建议: 如需幂等创建，请显式使用 --exist-ok")
                 return False
             # 使用Hugging Face Hub SDK创建仓库
+            # HF public creation can report success while AtomGit keeps the
+            # repository private. Always create safely as private, then use the
+            # V5 settings API and verify when public visibility was requested.
             create_repo(
                 repo_id=normalized_repo_id,
                 token=credentials['token'],
                 repo_type=_atomgit_repo_type(repo_type),
-                private=private,
+                private=True,
                 exist_ok=exist_ok,
             )
+            if not private and not self.set_repo_visibility(
+                repo_name, private=False
+            ):
+                print(
+                    "公开仓库创建未验证完成；远端可能仍为私有，也可能已公开，"
+                    "请立即使用 repo visibility 检查并设置目标状态"
+                )
+                return False
             return True
         except Exception as e:
             err_type, hint = _classify_create_repo_error(e)

@@ -69,6 +69,7 @@ atomgit = atomgit.cli:cli
 | `atomgit whoami` | 查询当前用户 | 是 |
 | `atomgit repo create` | 创建 model/dataset 仓库 | 是 |
 | `atomgit repo list` | 列出当前用户可访问的仓库 | 是 |
+| `atomgit repo visibility` | 修改并验证仓库公开/私有状态 | 是 |
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
@@ -78,6 +79,10 @@ atomgit = atomgit.cli:cli
 
 仓库列表使用 AtomGit V5 `GET /api/v5/user/repos`，凭据只通过
 `PRIVATE-TOKEN` 请求头发送；响应经过大小限制和 JSON 集合校验后才交给 CLI。
+可见性修改使用 `PATCH /api/v5/repos/:owner/:repo`，随后 GET 同一资源验证远端
+状态。公开建仓仍通过已验证的 HF model 兼容路由先创建私有仓库，再执行上述
+转换；任何转换或验证失败都会返回失败且不自动删除，并提示远端状态可能未知，
+必须重新检查和设置可见性。
 
 ## 4. 导入时全局配置
 

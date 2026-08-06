@@ -39,9 +39,9 @@ approval; it grants no access to other repositories, deletion, or publication.
   remains conditional on membership in the mapped physical namespace rather
   than an unverified client capability.
 - Live evidence confirmed that AtomGit's HF `private=False` create request can
-  report success while producing a private repository. Public creation remains
-  intentionally rejected; a controlled v5 visibility update supplied the
-  public download sample instead.
+  report success while producing a private repository. CLI public creation now
+  creates privately, applies the V5 visibility update, and GET-verifies public
+  state before success; the Python SDK remains intentionally private-only.
 - Non-main revision is intentionally rejected rather than pending implicit
   support; it must not be re-enabled without new AtomGit service evidence.
 - The authorized 2026-08-05 to 2026-08-06 CLI hardening tranche is complete:

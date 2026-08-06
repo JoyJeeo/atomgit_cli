@@ -318,12 +318,27 @@ atomgit repo create your-username/your-repo --type model --private
 # 创建私有 dataset 仓库
 atomgit repo create your-username/your-dataset --type dataset --private
 
+# 创建公开 model 仓库（创建后通过 V5 接口校验可见性）
+atomgit repo create your-username/your-model --type model --public
+
 # 幂等自动化：仓库已存在时也返回成功
 atomgit repo create your-username/your-repo --type model --private --exist-ok
 ```
 
 默认情况下仓库已存在会返回失败，避免误报“新建成功”；仅在明确需要幂等行为时
 使用 `--exist-ok`，成功提示会显示“已存在或已创建”。
+
+必须明确指定 `--private` 或 `--public`。公开创建会先安全地创建私有仓库，再修改
+并读取远端可见性；如果转换或验证失败，命令返回失败且不会自动删除，但远端状态
+可能仍为私有，也可能已经公开，必须立即检查并设置目标可见性。已有仓库可单独修改：
+
+```bash
+atomgit repo visibility your-username/your-repo public
+atomgit repo visibility your-username/your-repo private
+```
+
+`--exist-ok --public` 命中已有仓库时仍会确保并验证公开状态；`--exist-ok
+--private` 不承诺把已有公开仓库改为私有，需要变更时使用 `repo visibility`。
 
 ## SDK使用方法
 

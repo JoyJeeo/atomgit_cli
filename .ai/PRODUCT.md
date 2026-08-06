@@ -30,6 +30,9 @@ every remote path is verified; known status follows the interface list.
   progress-bar control
 - Large-folder resumable mode and worker selection
 - Repository download to a default or explicit directory
+- Single-file CLI download
+- Authenticated repository list and verified visibility changes
+- Explicit private creation and verified public creation
 - Configuration-state display
 
 ### Python SDK

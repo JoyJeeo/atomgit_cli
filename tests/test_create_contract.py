@@ -26,7 +26,9 @@ def main():
     original_create = api_mod.create_repo
     original_exists = api_mod._atomgit_repo_exists
     original_credentials = api_mod.config.get_credentials
+    original_visibility = api_mod.api.set_repo_visibility
     calls = []
+    visibility_calls = []
 
     def strict_create(**kwargs):
         inspect.signature(real_create_repo).bind(**kwargs)
@@ -36,6 +38,9 @@ def main():
     api_mod.create_repo = strict_create
     api_mod._atomgit_repo_exists = lambda repo_id, token: False
     api_mod.config.get_credentials = lambda: {"token": "fake-stored-token"}
+    api_mod.api.set_repo_visibility = lambda repo_id, private: (
+        visibility_calls.append((repo_id, private)) or True
+    )
     try:
         for repo_type in ("model", "dataset"):
             result = api_mod.api.create_repo(
@@ -53,6 +58,17 @@ def main():
             check(f"API private {repo_type} privacy forwarded", call["private"] is True)
             check(f"API private {repo_type} token forwarded", call["token"] == "fake-stored-token")
             check(f"API private {repo_type} defaults non-idempotent", call["exist_ok"] is False)
+
+        check(
+            "API public model succeeds after visibility transition",
+            api_mod.api.create_repo(
+                "user/public-repo", repo_type="model", private=False
+            )
+            is True,
+        )
+        check("API public create uses locked HF signature", calls[-1]["repo_id"] == "user/public-repo")
+        check("API public create starts private", calls[-1]["private"] is True)
+        check("API public create requests verified transition", visibility_calls == [("user/public-repo", False)])
 
         check(
             "API explicit exist_ok succeeds",
@@ -125,6 +141,7 @@ def main():
         api_mod.create_repo = original_create
         api_mod._atomgit_repo_exists = original_exists
         api_mod.config.get_credentials = original_credentials
+        api_mod.api.set_repo_visibility = original_visibility
 
     original_logged_in = cli_mod.config.is_logged_in
     original_api_create = cli_mod.api.create_repo
@@ -140,7 +157,7 @@ def main():
 
         cli_mod.config.is_logged_in = lambda: True
         cli_mod.api.create_repo = lambda name, repo_type, private, exist_ok=False: (
-            cli_calls.append((name, repo_type, private, exist_ok)) or private
+            cli_calls.append((name, repo_type, private, exist_ok)) or True
         )
         invalid_name = runner.invoke(
             cli_mod.cli,
@@ -157,10 +174,28 @@ def main():
 
         public = runner.invoke(
             cli_mod.cli,
+            ["repo", "create", "user/repo", "--type", "model", "--public"],
+        )
+        check("CLI explicit public creation succeeds", public.exit_code == 0)
+        check("CLI public flag reaches API as false", cli_calls[-1] == ("user/repo", "model", False, False))
+
+        before = len(cli_calls)
+        missing_visibility = runner.invoke(
+            cli_mod.cli,
             ["repo", "create", "user/repo", "--type", "model"],
         )
-        check("CLI public creation reports failure", public.exit_code == 1)
-        check("CLI public flag reaches API as false", cli_calls[-1] == ("user/repo", "model", False, False))
+        check("CLI requires explicit visibility", missing_visibility.exit_code == 2)
+        check("missing visibility avoids API", len(cli_calls) == before)
+
+        conflicting_visibility = runner.invoke(
+            cli_mod.cli,
+            [
+                "repo", "create", "user/repo", "--type", "model",
+                "--private", "--public",
+            ],
+        )
+        check("CLI visibility flags are mutually exclusive", conflicting_visibility.exit_code == 2)
+        check("conflicting visibility avoids API", len(cli_calls) == before)
 
         private = runner.invoke(
             cli_mod.cli,
