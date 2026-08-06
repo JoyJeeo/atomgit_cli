@@ -54,10 +54,12 @@ def _handler(headers, body):
     return Handler
 
 
-def _download(root, name, headers, body, existing=None):
+def _download(root, name, headers, body, existing=None, neighboring=None):
     destination = root / name
     if existing is not None:
         destination.write_bytes(existing)
+    if neighboring is not None:
+        destination.with_name(destination.name + ".part").write_bytes(neighboring)
     handler = _handler(headers, body)
     with _Server(handler) as server:
         url = f"http://127.0.0.1:{server.server.server_port}/file.bin"
@@ -90,10 +92,20 @@ def main():
             "fixed.bin",
             [("Content-Length", "4")],
             b"data",
+            neighboring=b"repository-content",
         )
         check(
             "valid Content-Length body succeeds",
             error is None and destination.read_bytes() == b"data",
+        )
+        check(
+            "successful raw download preserves neighboring file",
+            destination.with_name(destination.name + ".part").read_bytes()
+            == b"repository-content",
+        )
+        check(
+            "successful raw download leaves no unique temporary",
+            not list(destination.parent.glob(f".{destination.name}.*.part")),
         )
 
         destination, error = _download(
@@ -102,12 +114,15 @@ def main():
             [("Content-Length", "10")],
             b"short",
             existing=b"original",
+            neighboring=b"repository-content",
         )
         check(
             "truncated Content-Length preserves destination",
             error is not None
             and destination.read_bytes() == b"original"
-            and not destination.with_name(destination.name + ".part").exists(),
+            and destination.with_name(destination.name + ".part").read_bytes()
+            == b"repository-content"
+            and not list(destination.parent.glob(f".{destination.name}.*.part")),
             repr(error),
         )
 
