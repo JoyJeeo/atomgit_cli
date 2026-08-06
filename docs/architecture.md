@@ -208,6 +208,10 @@ create、文件/目录 upload、snapshot/file download、URL 构造和 dataset l
 `owner-namespace` 权限时对 create/upload 返回非零且不留下仓库；成功写入仍要求
 账号属于转换后的物理命名空间。
 
+CLI 直连 resolve 下载在目标目录使用唯一临时文件，完整成功后才原子替换目标；
+标准和 raw UTF-8 传输失败都会清理本次临时文件并保留原目标。固定名
+`<destination>.part` 可能是仓库中的真实文件，因此不会被当作残片删除。
+
 ## 10. 测试和打包
 
 - 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；

@@ -9,6 +9,7 @@ import ssl
 import urllib.request
 import urllib.error
 import multiprocessing
+import tempfile
 
 try:
     from .runtime import configure_hf_environment
@@ -471,8 +472,7 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
     host = parts.hostname
     port = parts.port or (443 if parts.scheme == "https" else 80)
     raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
-    tmp = dest.with_name(dest.name + ".part")
-    tmp.unlink(missing_ok=True)
+    temporary_path = None
     try:
         for _ in range(max_redirects + 1):
             status, response_headers, body, sock = _atomgit_raw_http_get(
@@ -495,9 +495,17 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
                     raise urllib.error.HTTPError(current_url, 404, "Not Found", response_headers, None)
                 if not 200 <= status < 300:
                     raise urllib.error.HTTPError(current_url, status, "HTTP Error", response_headers, None)
-                with open(tmp, "wb") as out:
+                with tempfile.NamedTemporaryFile(
+                    mode="wb",
+                    prefix=f".{dest.name}.",
+                    suffix=".part",
+                    dir=dest.parent,
+                    delete=False,
+                ) as out:
+                    temporary_path = Path(out.name)
                     _copy_framed_http_body(body, response_headers, out)
-                tmp.replace(dest)
+                temporary_path.replace(dest)
+                temporary_path = None
                 return
             finally:
                 try:
@@ -505,9 +513,9 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
                 finally:
                     sock.close()
         raise urllib.error.HTTPError(current_url, 302, "Too many redirects", {}, None)
-    except Exception:
-        tmp.unlink(missing_ok=True)
-        raise
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Path, token: str) -> None:
@@ -527,11 +535,24 @@ def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Pa
         if raw:
             _atomgit_download_raw(url, dest, headers, timeout=60)
             return
-        tmp = dest.with_name(dest.name + ".part")
-        req = urllib.request.Request(url, headers=headers)
-        with _atomgit_open_url(req, timeout=60) as resp, open(tmp, "wb") as out:
-            shutil.copyfileobj(resp, out)
-        tmp.replace(dest)
+        temporary_path = None
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with _atomgit_open_url(req, timeout=60) as resp:
+                with tempfile.NamedTemporaryFile(
+                    mode="wb",
+                    prefix=f".{dest.name}.",
+                    suffix=".part",
+                    dir=dest.parent,
+                    delete=False,
+                ) as out:
+                    temporary_path = Path(out.name)
+                    shutil.copyfileobj(resp, out)
+            temporary_path.replace(dest)
+            temporary_path = None
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     url_specs = [
         (_atomgit_resolve_url(repo_id, repo_type, filename), False),
