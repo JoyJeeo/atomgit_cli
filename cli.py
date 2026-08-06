@@ -151,7 +151,6 @@ def create(repo_name, repo_type, private, exist_ok):
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
         sys.exit(1)
-    
     if not validate_repo_name(repo_name):
         print_error("仓库名称格式不正确，应为: username/repo-name")
         sys.exit(1)
@@ -165,6 +164,44 @@ def create(repo_name, repo_type, private, exist_ok):
     else:
         print_error(f"仓库 {repo_name} 创建失败")
         sys.exit(1)
+
+
+@repo.command(name='list')
+def list_repositories():
+    """列出当前用户可访问的仓库"""
+    if not config.is_logged_in():
+        print_error("请先登录：atomgit login")
+        sys.exit(1)
+
+    repositories = api.list_repos()
+    if repositories is None:
+        print_error("获取仓库列表失败")
+        sys.exit(1)
+    if not repositories:
+        print_info("没有可显示的仓库")
+        return
+
+    for repository in repositories:
+        repo_id = repository.get('full_name') or repository.get(
+            'path_with_namespace'
+        )
+        if not repo_id:
+            owner = repository.get('owner')
+            owner_name = None
+            if isinstance(owner, dict):
+                owner_name = owner.get('login') or owner.get('path')
+            name = repository.get('name') or repository.get('path')
+            if owner_name and name:
+                repo_id = f"{owner_name}/{name}"
+            else:
+                repo_id = name or "(unknown)"
+
+        private = repository.get('private')
+        if isinstance(private, bool):
+            visibility = "private" if private else "public"
+        else:
+            visibility = repository.get('visibility') or "unknown"
+        print_info(f"{visibility}\t{repo_id}")
 
 
 @cli.command()

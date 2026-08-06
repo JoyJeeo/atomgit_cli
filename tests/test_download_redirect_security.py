@@ -54,6 +54,21 @@ def _sink_handler(seen_headers):
     return SinkHandler
 
 
+def _private_token_sink_handler(seen_headers):
+    class SinkHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            seen_headers.append(self.headers.get("Private-Token"))
+            self.send_response(200)
+            self.send_header("Content-Length", "2")
+            self.end_headers()
+            self.wfile.write(b"ok")
+
+        def log_message(self, *args):
+            pass
+
+    return SinkHandler
+
+
 def _redirect_handler(location):
     class RedirectHandler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -104,6 +119,22 @@ def main():
                 "raw cross-origin redirect strips bearer token",
                 raw_seen == [None],
                 repr(raw_seen),
+            )
+
+            private_token_seen = []
+            with _Server(_private_token_sink_handler(private_token_seen)) as sink:
+                location = lambda: f"http://localhost:{sink.port}/repos"
+                with _Server(_redirect_handler(location)) as redirect:
+                    request = api_mod.urllib.request.Request(
+                        f"http://127.0.0.1:{redirect.port}/api/v5/user/repos",
+                        headers={"PRIVATE-TOKEN": token},
+                    )
+                    with api_mod._atomgit_open_url(request) as response:
+                        response.read()
+            check(
+                "V5 cross-origin redirect strips private token",
+                private_token_seen == [None],
+                repr(private_token_seen),
             )
 
             _, same_origin_headers = api_mod._prepare_download_redirect(

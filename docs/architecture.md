@@ -68,12 +68,16 @@ atomgit = atomgit.cli:cli
 | `atomgit logout` | 清除 token 和 Git helper | 否 |
 | `atomgit whoami` | 查询当前用户 | 是 |
 | `atomgit repo create` | 创建 model/dataset 仓库 | 是 |
+| `atomgit repo list` | 列出当前用户可访问的仓库 | 是 |
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
 | `atomgit config-show` | 显示登录和 Git 集成状态 | 否 |
 
 注意：命令名是 `config-show`，不是旧文档中的 `config`。
+
+仓库列表使用 AtomGit V5 `GET /api/v5/user/repos`，凭据只通过
+`PRIVATE-TOKEN` 请求头发送；响应经过大小限制和 JSON 集合校验后才交给 CLI。
 
 ## 4. 导入时全局配置
 
