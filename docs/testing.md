@@ -125,7 +125,8 @@ login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支�
 - dataset 建仓和传输必须复用 AtomGit 的 model 兼容路由；
 - 私有 model 与 dataset 均以 399,300,506 字节文件完成 CLI 超时中断、恢复、
   下载与 SHA-256 一致性验证；
-- HF `private=False` 创建会假成功为私有仓库，因此客户端继续拒绝公开建仓；
+- HF `private=False` 创建会假成功为私有仓库；CLI 公开建仓因此先按私有创建，
+  再通过 V5 PATCH 和 GET 校验可见性。Python SDK 仍拒绝公开建仓；
 - 多层 ID 被正确转换，但测试账号缺少转换后命名空间权限，create/upload 均以
   401 非零退出且未留下仓库；
 - 固定测试仓库与多层物理 ID 最终在 model/dataset 路由均为 404。

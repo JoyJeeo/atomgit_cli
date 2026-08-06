@@ -143,11 +143,14 @@ def repo():
 @click.argument('repo_name')
 @click.option('--type', 'repo_type', type=click.Choice(['model', 'dataset']), 
               required=True, help='仓库类型 (model/dataset)')
-@click.option('--private', is_flag=True, help='创建私有仓库')
+@click.option('--private', is_flag=True, help='明确创建私有仓库')
+@click.option('--public', 'public_repo', is_flag=True, help='明确创建公开仓库')
 @click.option('--exist-ok', is_flag=True,
               help='仓库已存在时仍返回成功（用于幂等自动化）')
-def create(repo_name, repo_type, private, exist_ok):
+def create(repo_name, repo_type, private, public_repo, exist_ok):
     """创建新仓库"""
+    if private == public_repo:
+        raise click.UsageError("必须且只能指定 --private 或 --public")
     if not config.is_logged_in():
         print_error("请先登录：atomgit login")
         sys.exit(1)
@@ -202,6 +205,26 @@ def list_repositories():
         else:
             visibility = repository.get('visibility') or "unknown"
         print_info(f"{visibility}\t{repo_id}")
+
+
+@repo.command(name='visibility')
+@click.argument('repo_id')
+@click.argument('visibility', type=click.Choice(['public', 'private']))
+def set_repository_visibility(repo_id, visibility):
+    """修改并验证仓库可见性"""
+    if not config.is_logged_in():
+        print_error("请先登录：atomgit login")
+        sys.exit(1)
+    if not validate_repo_name(repo_id):
+        print_error("仓库ID格式不正确，应为: username/repo-name")
+        sys.exit(1)
+
+    private = visibility == 'private'
+    if api.set_repo_visibility(repo_id, private=private):
+        print_success(f"仓库 {repo_id} 已设置为 {visibility}")
+    else:
+        print_error(f"仓库 {repo_id} 可见性修改失败")
+        sys.exit(1)
 
 
 @cli.command()
