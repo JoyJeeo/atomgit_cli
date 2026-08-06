@@ -70,6 +70,7 @@ atomgit = atomgit.cli:cli
 | `atomgit repo create` | 创建 model/dataset 仓库 | 是 |
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
+| `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
 | `atomgit config-show` | 显示登录和 Git 集成状态 | 否 |
 
 注意：命令名是 `config-show`，不是旧文档中的 `config`。
@@ -172,9 +173,9 @@ Token 发送到 AtomGit。
 重试仍失败时，CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名
 URL 或其查询参数。
 
-`api.download_file` 不对 CLI 命令树暴露；它与整仓下载一样先列文件、校验安全
-目标路径，再直连 resolve。SDK `download_file` 使用 HF `hf_hub_download`，因此缓存
-路径和异常类型与 CLI API 不同。
+`atomgit download-file` 调用 `api.download_file`；它与整仓下载一样先列文件、
+校验安全目标路径，再直连 resolve。SDK `download_file` 使用 HF
+`hf_hub_download`，因此缓存路径和异常类型与 CLI API 不同。
 
 ## 8. Python SDK
 

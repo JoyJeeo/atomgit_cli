@@ -230,7 +230,9 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 
 涵盖：认证失败 / 仓库不存在 / 受限仓库 / 仓库已禁用 / 分支不存在 / 请求参数错误 / 请求超时 / 网络连接失败 等情形。底层异常原文不会输出，以免泄露 token、Authorization 头或签名 URL。
 
-### 3. 下载文件
+### 3. 下载
+
+#### 下载整个仓库
 
 #### 下载到当前目录
 
@@ -258,6 +260,21 @@ atomgit download your-username/your-dataset -d ./data/ --repo-type dataset
 
 ```bash
 atomgit download your-username/your-model-name -d ./models/ --force
+```
+
+#### 只下载一个文件
+
+仓库内文件名可以包含子目录；本地会保留该相对目录结构：
+
+```bash
+atomgit download-file your-username/your-model-name weights/model.bin -d ./models/
+```
+
+dataset、强制覆盖和匿名下载与整仓命令使用相同策略：
+
+```bash
+atomgit download-file your-username/your-dataset data/sample.csv \
+  -d ./data/ --repo-type dataset --force
 ```
 
 ### 4. 其他命令

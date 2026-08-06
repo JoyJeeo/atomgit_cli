@@ -363,6 +363,56 @@ def download(repo_id, directory, force, repo_type):
 
 
 @cli.command()
+@click.argument('repo_id')
+@click.argument('filename')
+@click.option('--directory', '-d', type=click.Path(),
+              help='下载到指定目录，默认当前目录')
+@click.option('--force', is_flag=True, help='强制覆盖已存在的文件')
+@click.option('--repo-type', '-r', 'repo_type',
+              type=click.Choice(['model', 'dataset']), default=None,
+              help='明确仓库类型；不指定时自动探测 model/dataset')
+def download_file(repo_id, filename, directory, force, repo_type):
+    """下载仓库中的单个文件（公开仓库无需登录）"""
+    if not validate_repo_name(repo_id):
+        print_error("仓库ID格式不正确，应为: username/repo-name")
+        sys.exit(1)
+
+    if directory:
+        if not is_valid_path(directory):
+            print_error(f"无效的目录路径: {directory}")
+            sys.exit(1)
+        local_path = Path(directory)
+    else:
+        local_path = Path.cwd()
+
+    if local_path.exists() and local_path.is_file():
+        print_error(f"目标路径是文件，不是目录: {local_path}")
+        sys.exit(1)
+    if not ensure_directory(local_path):
+        print_error(f"无法创建目录: {local_path}")
+        sys.exit(1)
+
+    print_info(f"正在下载文件: {repo_id}/{filename}")
+    print_info(f"下载到: {local_path}")
+    if not config.is_logged_in():
+        print_info("当前未登录，尝试从公开仓库下载...")
+
+    if api.download_file(
+        repo_id,
+        filename,
+        local_path,
+        force_download=force,
+        repo_type=repo_type,
+    ):
+        print_success(f"文件下载成功: {filename}")
+    else:
+        print_error(f"文件下载失败: {repo_id}/{filename}")
+        if not config.is_logged_in():
+            print_info("提示：如果这是私有仓库，请先使用 'atomgit login' 登录")
+        sys.exit(1)
+
+
+@cli.command()
 def config_show():
     """显示配置信息"""
     if config.is_logged_in():
