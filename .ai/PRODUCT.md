@@ -33,6 +33,7 @@ every remote path is verified; known status follows the interface list.
 - Single-file CLI download
 - Authenticated repository list and verified visibility changes
 - Explicit private creation and verified public creation
+- Explicit branch creation and CLI upload to existing non-main branches
 - Configuration-state display
 
 ### Python SDK

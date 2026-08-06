@@ -149,7 +149,7 @@ def _atomgit_v5_request_json(
     if not path.startswith("/") or "?" in path or "#" in path:
         raise ValueError("invalid AtomGit API path")
     method = method.upper()
-    if method not in ("GET", "PATCH"):
+    if method not in ("GET", "POST", "PATCH"):
         raise ValueError("unsupported AtomGit API method")
 
     data = None
@@ -922,6 +922,37 @@ class HuggingFaceAPI:
         except Exception as error:
             print(f"修改仓库可见性失败: {_sanitized_v5_api_error(error)}")
             return False
+
+    def create_branch(
+        self, repo_id: str, branch_name: str, source: str = "main"
+    ) -> bool:
+        """Create one explicit branch and verify it through AtomGit V5."""
+        try:
+            credentials = config.get_credentials()
+            if not credentials or not credentials.get('token'):
+                print("❌ 未找到登录凭证")
+                return False
+            if not branch_name or not is_supported_upload_revision(branch_name):
+                raise ValueError("invalid branch name")
+            if not source or not is_supported_upload_revision(source):
+                raise ValueError("invalid source revision")
+            base_path = _atomgit_v5_repo_path(repo_id) + "/branches"
+            _atomgit_v5_request_json(
+                "POST",
+                base_path,
+                credentials['token'],
+                {"branch_name": branch_name, "refs": source},
+            )
+            branch_path = base_path + "/" + quote(branch_name, safe="")
+            payload = _atomgit_v5_get_json(branch_path, credentials['token'])
+            name = payload.get("name") if isinstance(payload, dict) else None
+            if name != branch_name:
+                print("分支创建验证失败：远端未返回目标分支")
+                return False
+            return True
+        except Exception as error:
+            print(f"创建分支失败: {_sanitized_v5_api_error(error)}")
+            return False
     
     def create_repo(self, 
                     repo_name: str,
@@ -994,7 +1025,7 @@ class HuggingFaceAPI:
                 以保留语义。
         """
         if not is_supported_upload_revision(revision):
-            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            print("上传 revision 名称不合法，已拒绝上传")
             return False
         try:
             if not file_path.exists():
@@ -1113,7 +1144,7 @@ class HuggingFaceAPI:
                 由 HF 默认决定。
         """
         if not is_supported_upload_revision(revision):
-            print("AtomGit 当前仅支持默认 revision main，已拒绝上传")
+            print("上传 revision 名称不合法，已拒绝上传")
             return False
         try:
             if not dir_path.exists() or not dir_path.is_dir():

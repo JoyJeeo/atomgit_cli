@@ -107,7 +107,7 @@ def main():
             uf_captured.clear(); ufold_captured.clear()
             r = runner.invoke(cli, ["upload", str(fpath), "--repo-id", "user/repo",
                                    "--repo-type", "dataset", "--revision", "dev"])
-            check("T3 dataset+dev rejected", r.exit_code == 2, f"exit={r.exit_code}")
+            check("T3 dataset+dev accepted", r.exit_code == 0, f"exit={r.exit_code}")
             if uf_captured:
                 check("T3 dataset 使用 model 传输路由",
                       uf_captured[0].get("repo_type") == "model",

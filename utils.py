@@ -130,8 +130,22 @@ def validate_repo_type(repo_type: str) -> bool:
 
 
 def is_supported_upload_revision(revision: Optional[str]) -> bool:
-    """Return whether AtomGit can safely target the requested upload revision."""
-    return revision in (None, "", "main")
+    """Return whether a revision has one safe Git-ref interpretation."""
+    if revision in (None, ""):
+        return True
+    if not isinstance(revision, str) or revision == "@":
+        return False
+    if (
+        revision.startswith(("/", "."))
+        or revision.endswith(("/", ".", ".lock"))
+        or ".." in revision
+        or "@{" in revision
+        or "//" in revision
+        or any(character in revision for character in " ~^:?*[\\")
+        or any(ord(character) < 32 or ord(character) == 127 for character in revision)
+    ):
+        return False
+    return all(part and not part.startswith(".") for part in revision.split("/"))
 
 
 def normalize_repo_id(repo_id: str) -> str:

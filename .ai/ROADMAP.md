@@ -42,8 +42,8 @@ approval; it grants no access to other repositories, deletion, or publication.
   report success while producing a private repository. CLI public creation now
   creates privately, applies the V5 visibility update, and GET-verifies public
   state before success; the Python SDK remains intentionally private-only.
-- Non-main revision is intentionally rejected rather than pending implicit
-  support; it must not be re-enabled without new AtomGit service evidence.
+- CLI non-main revision uses explicit V5 branch creation and verification before
+  HF upload forwarding; SDK upload remains intentionally main-only.
 - The authorized 2026-08-05 to 2026-08-06 CLI hardening tranche is complete:
   redirect credential isolation, download path/framing/type/skip/error safety,
   stdin login, lazy atomic configuration, strict repo IDs and upload conflicts,

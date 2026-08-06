@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prevent silent writes to main when AtomGit ignores non-default revisions."""
+"""Forward safe explicit revisions and reject malformed Git refs."""
 import tempfile
 from pathlib import Path
 from click.testing import CliRunner
@@ -22,11 +22,12 @@ def main():
             path = Path(td) / "file.txt"
             path.write_text("x")
             runner = CliRunner()
-            rejected = runner.invoke(cli, ["upload", str(path), "--repo-id", "user/repo", "--revision", "dev"])
-            rejected_calls = len(calls)
+            accepted_dev = runner.invoke(cli, ["upload", str(path), "--repo-id", "user/repo", "--revision", "dev"])
+            dev_calls = len(calls)
+            rejected = runner.invoke(cli, ["upload", str(path), "--repo-id", "user/repo", "--revision", "bad..ref"])
             accepted = runner.invoke(cli, ["upload", str(path), "--repo-id", "user/repo", "--revision", "main"])
-        ok = rejected.exit_code == 2 and rejected_calls == 0 and accepted.exit_code == 0 and len(calls) == 1
-        print(f"[{'PASS' if ok else 'FAIL'}] non-default rejected; main accepted")
+        ok = accepted_dev.exit_code == 0 and dev_calls == 1 and rejected.exit_code == 2 and accepted.exit_code == 0 and len(calls) == 2 and calls[0]["revision"] == "dev"
+        print(f"[{'PASS' if ok else 'FAIL'}] safe non-main forwarded; malformed rejected")
         return 0 if ok else 1
     finally:
         api.upload_folder = original

@@ -21,7 +21,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
   - 进度条开关（`--no-progress-bar`）
   - 仓库内目标路径（`-p/--path-in-repo`）
   - 仓库类型选择（`-r/--repo-type model|dataset`）
-  - 默认分支兼容参数（`--revision main`；其他值会拒绝）
+  - 显式分支创建与非 `main` 上传（CLI）
   - 忽略文件模式（`-i/--ignore`）
   - 断点续传/分块上传（`--resumable`、`--num-workers`）
   - 单文件上传无本地拷贝（直接走 `upload_file`）
@@ -182,7 +182,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `--no-progress-bar` | 禁用进度条（日志/CI 场景） |
 | `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
-| `--revision <name>` | 当前仅接受默认分支 `main`；其他值退出 2，不会上传 |
+| `--revision <name>` | 上传到已存在分支；非 `main` 分支需先显式创建 |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
 | `--resumable` | 目录大文件断点续传接口，重复同一命令可复用本地上传状态 |
 | `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
@@ -216,7 +216,9 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 
 > 当前实现通过 `HfApi(token=...)` 认证，并已分别对 model 和 dataset 完成约
 > 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认
-> 分支，因此当前 CLI 在任何远程调用前拒绝非 `main` revision。详见
+> 分支，因此 CLI 不依赖 HF 隐式建分支。先运行
+> `atomgit repo branch create REPO_ID BRANCH --from main`，再使用
+> `upload --revision BRANCH`。Python SDK 仍保持 `main`-only。详见
 > [上传实现分析](docs/upload_command_analysis.md)。
 
 #### 错误处理
@@ -703,7 +705,7 @@ python -c "from atomgit_hub import snapshot_download; print('SDK导入成功')"
 python tests/test_upload_progress.py        # 进度条
 python tests/test_upload_path_in_repo.py    # 仓库内路径
 python tests/test_upload_repo_type.py       # 仓库类型
-python tests/test_revision_rejection.py      # 非 main revision 拒绝
+python tests/test_revision_rejection.py      # 安全 revision 转发与非法 ref 拒绝
 python tests/test_upload_ignore.py          # 忽略模式
 python tests/test_upload_resumable.py       # 断点续传
 python tests/test_upload_file_no_copy.py    # 单文件无拷贝
