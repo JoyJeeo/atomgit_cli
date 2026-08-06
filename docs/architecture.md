@@ -159,7 +159,9 @@ atomgit download REPO
   -> 逐文件 resolve 下载
 ```
 
-CLI 不强制登录；有本地 token 时会用于列表和文件请求，没有时尝试匿名下载。
+CLI 不强制登录；有本地 AtomGit token 时会用于列表和文件请求，没有时通过
+`token=False` 显式禁用 HF SDK 的环境凭据并尝试匿名下载，避免把其他平台的
+Token 发送到 AtomGit。
 默认策略是跳过已经存在的目标文件且不校验其内容；`--force` 才重新下载并原子
 替换。标准 URL 与非 ASCII raw UTF-8 回退都在目标目录创建唯一临时文件，完整
 成功后替换目标，普通异常和重试失败会清理临时文件并保留原目标。

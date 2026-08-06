@@ -150,7 +150,10 @@ def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) ->
     if repo_type not in (None, "model", "dataset"):
         raise ValueError("repo_type 仅支持 model 或 dataset")
 
-    api = HfApi(token=token)
+    # HF Hub treats None as "use the ambient Hugging Face token". AtomGit
+    # anonymous requests must opt out explicitly so an unrelated credential is
+    # never attached after HF_ENDPOINT is redirected to hub.atomgit.com.
+    api = HfApi(token=token if token else False)
     if repo_type is not None:
         candidate = None if repo_type == "model" else "dataset"
         files = api.list_repo_files(repo_id, repo_type=candidate)
