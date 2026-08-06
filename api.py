@@ -11,6 +11,10 @@ import urllib.error
 import multiprocessing
 import tempfile
 
+
+_ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
+_ATOMGIT_V5_MAX_JSON_BYTES = 10 * 1024 * 1024
+
 try:
     from .runtime import configure_hf_environment
 except ImportError:
@@ -134,6 +138,50 @@ def _atomgit_resolve_url(repo_id: str, repo_type: str, filename: str) -> str:
 def _is_not_found_error(error: Exception) -> bool:
     message = str(error).lower()
     return "404" in message or "not found" in message
+
+
+def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15):
+    """Read one bounded JSON document from AtomGit's authenticated V5 API."""
+    if not token:
+        raise ValueError("missing AtomGit credential")
+    if not path.startswith("/") or "?" in path or "#" in path:
+        raise ValueError("invalid AtomGit API path")
+
+    request = urllib.request.Request(
+        _ATOMGIT_V5_API_BASE + path,
+        headers={
+            "PRIVATE-TOKEN": token,
+            "Accept": "application/json",
+            "User-Agent": "atomgit-cli",
+        },
+        method="GET",
+    )
+    with _atomgit_open_url(request, timeout=timeout) as response:
+        payload = response.read(_ATOMGIT_V5_MAX_JSON_BYTES + 1)
+    if len(payload) > _ATOMGIT_V5_MAX_JSON_BYTES:
+        raise ValueError("AtomGit API response is too large")
+    return json.loads(payload.decode("utf-8"))
+
+
+def _sanitized_v5_api_error(error: Exception) -> str:
+    """Return a credential-safe V5 API error category."""
+    if isinstance(error, urllib.error.HTTPError):
+        if error.code == 401:
+            return "认证失败，请重新登录"
+        if error.code == 403:
+            return "权限不足"
+        if error.code == 404:
+            return "接口或资源不存在"
+        if error.code == 429:
+            return "请求过于频繁，请稍后重试"
+        if error.code >= 500:
+            return "AtomGit 服务暂时不可用"
+        return f"AtomGit API 请求失败（HTTP {error.code}）"
+    if isinstance(error, (urllib.error.URLError, socket.timeout, TimeoutError)):
+        return "无法连接 AtomGit API，请检查网络后重试"
+    if isinstance(error, (json.JSONDecodeError, UnicodeDecodeError, ValueError)):
+        return "AtomGit API 响应格式无效"
+    return f"AtomGit API 请求失败（{type(error).__name__}）"
 
 
 def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
@@ -284,7 +332,7 @@ def _prepare_download_redirect(current_url: str, location: str, headers) -> tupl
         redirected_headers = {
             key: value
             for key, value in redirected_headers.items()
-            if key.lower() != "authorization"
+            if key.lower() not in ("authorization", "private-token")
         }
     return target_url, redirected_headers
 
@@ -301,11 +349,13 @@ class _AtomGitRedirectHandler(urllib.request.HTTPRedirectHandler):
         )
         if redirected is None:
             return None
-        if not any(
-            key.lower() == "authorization" for key in redirected_headers
-        ):
-            redirected.remove_header("Authorization")
-            redirected.unredirected_hdrs.pop("Authorization", None)
+        for header_name in ("Authorization", "Private-token"):
+            if not any(
+                key.lower() == header_name.lower()
+                for key in redirected_headers
+            ):
+                redirected.remove_header(header_name)
+                redirected.unredirected_hdrs.pop(header_name, None)
         return redirected
 
 
@@ -779,6 +829,30 @@ class HuggingFaceAPI:
             print("❌ 未找到登录凭证")
             return None
         return self._get_login_user_by_token(credentials['token'])
+
+    def list_repos(self):
+        """List repositories available to the stored AtomGit credential."""
+        try:
+            credentials = config.get_credentials()
+            if not credentials or not credentials.get('token'):
+                print("❌ 未找到登录凭证")
+                return None
+            payload = _atomgit_v5_get_json(
+                "/user/repos", credentials['token']
+            )
+            if isinstance(payload, dict):
+                for key in ("data", "repositories"):
+                    if isinstance(payload.get(key), list):
+                        payload = payload[key]
+                        break
+            if not isinstance(payload, list) or not all(
+                isinstance(repository, dict) for repository in payload
+            ):
+                raise ValueError("repository collection is malformed")
+            return payload
+        except Exception as error:
+            print(f"获取仓库列表失败: {_sanitized_v5_api_error(error)}")
+            return None
     
     def create_repo(self, 
                     repo_name: str,

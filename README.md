@@ -279,6 +279,14 @@ atomgit download-file your-username/your-dataset data/sample.csv \
 
 ### 4. 其他命令
 
+#### 列出当前用户可访问的仓库
+
+```bash
+atomgit repo list
+```
+
+该命令需要先登录，输出仓库 ID 和服务返回的可见性信息。
+
 #### 退出登录
 
 ```bash

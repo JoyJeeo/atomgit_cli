@@ -1,61 +1,62 @@
 # Current Issue Contract
 
-# Issue CLI-SINGLE-FILE-DOWNLOAD
+# Issue CLI-REPOSITORY-LIST
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `CLI-SINGLE-FILE-DOWNLOAD`
-- Title: `Expose safe single-file repository download in the CLI`
+- Local Issue: `CLI-REPOSITORY-LIST`
+- Title: `List repositories available to the authenticated user`
 - Type: `cli`, `feature`
 - Priority: `P2`
-- Branch: `codex/add-download-file-cli` (local only)
+- Branch: `codex/add-repo-list` (local only)
 - Base: `yuto`
-- Previous Issue: `ANONYMOUS-HF-TOKEN-ISOLATION`, delivered by `5203c13`
-  and merged by `13f493d`.
+- Previous Issue: `CLI-SINGLE-FILE-DOWNLOAD`, delivered by `6258822` and
+  merged by `d874747`.
 - Delivery mode: standing-authorized implementation, review, commit, local merge
   into `yuto`, and push only `yuto`; task branch remains local-only.
 
-## User Impact And Current Behavior
+## User Impact And API Contract
 
-The CLI can download only an entire repository, although the CLI-facing API
-already provides the same safe list/resolve implementation for one file. Users
-must currently write Python or download every file when they know the exact
-repository path.
+The CLI can act on a known repository ID but cannot discover repositories
+available to the logged-in user. AtomGit's official V5 API documents
+`GET https://api.atomgit.com/api/v5/user/repos`, authenticated by request header,
+with a JSON repository collection response.
 
-Expected behavior: `atomgit download-file REPO_ID FILENAME` downloads only the
-requested repository file, supports an explicit destination directory,
-model/dataset selection, default existing-file skip, and forced replacement.
+Expected behavior: `atomgit repo list` requires AtomGit login, requests the
+authorized repository collection without putting credentials in the URL, and
+prints stable repository IDs plus public/private visibility when present.
 
 ## Scope
 
-In scope: one root CLI command, repository and destination validation, forwarding
-to `api.download_file`, anonymous/private guidance consistent with whole-repo
-download, CLI integration tests, root/help coverage, and README/architecture
-documentation.
+In scope: a minimal authenticated AtomGit V5 JSON GET boundary, repository-list
+API method, `repo list` CLI command, robust parsing of documented array and
+defensive collection wrappers, concise output, sanitized errors, offline tests,
+and README/architecture documentation.
 
-Out of scope: SDK changes, checksum verification, resume, pruning, arbitrary
-revision selection, repository management, and changes to the existing transfer
-implementation.
+Out of scope: public-user discovery, organization aggregation, filters,
+server-side pagination options not documented for this endpoint, create/update/
+delete operations, SDK exposure, and access to any repository beyond the
+existing standing live authorization.
 
 ## Compatibility Requirements
 
-- Preserve current `atomgit download` behavior and all public Python signatures.
-- Reuse the safe target-path, credential-isolation, retry, and atomic replacement
-  behavior already enforced by `api.download_file`.
-- Preserve Python 3.8+ and locked dependency versions.
+- Preserve existing CLI/API behavior and Python 3.8+ syntax.
+- Use `https://api.atomgit.com/api/v5` and header authentication; tokens must
+  never appear in URLs, output, errors, or fixtures except clearly fake values.
+- Do not change locked HF/datasets dependencies.
 
 ## Acceptance Criteria
 
-- Root help advertises `download-file` and command help describes its arguments
-  and options.
-- Valid calls forward exact repository ID, filename, destination directory,
-  force flag, and repository type to `api.download_file`.
-- The default destination is the current directory and nested repository paths
-  retain their directories below it.
-- Invalid repository IDs and file destinations fail before API access.
-- API failure exits nonzero and anonymous failure provides login guidance.
+- `atomgit repo list` is advertised in help and rejects logged-out use before
+  network access.
+- The API sends one authenticated GET to `/api/v5/user/repos`, requests JSON,
+  applies a finite timeout, and rejects malformed/non-collection JSON.
+- CLI output handles empty results, standard `full_name`, owner/name fallback,
+  private boolean, visibility string, and missing optional fields.
+- HTTP/network/JSON failures exit nonzero with a concise sanitized message and
+  never expose the credential.
 - Focused and complete offline tests, compileall, and diff checks pass.
 - Independent review has no open P0/P1 findings.
 
@@ -63,39 +64,40 @@ implementation.
 
 - Authorized: local source/tests/docs/task metadata, task branch, conventional
   commit without `czx:` prefix, local merge into `yuto`, and push only `yuto`.
-- Authorized live testing remains limited to read/download operations against
-  `weixin_52273949/test_model` and `weixin_52273949/test_datasets`; no remote
-  mutation or token output is allowed. A small-file live CLI read may be used.
-- Human acceptance: standing acceptance granted for the approved ordered plan.
+- No live list call is authorized because this endpoint enumerates repositories
+  outside the two fixed test repositories. Official documentation and strict
+  offline HTTP contracts are the acceptance boundary for this Issue.
+- Human acceptance: standing acceptance granted for the ordered feature plan.
 
 ## Evidence And Closure
 
-- Implementation: root `download-file` command validates repository and local
-  directory, creates the destination, reports anonymous mode, and forwards the
-  exact file request to the existing safe `api.download_file` path. README and
-  architecture documentation now describe the command and its shared policy.
-- Regression-before-implementation: `python tests/test_cli_download_file.py`
-  failed because root help and command resolution had no `download-file` entry,
-  proving the missing CLI surface.
-- Focused offline tests: `python tests/test_cli_download_file.py`,
-  `python tests/test_cli_surface.py`, `python tests/test_download_contract.py`,
-  and `python tests/test_download_path_security.py` passed 15/15, 50/50, 45/45,
-  and 15/15 custom checks.
-- Complete offline suite: `python -m pytest -q` passed 45/45 isolated script
-  cases in 43.90 seconds in the `atomgit_cli` environment.
+- Official API evidence: AtomGit OpenAPI introduction documents the
+  `https://api.atomgit.com/api/v5` base and header token authentication; the
+  repository-list page documents `GET /api/v5/user/repos` with a 200 response.
+- Implementation: a bounded authenticated V5 JSON GET helper now backs
+  `HuggingFaceAPI.list_repos`; `atomgit repo list` formats direct and fallback
+  repository IDs plus visibility, while README and architecture document the
+  command and credential boundary. Cross-origin redirects strip both bearer and
+  V5 private-token headers.
+- Regression-before-implementation: `python tests/test_repo_list.py` failed 0/2
+  because neither the `repo list` command nor API method existed.
+- Focused offline tests: `python tests/test_repo_list.py`,
+  `python tests/test_download_redirect_security.py`,
+  `python tests/test_create_contract.py`, and `python tests/test_cli_surface.py`
+  passed 24/24, 9/9, 33/33, and 50/50 custom checks respectively.
+- Complete offline suite: `python -m pytest -q` passed 46/46 isolated script
+  cases in 41.51 seconds in the `atomgit_cli` environment.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Live read test: actual `python -m atomgit download-file` calls exited 0 and
-  created the requested files from only the authorized model and dataset test
-  repositories. Model `ignore_test/config.json` was 77 bytes and dataset
-  `sub/中文样本.csv` was 31 bytes; temporary local directories were removed.
-- Independent review: no findings. The new command delegates transfer and
-  filename containment to the already tested API, rejects invalid repositories
-  and non-directory destinations before remote access, preserves exact option
-  forwarding, and changes no existing interface. Offline and scoped live
-  evidence cover model, dataset, anonymous guidance, nested paths, failure
-  exits, and help text. Verdict: `APPROVED`.
-- DoD: implementation, focused regression, full suite, documentation, live
-  read-only evidence, compileall, and diff checks agree; no credential,
-  generated artifact, unrelated edit, or open P0/P1 finding is present.
+- Live tests: not run because `/user/repos` necessarily enumerates repositories
+  beyond the two fixed repositories authorized for live access.
+- Independent review: no findings. Official endpoint and authentication agree
+  with the implementation; credentials are absent from URLs and sanitized from
+  failures, cross-origin redirects remove both supported credential headers,
+  response parsing is bounded and strict, and existing repository creation
+  remains covered. The lack of live enumeration is an accepted authorization
+  boundary, not missing local evidence. Verdict: `APPROVED`.
+- DoD: Issue-scoped implementation, regression, redirect security coverage,
+  full suite, documentation, compileall, and diff checks agree; no real token,
+  generated artifact, unrelated change, or open P0/P1 finding is present.
 - Commit/merge/push: authorized; exact references will be reported from Git
   after execution.
