@@ -32,17 +32,19 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 
 `cli.upload` 依次执行：
 
-1. 校验 timeout、worker 数和 revision（非 `main` 直接退出 2）；
-2. 检查 `config.is_logged_in()`；
-3. 使用 `validate_repo_name` 校验 repo ID；
-4. 将 PATH 转为 `Path` 并区分文件或目录；
-5. 使用 `normalize_path_in_repo` 统一斜杠并拒绝 `..`；
-6. 使用 `parse_ignore_patterns` 拆分、去空和去重；
+1. 校验 timeout、worker 数、revision 和 worker/resumable 关系；
+2. 使用 `validate_repo_name` 校验 repo ID；
+3. 将 PATH 转为 `Path` 并区分文件或目录；
+4. 使用 `normalize_path_in_repo` 与 `parse_ignore_patterns` 规整参数；
+5. 根据文件/目录类型拒绝歧义选项组合；
+6. 检查 `config.is_logged_in()`；
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
-`--resumable` 用于文件时会警告并忽略。`--ignore` 用于单文件时会警告，但仍
-传给 API 层并触发回退上传路径。
+CLI 在认证和远端调用前拒绝歧义组合：单文件不接受 `--resumable` 或
+`--ignore`；`--num-workers` 必须与 `--resumable` 同用；resumable 目录不接受
+`--path-in-repo` 或 `--message`。这些用法错误统一以退出码 2 结束，不会
+进入 API 层。
 
 ## 3. 单文件上传
 
@@ -67,7 +69,7 @@ cli.upload
 以下情况退回 `upload_folder`：
 
 - 当前 HF 版本没有 `upload_file`；
-- 用户传入非空 ignore patterns。
+- API 调用方直接传入非空 ignore patterns（CLI 已拒绝单文件 `--ignore`）。
 
 回退路径为每次调用创建唯一系统临时目录，复制文件后上传，并在成功或失败时
 自动清理。临时内容只在 HF 调用期间存活，不会在当前工作目录创建共享目录。
@@ -113,8 +115,9 @@ CLI 中断、恢复、下载与 SHA-256 验证。
 
 HF large-folder 模式的其他限制：
 
-- 不支持 `path_in_repo`，CLI 只打印警告；
-- 不使用单一 commit message，会产生多次提交；
+- 不支持 `path_in_repo`，CLI 在远端调用前拒绝该组合；
+- 不支持用户指定的单一 commit message，CLI 在远端调用前拒绝
+  `--message`；服务过程可产生多次提交；
 - repo type 必填，CLI 未指定时补为 `model`；
 - 续传元数据由 HF 写入上传目录下的缓存位置。
 
@@ -131,7 +134,8 @@ SHA-256 均一致。
 
 上传、下载、建仓、SDK URL 和 dataset loading 共享同一个多层 ID 映射：
 `org/namespace/repo -> org-namespace/repo`。匿名公开读取已验证该映射；上传和
-创建的远程写结果仍需显式授权后验收。
+创建的远程写结果仍需授权后验收；当前持续授权仅限已提供的两个固定
+测试仓库。
 
 ## 8. 错误处理
 

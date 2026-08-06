@@ -17,7 +17,10 @@ the corresponding remote Issues are explicitly created.
 
 This summary describes `yuto` after local implementation, offline review, and
 the explicitly authorized 2026-08-04 AtomGit acceptance run. It does not grant
-standing permission for future remote writes, release, or Issue transitions.
+permission by itself for future remote writes, release, or Issue transitions.
+Separate maintainer authorization recorded on 2026-08-06 permits tests only on
+`weixin_52273949/test_model` and `weixin_52273949/test_datasets` without repeated
+approval; it grants no access to other repositories, deletion, or publication.
 
 - Completed with local regression/contract evidence: #001-#014, #018, and
   #020-#026. The development line includes strict HF contracts, SDK parity,
@@ -41,6 +44,14 @@ standing permission for future remote writes, release, or Issue transitions.
   public download sample instead.
 - Non-main revision is intentionally rejected rather than pending implicit
   support; it must not be re-enabled without new AtomGit service evidence.
+- The authorized 2026-08-05 to 2026-08-06 CLI hardening tranche is complete:
+  redirect credential isolation, download path/framing/type/skip/error safety,
+  stdin login, lazy atomic configuration, strict repo IDs and upload conflicts,
+  create preflight semantics, partial Git status, cached Git identity, and
+  collision-safe transfer temporaries all have focused regressions and
+  independent review. The final complete offline matrix passed 43/43 pytest
+  cases; no additional reproducible CLI implementation defect was found in the
+  closing consistency audit.
 
 ## Milestone A: v1.0.5-yuto Stability
 
