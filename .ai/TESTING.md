@@ -52,10 +52,18 @@ configuration access with clearly fake values.
 Live tests are opt-in and require explicit user authorization. They must use:
 
 - a dedicated test account and token supplied through an environment variable;
-- uniquely named disposable repositories;
+- uniquely named disposable repositories, or exact dedicated repositories named
+  by a scoped standing authorization;
 - no production or personal repositories;
 - explicit cleanup approval;
 - recorded command exit codes and remote verification.
+
+Maintainer standing authorization recorded on 2026-08-06 permits live tests
+without repeated approval only against
+`weixin_52273949/test_model` and
+`weixin_52273949/test_datasets`, using the already supplied test login. It does
+not authorize any other repository, deletion, release, or publication, and the
+token must never be printed or copied into test output.
 
 Live coverage should separately verify model and dataset creation, privacy,
 upload/download checksums, repository paths, ignore rules, revisions, resumable

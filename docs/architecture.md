@@ -154,19 +154,25 @@ atomgit download REPO
   -> validate_repo_name
   -> api.download_repo
   -> _normalize_repo_id
-  -> snapshot_download(local_dir, force_download, token-or-none)
+  -> _atomgit_list_repo_files（自动探测或使用 --repo-type）
+  -> 预先校验全部本地目标路径
+  -> 逐文件 resolve 下载
 ```
 
-CLI 不强制登录；有本地 token 时会直接传入，没有时尝试匿名下载。
+CLI 不强制登录；有本地 token 时会用于列表和文件请求，没有时尝试匿名下载。
+默认策略是跳过已经存在的目标文件且不校验其内容；`--force` 才重新下载并原子
+替换。标准 URL 与非 ASCII raw UTF-8 回退都在目标目录创建唯一临时文件，完整
+成功后替换目标，普通异常和重试失败会清理临时文件并保留原目标。
 
-整仓、单文件和 `load_dataset` 使用的数据集快照下载共享同一恢复策略：遇到响应体
-不完整、读取超时或连接中断时自动重试一次，以便复用 HF 本地缓存中的部分下载；
-认证、权限、仓库、文件或 revision 不存在等确定性错误不会重试。重试仍失败时，
-CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名 URL 或其查询参数。
+整仓和 CLI API 单文件下载在响应体不完整、读取超时或连接中断时从头自动
+重试一次；SDK 的 snapshot/file 下载和 `load_dataset` 则由 HF 缓存保留可恢复
+状态。认证、权限、仓库、文件或 revision 不存在等确定性错误不会重试。
+重试仍失败时，CLI 和 SDK 只返回脱敏后的错误类别，不包含远端 URL、签名
+URL 或其查询参数。
 
-`api.download_file` 不对 CLI 暴露，它先匿名调用 `hf_hub_download`，只有错误文本
-包含特定 403 特征时才回退到保存的 token。SDK 的 `download_file` 则直接使用显式
-或保存的 token，两者行为不完全一致。
+`api.download_file` 不对 CLI 命令树暴露；它与整仓下载一样先列文件、校验安全
+目标路径，再直连 resolve。SDK `download_file` 使用 HF `hf_hub_download`，因此缓存
+路径和异常类型与 CLI API 不同。
 
 ## 8. Python SDK
 

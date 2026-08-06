@@ -1,93 +1,99 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-STANDARD-PART-CLEANUP
+# Issue CLI-DOCUMENTATION-CONSISTENCY
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-STANDARD-PART-CLEANUP`
-- Title: `Failed standard URL downloads leave partial files behind`
-- Type: `bug`, `security`
+- Local Issue: `CLI-DOCUMENTATION-CONSISTENCY`
+- Title: `Maintainer documentation describes retired CLI behavior`
+- Type: `documentation`, `maintenance`
 - Priority: `P2`
-- Branch: `codex/cleanup-download-parts` (local only)
+- Branch: `codex/final-cli-consistency-audit` (local only)
 - Base: `yuto`
 - Delivery mode: local acceptance, authorized commit, local merge into `yuto`,
   and push only `yuto`; task branch remains local-only.
 
 ## Previous Issue (Closed)
 
-- `GIT-HELPER-CACHED-IDENTITY` was delivered by `5505766` and merged by
-  `ca3d7cc`.
+- `DOWNLOAD-STANDARD-PART-CLEANUP` was delivered by `b012a82` and merged by
+  `41cc174`.
 
 ## User Impact And Evidence
 
-The standard percent-encoded download path writes `<destination>.part` and only
-renames it on success, but it has no failure cleanup. Interrupted reads or
-exhausted retries can leave partial repository content on disk. Both standard
-and raw UTF-8 paths use the fixed name, which also collides with a legitimate
-repository file at that path.
+The final CLI audit found no new reproducible implementation defect, but three
+maintainer documents still describe behavior retired by completed Issues:
+architecture says repository download uses `snapshot_download`, upload analysis
+says invalid option combinations warn and continue, and testing guidance calls
+the now-strict resumable contract fake permissive. These statements can cause
+future changes and tests to target the wrong contract.
 
 ## Scope
 
-In scope: use a unique same-directory temporary file for each standard and raw
-UTF-8 attempt, clean it on every failure (including exhausted retry and pre-open
-failure), preserve existing destination and neighboring repository files until
-a complete successful replace, add offline regressions, and align architecture
-documentation.
+In scope: align architecture, upload analysis, testing guidance, and roadmap
+status with the verified current implementation and the maintainer's scoped
+standing live-test authorization; run documentation/source consistency
+searches, the complete offline suite, and live read/download acceptance against
+only the two supplied test repositories.
 
-Out of scope: resume support, checksum verification, raw transport framing,
-destination path policy, and changing the default existing-file skip behavior.
+Out of scope: new CLI/SDK behavior, any other remote repository, remote deletion,
+dependency/version changes, release artifacts, and new roadmap feature work.
 
 ## Acceptance Criteria
 
-- A mid-stream standard response failure leaves no temporary file from the
-  failed attempt.
-- Retry remains bounded and each attempt starts clean.
-- A failure before response open creates no temporary file.
-- An existing destination is preserved on failure.
-- A legitimate `<destination>.part` repository file is preserved on failure and
-  success across both transports.
-- Successful standard downloads still atomically replace the destination.
-- Focused/full offline tests, compileall, and `git diff --check` pass.
+- Download documentation describes list-files plus safe per-file resolve flow,
+  default existing-file skip, explicit force replacement, and unique temporary
+  cleanup.
+- Upload option conflicts are documented as preflight errors with exit code 2.
+- Testing guidance no longer reports the resolved permissive-fake risk and
+  reflects the current complete suite.
+- Roadmap status records the completed CLI hardening/audit tranche without
+  creating or transitioning remote Issues.
+- Authenticated live probes reach both authorized repositories; small-file
+  download, default skip, force replacement, neighboring-file preservation, and
+  whole-repository CLI skip behavior pass without remote mutation.
+- Full offline tests, compileall, `git diff --check`, and consistency searches
+  pass.
 
 ## Permissions And Acceptance
 
-- Authorized: local edits, tests, commits, local merge into `yuto`, and push
-  only `yuto`; no task-branch push.
-- Tests are offline with fake responses; no real token/config or remote service
-  is used.
+- Authorized: local documentation edits, tests, commits, local merge into
+  `yuto`, and push only `yuto`; no task-branch push.
+- Authorized live scope is limited to read/download tests against
+  `weixin_52273949/test_model` and `weixin_52273949/test_datasets` using the
+  already supplied login; no token value may be printed.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: standard and raw UTF-8 resolve transports now create a unique
-  0600 temporary file in the destination directory, close it before atomic
-  replacement, and remove it in every unsuccessful path. Fixed-name
-  `<destination>.part` files are no longer opened, truncated, or deleted.
-- Regression evidence: the original standard-path regression passed 6/8
-  assertions; interrupted reads left the fixed `.part` behind and pre-open
-  failures left an existing fragment untouched. The completed regression passes
-  11/11 assertions and additionally protects legitimate neighboring files. Raw
-  transport tests cover the same neighboring-file behavior on success and
-  truncated responses.
-- Focused offline command: `python -m pytest -q
-  tests/pytest_offline_scripts.py -k 'download_standard_cleanup or
-  download_contract or download_recovery or download_raw_integrity'` passed 4/4
-  pytest cases in the `atomgit_cli` environment. The standalone standard-path
-  script passed 11/11 assertions.
+- Documentation: architecture now describes list-files plus safe per-file
+  resolve downloads, default skip/force semantics, retry behavior, and CLI/SDK
+  differences. Upload analysis records all preflight option conflicts and API-
+  only fallback behavior. Testing and roadmap documents record the strict
+  dependency contracts, 43-case suite, completed hardening tranche, and exact
+  standing live-test boundary.
+- Consistency evidence: searches for the retired warning/ignore behavior,
+  permissive resumable fake, snapshot-based CLI flow, anonymous-first CLI API
+  file download, and per-run authorization wording returned no stale matches.
 - Complete offline command: `python -m pytest -q` passed 43/43 pytest cases in
-  41.10 seconds with local-loopback permission. An earlier sandboxed focused run
-  passed 3/4; its only failure was `PermissionError` while binding 127.0.0.1 in
-  the existing raw HTTP transport test, not an assertion failure.
+  45.00 seconds in the `atomgit_cli` environment with local-loopback permission.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Dependency compatibility: no Hugging Face or datasets call signature changed;
-  the locked dependency contract tests passed in the complete suite. The
-  `tempfile.NamedTemporaryFile` call uses the Python 3.8-compatible signature.
-- Documentation: architecture documentation describes unique same-directory
-  temporary files, atomic replacement, cleanup, and fixed-name collision safety.
-- Independent review: the first review found the same fixed-name collision in
-  the raw UTF-8 fallback (`REQUEST CHANGES`). The raw path and its regressions
-  were corrected; a fresh review found no open findings (`APPROVED`).
-- DoD/security: tests use fake responses, temporary HOME/directories, and local
-  loopback only. No real token/config was read and no remote service was called.
-  Residual risk: process termination that bypasses Python cleanup can leave a
-  uniquely named hidden temporary file; normal exceptions and retries clean it.
+- Live authentication/repository evidence: `python -m atomgit whoami` exited 0
+  as `weixin_52273949`; authenticated listings returned model 62 files and
+  dataset 14 files from only the two authorized repositories.
+- Live small-file evidence: model `ignore_test/config.json` and dataset
+  `sub/中文样本.csv` both passed initial download, default local-content skip,
+  forced remote-content replacement, neighboring `.part` preservation, and
+  unique-temporary cleanup. Observed SHA-256 prefixes were `789192e81c76` and
+  `19391604546c` respectively.
+- Live CLI evidence: actual `atomgit download` invocations exited 0 and skipped
+  62/62 model files and 14/14 dataset files pre-populated with sentinels; every
+  sentinel remained unchanged, so no large transfer or remote mutation occurred.
+- Dependency compatibility: no source or dependency changed; the locked HF and
+  datasets signature contracts passed in the complete suite.
+- Independent review: first review found contradictory fixed-repository and
+  no-remote wording (`REQUEST CHANGES`). The authorization exception and Issue
+  evidence were corrected; a fresh review found no open findings (`APPROVED`).
+- DoD/security: live commands did not print the token, used temporary local
+  directories, accessed no other repository, and performed no remote write,
+  deletion, release, or publication. No residual code risk was introduced by
+  this documentation-only Issue.
 - Commit/merge/push: authorized and pending.
