@@ -1,61 +1,98 @@
 # Current Issue Contract
 
-# Issue CONFIG-SHOW-GIT-STATUS
+# Issue GIT-HELPER-CACHED-IDENTITY
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `CONFIG-SHOW-GIT-STATUS`
-- Title: `config-show reports full Git integration when only one host is configured`
-- Type: `bug`, `cli`
-- Priority: `P2`
-- Branch: `codex/fix-config-show-helper-status` (local only)
+- Local Issue: `GIT-HELPER-CACHED-IDENTITY`
+- Title: `Git credential lookup depends on a live username API request`
+- Type: `security`, `bug`, `cli`
+- Priority: `P1`
+- Branch: `codex/cache-git-helper-identity` (local only)
 - Base: `yuto`
+- Delivery mode: local acceptance, authorized commit, local merge into `yuto`,
+  and push only `yuto`; task branch remains local-only.
 
 ## Previous Issue (Closed)
 
-- `CREATE-EXIST-OK` was delivered by `3dc1fb0` and merged by `028a832`.
+- `CONFIG-SHOW-GIT-STATUS` was delivered by `6537fba` and merged by `563a3fc`.
 
-## Evidence And Scope
+## User Impact And Evidence
 
-`config-show` queries two AtomGit credential-helper keys but reports enabled when
-either host contains the managed helper. It also uses `git config --get`, while
-login installs a multi-value reset/helper chain.
+The generated Git credential helper calls `https://atomgit.com/api/v5/user`
+for every Git credential `get`. A transient network/API failure therefore
+prevents Git from using an otherwise valid locally stored token and repeatedly
+sends the token to the identity endpoint.
 
-In scope: inspect all helper values for both supported hosts, report full,
-partial (including configured/missing hosts), missing, and inspection failure,
-without displaying helper command values or tokens.
+Current path: `login -> api.login -> Config.set_credentials ->
+setup_git_credentials -> generated helper -> live identity API on every get`.
 
-Out of scope: repairing configuration, changing login/logout helper state, and
-checking unrelated Git hosts.
+Expected path: the already verified login name is persisted as non-sensitive
+configuration and the helper returns cached username plus token without network
+I/O.
+
+## Scope
+
+In scope: persist the verified login name with the token, generate an offline
+helper that uses only local configuration, keep `get_credentials()` token-only,
+clear cached username on logout, add isolated regressions, and update user/
+architecture documentation.
+
+Out of scope: token encryption, changing Git helper registration/rollback,
+supporting arbitrary hosts, and automatic migration without re-login.
 
 ## Acceptance Criteria
 
-- Full status requires both AtomGit hosts to contain the managed helper.
-- Partial status names configured and missing supported hosts.
-- Missing and command-failure states remain distinct.
-- No helper command or token value is printed.
-- Focused/full tests and required checks pass.
+- Successful login atomically stores token and verified username.
+- Generated helper performs no HTTP/network import or request.
+- Supported-host `get` returns cached username/token; missing username returns
+  no credentials without exposing token.
+- Unrelated hosts and store/erase behavior remain unchanged.
+- `get_credentials()` continues returning only the token compatibility shape.
+- Existing installations migrate by re-running `atomgit login`, documented.
+- Focused/full offline tests, compileall, and `git diff --check` pass.
 
-## Permissions And Delivery
+## Permissions And Acceptance
 
-- Authorized: local edits/commits, local merge into `yuto`, and push only
-  `yuto`; task branches remain local-only.
-- Tests isolate and mock Git configuration; user Git state is not modified.
+- Authorized: local edits, tests, commits, local merge into `yuto`, and push
+  only `yuto`; no task-branch push.
+- Git tests must use isolated HOME/global config and must not mutate real user
+  Git configuration.
+- No live AtomGit test is required; no real token or config content may be read.
 - Human acceptance: standing acceptance granted for the approved full plan.
-- Implementation: config-show now reads all global helper values through the
-  shared Git utility for both supported hosts. It reports dynamic full counts,
-  partial configured/missing host lists, missing, or inspection failure without
-  printing values. README documents the status meanings.
-- Regression evidence: the extended CLI regression initially passed 45/48;
-  full-format and both partial-state assertions failed because either host was
-  treated as full integration.
-- Focused tests: CLI surface passed 48/48 assertions and 3/3 related pytest
-  cases passed.
-- Complete offline suite: 42/42 passed in 35.26 seconds.
+- Implementation: `Config.set_credentials(token, username=...)` atomically
+  persists the verified non-sensitive login while preserving the token-only
+  `get_credentials()` shape. Login forwards its verified `login`. The generated
+  helper now imports only stdlib JSON/path modules, reads local username/token,
+  and performs no HTTP request. Missing or control-character-bearing values
+  return no credential; logout already removes both username and token.
+- Regression evidence: before implementation, 1/4 extended helper assertions
+  passed and login configuration rejected the username parameter. The old
+  helper source contained urllib, the identity API URL, and returned nothing
+  offline despite a valid cached token.
+- Focused offline command: `python -m pytest -q
+  tests/pytest_offline_scripts.py -k 'git_helper_identity or login_config or
+  git_credentials_isolation or config_permissions or cli_surface'` passed 5/5
+  pytest cases in the `atomgit_cli` environment.
+- Complete offline command: `python -m pytest -q` passed 42/42 pytest cases in
+  40.02 seconds with local-loopback permission. The first sandboxed run passed
+  40/42; its only failures were `PermissionError` while binding 127.0.0.1 in
+  existing HTTP transport tests, not assertion failures.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Independent review: no open findings (`APPROVED`). Tests mock all Git reads;
-  no user helper configuration was modified.
+- Dependency compatibility: no HF call signature changed; existing locked
+  signature contract tests passed in the full suite. Python 3.8-compatible
+  syntax is retained.
+- Documentation: README, architecture, and FAQ describe cached identity,
+  offline helper lookup, and the required one-time re-login migration.
+- Independent review: first review found P2 credential-protocol injection via
+  CR/LF in cached values (`REQUEST CHANGES`). Persistence and helper output now
+  reject all control characters with regressions. Fresh review found no open
+  findings (`APPROVED`).
+- DoD/security: tests use isolated HOME/global Git config and fake credentials;
+  no real token/config was read, no real Git helper was changed, and no remote
+  test was run. Residual migration risk is explicit: an old config without
+  username yields no Git credentials until the user logs in again.
 - Human acceptance: standing acceptance granted for the approved full plan.
 - Commit/merge/push: authorized and pending.

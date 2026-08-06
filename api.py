@@ -710,7 +710,7 @@ class HuggingFaceAPI:
             print("❌ 获取用户信息失败")
             return False
         try:
-            config.set_credentials(token)
+            config.set_credentials(token, username=user_info['login'])
         except Exception:
             print("❌ 登录凭证保存失败，请检查配置目录权限后重试")
             return False

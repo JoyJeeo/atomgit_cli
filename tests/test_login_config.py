@@ -31,12 +31,36 @@ def main():
         with patch("pathlib.Path.home", return_value=home):
             config = config_mod.Config()
             check("fresh config is logged out", not config.is_logged_in())
-            config.set_credentials("fake-persisted-token")
+            config.set_credentials(
+                "fake-persisted-token", username="offline-persisted-user"
+            )
             reloaded = config_mod.Config()
             check(
-                "saved token reloads",
+                "saved token reloads with compatibility shape",
                 reloaded.get_credentials() == {"token": "fake-persisted-token"},
             )
+            check(
+                "verified username reloads separately",
+                reloaded.get_value("username") == "offline-persisted-user",
+            )
+            for label, token, username in (
+                (
+                    "credential token control characters rejected",
+                    "fake-token\npassword=injected",
+                    "offline-user",
+                ),
+                (
+                    "credential username control characters rejected",
+                    "fake-token-never-print",
+                    "offline-user\npassword=injected",
+                ),
+            ):
+                try:
+                    reloaded.set_credentials(token, username=username)
+                    rejected = False
+                except ValueError:
+                    rejected = True
+                check(label, rejected)
             reloaded.clear_credentials()
             check("logout state persists", not config_mod.Config().is_logged_in())
 
@@ -60,25 +84,30 @@ def main():
 
     api = api_mod.HuggingFaceAPI()
     original_set = api_mod.config.set_credentials
-    saved_tokens = []
-    api_mod.config.set_credentials = saved_tokens.append
+    saved_credentials = []
+
+    def save_credentials(token, username=None):
+        saved_credentials.append((token, username))
+
+    api_mod.config.set_credentials = save_credentials
     try:
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             short_result = api.login("short")
-        check("short token rejected", short_result is False and not saved_tokens)
+        check("short token rejected", short_result is False and not saved_credentials)
 
         api._get_login_user_by_token = lambda token: None
         with contextlib.redirect_stdout(output):
             identity_result = api.login("fake-token-long-enough")
-        check("identity failure is not persisted", identity_result is False and not saved_tokens)
+        check("identity failure is not persisted", identity_result is False and not saved_credentials)
 
         api._get_login_user_by_token = lambda token: {"login": "offline-user"}
         with contextlib.redirect_stdout(output):
             valid_result = api.login("fake-token-long-enough")
         check(
-            "verified token is persisted once",
-            valid_result is True and saved_tokens == ["fake-token-long-enough"],
+            "verified token and username are persisted once",
+            valid_result is True
+            and saved_credentials == [("fake-token-long-enough", "offline-user")],
         )
         check("token is absent from login output", "fake-token-long-enough" not in output.getvalue())
     finally:

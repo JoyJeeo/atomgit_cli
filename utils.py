@@ -431,38 +431,19 @@ def setup_git_credentials(token: str) -> bool:
 # -*- coding: utf-8 -*-
 """
 AtomGit Git Credential Helper
-自动提供保存的AtomGit token用于Git认证，并从API获取真实用户名
+使用登录时验证并保存的用户名和token提供Git认证
 """
 
 import sys
 import json
-import urllib.request
-import urllib.error
 from pathlib import Path
 
-def get_atomgit_username(token):
-    """通过AtomGit API获取用户名"""
-    try:
-        # 调用AtomGit API获取用户信息
-        api_url = 'https://atomgit.com/api/v5/user'
-        req = urllib.request.Request(
-            api_url,
-            headers={
-                'Authorization': token,
-                'User-Agent': 'atomgit-cli',
-                'Accept': 'application/json'
-            }
-        )
-        
-        with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode('utf-8'))
-                login = data.get('login')
-                if login:
-                    return login
-    except Exception:
-        return None
-    return None
+def is_safe_credential_value(value):
+    return (
+        isinstance(value, str)
+        and bool(value)
+        and not any(ord(character) < 32 or ord(character) == 127 for character in value)
+    )
 
 def main():
     operation = sys.argv[1] if len(sys.argv) > 1 else 'get'
@@ -488,13 +469,11 @@ def main():
                         config = json.load(f)
                     
                     token = config.get('token')
-                    if token:
-                        # 获取真实的AtomGit用户名
-                        username = get_atomgit_username(token)
-                        if username:
-                            print(f'username={username}')
-                            print(f'password={token}')
-                            return
+                    username = config.get('username')
+                    if is_safe_credential_value(token) and is_safe_credential_value(username):
+                        print(f'username={username}')
+                        print(f'password={token}')
+                        return
                 except Exception:
                     pass
     
