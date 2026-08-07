@@ -384,7 +384,8 @@ def main():
                 upload_directory_result.exit_code == 0
                 and directory_call[1] == upload_directory
                 and directory_call[3]["ignore_patterns"] == ["*.tmp"]
-                and directory_call[3]["repo_type"] == "dataset",
+                and directory_call[3]["repo_type"] == "dataset"
+                and directory_call[3]["resumable"] is True,
                 f"exit={upload_directory_result.exit_code}",
             )
 

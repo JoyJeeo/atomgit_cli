@@ -15,6 +15,7 @@ from huggingface_hub import (
     upload_folder,
 )
 from huggingface_hub.file_download import http_get
+from huggingface_hub.utils import filter_repo_objects
 
 
 results = []
@@ -151,6 +152,12 @@ def main():
                 "ignore_patterns": ["*.tmp"],
                 "num_workers": 2,
             },
+        ),
+        (
+            "upload projection filtering contract",
+            filter_repo_objects,
+            (["a.txt", "logs/a.txt"],),
+            {"ignore_patterns": ["logs/"], "key": lambda item: item},
         ),
     ]
 

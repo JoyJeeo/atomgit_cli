@@ -230,7 +230,8 @@ EXPECTED_PUBLIC_SCHEMA = {
             _option(
                 "resumable",
                 "--resumable",
-                default=False,
+                "--no-resumable",
+                default=None,
                 parameter_type=("bool",),
                 is_flag=True,
             ),

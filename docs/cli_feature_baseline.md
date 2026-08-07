@@ -47,12 +47,15 @@ atomgit upload PATH --repo-id REPO [OPTIONS]
 - `--repo-type/-r model|dataset` 指定业务类型；
 - `--revision` 上传到已存在的 revision；
 - `--ignore/-i` 为目录上传传递忽略模式；
-- `--resumable` 使用 large-folder 断点续传，`--num-workers` 控制 worker 数；
+- 目录默认使用 large-folder 断点续传，`--resumable/--no-resumable` 可显式选择，
+  `--num-workers` 控制 worker 数；
 - 参数冲突、无效路径、符号链接和缺少登录凭证会在上传前失败；
 - 上传超时和进度条的进程级状态在成功与失败后恢复。
 
 单文件默认直接读取原文件，不创建完整副本；必要的兼容回退使用唯一临时目录。
-resumable 模式不支持 `--path-in-repo` 或 `--message`，CLI 会在远端调用前拒绝。
+resumable 与 `--path-in-repo` 组合使用稳定的私有缓存投影并保留 HF 元数据。
+large-folder 不支持单一提交说明，因此未显式选择模式的 `--message` 使用普通上传；
+显式 `--resumable --message` 会在远端调用前拒绝。
 
 ## 下载
 

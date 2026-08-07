@@ -75,6 +75,7 @@ try:
         are_progress_bars_disabled,
         disable_progress_bars,
         enable_progress_bars,
+        filter_repo_objects,
     )
     try:
         from huggingface_hub.utils.tqdm import progress_bar_states
@@ -91,6 +92,9 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
 
     def disable_progress_bars(*args, **kwargs):
         pass
+
+    def filter_repo_objects(items, *, ignore_patterns=None, key=None, **kwargs):
+        return items
 
 
 def _set_progress_bar(enabled: bool) -> None:
@@ -1723,6 +1727,217 @@ def _run_resumable_upload(token, kwargs, result_queue):
         result_queue.put((False, (type(exc).__name__, str(exc))))
 
 
+class ResumableProjectionError(ValueError):
+    """A local resumable projection cannot be prepared safely."""
+
+
+def _resumable_projection_cache_root() -> Path:
+    """Return the private cache for stable path-in-repo upload projections."""
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
+    root = hf_home / "upload-projections"
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir():
+        raise ResumableProjectionError("断点续传投影缓存目录不安全")
+    os.chmod(root, 0o700)
+    return root
+
+
+def _ensure_projection_directory(path: Path, projection_root: Path) -> None:
+    """Create an internal projection directory without following symlinks."""
+    relative = path.relative_to(projection_root)
+    current = projection_root
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise ResumableProjectionError("断点续传投影缓存包含符号链接")
+        if current.exists() and not current.is_dir():
+            current.unlink()
+        current.mkdir(mode=0o700, exist_ok=True)
+
+
+def _source_projection_files(source: Path):
+    """Yield regular source files while excluding HF's local resume metadata."""
+    for root_name, directory_names, filenames in os.walk(
+        str(source), topdown=True, followlinks=False
+    ):
+        root = Path(root_name)
+        relative_root = root.relative_to(source)
+        if tuple(part.casefold() for part in relative_root.parts[:2]) == (
+            ".cache", "huggingface"
+        ):
+            directory_names[:] = []
+            continue
+
+        retained_directories = []
+        for name in directory_names:
+            candidate = root / name
+            if candidate.is_symlink():
+                raise ValueError("上传路径包含符号链接，已拒绝上传")
+            relative = candidate.relative_to(source)
+            if tuple(part.casefold() for part in relative.parts[:2]) != (
+                ".cache", "huggingface"
+            ):
+                retained_directories.append(name)
+        directory_names[:] = retained_directories
+
+        for name in filenames:
+            candidate = root / name
+            if candidate.is_symlink():
+                raise ValueError("上传路径包含符号链接，已拒绝上传")
+            try:
+                file_stat = candidate.stat()
+            except OSError as error:
+                raise ValueError("无法读取上传目录，已拒绝上传") from error
+            if stat.S_ISREG(file_stat.st_mode):
+                yield candidate.relative_to(source), candidate, file_stat
+
+
+def _projection_file_is_current(
+    source: Path, destination: Path, source_stat
+) -> bool:
+    if destination.is_symlink() or not destination.is_file():
+        return False
+    try:
+        if os.path.samefile(source, destination):
+            return True
+        destination_stat = destination.stat()
+    except OSError:
+        return False
+    return (
+        destination_stat.st_size == source_stat.st_size
+        and destination_stat.st_mtime_ns == source_stat.st_mtime_ns
+    )
+
+
+def _is_projection_hf_metadata(path: Path, projection: Path) -> bool:
+    relative = path.relative_to(projection)
+    return tuple(part.casefold() for part in relative.parts[:2]) == (
+        ".cache", "huggingface"
+    )
+
+
+def _sync_resumable_projection(
+    source: Path,
+    projection: Path,
+    prefix: str = None,
+    ignore_patterns=None,
+) -> None:
+    """Mirror source files below prefix while retaining HF metadata at root."""
+    payload_root = (
+        projection.joinpath(*prefix.split("/")) if prefix else projection
+    )
+    _ensure_projection_directory(payload_root, projection)
+    desired_paths = set()
+
+    source_files = filter_repo_objects(
+        _source_projection_files(source),
+        ignore_patterns=ignore_patterns,
+        key=lambda item: item[0].as_posix(),
+    )
+    for relative, source_file, source_stat in source_files:
+        desired_paths.add(relative)
+        destination = payload_root / relative
+        if _is_projection_hf_metadata(destination, projection):
+            raise ResumableProjectionError(
+                "上传内容与 HF 断点续传元数据路径冲突，请使用 --no-resumable"
+            )
+        _ensure_projection_directory(destination.parent, projection)
+        if destination.is_symlink():
+            raise ResumableProjectionError("断点续传投影缓存包含符号链接")
+        if destination.is_dir():
+            shutil.rmtree(destination)
+        elif _projection_file_is_current(source_file, destination, source_stat):
+            continue
+        elif destination.exists():
+            destination.unlink()
+
+        try:
+            os.link(source_file, destination)
+        except OSError:
+            shutil.copy2(source_file, destination)
+
+    for root_name, directory_names, filenames in os.walk(
+        str(payload_root), topdown=False, followlinks=False
+    ):
+        root = Path(root_name)
+        for name in filenames:
+            candidate = root / name
+            if candidate.is_symlink():
+                raise ResumableProjectionError("断点续传投影缓存包含符号链接")
+            relative = candidate.relative_to(payload_root)
+            if _is_projection_hf_metadata(candidate, projection):
+                continue
+            if relative not in desired_paths:
+                candidate.unlink()
+        for name in directory_names:
+            candidate = root / name
+            if candidate.is_symlink():
+                raise ResumableProjectionError("断点续传投影缓存包含符号链接")
+            relative = candidate.relative_to(payload_root)
+            if _is_projection_hf_metadata(candidate, projection):
+                continue
+            try:
+                candidate.rmdir()
+            except OSError:
+                pass
+
+
+def _prepare_resumable_upload_projection(
+    source: Path,
+    repo_id: str,
+    repo_type: str,
+    revision: str,
+    path_in_repo: str = None,
+    ignore_patterns=None,
+) -> Path:
+    """Build or refresh one stable large-folder projection for a remote prefix."""
+    parts = path_in_repo.split("/") if path_in_repo else []
+    folded_parts = [part.casefold() for part in parts]
+    if ".git" in folded_parts or any(
+        folded_parts[index:index + 2] == [".cache", "huggingface"]
+        for index in range(len(folded_parts) - 1)
+    ):
+        raise ResumableProjectionError(
+            "断点续传模式不能上传到 HF 保留路径，请使用 --no-resumable"
+        )
+
+    source = source.expanduser().resolve(strict=True)
+    cache_root = _resumable_projection_cache_root()
+    try:
+        source.relative_to(cache_root)
+    except ValueError:
+        pass
+    else:
+        raise ResumableProjectionError("不能将断点续传投影缓存作为上传源")
+
+    identity = "\0".join(
+        (
+            _atomgit_hf_endpoint(),
+            str(source),
+            repo_id,
+            repo_type,
+            revision or "main",
+            path_in_repo or "",
+        )
+    )
+    projection = cache_root / hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    _ensure_projection_directory(projection, cache_root)
+    os.chmod(projection, 0o700)
+    _sync_resumable_projection(
+        source, projection, path_in_repo, ignore_patterns=ignore_patterns
+    )
+    return projection
+
+
+def _prefix_resumable_ignore_patterns(path_in_repo: str, ignore_patterns):
+    """Apply source-relative ignore patterns to a projected remote prefix."""
+    if not path_in_repo or not ignore_patterns:
+        return ignore_patterns
+    return [
+        f"{path_in_repo}/{pattern.lstrip('/')}" for pattern in ignore_patterns
+    ]
+
+
 def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     """把 HF Hub 上传异常归类为 (error_type, hint) 二元组，供上层给出语义化提示。
 
@@ -1781,6 +1996,9 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     # 受限仓库（文本特征兜底：仅限明确的 gated 语义）
     if gated_markers:
         return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
+
+    if isinstance(e, ResumableProjectionError):
+        return "本地投影失败", msg
 
     # 请求参数错误
     if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
@@ -2314,10 +2532,11 @@ class HuggingFaceAPI:
             resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF
                 ``upload_large_folder``：进程级元数据写入目录下
                 ``.cache/.huggingface/``，中断后再次执行可自动续传；适合
-                大目录。注意该模式下的限制（HF 既定）：
-                (1) ``path_in_repo`` 不生效（需本地自行组织目录结构）；
-                (2) ``message`` / ``commit_message`` 不生效（会产生多次提交）；
-                (3) ``repo_type`` 必须有值（HF 要求），为空时默认 ``model``。
+                大目录。CLI 使用按上传身份隔离的私有持久投影；
+                ``path_in_repo`` 非空时将源目录内容放到对应远端前缀下，同时
+                保留 HF 元数据。该模式不支持单一
+                ``message`` / ``commit_message``（会产生多次提交），且 HF
+                要求 ``repo_type`` 必填，为空时默认 ``model``。
             num_workers: 仅 ``resumable=True`` 生效，并发 worker 数；为空时
                 由 HF 默认决定。
         """
@@ -2357,21 +2576,28 @@ class HuggingFaceAPI:
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
+                    normalized_repo_id = self._normalize_repo_id(repo_id)
+                    upload_root = _prepare_resumable_upload_projection(
+                        dir_path,
+                        normalized_repo_id,
+                        eff_repo_type,
+                        revision,
+                        pipr,
+                        ignore_patterns,
+                    )
                     lf_kwargs = dict(
-                        repo_id=self._normalize_repo_id(repo_id),
-                        folder_path=str(dir_path),
+                        repo_id=normalized_repo_id,
+                        folder_path=str(upload_root),
                         repo_type=eff_repo_type,
                     )
                     if revision is not None:
                         lf_kwargs['revision'] = revision
                     if ignore_patterns:
-                        lf_kwargs['ignore_patterns'] = ignore_patterns
+                        lf_kwargs['ignore_patterns'] = (
+                            _prefix_resumable_ignore_patterns(pipr, ignore_patterns)
+                        )
                     if num_workers is not None:
                         lf_kwargs['num_workers'] = num_workers
-                    if pipr:
-                        # upload_large_folder 不支持 path_in_repo，显式提示
-                        print("⚠ 注意：resumable 模式不支持 path_in_repo，"
-                              "如需子目录请本地自行组织目录结构")
                     # 在隔离进程中运行，超时后可终止 HF 内部 worker，避免
                     # upload_large_folder 阻塞 CLI 或错误返回成功。
                     methods = multiprocessing.get_all_start_methods()

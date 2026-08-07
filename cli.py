@@ -302,11 +302,11 @@ def create_branch(repo_id, branch_name, source):
 @click.option('--ignore', '-i', 'ignore', default=None,
               help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
                    '仅对目录上传有意义')
-@click.option('--resumable', is_flag=True, default=False,
-              help='启用断点续传/分块上传模式（仅目录上传有效，走 HF upload_large_folder，'
-                   '中断后可自动续传；不能与 --path-in-repo 或 --message 同用）')
+@click.option('--resumable/--no-resumable', default=None,
+              help='目录上传默认启用断点续传/分块模式；--no-resumable 改用普通上传。'
+                   '--resumable 不能与 --message 同用')
 @click.option('--num-workers', 'num_workers', default=None, type=int,
-              help='断点续传模式的并发 worker 数（仅 --resumable 生效）')
+              help='断点续传模式的并发 worker 数（目录默认模式下可直接使用）')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
     """上传文件或目录到仓库"""
     if timeout_sec <= 0:
@@ -317,9 +317,6 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
         sys.exit(2)
     if num_workers is not None and num_workers <= 0:
         print_error("并发 worker 数必须大于 0")
-        sys.exit(2)
-    if num_workers is not None and not resumable:
-        print_error("--num-workers 仅能与 --resumable 同时使用")
         sys.exit(2)
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -344,15 +341,23 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
     ignore_patterns = parse_ignore_patterns(ignore)
 
     if path.is_file():
+        resumable = False if resumable is None else resumable
         if resumable:
             print_error("--resumable 仅支持目录上传")
+            sys.exit(2)
+        if num_workers is not None:
+            print_error("--num-workers 仅支持断点续传目录上传")
             sys.exit(2)
         if ignore_patterns:
             print_error("--ignore 仅支持目录上传")
             sys.exit(2)
     elif path.is_dir():
-        if resumable and pipr:
-            print_error("--resumable 不支持 --path-in-repo")
+        if resumable is None:
+            # A commit message requires HF upload_folder. Otherwise directories
+            # automatically use the resilient large-folder uploader.
+            resumable = not bool(message)
+        if num_workers is not None and not resumable:
+            print_error("--num-workers 仅支持断点续传目录上传")
             sys.exit(2)
         if resumable and message:
             print_error("--resumable 不支持 --message")

@@ -172,8 +172,9 @@ atomgit upload PATH
        -> 默认 hf upload_file（直接读取原文件）
        -> 传 ignore 或旧 HF 无 upload_file 时：临时目录 + upload_folder
   -> 目录
-       -> 普通模式：upload_folder
-       -> resumable：HfApi.upload_large_folder
+       -> 默认 resumable：稳定私有投影 + HfApi.upload_large_folder
+       -> path-in-repo：源内容投影到远端前缀
+       -> --no-resumable 或自动兼容 message：upload_folder
 ```
 
 符号链接检查先于凭证读取、HF 上传调用和 resumable worker 创建。普通、失效、
@@ -188,7 +189,10 @@ atomgit upload PATH
 
 resumable 通过 `HfApi(token=...)` 认证。私有 model 和 dataset 均已使用真实
 399,300,506 字节文件验证中断、恢复和最终 SHA-256；dataset 在保留用户侧业务
-类型的同时使用 AtomGit 可用的共享 model 传输路由。
+类型的同时使用 AtomGit 可用的共享 model 传输路由。锁定版 HF 不支持在
+large-folder 方法上传入 `path_in_repo`，因此 CLI 以源目录、规范化仓库、revision
+和前缀为身份建立稳定缓存投影；所有 resumable 上传使用该投影隔离 HF 元数据，
+带前缀时源内容位于对应投影子目录，文件同步优先使用硬链接。
 
 ## 7. 下载
 

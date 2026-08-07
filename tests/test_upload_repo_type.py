@@ -107,7 +107,7 @@ def main():
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub),
                                     "--repo-id", "user/repo",
-                                    "--repo-type", "dataset"])
+                                    "--repo-type", "dataset", "--no-resumable"])
             check("T4 目录-dataset exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T4 目录 dataset 映射为 model 传输路由",

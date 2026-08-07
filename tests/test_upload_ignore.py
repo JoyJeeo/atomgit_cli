@@ -88,7 +88,8 @@ def main():
         with runner.isolated_filesystem():
             # --- T1: 目录上传，不指定 --ignore → 不传 ignore_patterns ---
             captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo"])
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--no-resumable"])
             check("T1 目录-默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T1 目录-默认不传 ignore_patterns",
@@ -98,7 +99,7 @@ def main():
             # --- T2: 目录上传，--ignore 单模式 *.tmp ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--ignore", "*.tmp"])
+                                    "--ignore", "*.tmp", "--no-resumable"])
             check("T2 目录-单模式 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T2 ignore_patterns=['*.tmp']",
@@ -108,7 +109,8 @@ def main():
             # --- T3: 目录上传，--ignore 多模式（逗号分隔+空白） ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--ignore", " *.tmp , logs/ , .DS_Store "])
+                                    "--ignore", " *.tmp , logs/ , .DS_Store ",
+                                    "--no-resumable"])
             check("T3 目录-多模式 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T3 ignore_patterns 规整为 ['*.tmp','logs/','.DS_Store']",
@@ -118,7 +120,7 @@ def main():
             # --- T4: -i 短选项别名 ---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "-i", "*.tmp"])
+                                    "-i", "*.tmp", "--no-resumable"])
             check("T4 -i短选项 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T4 -i 等价 --ignore",
@@ -130,7 +132,7 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--ignore", "*.tmp,*.log",
                                     "--path-in-repo", "weights/",
-                                    "--repo-type", "model"])
+                                    "--repo-type", "model", "--no-resumable"])
             check("T5 组合 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T5 ignore_patterns=['*.tmp','*.log']",

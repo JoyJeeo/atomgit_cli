@@ -76,11 +76,15 @@ and must not report creation or upload success.
 ## Upload Paths
 
 - Single file: prefer HF `upload_file` with a full remote filename.
-- Directory: use HF `upload_folder` with a normalized repository prefix.
-- Large directory: use `HfApi.upload_large_folder`; authenticate through the
-  `HfApi` instance according to the locked library signature. Logical dataset
-  resumable uploads use the same verified AtomGit model compatibility route as
-  dataset creation and ordinary transfer.
+- Directory: the CLI defaults to `HfApi.upload_large_folder`; authenticate
+  through the `HfApi` instance according to the locked library signature.
+  Every resumable upload uses a stable private projection keyed by source/
+  repository/revision/prefix so HF metadata cannot drift across destinations.
+  Because HF 1.1.7 has no large-folder `path_in_repo` argument, requested source
+  content is placed below that prefix in the projection. Explicit ordinary mode
+  uses `upload_folder` with the normalized repository prefix. Logical
+  dataset resumable uploads use the same verified AtomGit model compatibility
+  route as dataset creation and ordinary transfer.
 - Temporary directories must remain alive until the dependent HF call returns
   and must be cleaned in `finally` or a context manager.
 
