@@ -20,8 +20,8 @@
 
 token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
 隔离、URL 重定向、路径穿越、HTTP 响应完整性、临时文件清理和 wheel 安装均有
-隔离离线测试。2026-08-06 的完整矩阵为 43 个 pytest case（自执行脚本内部可包含
-多个聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
+隔离离线测试。当前完整矩阵包含 62 个 pytest case（自执行脚本内部可包含多个
+聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
 验收证据。维护者已授权两个固定测试仓库可直接重跑连线测试；其他仓库或
 操作仍需单独授权。
 
@@ -39,11 +39,14 @@ python -m pip install -r requirements-dev.txt
 
 ## 运行现有测试
 
-标准完整离线命令：
+DoD 强制使用的完整离线基线命令：
 
 ```bash
-python -m pytest
+python tests/run_cli_baseline.py
 ```
+
+该入口使用当前 conda Python 运行完整隔离 pytest 矩阵。需要直接诊断 pytest
+收集器时仍可运行 `python -m pytest`，两者覆盖相同的离线脚本集合。
 
 需要诊断单个旧脚本时，仍可直接运行并以退出码为准：
 
@@ -75,9 +78,16 @@ git diff --check
 必须分别覆盖。`tests/test_cli_surface.py` 还会枚举根命令公开的全部子命令，验证
 login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支；所有依赖
 均使用 fake，不访问真实 HOME、Git 配置或网络。
-`tests/test_cli_feature_baseline.py` 集中锁定全部现有命令路径、公开参数及短选项
-别名、帮助页和每个叶子命令的最小成功分派；测试只要求现有能力继续存在，不会因
-后续增加新命令而失败。
+`tests/cli_baseline_contract.py` 精确锁定根命令、命令组、叶子命令以及每个参数的
+顺序、类型、必填性、默认值、flag 语义、Choice 值和长短选项，并登记每个叶子
+命令的成功分派及全部离线测试脚本。`tests/test_cli_baseline_guard.py` 会主动证明
+未登记的新命令、新参数、新测试、失效登记、遗漏分派及不可执行的空测试脚本均会
+让基线失败。`tests/test_cli_feature_baseline.py` 负责执行精确接口和最小成功分派。
+
+新增功能时必须增加或扩展专项自执行测试；新增公开 CLI 接口时必须同步更新精确
+schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。回归失败必须修复
+开发代码并重跑完整门禁，不得为了通过而删除或放宽已有断言。只有当前 Issue 明确
+记录维护者批准的兼容性破坏时，才允许同步修改旧基线契约。
 `tests/test_login_error_semantics.py` 进一步验证登录身份接口的 401、403、429、
 5xx、网络、超时和畸形响应分类，且 token 与原始异常文本不会进入输出。
 `tests/test_login_response_bound.py` 验证身份响应最多读取 1 MiB 加 1 字节，并在
