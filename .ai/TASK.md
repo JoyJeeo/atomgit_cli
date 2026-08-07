@@ -2,7 +2,7 @@
 
 # Issue LOGIN-RESPONSE-BOUND
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -55,7 +55,7 @@ body, exception details, or token.
 - [x] Existing login behavior and credential/error redaction remain compatible.
 - [x] Complete offline tests, compileall, pip, and diff checks pass.
 - [x] Scope, credentials, documentation, and independent review pass.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -83,3 +83,7 @@ body, exception details, or token.
   needed because the defect and the byte boundary are entirely client-local.
 - Human acceptance is covered by the maintainer's instruction to complete all
   confirmed defects under the standing delivery workflow.
+- Delivery implementation commit: `576210a` (`fix(auth): bound identity
+  response size`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
