@@ -2,7 +2,7 @@
 
 # Issue AUTH-STATUS-SEMANTICS
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -73,7 +73,7 @@ operation lacks permission. Incidental digits must not affect error semantics.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -102,3 +102,6 @@ operation lacks permission. Incidental digits must not affect error semantics.
   cannot become a remote 403. Final review is `APPROVED` with no open P0-P3
   findings; residual unknown third-party text safely falls through unless it
   exposes structured or explicit protocol evidence.
+- Delivery implementation commit: `58962fb` (`fix(auth): distinguish permission
+  failures`). The closure commit is merged locally through the standing delivery
+  workflow; the task branch remains local-only and only `yuto` is pushed.
