@@ -4,6 +4,7 @@
 
 - [vision.md](vision.md)：项目定位、边界和成功标准。
 - [architecture.md](architecture.md)：当前代码结构、调用链和已知架构风险。
+- [cli_feature_baseline.md](cli_feature_baseline.md)：当前公开 CLI 功能清单及不可回退的测试契约。
 - [upload_command_analysis.md](upload_command_analysis.md)：当前 upload 参数、分支和
   已知缺陷。
 - [development.md](development.md)：conda 环境、分支和 Issue 开发流程。
