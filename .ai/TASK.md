@@ -2,7 +2,7 @@
 
 # Issue BRANCH-SOURCE-VERIFICATION
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -71,7 +71,7 @@ alone is not sufficient evidence.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -101,3 +101,6 @@ alone is not sufficient evidence.
   `27/28` and resolved by strict source/target extractors (`28/28`). Final review
   is `APPROVED` with no open P0-P3 findings. Residual risk is a safe false failure
   if a mutable source advances between its pre-read and the POST.
+- Delivery implementation commit: `dd5700e` (`fix(repo): verify branch source
+  commit`). The closure commit is merged locally through the standing delivery
+  workflow; the task branch remains local-only and only `yuto` is pushed.
