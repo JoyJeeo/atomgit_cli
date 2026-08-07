@@ -2,7 +2,7 @@
 
 # Issue CLI-BASELINE-CONTRACT
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -58,7 +58,7 @@ exit behavior, and minimum happy-path dispatch for every public command.
 - [x] Every leaf command has a minimal isolated successful dispatch regression.
 - [x] Existing focused tests and the complete offline suite pass.
 - [x] Compileall, pip, diff, scope, credentials, and independent review pass.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -86,3 +86,7 @@ exit behavior, and minimum happy-path dispatch for every public command.
   contract and does not require a live test for acceptance.
 - Human acceptance is provided by the maintainer's explicit request to inventory
   existing features and prevent future regressions through stronger tests.
+- Delivery implementation commit: `f2c5dc9` (`test(cli): lock existing feature
+  baseline`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
