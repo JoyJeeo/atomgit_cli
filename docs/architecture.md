@@ -79,6 +79,10 @@ atomgit = atomgit.cli:cli
 
 注意：命令名是 `config-show`，不是旧文档中的 `config`。
 
+登录和 `whoami` 的远端失败采用固定、脱敏的类别提示：401、403、限流、服务端
+故障、网络/超时和无效响应分别保留可执行的诊断；CLI 不会把所有失败都归因为
+token 无效，也不会输出响应正文或底层异常详情。
+
 仓库列表使用 AtomGit V5 `GET /api/v5/user/repos`，凭据只通过
 `PRIVATE-TOKEN` 请求头发送；响应经过大小限制和 JSON 集合校验后才交给 CLI。
 可见性修改使用 `PATCH /api/v5/repos/:owner/:repo`，随后 GET 同一资源验证远端
