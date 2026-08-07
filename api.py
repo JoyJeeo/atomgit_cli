@@ -2617,18 +2617,9 @@ class HuggingFaceAPI:
 
 
     def get_repo_info(self, repo_id: str) -> Optional[Dict[str, Any]]:
-        """获取仓库信息 - 此功能需要Hugging Face Hub SDK支持"""
-        try:
-            # 目前Hugging Face Hub SDK可能不直接支持获取仓库信息
-            # 这里返回基础信息
-            return {
-                "repo_id": repo_id,
-                "status": "需要Hugging Face Hub SDK支持"
-            }
-            
-        except Exception as e:
-            print(f"获取仓库信息失败: {e}")
-            return None
+        """Report the unsupported detail lookup without fabricating data."""
+        print("获取仓库信息失败: 当前版本暂不支持仓库信息查询")
+        return None
 
 
 # 全局API实例
