@@ -4,6 +4,11 @@ This project uses Git tags for immutable source history. The `yuto` line uses a
 distinct package version and tag so users can distinguish it from upstream
 PyPI releases.
 
+## Unreleased
+
+- Make CLI directory uploads resumable by default, add `--no-resumable`, and
+  support `--path-in-repo` through stable local large-folder projections.
+
 ## 1.0.5+yuto.1 - 2026-08-03
 
 - Add upload progress, repository path/type/revision/ignore controls, resumable

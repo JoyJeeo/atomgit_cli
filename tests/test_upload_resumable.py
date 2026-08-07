@@ -1,44 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""atomgit upload --resumable/--num-workers 功能集成测试（不触碰真实远程仓库）。
+"""CLI resumable-upload defaults and repository-prefix regressions.
 
-策略沿用既有测试的约定：用 Click CliRunner 调用真实 `atomgit upload`
-命令链路，但把两个底层 HF 上传入口都替换为假函数，捕获调用瞬间实际
-传入的参数，据此验证：
-  - 默认走普通 upload_folder（不传 resumable）
-  - --resumable 时改走 HfApi().upload_large_folder，并校验 repo_type
-    必填（默认 model）、revision/ignore_patterns/num_workers 透传
-  - 单文件 + --resumable 应给出 warning 且走普通路径
-
-设计契约：打桩与测试全部位于 tests/ 内，不修改业务源码；仅当本测试模块
-被 import 时才会对业务对象的运行时引用生效，进程结束即失效。
-
-运行：conda run -n atomgit_cli python tests/test_upload_resumable.py
+All upload entry points and multiprocessing are replaced with strict inline
+fakes. No remote repository or real credential is accessed.
 """
+
+import os
+import queue
 import sys
 import tempfile
 from pathlib import Path
+
 from click.testing import CliRunner
 
-import atomgit  # noqa: F401  触发包初始化
-# atomgit/__init__.py 的 `from .api import api` 会把包级 api 名字
-# 覆盖为 HuggingFaceAPI 实例，故用 sys.modules 取真正的 api 模块。
+import atomgit  # noqa: F401
+
+
 api_mod = sys.modules["atomgit.api"]
 cfg_mod = sys.modules["atomgit.config"]
 from atomgit.cli import cli
-import huggingface_hub
+
 
 results = []
-
-
-def check(name, cond, detail=""):
-    results.append((name, cond, detail))
-    flag = "PASS" if cond else "FAIL"
-    print(f"[{flag}] {name}" + (f"  -> {detail}" if detail else ""))
-
-
-# 捕获：普通 upload_folder 调用
 uf_captured = []
+ulf_captured = []
+hfa_init_captured = []
+
+
+def check(name, condition, detail=""):
+    results.append((name, condition, detail))
+    flag = "PASS" if condition else "FAIL"
+    print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
 def fake_upload_folder(**kwargs):
@@ -46,13 +39,8 @@ def fake_upload_folder(**kwargs):
     return "fake-commit-url"
 
 
-# 捕获：upload_large_folder 调用（替代 HfApi 实例上的方法）
-ulf_captured = []
-hfa_init_captured = []
-
-
 class FakeHfApi:
-    """Match the locked HF 1.1.7 signatures used by the resumable path."""
+    """Match the locked HF 1.1.7 large-folder signatures used by AtomGit."""
 
     def __init__(self, endpoint=None, token=None, library_name=None,
                  library_version=None, user_agent=None, headers=None):
@@ -62,6 +50,16 @@ class FakeHfApi:
                             revision=None, private=None, allow_patterns=None,
                             ignore_patterns=None, num_workers=None,
                             print_report=True, print_report_every=60):
+        root = Path(folder_path)
+        metadata = root / ".cache" / "huggingface" / "upload" / "sentinel"
+        visible_files = sorted(
+            path.relative_to(root).as_posix()
+            for path in root.rglob("*")
+            if path.is_file()
+            and not path.relative_to(root).as_posix().startswith(
+                ".cache/huggingface/"
+            )
+        )
         ulf_captured.append({
             "repo_id": repo_id,
             "folder_path": folder_path,
@@ -73,119 +71,326 @@ class FakeHfApi:
             "num_workers": num_workers,
             "print_report": print_report,
             "print_report_every": print_report_every,
+            "visible_files": visible_files,
+            "metadata_present": metadata.exists(),
         })
+
+
+class InlineQueue:
+    def __init__(self):
+        self._queue = queue.Queue()
+
+    def put(self, value):
+        self._queue.put(value)
+
+    def get(self, timeout=None):
+        return self._queue.get(timeout=timeout)
+
+
+class InlineProcess:
+    def __init__(self, target, args):
+        self._target = target
+        self._args = args
+        self.daemon = False
+        self._alive = False
+
+    def start(self):
+        self._alive = True
+        try:
+            self._target(*self._args)
+        finally:
+            self._alive = False
+
+    def join(self, timeout=None):
         return None
 
+    def is_alive(self):
+        return self._alive
 
-# 替换 api 模块引用的底层入口：
-# - upload_folder（目录上传 + 文件回退路径）
-# - hf_upload_file（单文件上传主路径，v1.0.5 起新增；单文件+resumable 时走它）
-# - HfApi（resumable 模式下用其实例的 upload_large_folder）
-api_mod.upload_folder = fake_upload_folder
-api_mod.hf_upload_file = fake_upload_folder
-api_mod.HfApi = FakeHfApi
+    def terminate(self):
+        self._alive = False
 
-# stub 鉴权
-cfg_mod.config.is_logged_in = lambda: True
-cfg_mod.config.get_credentials = lambda: {"token": "fake-token-0123456789"}
+
+class InlineContext:
+    def Queue(self):
+        return InlineQueue()
+
+    def Process(self, target, args):
+        return InlineProcess(target, args)
 
 
 def main():
-    with tempfile.TemporaryDirectory() as td:
-        tdpath = Path(td)
-        (tdpath / "file.bin").write_bytes(b"x" * 100)
-        sub = tdpath / "modeldir"
-        sub.mkdir()
-        (sub / "a.txt").write_text("a")
-        (sub / "b.txt").write_text("b")
+    original_upload_folder = api_mod.upload_folder
+    original_upload_file = api_mod.hf_upload_file
+    original_hf_api = api_mod.HfApi
+    original_methods = api_mod.multiprocessing.get_all_start_methods
+    original_context = api_mod.multiprocessing.get_context
+    original_hf_home = os.environ.get("HF_HOME")
 
-        runner = CliRunner()
-        with runner.isolated_filesystem():
-            # --- T1: 目录上传，默认走 upload_folder（不传 resumable） ---
+    api_mod.upload_folder = fake_upload_folder
+    api_mod.hf_upload_file = fake_upload_folder
+    api_mod.HfApi = FakeHfApi
+    api_mod.multiprocessing.get_all_start_methods = lambda: ["fork"]
+    api_mod.multiprocessing.get_context = lambda method: InlineContext()
+    cfg_mod.config.is_logged_in = lambda: True
+    cfg_mod.config.get_credentials = lambda: {"token": "fake-token-never-print"}
+
+    try:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            os.environ["HF_HOME"] = str(root / "atomgit-cache")
+            source_file = root / "file.bin"
+            source_file.write_bytes(b"file")
+            source = root / "modeldir"
+            source.mkdir()
+            (source / "a.txt").write_text("a", encoding="utf-8")
+            (source / "b.txt").write_text("b", encoding="utf-8")
+
+            runner = CliRunner()
+
+            # Directory uploads automatically select resumable mode.
             uf_captured.clear(); ulf_captured.clear(); hfa_init_captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo"])
-            check("T1 默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T1 默认走 upload_folder", len(uf_captured) == 1 and len(ulf_captured) == 0,
-                  f"uf={len(uf_captured)} ulf={len(ulf_captured)}")
+            result = runner.invoke(
+                cli, ["upload", str(source), "--repo-id", "user/repo"]
+            )
+            check("T1 default directory succeeds", result.exit_code == 0)
+            check(
+                "T1 default directory uses upload_large_folder",
+                len(ulf_captured) == 1 and not uf_captured,
+                f"large={len(ulf_captured)} ordinary={len(uf_captured)}",
+            )
+            if ulf_captured:
+                check("T1 default repo type is model", ulf_captured[0]["repo_type"] == "model")
+                check("T1 private projection is used at repository root",
+                      ulf_captured[0]["folder_path"] != str(source))
+                check("T1 root projection preserves relative file paths",
+                      ulf_captured[0]["visible_files"] == ["a.txt", "b.txt"])
+                check("T1 HfApi constructor receives token",
+                      len(hfa_init_captured) == 1 and bool(hfa_init_captured[0]["token"]))
+                first_projection = ulf_captured[0]["folder_path"]
+                root_sentinel = (
+                    Path(first_projection) / ".cache" / "huggingface"
+                    / "upload" / "sentinel"
+                )
+                root_sentinel.parent.mkdir(parents=True, exist_ok=True)
+                root_sentinel.write_text("root-resume-state", encoding="utf-8")
+                repeated_root = runner.invoke(
+                    cli, ["upload", str(source), "--repo-id", "user/repo"]
+                )
+                check("T1 repeated root upload succeeds", repeated_root.exit_code == 0)
+                check("T1 root upload reuses projection and metadata",
+                      ulf_captured[-1]["folder_path"] == first_projection
+                      and ulf_captured[-1]["metadata_present"])
+                other_repo = runner.invoke(
+                    cli, ["upload", str(source), "--repo-id", "user/other"]
+                )
+                check("T1 second repository upload succeeds", other_repo.exit_code == 0)
+                check("T1 repositories have isolated resume state",
+                      ulf_captured[-1]["folder_path"] != first_projection)
+                check("T1 source tree is not polluted by HF metadata",
+                      not (source / ".cache" / "huggingface").exists())
 
-            # --- T2: 目录上传，--resumable → 走 upload_large_folder ---
+            # An explicit opt-out preserves the ordinary upload-folder path.
             uf_captured.clear(); ulf_captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--resumable"])
-            check("T2 resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
-            check("T2 resumable worker completes", r.exit_code == 0,
-                  f"uf={len(uf_captured)} ulf={len(ulf_captured)}")
+            result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo", "--no-resumable"],
+            )
+            check("T2 --no-resumable succeeds", result.exit_code == 0)
+            check("T2 --no-resumable uses upload_folder",
+                  len(uf_captured) == 1 and not ulf_captured)
+
+            # Dataset keeps the verified AtomGit model compatibility route.
+            uf_captured.clear(); ulf_captured.clear()
+            result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo",
+                 "--repo-type", "dataset"],
+            )
+            check("T3 default dataset resumable succeeds", result.exit_code == 0)
+            if ulf_captured:
+                check("T3 dataset uses model transfer route",
+                      ulf_captured[0]["repo_type"] == "model")
+
+            # Existing explicit resumable options remain supported.
+            uf_captured.clear(); ulf_captured.clear()
+            result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo", "--resumable",
+                 "--revision", "dev", "--ignore", "*.tmp", "--num-workers", "4"],
+            )
+            check("T4 explicit resumable options succeed", result.exit_code == 0)
             if ulf_captured:
                 call = ulf_captured[0]
-                check("T2 repo_type 默认 model",
-                      call.get("repo_type") == "model",
-                      f"repo_type={call.get('repo_type')!r}")
-                check("T2 folder_path=原目录",
-                      call.get("folder_path") == str(sub),
-                      f"folder_path={call.get('folder_path')}")
-                check("T2 upload_large_folder 未传 token", "token" not in call)
-                check("T2 HfApi 构造器传入 token",
-                      len(hfa_init_captured) == 1
-                      and bool(hfa_init_captured[0]["token"]),
-                      f"init_calls={len(hfa_init_captured)}")
+                check("T4 revision forwarded", call["revision"] == "dev")
+                check("T4 ignore patterns forwarded", call["ignore_patterns"] == ["*.tmp"])
+                check("T4 worker count forwarded", call["num_workers"] == 4)
 
-            # --- T3: --resumable --repo-type dataset ---
+            # path-in-repo uses one stable projection and preserves HF metadata.
             uf_captured.clear(); ulf_captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--resumable", "--repo-type", "dataset"])
-            check("T3 dataset resumable exit=0", r.exit_code == 0, f"exit={r.exit_code}")
+            (source / "ignored.tmp").write_text("ignored", encoding="utf-8")
+            (source / "logs").mkdir()
+            (source / "logs" / "run.log").write_text("ignored", encoding="utf-8")
+            prefixed_args = [
+                "upload", str(source), "--repo-id", "user/repo",
+                "--path-in-repo", "weights/checkpoints/",
+                "--ignore", "*.tmp,logs/",
+            ]
+            first = runner.invoke(cli, prefixed_args)
+            check("T5 resumable path-in-repo succeeds", first.exit_code == 0,
+                  f"exit={first.exit_code}")
+            first_call = ulf_captured[-1] if ulf_captured else None
+            if first_call:
+                projection = Path(first_call["folder_path"])
+                check("T5 projection differs from source", projection != source)
+                check(
+                    "T5 projection exposes only prefixed files",
+                    first_call["visible_files"]
+                    == ["weights/checkpoints/a.txt", "weights/checkpoints/b.txt"],
+                    repr(first_call["visible_files"]),
+                )
+                check(
+                    "T5 ignore patterns are relative to projected prefix",
+                    first_call["ignore_patterns"]
+                    == ["weights/checkpoints/*.tmp", "weights/checkpoints/logs/"],
+                    repr(first_call["ignore_patterns"]),
+                )
+                sentinel = projection / ".cache" / "huggingface" / "upload" / "sentinel"
+                sentinel.parent.mkdir(parents=True, exist_ok=True)
+                sentinel.write_text("resume-state", encoding="utf-8")
+                (source / "a.txt").write_text("changed", encoding="utf-8")
+                (source / "b.txt").unlink()
+                (source / "c.txt").write_text("c", encoding="utf-8")
+
+                second = runner.invoke(cli, prefixed_args)
+                check("T5 repeated prefixed upload succeeds", second.exit_code == 0)
+                second_call = ulf_captured[-1]
+                check("T5 repeated upload reuses projection",
+                      second_call["folder_path"] == first_call["folder_path"])
+                check("T5 HF resume metadata survives synchronization",
+                      second_call["metadata_present"])
+                check(
+                    "T5 projection reflects changed and removed files",
+                    second_call["visible_files"]
+                    == ["weights/checkpoints/a.txt", "weights/checkpoints/c.txt"],
+                    repr(second_call["visible_files"]),
+                )
+                check(
+                    "T5 changed content is visible",
+                    (projection / "weights" / "checkpoints" / "a.txt").read_text(
+                        encoding="utf-8"
+                    ) == "changed",
+                )
+
+            # A .cache prefix must preserve the projection-root HF metadata.
+            uf_captured.clear(); ulf_captured.clear()
+            cache_prefix_args = [
+                "upload", str(source), "--repo-id", "user/repo",
+                "--path-in-repo", ".cache",
+            ]
+            first_cache = runner.invoke(cli, cache_prefix_args)
+            check("T5b .cache prefix succeeds", first_cache.exit_code == 0)
             if ulf_captured:
-                check("T3 dataset 使用 model 传输路由",
-                      ulf_captured[0].get("repo_type") == "model",
-                      f"repo_type={ulf_captured[0].get('repo_type')!r}")
+                cache_projection = Path(ulf_captured[-1]["folder_path"])
+                cache_sentinel = (
+                    cache_projection / ".cache" / "huggingface"
+                    / "upload" / "sentinel"
+                )
+                cache_sentinel.parent.mkdir(parents=True, exist_ok=True)
+                cache_sentinel.write_text("cache-prefix-state", encoding="utf-8")
+                repeated_cache = runner.invoke(cli, cache_prefix_args)
+                check("T5b repeated .cache prefix succeeds",
+                      repeated_cache.exit_code == 0)
+                check("T5b .cache prefix preserves HF metadata",
+                      ulf_captured[-1]["metadata_present"])
 
-            # --- T4: --resumable --revision dev --ignore *.tmp --num-workers 4 ---
+                conflict = source / "huggingface"
+                conflict.mkdir()
+                (conflict / "payload.bin").write_bytes(b"conflict")
+                call_count = len(ulf_captured)
+                conflict_result = runner.invoke(cli, cache_prefix_args)
+                check("T5b metadata path collision is rejected",
+                      conflict_result.exit_code == 1 and len(ulf_captured) == call_count)
+                check("T5b collision guidance is actionable",
+                      "--no-resumable" in conflict_result.output)
+                check("T5b rejected collision retains metadata", cache_sentinel.exists())
+                (conflict / "payload.bin").unlink()
+                conflict.rmdir()
+
+            reserved_result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo",
+                 "--path-in-repo", ".cache/huggingface"],
+            )
+            check("T5c reserved HF prefix is rejected", reserved_result.exit_code == 1)
+            check("T5c reserved prefix suggests ordinary upload",
+                  "--no-resumable" in reserved_result.output)
+            reserved_case_result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo",
+                 "--path-in-repo", ".CACHE/HUGGINGFACE"],
+            )
+            check("T5c reserved prefix is case-insensitive",
+                  reserved_case_result.exit_code == 1
+                  and "--no-resumable" in reserved_case_result.output)
+
+            # Files remain ordinary unless resumable is explicitly requested.
             uf_captured.clear(); ulf_captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--resumable", "--revision", "dev",
-                                    "--ignore", "*.tmp", "--num-workers", "4"])
-            check("T4 已存在非默认 revision accepted", r.exit_code == 0, f"exit={r.exit_code}")
+            result = runner.invoke(
+                cli, ["upload", str(source_file), "--repo-id", "user/repo"]
+            )
+            check("T6 default file upload succeeds", result.exit_code == 0)
+            check("T6 default file uses ordinary uploader",
+                  len(uf_captured) == 1 and not ulf_captured)
+
+            uf_captured.clear(); ulf_captured.clear()
+            result = runner.invoke(
+                cli,
+                ["upload", str(source_file), "--repo-id", "user/repo", "--resumable"],
+            )
+            check("T7 file --resumable is rejected", result.exit_code == 2)
+            check("T7 rejected file calls no uploader", not uf_captured and not ulf_captured)
+
+            # A message without an explicit mode keeps ordinary commit semantics.
+            uf_captured.clear(); ulf_captured.clear()
+            result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo",
+                 "--message", "release"],
+            )
+            check("T8 directory message succeeds", result.exit_code == 0)
+            check("T8 message selects ordinary upload",
+                  len(uf_captured) == 1 and not ulf_captured)
+            if uf_captured:
+                check("T8 message is forwarded",
+                      uf_captured[0]["commit_message"] == "release")
+
+            # Workers can tune the automatic resumable mode.
+            uf_captured.clear(); ulf_captured.clear()
+            result = runner.invoke(
+                cli,
+                ["upload", str(source), "--repo-id", "user/repo",
+                 "--num-workers", "2"],
+            )
+            check("T9 workers accepted for default resumable mode", result.exit_code == 0)
             if ulf_captured:
-                call = ulf_captured[0]
-                check("T4 revision=dev", call.get("revision") == "dev",
-                      f"revision={call.get('revision')!r}")
-                check("T4 ignore_patterns=['*.tmp']", call.get("ignore_patterns") == ["*.tmp"],
-                      f"ignore={call.get('ignore_patterns')!r}")
-                check("T4 num_workers=4", call.get("num_workers") == 4,
-                      f"num_workers={call.get('num_workers')!r}")
-
-            # --- T5: --resumable + path_in_repo → 拒绝，避免静默上传根目录 ---
-            uf_captured.clear(); ulf_captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--resumable", "--path-in-repo", "sub/"])
-            check("T5 path_in_repo+resumable exit=2", r.exit_code == 2, f"exit={r.exit_code}")
-            check("T5 resumable worker not called", len(ulf_captured) == 0,
-                  f"ulf={len(ulf_captured)}")
-            # 输出应包含 path_in_repo 不支持的提示
-            check("T5 提示 path_in_repo 不支持", "path_in_repo" in r.output or "resumable" in r.output,
-                  f"output含提示={'path_in_repo' in r.output or 'resumable' in r.output}")
-
-            # --- T6: 单文件 + --resumable → 拒绝，不静默切换普通路径 ---
-            uf_captured.clear(); ulf_captured.clear()
-            r = runner.invoke(cli, ["upload", str(tdpath / "file.bin"),
-                                    "--repo-id", "user/repo", "--resumable"])
-            check("T6 文件+resumable exit=2", r.exit_code == 2, f"exit={r.exit_code}")
-            check("T6 文件不调用任何上传",
-                  len(uf_captured) == 0 and len(ulf_captured) == 0,
-                  f"uf={len(uf_captured)} ulf={len(ulf_captured)}")
-            check("T6 文件提示 resumable 仅目录有效",
-                  "resumable" in r.output or "目录" in r.output,
-                  f"提示={'有' if ('resumable' in r.output or '目录' in r.output) else '无'}")
-
-            # --- T7: .tmp_upload 清理（文件分支会复制） ---
-            leftover = Path.cwd() / ".tmp_upload"
-            check("T7 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
+                check("T9 worker count forwarded", ulf_captured[0]["num_workers"] == 2)
+    finally:
+        api_mod.upload_folder = original_upload_folder
+        api_mod.hf_upload_file = original_upload_file
+        api_mod.HfApi = original_hf_api
+        api_mod.multiprocessing.get_all_start_methods = original_methods
+        api_mod.multiprocessing.get_context = original_context
+        if original_hf_home is None:
+            os.environ.pop("HF_HOME", None)
+        else:
+            os.environ["HF_HOME"] = original_hf_home
 
     print("\n" + "=" * 50)
-    passed = sum(1 for _, c, _ in results if c)
-    print(f"汇总: {passed}/{len(results)} 通过")
+    passed = sum(1 for _, condition, _ in results if condition)
+    print(f"summary: {passed}/{len(results)} passed")
     return 0 if passed == len(results) else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

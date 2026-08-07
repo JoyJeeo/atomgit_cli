@@ -84,7 +84,8 @@ def main():
         with runner.isolated_filesystem():
             # --- Test 1: 目录上传，默认（应开启进度条）---
             captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo"])
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--no-resumable"])
             check("T1 目录上传默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             check("T1 调用 HF 1次", len(captured) == 1, f"calls={len(captured)}")
             if captured:
@@ -94,7 +95,7 @@ def main():
             # --- Test 2: 目录上传，--no-progress-bar（应禁用进度条）---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--no-progress-bar"])
+                                    "--no-progress-bar", "--no-resumable"])
             check("T2 目录上传-noprog exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T2 --no-progress-bar 确实禁用", captured[0]["pb_disabled_at_call"] is True,
@@ -140,7 +141,7 @@ def main():
             original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--timeout", "17"])
+                                    "--timeout", "17", "--no-resumable"])
             check("T7 目录 timeout 调用 exit=0", r.exit_code == 0,
                   f"exit={r.exit_code}")
             check("T7 调用期间 timeout=17",
@@ -169,7 +170,8 @@ def main():
             captured.clear()
             raise_upload_error = True
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--timeout", "23", "--no-progress-bar"])
+                                    "--timeout", "23", "--no-progress-bar",
+                                    "--no-resumable"])
             raise_upload_error = False
             check("T9 目录异常 exit!=0", r.exit_code != 0, f"exit={r.exit_code}")
             check("T9 目录异常后恢复 timeout",
@@ -183,7 +185,7 @@ def main():
             enable_progress_bars("uploads")
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--no-progress-bar"])
+                                    "--no-progress-bar", "--no-resumable"])
             check("T10 命名状态上传 exit=0", r.exit_code == 0,
                   f"exit={r.exit_code}")
             check("T10 恢复 downloads 禁用状态",

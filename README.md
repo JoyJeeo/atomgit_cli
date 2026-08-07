@@ -23,7 +23,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
   - 仓库类型选择（`-r/--repo-type model|dataset`）
   - 显式分支创建与非 `main` 上传（CLI）
   - 忽略文件模式（`-i/--ignore`）
-  - 断点续传/分块上传（`--resumable`、`--num-workers`）
+  - 目录默认断点续传/分块上传（`--resumable/--no-resumable`、`--num-workers`）
   - 单文件上传无本地拷贝（直接走 `upload_file`）
   - 语义化错误分类（认证失败 / 权限不足 / 仓库不存在 / 超时等，附可执行建议）
 
@@ -184,12 +184,14 @@ atomgit upload <path> --repo-id <id> [options]
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
 | `--revision <name>` | 上传到已存在分支；非 `main` 分支需先显式创建 |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
-| `--resumable` | 目录大文件断点续传接口，重复同一命令可复用本地上传状态 |
-| `--num-workers <n>` | 断点续传模式的并发 worker 数（仅 `--resumable` 生效） |
+| `--resumable / --no-resumable` | 目录默认使用断点续传；显式 `--no-resumable` 改用普通上传 |
+| `--num-workers <n>` | 断点续传模式的并发 worker 数（目录默认模式下可直接使用） |
 
-冲突参数会在上传前以退出码 2 拒绝：`--resumable` 仅适用于目录，且不能与
-`--path-in-repo` 或 `--message` 同用；`--num-workers` 必须搭配
-`--resumable`；`--ignore` 仅适用于目录上传。
+目录未显式选择模式时默认使用断点续传；单文件仍使用普通文件上传。目录指定
+`--message` 且未显式选择模式时会自动使用普通上传，以保留单一提交说明。
+冲突参数会在上传前以退出码 2 拒绝：显式 `--resumable` 仅适用于目录且不能与
+`--message` 同用；`--num-workers` 不能与 `--no-resumable` 或单文件同用；
+`--ignore` 仅适用于目录上传。
 
 为避免 Hugging Face 上传实现读取选定路径之外的内容，上传文件、上传目录根路径
 以及目录树中的文件、目录或失效符号链接都会在读取登录凭证和发送远端请求前被
@@ -203,21 +205,29 @@ atomgit upload <path> --repo-id <id> [options]
 atomgit upload ./data --repo-id user/my-dataset \
   -p sub/ -r dataset -i "*.tmp"
 
-# 大目录断点续传（中断后再次执行同一命令即可续传）
+# 目录默认断点续传（中断后再次执行同一命令即可续传）
 atomgit upload ./large-model --repo-id user/large-model \
-  --resumable --num-workers 4 -t 1800
+  --num-workers 4 -t 1800
 
 # dataset 使用相同的断点续传接口，底层自动走 AtomGit 兼容路由
 atomgit upload ./large-dataset --repo-id user/large-dataset \
-  --repo-type dataset --resumable --num-workers 4 -t 1800
+  --repo-type dataset --num-workers 4 -t 1800
+
+# 默认断点续传也可上传到仓库子目录
+atomgit upload ./large-model --repo-id user/large-model \
+  --path-in-repo checkpoints/ -t 1800
 
 # 单文件无本地拷贝，直接上传到仓库内指定路径
 atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 ```
 
-> ⚠️ 注意：`--resumable` 模式下 HF 既定限制——`--path-in-repo` 与 `-m`
-> 不生效（会产生多次提交）；HF 底层调用要求 `repo_type`，CLI 未指定时会自动
-> 使用 `model`。
+> ⚠️ 注意：CLI resumable 目录上传会在
+> `~/.cache/atomgit/upload-projections/` 建立按源目录、仓库、revision 和远端前缀
+> 隔离的稳定投影，避免不同仓库误用同一份 HF 元数据。HF large-folder 接口本身
+> 没有 `path_in_repo`，投影也用于表达远端前缀。文件优先使用硬链接；跨文件系统
+> 无法硬链接时会复制并占用额外磁盘。large-folder 仍不支持单一提交说明，需指定
+> `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
+> CLI 未指定时自动使用 `model`。
 
 > 当前实现通过 `HfApi(token=...)` 认证，并已分别对 model 和 dataset 完成约
 > 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认

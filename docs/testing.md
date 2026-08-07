@@ -14,7 +14,7 @@
 - model/dataset 类型；
 - revision；
 - ignore patterns；
-- resumable 参数；
+- 目录默认 resumable、显式普通模式、worker 和 path-in-repo 稳定投影；
 - 单文件直接上传；
 - 上传错误分类。
 

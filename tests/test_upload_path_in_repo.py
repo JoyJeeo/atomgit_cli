@@ -129,7 +129,7 @@ def main():
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub),
                                     "--repo-id", "user/repo",
-                                    "--path-in-repo", "sub/"])
+                                    "--path-in-repo", "sub/", "--no-resumable"])
             check("T6 目录-sub exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T6 目录 path_in_repo='sub/'",
@@ -142,7 +142,8 @@ def main():
 
             # --- T7: 目录上传，不指定 → 根目录 "./" ---
             captured.clear()
-            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo"])
+            r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
+                                    "--no-resumable"])
             check("T7 目录-默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             if captured:
                 check("T7 目录-默认 path_in_repo='./'",

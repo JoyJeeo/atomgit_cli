@@ -1,62 +1,63 @@
 # Current Issue Contract
 
-# Issue CLI-BASELINE-MONOTONIC
+# Issue CLI-UPLOAD-DEFAULT-RESUME
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `CLI-BASELINE-MONOTONIC`
-- Title: `Make the CLI regression baseline comprehensive and monotonic`
-- Type: `testing`, `cli`, `compatibility`, `process`
+- Local Issue: `CLI-UPLOAD-DEFAULT-RESUME`
+- Title: `Default directory uploads to resumable mode with repository prefixes`
+- Type: `cli`, `compatibility`
 - Priority: `P1`
-- Branch: `codex/strengthen-cli-baseline` (local only)
+- Branch: `codex/default-resumable-upload` (local only)
 - Base: `yuto`
-- Previous Issue: `CLI-BASELINE-DOD-GATE`, delivered by `263063c`.
+- Previous Issue: `CLI-BASELINE-MONOTONIC`, delivered by `0274131`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Objective
 
-The current baseline protects the presence of known commands and option aliases
-with subset comparisons and 56 lightweight checks. It deliberately allows new
-commands or options without baseline registration and does not execute the 61
-existing focused offline regression scripts. A feature can therefore expand the
-public surface without updating the baseline, while the mandatory DoD command
-still exercises only happy-path smoke behavior.
+The maintainer requested that CLI directory uploads support interruption and
+resume by default and remain compatible with `--path-in-repo`. Currently a
+directory uses the non-resumable HF `upload_folder` path unless `--resumable`
+is supplied, while the CLI rejects `--resumable --path-in-repo` before any
+upload. Locked `huggingface-hub==1.1.7` exposes no `path_in_repo` parameter on
+`HfApi.upload_large_folder`, so forwarding the option directly is not valid.
 
-Turn the baseline into a monotonic contract: the full public CLI schema and all
-offline regression scripts must be explicitly registered, new public surface or
-new tests must update that registration, and one mandatory runner must execute
-the complete offline suite. Regressions must be fixed in implementation code;
-the baseline may change only for an explicitly authorized compatibility change
-or a genuine new capability with matching tests and documentation.
+Make resumable mode the automatic CLI choice for directories, preserve normal
+single-file behavior, and construct a stable local projection when a repository
+prefix is requested so HF sees the desired relative paths and retains its
+resume metadata across repeated commands.
 
 ## Scope And Acceptance
 
-- Replace subset command checks with an exact public CLI schema contract that
-  includes root/group/leaf paths, parameter order and kind, option aliases,
-  required/default/flag semantics, types, and choices.
-- Add a complete capability registry covering every current offline
-  `tests/test_*.py` script; unregistered additions and stale registrations fail.
-- Add guard regressions proving an unregistered command, option/schema change,
-  missing leaf dispatch, and unregistered test script are detected.
-- Preserve isolated successful dispatch coverage for every current leaf command.
-- Add one comprehensive baseline runner that executes the entire isolated
-  pytest matrix, not only the interface smoke checks.
-- Update DoD and testing documentation so new features must add focused tests,
-  register them in the baseline, update the exact schema when applicable, and
-  pass the comprehensive gate.
-- Document that regressions are repaired in runtime code; weakening a baseline
-  is forbidden without explicit maintainer authorization for a compatibility
-  break.
-- Preserve runtime code, dependencies, packaging, CLI behavior, and all current
-  tests. No live AtomGit operation is in scope.
+- A directory upload with no explicit mode calls the resumable large-folder
+  path; a single-file upload continues to use the ordinary file path.
+- Existing `--resumable` remains accepted and a new `--no-resumable` selection
+  permits the ordinary directory uploader when its commit-message behavior is
+  required.
+- A directory with `--message` and no explicit mode preserves the message by
+  selecting the ordinary uploader; explicit `--resumable --message` remains an
+  error rather than silently ignoring the message.
+- `--num-workers` is valid for the default resumable directory mode and remains
+  invalid for a non-resumable or single-file upload.
+- Resumable directory uploads accept a normalized `--path-in-repo`, expose the
+  selected source only beneath that remote prefix, and reuse one credential-free
+  private projection plus HF metadata for the same source/repository/revision/
+  prefix identity.
+- Projection synchronization preserves unchanged resume metadata, reflects
+  changed and removed source files, excludes HF's source metadata subtree, and
+  never follows symbolic links.
+- Locked HF method calls keep authenticating through `HfApi(token=...)` and do
+  not pass unsupported `path_in_repo` or `token` method arguments.
+- Update exact CLI schema, focused offline regressions, README and upload
+  behavior documentation. SDK upload defaults and public signatures are out of
+  scope. No live AtomGit operation is required or authorized.
 
 ## Permissions
 
-- The maintainer explicitly requested a comprehensive, monotonically growing
-  baseline and mandatory repair loop for future feature development.
+- The maintainer explicitly requested this CLI behavior change.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
 - No live request, test repository access, credential mutation, Git-helper
@@ -65,56 +66,56 @@ or a genuine new capability with matching tests and documentation.
 
 ## Required Evidence And Closure
 
-- [x] A regression test fails against the previous permissive baseline.
-- [x] Exact CLI schema drift and incomplete leaf dispatch coverage are blocked.
-- [x] Every offline test script is explicitly registered and the registry is
-      exact in both directions.
-- [x] The comprehensive baseline runner executes the full isolated test matrix.
-- [x] DoD and maintainer documentation enforce monotonic feature registration
-      and implementation-first regression repair.
-- [x] Focused regressions, comprehensive baseline, full suite, compileall, pip,
-      diff, scope, credentials, and independent review pass.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] A regression fails against the previous default/non-prefix behavior.
+- [x] Focused CLI and API projection tests pass offline.
+- [x] The exact CLI schema and comprehensive baseline pass.
+- [x] Locked dependency signatures, compileall, pip check, diff check, scope,
+      credentials, documentation, and independent review pass.
+- [x] Human acceptance is recorded and the authorized local delivery completes.
 
 ## Verification Evidence
 
-- Previous-gap regression: before implementation,
-  `python tests/test_cli_baseline_guard.py` exited `1` with `0/1`; the previous
-  baseline exposed none of the exact-schema, registry, dispatch, or monotonic
-  validators required by the new guard.
-- Guard result: the same command now passes `14/14`, proving unregistered
-  commands and options, unregistered or stale test scripts, missing leaf
-  dispatches, inert non-executing tests, and runner failure propagation are all
-  detected. Monotonic ledger totals are 15 command paths, 40 public parameters,
-  12 leaf commands, and 62 offline scripts.
-- Exact interface result: `python tests/test_cli_feature_baseline.py` passes
-  `47/47`. It checks root/group/leaf schema, parameter order and declarations,
-  required/default/type/path/Choice/flag/help semantics, test registration and
-  entrypoints, leaf coverage, and isolated happy-path API dispatch.
-- Mandatory comprehensive result: `python tests/run_cli_baseline.py` invokes
-  the complete isolated pytest matrix and passed all `62` collected cases in
-  `60.01s` with no skip. Each legacy script runs in a subprocess with temporary
-  HOME and Git configuration through `tests/pytest_offline_scripts.py`.
-- Process contract: `.ai/DOD.md`, `.ai/TESTING.md`, `docs/testing.md`, README,
-  and `docs/cli_feature_baseline.md` require focused tests for new behavior,
-  exact schema/dispatch updates for public CLI growth, registration for every
-  new script, and implementation repair rather than baseline weakening.
-- Compatibility: implicit Click unset defaults and false `show_default` values
-  are normalized by effective public semantics rather than Click internals.
-  The installed Click is `8.4.2`; locked dependencies remain
-  `huggingface-hub==1.1.7` and `datasets==4.4.1`.
+- Previous-gap regression: after updating `tests/test_upload_resumable.py` but
+  before runtime implementation, `python tests/test_upload_resumable.py`
+  exited `1` with `14/18`; default directories still called `upload_folder`,
+  `--no-resumable` did not exist, and workers required explicit resumable.
+- Focused resumable result: `python tests/test_upload_resumable.py` passes
+  `46/46`. It proves automatic directory selection, ordinary file behavior,
+  explicit opt-out, message compatibility, model/dataset routing, worker and
+  revision forwarding, prefix-relative ignore patterns, source synchronization,
+  root and prefixed metadata reuse, repository isolation, no source-tree
+  metadata pollution, reserved-path guidance, metadata collision rejection,
+  and case-insensitive Windows-safe reserved-path handling.
+- Locked dependency result: `python tests/test_hf_api_contract.py` passes
+  `13/13` against `huggingface-hub==1.1.7` and `datasets==4.4.1`. The real
+  large-folder signature accepts neither `token` nor `path_in_repo`; filtering
+  binds to the installed `filter_repo_objects` signature.
+- Affected ordinary-upload tests explicitly select `--no-resumable`; upload
+  validation, path, ignore, type, progress, schema, dataset route, timeout,
+  recovery, statistics, and symlink checks pass offline.
+- Mandatory comprehensive result: `python tests/run_cli_baseline.py` passed all
+  `62` isolated pytest cases in `50.37s` with no skip after the final
+  implementation changes.
 - Required checks: `python -m compileall -q .`, `python -m pip check`, and
-  `git diff --check` passed in the `atomgit_cli` environment.
-- Scope and security: runtime source, dependencies, packaging, CLI behavior,
-  credentials, Git helper, and remote state are unchanged. No live request or
-  test repository operation ran; the credential scan found only an existing
-  explicitly fake authorization fixture.
-- Independent review: `APPROVED` with no P0-P3 finding. Residual governance
-  risk from deliberately editing both tests and contracts is controlled by the
-  explicit compatibility authorization rule and independent diff review.
-- Human acceptance is provided by the maintainer's explicit request for this
-  comprehensive monotonic baseline and implementation-first repair loop.
-- Delivery implementation commit: `9f471bf` (`test(cli): enforce monotonic
-  feature baseline`). The closure commit is merged locally through the standing
+  `git diff --check` pass in the `atomgit_cli` environment.
+- Scope and security: no live request, credential read, Git-helper mutation,
+  test repository operation, dependency change, SDK behavior change, or remote
+  write ran. Projection identities contain no credential and cache roots are
+  private on POSIX platforms; the diff credential scan found no real secret.
+- Documentation and exact schema describe the new automatic directory mode,
+  `--no-resumable`, stable prefix projection, message behavior, and cross-filesystem
+  copy/disk-space tradeoff.
+- First independent review returned `REQUEST CHANGES`: P1 metadata cleanup for
+  a `.cache` prefix and P2 swallowed projection guidance. Both were fixed with
+  projection-root-relative metadata protection, collision regressions, and a
+  trusted local projection error category. The second review found a P2
+  case-insensitive Windows collision; case-folded protection and regression
+  now pass. Final independent review found no P0-P3 issue and returned
+  `APPROVED`. No live AtomGit upload ran; remote acceptance remains the only
+  uncollected evidence and is not required or authorized for this Issue.
+- Human acceptance: the maintainer's explicit request defines and accepts the
+  requested default-resume and `--path-in-repo` outcome.
+- Delivery implementation commit: `1fa64de` (`feat(upload): default directory
+  uploads to resume`). The closure commit is merged locally through the standing
   delivery workflow; the task branch remains local-only and only `yuto` is
   pushed.

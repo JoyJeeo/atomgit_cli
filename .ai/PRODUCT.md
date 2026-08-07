@@ -28,7 +28,8 @@ every remote path is verified; known status follows the interface list.
 - Single-file and directory upload
 - Upload target path, repository type, revision, ignore patterns, timeout, and
   progress-bar control
-- Large-folder resumable mode and worker selection
+- Default large-folder resumable directory uploads, repository prefixes, and
+  worker selection, with an explicit ordinary-upload opt-out
 - Repository download to a default or explicit directory
 - Single-file CLI download
 - Opt-in checksum verification for existing and newly downloaded CLI files

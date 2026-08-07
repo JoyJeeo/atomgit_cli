@@ -20,8 +20,8 @@ atomgit upload [OPTIONS] PATH
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
 | `--revision` | 默认分支 | CLI 接受已存在的安全分支名；需先显式创建 |
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
-| `--resumable` | 关闭 | 目录使用 `upload_large_folder` |
-| `--num-workers` | HF 默认 | resumable worker 数 |
+| `--resumable/--no-resumable` | 按路径自动 | 目录默认使用 `upload_large_folder`；可显式选择普通上传 |
+| `--num-workers` | HF 默认 | resumable worker 数，目录默认模式下可直接使用 |
 
 AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传输路由。CLI
 仍使用 `dataset` 表达仓库业务类型，但底层调用映射到 model 路由。2026-08-04
@@ -32,19 +32,20 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 
 `cli.upload` 依次执行：
 
-1. 校验 timeout、worker 数、安全 revision 名和 worker/resumable 关系；
+1. 校验 timeout、worker 数和安全 revision 名；
 2. 使用 `validate_repo_name` 校验 repo ID；
 3. 将 PATH 转为 `Path` 并区分文件或目录；
 4. 使用 `normalize_path_in_repo` 与 `parse_ignore_patterns` 规整参数；
-5. 根据文件/目录类型拒绝歧义选项组合；
+5. 单文件默认普通上传；目录默认 resumable，未显式选模式的 `--message` 自动
+   选择普通上传，并拒绝其余歧义组合；
 6. 检查 `config.is_logged_in()`；
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
-CLI 在认证和远端调用前拒绝歧义组合：单文件不接受 `--resumable` 或
-`--ignore`；`--num-workers` 必须与 `--resumable` 同用；resumable 目录不接受
-`--path-in-repo` 或 `--message`。这些用法错误统一以退出码 2 结束，不会
-进入 API 层。
+CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--resumable`、
+`--num-workers` 或 `--ignore`；`--num-workers` 不接受 `--no-resumable`；显式
+`--resumable` 不接受 `--message`。`--path-in-repo` 可用于两种目录上传模式。
+这些用法错误统一以退出码 2 结束，不会进入 API 层。
 
 ## 3. 单文件上传
 
@@ -76,6 +77,9 @@ cli.upload
 
 ## 4. 普通目录上传
 
+显式 `--no-resumable`，或在没有显式选择模式时提供 `--message`，进入普通
+目录上传：
+
 ```text
 cli.upload
   -> api.upload_directory(dir_path, resumable=False, ...)
@@ -94,6 +98,9 @@ cli.upload
 都会按条件传给 HF `upload_folder`。
 
 ## 5. Resumable 目录上传
+
+目录在没有显式选择且没有 `--message` 时默认进入该分支。`--resumable` 可继续
+用于显式选择：
 
 resumable 分支调用：
 
@@ -117,11 +124,19 @@ HF large-folder 模式的其他限制：
 
 - CLI 和 SDK 在凭证或上传调用前拒绝上传根路径及目录树中的全部符号链接；
   `ignore_patterns` 不会绕过该安全检查；
-- 不支持 `path_in_repo`，CLI 在远端调用前拒绝该组合；
+- CLI 在 `$HF_HOME/upload-projections/` 使用 credential-free 哈希身份为每个
+  resumable 上传建立持久投影，避免同一源目录上传到不同仓库时复用错误的 HF
+  元数据。HF 方法不接收 `path_in_repo`，带前缀时投影把源文件放在对应目录下再把
+  投影根传给 HF。相同源目录、规范化仓库、传输类型、revision 和前缀会复用同一
+  投影与 HF 元数据；同步会反映源文件增删改并排除源目录自身的
+  `.cache/huggingface`，用户 `--ignore` 排除的文件也不会物化到投影；
+- 投影优先使用硬链接，跨文件系统或平台不支持时使用 `copy2`，后者会占用与源
+  文件相当的额外磁盘；投影根权限在支持 POSIX 权限的平台设为 `0700`；
 - 不支持用户指定的单一 commit message，CLI 在远端调用前拒绝
-  `--message`；服务过程可产生多次提交；
+  显式 `--resumable --message`；未显式选择模式时 `--message` 自动走普通上传，
+  服务过程可产生多次提交；
 - repo type 必填，CLI 未指定时补为 `model`；
-- 续传元数据由 HF 写入上传目录下的缓存位置。
+- 续传元数据由 HF 写入按上传身份隔离的稳定投影根，不污染源目录。
 
 真实 404 MB 文件测试已完成“中断 -> 再次执行 -> 下载回读”，文件大小和
 SHA-256 均一致。
