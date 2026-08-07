@@ -2,7 +2,7 @@
 
 ## Python Baseline
 
-- Support Python 3.8 and newer as declared by packaging metadata.
+- Support Python 3.9 and newer as declared by packaging metadata.
 - Follow the existing module layout unless the task justifies a migration.
 - Use four-space indentation, `snake_case` functions and variables,
   `PascalCase` classes, and `UPPER_CASE` constants.

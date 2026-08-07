@@ -6,6 +6,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
+from email.parser import BytesParser
+from importlib.metadata import metadata, version
 from pathlib import Path
 
 
@@ -86,6 +89,40 @@ def main():
         check("exactly one wheel produced", len(wheels) == 1)
         if not wheels:
             return 1
+
+        with zipfile.ZipFile(wheels[0]) as wheel_archive:
+            metadata_names = [
+                name for name in wheel_archive.namelist()
+                if name.endswith(".dist-info/METADATA")
+            ]
+            check("wheel contains one METADATA file", len(metadata_names) == 1)
+            wheel_metadata = BytesParser().parsebytes(
+                wheel_archive.read(metadata_names[0])
+            )
+        classifiers = wheel_metadata.get_all("Classifier", [])
+        check(
+            "wheel requires Python 3.9 or newer",
+            wheel_metadata.get("Requires-Python") == ">=3.9",
+            repr(wheel_metadata.get("Requires-Python")),
+        )
+        check(
+            "wheel classifiers omit Python 3.8 and retain Python 3.9",
+            "Programming Language :: Python :: 3.8" not in classifiers
+            and "Programming Language :: Python :: 3.9" in classifiers,
+            repr(classifiers),
+        )
+        dependency_minimums = {
+            dependency: metadata(dependency).get("Requires-Python")
+            for dependency in ("huggingface-hub", "datasets")
+        }
+        check(
+            "locked dependencies independently require Python 3.9",
+            version("huggingface-hub") == "1.1.7"
+            and version("datasets") == "4.4.1"
+            and dependency_minimums
+            == {"huggingface-hub": ">=3.9.0", "datasets": ">=3.9.0"},
+            repr(dependency_minimums),
+        )
 
         venv_result = run(
             [sys.executable, "-m", "venv", "--system-site-packages", venv],

@@ -54,7 +54,7 @@ refactor with no external effect. Update the smallest authoritative document.
   architecture. New files must have an immediate task-owned responsibility.
 - Reuse code only when the shared contract is genuinely the same. Do not force
   CLI output concerns into SDK code merely to remove duplication.
-- Preserve Python 3.8 compatibility until the support policy changes.
+- Preserve Python 3.9 compatibility as required by the locked dependencies.
 - Validate all Hugging Face calls against the locked dependency, not memory or
   current online documentation.
 

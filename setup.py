@@ -43,7 +43,7 @@ setup(
     package_dir={'atomgit': '.'},
     py_modules=['atomgit_hub'],
     install_requires=read_requirements(),
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     entry_points={
         'console_scripts': [
             'atomgit=atomgit.cli:cli',
@@ -54,7 +54,6 @@ setup(
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
