@@ -1,78 +1,99 @@
 # Current Issue Contract
 
-# Issue EXPLICIT-BRANCH-UPLOAD
+# Issue DOWNLOAD-CHECKSUM-VERIFICATION
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `EXPLICIT-BRANCH-UPLOAD`
-- Title: `Create explicit branches and upload to non-main revisions`
-- Type: `cli`, `feature`, `compatibility`
+- Local Issue: `DOWNLOAD-CHECKSUM-VERIFICATION`
+- Title: `Verify CLI downloads against AtomGit checksums`
+- Type: `cli`, `feature`, `data-integrity`
 - Priority: `P1`
-- Branch: `codex/add-branch-upload` (local only)
+- Branch: `codex/add-download-checksum` (local only)
 - Base: `yuto`
-- Previous Issue: `REPOSITORY-VISIBILITY-AND-PUBLIC-CREATE`, delivered by
-  `04e060a` and merged by `ec82486`.
-- Delivery mode: standing-authorized implementation, review, commit, local merge
-  into `yuto`, and push only `yuto`; task branch remains local-only.
+- Previous Issue: `EXPLICIT-BRANCH-UPLOAD`, delivered by `5444646` and
+  merged by `f543288`.
+- Delivery mode: standing-authorized implementation, review, commit, local
+  merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
-## Contract
+## Evidence And Expected Behavior
 
-AtomGit previously ignored implicit HF branch creation, so uploads rejected every
-non-main revision. Official V5 API documents POST and GET
-`/api/v5/repos/:owner/:repo/branches`; its compatible request body uses
-`branch_name` and source `refs`.
+CLI repository and single-file downloads currently stream resolve responses to
+unique temporary files and atomically replace destinations, but they do not
+compare downloaded bytes with repository metadata. Existing files are skipped
+by default without verification.
 
-Expected workflow: users explicitly run
-`atomgit repo branch create REPO_ID BRANCH --from main`, which POSTs and then
-GET-verifies the branch. `atomgit upload --revision BRANCH` then forwards the
-validated existing branch to locked HF upload calls. Upload never auto-creates a
-branch and missing-branch errors remain nonzero and actionable.
+Authorized read-only probes of `weixin_52273949/test_model` and
+`weixin_52273949/test_datasets` confirm that locked
+`get_hf_file_metadata()` returns a size plus a 40-hex Git blob SHA-1 for regular
+Git files and a 64-hex content SHA-256 for LFS files.
+
+Add opt-in `--verify-checksum` behavior to both CLI download commands. Default
+skip semantics remain unchanged. When enabled, existing files are verified
+without network content transfer; mismatches fail with `--force` guidance.
+New or forced downloads are checked in their unique temporary file before the
+destination is replaced. Missing, malformed, unsupported, or mismatched
+metadata fails closed and never claims verification.
 
 ## Scope And Acceptance
 
-- Add safe Git branch-name validation and reject ambiguous/unsafe ref names.
-- Add bounded V5 POST JSON support, encoded branch paths, create + GET verify,
-  and `repo branch create` CLI help/login/error behavior.
-- Permit validated non-main revision forwarding for file, directory, and
-  resumable upload; preserve empty/main compatibility and SDK behavior.
-- Update tests/docs that currently state main-only behavior.
+- Bind checksum metadata lookup to the real `huggingface-hub==1.1.7` signature
+  with explicit AtomGit or anonymous authentication.
+- Support content SHA-256 and Git blob SHA-1, including expected-size checks,
+  using streamed local hashing.
+- Preserve default existing-file skip behavior and all CLI/API compatibility;
+  SDK download behavior is out of scope.
+- Verify standard and raw UTF-8 fallback downloads before atomic replacement;
+  mismatch must preserve an existing destination and clean unique temporaries.
+- Add CLI forwarding, existing-file, valid checksum, corrupt download,
+  unsupported metadata, and credential-isolation regressions.
+- Update authoritative user and architecture documentation.
 - Run focused and full offline tests, compileall, diff checks, and independent
   review with no open P0/P1 findings.
 
 ## Permissions
 
 - Authorized local development/delivery follows standing rules.
-- No live branch creation or upload is authorized in this Issue because those
-  are remote writes; strict offline API/HF contracts apply.
+- Read-only live checksum verification may use only
+  `weixin_52273949/test_model` and `weixin_52273949/test_datasets` with the
+  already supplied login. No remote create, upload, branch, visibility, delete,
+  credential-helper mutation, publication, or other remote write is authorized
+  by this Issue.
 - Human acceptance is standing-approved for the ordered plan.
 
 ## Evidence And Closure
 
-- Official API evidence: AtomGit documents POST/GET branch endpoints; the V5
-  compatible body uses `branch_name` and `refs`.
-- Implementation: V5 POST support, strict ref validation, explicit branch
-  create + GET verification, CLI branch command, and safe non-main forwarding
-  now cover file, directory, and resumable CLI uploads. SDK remains main-only.
-- Regression evidence: former main-only tests were converted to prove `dev`
-  forwarding and malformed-ref rejection; new branch tests cover exact POST
-  JSON, encoded verification path, CLI forwarding, and invalid names.
-- Focused tests: branch create 8/8, API revision 14/14, file upload 16/16,
-  dataset resumable 8/8, and upload resumable 13/13 custom checks passed.
-- Complete offline suite: `python -m pytest -q` passed 48/48 isolated script
-  cases in 46.64 seconds in the `atomgit_cli` environment.
+- Implementation: `--verify-checksum` is available on repository and
+  single-file CLI downloads. Metadata lookup uses explicit `False` for
+  anonymous HF authentication, validates only 40/64-hex strong checksums and a
+  nonnegative size, streams Git blob SHA-1 or SHA-256 locally, and verifies
+  unique temporary files before atomic replacement. Existing default skip
+  behavior and SDK behavior are unchanged.
+- Regression evidence: `tests/test_download_checksum.py` passed 23/23 custom
+  checks covering both algorithms, standard/raw transfers, mismatch retry and
+  cleanup, encoded-URL-to-raw fallback enforcement, existing-file validation,
+  unsupported metadata, credential isolation, default compatibility, and both
+  CLI options and consistent existing-directory guidance. All download-focused
+  scripts plus the locked HF contract passed.
+- Complete offline suite: `python -m pytest -ra` collected and passed 49/49
+  isolated script cases in the `atomgit_cli` environment.
 - Required checks: `python -m compileall -q .` and `git diff --check` passed.
-- Live tests: not run because branch creation and upload are remote writes not
-  authorized for this Issue.
-- Independent review: no open findings. The change requires explicit branch
-  creation, verifies the remote branch before success, forwards only validated
-  refs, preserves SDK main-only behavior, binds all existing HF upload paths,
-  keeps credentials header-only, and documents that upload does not auto-create
-  branches. Residual risk is AtomGit service acceptance of the documented V5
-  compatible body and encoded slash branch path without an authorized live
-  write. Verdict: `APPROVED`.
-- DoD: implementation, regressions, full suite, docs, compileall, and diff
-  checks agree; no token, artifact, unrelated edit, remote mutation, or open
-  P0/P1 finding is present.
-- Commit/merge/push: authorized; exact references will be reported from Git.
+- Live tests: read-only `download-file --force --verify-checksum` succeeded on
+  authorized model `ignore_test/config.json` (Git blob SHA-1, 77 bytes) and
+  dataset `part1.bin` (SHA-256, 12,582,912 bytes); independent local verification
+  returned true for both. No remote state was changed.
+- Independent review: the first pass requested a raw-fallback enforcement
+  regression and corrected retry documentation; the second pass found
+  contradictory existing-directory CLI guidance. Both findings were fixed and
+  covered by regressions. The final pass found no open P0/P1/P2/P3 finding.
+  Residual risk is limited to AtomGit repositories that do not return the
+  observed 40/64-hex strong metadata; explicit verification fails closed for
+  them rather than silently accepting content. Verdict: `APPROVED`.
+- DoD: implementation, regressions, complete offline suite, locked signature,
+  documentation, compileall, diff checks, scoped live evidence, credential
+  safety, atomic cleanup, and final independent review agree. No token,
+  generated artifact, unrelated edit, remote mutation, or open finding is
+  present.
+- Commit/merge/push: authorized; exact references will be recorded after
+  successful delivery.

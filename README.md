@@ -264,6 +264,17 @@ atomgit download your-username/your-dataset -d ./data/ --repo-type dataset
 atomgit download your-username/your-model-name -d ./models/ --force
 ```
 
+需要验证本地文件与仓库内容一致时使用 `--verify-checksum`：
+
+```bash
+atomgit download your-username/your-model-name -d ./models/ --verify-checksum
+```
+
+该选项会校验已有文件而不重新传输；新下载或 `--force` 下载的内容会在替换目标
+文件前完成校验。普通 Git 文件使用 Git blob SHA-1，LFS 文件使用内容 SHA-256。
+checksum 不匹配或服务未提供受支持的强校验值时命令会失败，不会用错误内容替换
+已有文件；已有文件不匹配时可结合 `--force --verify-checksum` 重新下载并校验。
+
 #### 只下载一个文件
 
 仓库内文件名可以包含子目录；本地会保留该相对目录结构：
@@ -276,7 +287,7 @@ dataset、强制覆盖和匿名下载与整仓命令使用相同策略：
 
 ```bash
 atomgit download-file your-username/your-dataset data/sample.csv \
-  -d ./data/ --repo-type dataset --force
+  -d ./data/ --repo-type dataset --force --verify-checksum
 ```
 
 ### 4. 其他命令

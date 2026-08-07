@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urljoin, urlsplit
+import hashlib
 import os
 import shutil
 import json
@@ -24,7 +25,7 @@ configure_hf_environment()
 
 
 from huggingface_hub import (
-    hf_hub_download, upload_folder, create_repo, snapshot_download,
+    get_hf_file_metadata, hf_hub_download, upload_folder, create_repo, snapshot_download,
     constants as hf_constants, HfApi,
 )
 
@@ -133,6 +134,74 @@ def _atomgit_resolve_url(repo_id: str, repo_type: str, filename: str) -> str:
     # 请求行时按 ASCII 编码，中文文件名会抛 UnicodeEncodeError。
     encoded_filename = quote(filename, safe="/")
     return f"{endpoint}/{prefix}{repo_id}/resolve/main/{encoded_filename}"
+
+
+class DownloadChecksumMismatchError(OSError):
+    """Downloaded or existing bytes do not match repository metadata."""
+
+
+class DownloadChecksumMetadataError(ValueError):
+    """AtomGit did not provide a supported strong checksum."""
+
+
+def _atomgit_file_checksum(
+    repo_id: str, repo_type: str, filename: str, token: str
+) -> tuple:
+    """Return (algorithm, digest, size) from AtomGit resolve metadata."""
+    metadata = get_hf_file_metadata(
+        _atomgit_resolve_url(repo_id, repo_type, filename),
+        token=token if token else False,
+        timeout=60,
+        endpoint=_atomgit_hf_endpoint(),
+    )
+    etag = metadata.etag
+    size = metadata.size
+    if not isinstance(etag, str) or not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        raise DownloadChecksumMetadataError("checksum metadata is unavailable")
+    digest = etag.strip().strip('"').lower()
+    if not digest or any(character not in "0123456789abcdef" for character in digest):
+        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
+    if len(digest) == 64:
+        algorithm = "sha256"
+    elif len(digest) == 40:
+        algorithm = "git-sha1"
+    else:
+        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
+    return algorithm, digest, size
+
+
+def _verify_download_checksum(path: Path, checksum: tuple) -> bool:
+    """Stream-hash one local file using a strong AtomGit checksum contract."""
+    algorithm, expected_digest, expected_size = checksum
+    try:
+        actual_size = path.stat().st_size
+    except OSError as error:
+        raise DownloadChecksumMismatchError("checksum mismatch") from error
+    if actual_size != expected_size:
+        raise DownloadChecksumMismatchError("checksum mismatch")
+
+    if algorithm == "sha256":
+        digest = hashlib.sha256()
+    elif algorithm == "git-sha1":
+        digest = hashlib.sha1()
+        digest.update(b"blob " + str(actual_size).encode("ascii") + b"\0")
+    else:
+        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
+
+    bytes_read = 0
+    try:
+        with path.open("rb") as stream:
+            while True:
+                chunk = stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+                bytes_read += len(chunk)
+    except OSError as error:
+        raise DownloadChecksumMismatchError("checksum mismatch") from error
+    if bytes_read != expected_size or digest.hexdigest() != expected_digest:
+        raise DownloadChecksumMismatchError("checksum mismatch")
+    return True
 
 
 def _is_not_found_error(error: Exception) -> bool:
@@ -557,7 +626,14 @@ def _copy_framed_http_body(body, response_headers, output) -> None:
     shutil.copyfileobj(body, output)
 
 
-def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_redirects: int = 5) -> None:
+def _atomgit_download_raw(
+    url: str,
+    dest: Path,
+    headers,
+    timeout: int = 60,
+    max_redirects: int = 5,
+    checksum: tuple = None,
+) -> None:
     """Download over HTTPS keeping non-ASCII path bytes raw.
 
     AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
@@ -604,6 +680,8 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
                 ) as out:
                     temporary_path = Path(out.name)
                     _copy_framed_http_body(body, response_headers, out)
+                if checksum is not None:
+                    _verify_download_checksum(temporary_path, checksum)
                 temporary_path.replace(dest)
                 temporary_path = None
                 return
@@ -618,7 +696,14 @@ def _atomgit_download_raw(url: str, dest: Path, headers, timeout: int = 60, max_
             temporary_path.unlink(missing_ok=True)
 
 
-def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Path, token: str) -> None:
+def _download_atomgit_file(
+    repo_id: str,
+    repo_type: str,
+    filename: str,
+    dest: Path,
+    token: str,
+    checksum: tuple = None,
+) -> None:
     """Download one file from the already-selected repository type.
 
     Standard percent-encoded URLs are tried first (HF Hub compatible). When the
@@ -633,7 +718,12 @@ def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Pa
 
     def fetch_once(url: str, raw: bool = False) -> None:
         if raw:
-            _atomgit_download_raw(url, dest, headers, timeout=60)
+            if checksum is None:
+                _atomgit_download_raw(url, dest, headers, timeout=60)
+            else:
+                _atomgit_download_raw(
+                    url, dest, headers, timeout=60, checksum=checksum
+                )
             return
         temporary_path = None
         try:
@@ -648,6 +738,8 @@ def _download_atomgit_file(repo_id: str, repo_type: str, filename: str, dest: Pa
                 ) as out:
                     temporary_path = Path(out.name)
                     shutil.copyfileobj(resp, out)
+            if checksum is not None:
+                _verify_download_checksum(temporary_path, checksum)
             temporary_path.replace(dest)
             temporary_path = None
         finally:
@@ -1248,7 +1340,14 @@ class HuggingFaceAPI:
             print(f"💡 建议: {hint}")
             return False
     
-    def download_repo(self, repo_id: str, local_path: Path = None, force_download: bool = False, repo_type: str = None) -> bool:
+    def download_repo(
+        self,
+        repo_id: str,
+        local_path: Path = None,
+        force_download: bool = False,
+        repo_type: str = None,
+        verify_checksum: bool = False,
+    ) -> bool:
         """下载仓库到本地目录（公开仓库无需token）。
 
         绕过 huggingface_hub 的 snapshot_download：AtomGit hub 未实现
@@ -1277,17 +1376,50 @@ class HuggingFaceAPI:
             ]
             for filename, dest in destinations:
                 if dest.exists() and not force_download:
+                    if verify_checksum:
+                        checksum = _atomgit_file_checksum(
+                            normalized_repo_id, effective_type, filename, token
+                        )
+                        _verify_download_checksum(dest, checksum)
+                        print(f"✓ checksum 校验通过: {filename}")
+                        continue
                     print(f"⏭ 已存在，跳过（未校验内容；--force 可覆盖）: {filename}")
                     continue
-                _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
-                print(f"✓ 已下载: {filename}")
+                checksum = None
+                if verify_checksum:
+                    checksum = _atomgit_file_checksum(
+                        normalized_repo_id, effective_type, filename, token
+                    )
+                if checksum is None:
+                    _download_atomgit_file(
+                        normalized_repo_id, effective_type, filename, dest, token
+                    )
+                    print(f"✓ 已下载: {filename}")
+                else:
+                    _download_atomgit_file(
+                        normalized_repo_id,
+                        effective_type,
+                        filename,
+                        dest,
+                        token,
+                        checksum=checksum,
+                    )
+                    print(f"✓ 已下载并通过 checksum 校验: {filename}")
             print("✅ 仓库下载成功")
             return True
         except Exception as e:
             print(f"仓库下载失败: {sanitized_download_error(e)}")
             return False
 
-    def download_file(self, repo_id: str, filename: str, local_path: Path = None, force_download: bool = False, repo_type: str = None) -> bool:
+    def download_file(
+        self,
+        repo_id: str,
+        filename: str,
+        local_path: Path = None,
+        force_download: bool = False,
+        repo_type: str = None,
+        verify_checksum: bool = False,
+    ) -> bool:
         """下载单个文件到本地目录（公开仓库无需token）。"""
         try:
             normalized_repo_id = self._normalize_repo_id(repo_id)
@@ -1307,10 +1439,35 @@ class HuggingFaceAPI:
 
             dest = _safe_download_destination(local_path, filename)
             if dest.exists() and not force_download:
+                if verify_checksum:
+                    checksum = _atomgit_file_checksum(
+                        normalized_repo_id, effective_type, filename, token
+                    )
+                    _verify_download_checksum(dest, checksum)
+                    print(f"✅ 文件 checksum 校验通过: {filename}")
+                    return True
                 print(f"⏭ 文件已存在，跳过: {filename}（未校验内容；--force 可覆盖）")
                 return True
-            _download_atomgit_file(normalized_repo_id, effective_type, filename, dest, token)
-            print("✅ 文件下载成功")
+            checksum = None
+            if verify_checksum:
+                checksum = _atomgit_file_checksum(
+                    normalized_repo_id, effective_type, filename, token
+                )
+            if checksum is None:
+                _download_atomgit_file(
+                    normalized_repo_id, effective_type, filename, dest, token
+                )
+                print("✅ 文件下载成功")
+            else:
+                _download_atomgit_file(
+                    normalized_repo_id,
+                    effective_type,
+                    filename,
+                    dest,
+                    token,
+                    checksum=checksum,
+                )
+                print("✅ 文件下载成功，checksum 校验通过")
             return True
         except Exception as e:
             print(f"文件下载失败: {sanitized_download_error(e)}")
