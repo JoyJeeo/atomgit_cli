@@ -20,6 +20,7 @@ import time
 
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
 _ATOMGIT_V5_MAX_JSON_BYTES = 10 * 1024 * 1024
+_ATOMGIT_IDENTITY_MAX_JSON_BYTES = 1024 * 1024
 
 try:
     from .runtime import configure_hf_environment
@@ -1908,7 +1909,10 @@ class HuggingFaceAPI:
                     getattr(response, "headers", {}),
                     None,
                 )
-            data = json.loads(response.read().decode('utf-8'))
+            payload = response.read(_ATOMGIT_IDENTITY_MAX_JSON_BYTES + 1)
+        if len(payload) > _ATOMGIT_IDENTITY_MAX_JSON_BYTES:
+            raise ValueError("identity response is too large")
+        data = json.loads(payload.decode('utf-8'))
         if not isinstance(data, dict):
             raise ValueError("identity response is malformed")
         login = data.get('login')
