@@ -1,56 +1,59 @@
 # Current Issue Contract
 
-# Issue BRANCH-SOURCE-VERIFICATION
+# Issue AUTH-STATUS-SEMANTICS
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `BRANCH-SOURCE-VERIFICATION`
-- Title: `Verify a created branch points to the requested source`
-- Type: `bug`, `cli`, `reliability`
+- Local Issue: `AUTH-STATUS-SEMANTICS`
+- Title: `Distinguish authentication failures from permission denials`
+- Type: `bug`, `cli`, `sdk`, `diagnostics`
 - Priority: `P2`
-- Branch: `codex/fix-branch-source-verification` (local only)
+- Branch: `codex/fix-auth-status-semantics` (local only)
 - Base: `yuto`
-- Previous Issue: `V5-AMBIGUOUS-WRITE-VERIFICATION`, delivered by `16341b2`.
+- Previous Issue: `BRANCH-SOURCE-VERIFICATION`, delivered by `702bcb6`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-Branch creation sends the requested source in `refs`, but post-write verification
-only compares the returned branch name. A pre-existing or incorrectly created
-same-name branch can therefore be accepted even when it points to a different
-source commit, especially while recovering an ambiguous POST result.
+The shared authentication predicate treats any exception text containing the
+digits `401` or `403` as an authentication error. Unrelated filenames, IDs, or
+counts can therefore be misclassified. Real 403 permission denials are also
+reported with the same re-login guidance as 401 invalid/expired credentials in
+download, upload, repository creation, and SDK diagnostics.
 
-The CLI must resolve the requested source before creation, then verify that the
-target branch points to the same immutable commit after creation. Branch name
-alone is not sufficient evidence.
+Status evidence and explicit protocol wording must drive classification. A 401
+means authentication failed; a 403 means the credential was understood but the
+operation lacks permission. Incidental digits must not affect error semantics.
 
 ## Scope And Acceptance
 
-- Use the existing authenticated V5 commit read to resolve the source and the
-  branch read to verify the target branch's immutable commit identifier.
-- Resolve the source before POST so later source movement cannot change the
-  expected value during verification.
-- Return false with sanitized guidance if either V5 response lacks its required
-  commit identity or if target and source commits differ.
-- Preserve ambiguous-write recovery: matching target commit may recover success;
-  HTTP 4xx remains definitive and skips post-write recovery reads.
-- Preserve paths, POST body, token headers, timeouts, CLI arguments, and exit
-  behavior.
-- Add focused regressions for normal match, mismatch, malformed response,
-  encoded source names, ambiguous recovery, and credential redaction.
-- Do not add commands, flags, retries, revision types, or unrelated features.
+- Add one shared credential-error classifier that returns authentication,
+  permission, or no credential classification.
+- Prefer structured HTTP status attributes from urllib/HF/httpx exceptions;
+  use bounded explicit status/wording patterns only as compatibility fallback.
+- Keep `is_auth_error` as the existing combined compatibility predicate.
+- Give 401 and 403 distinct, credential-safe guidance in download, upload,
+  repository creation, and SDK translation paths.
+- Preserve higher-priority repository-not-found, gated, disabled, revision,
+  request, timeout, network, and unknown classifications.
+- Preserve the public SDK exception hierarchy: permission errors remain the
+  existing compatible `AtomGitAuthenticationError` type but use permission
+  semantics in the message.
+- Add focused regressions for structured 401/403, explicit text fallbacks,
+  incidental digits, precedence, and credential redaction.
+- Do not change login behavior, commands, flags, network calls, exception API,
+  credentials, or unrelated functionality.
 
 ## Compatibility And Risks
 
-- This adds one pre-write GET to branch creation and requires AtomGit's existing
-  branch response to expose a stable commit identity.
-- A source branch may advance after the pre-write read; verification intentionally
-  checks the exact commit requested at operation start, not the later branch tip.
-- No live branch creation is authorized. Read-only schema inspection may use only
-  the maintainer-provided test repository; write behavior remains strict offline.
+- Callers using `is_auth_error` or catching `AtomGitAuthenticationError` remain
+  compatible; only false positives and user-facing categorization change.
+- Text fallback cannot infer every arbitrary third-party message, so structured
+  status attributes are authoritative whenever available.
+- No live request is needed; strict offline exception objects cover this Issue.
 
 ## Permissions
 
@@ -58,16 +61,15 @@ alone is not sufficient evidence.
   explicitly excluded new functionality.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
-- No live branch creation, upload, deletion, visibility mutation, repository
-  creation, or other remote write is authorized or required.
+- No live request, remote write, credential mutation, or repository operation is
+  authorized or required for this Issue.
 
 ## Required Evidence And Closure
 
-- [x] Branch-name-only false success is reproduced by a failing regression.
-- [x] Source and target are compared using a stable commit identity.
-- [x] Missing or mismatched identities fail with credential-safe output.
-- [x] Ambiguous write and HTTP 4xx semantics remain correct.
-- [x] Existing request paths, body, timeout, and CLI behavior remain compatible.
+- [x] Incidental 401/403 digits are reproduced as false-positive auth failures.
+- [x] Structured and explicit 401/403 evidence is classified distinctly.
+- [x] Download, upload, create, and SDK guidance reflects auth versus permission.
+- [x] Existing classification precedence and public exception types are stable.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
@@ -75,32 +77,31 @@ alone is not sufficient evidence.
 
 ## Verification Evidence
 
-- Regression before implementation: branch creation passed `16/17`; a target
-  with the requested name but a different `commit.id` was incorrectly accepted.
-- Implementation: before POST, `GET /commits/:sha` resolves the requested
-  branch, tag, or commit to the response's top-level `sha`. After POST,
-  `GET /branches/:branch` must return the requested name and the same nested
-  `commit.id`; missing or conflicting identities fail without exposing values.
-- Request contract: strict regressions preserve the encoded repository/source/
-  target paths, exact `{"branch_name", "refs"}` body, three 15-second bounds,
-  CLI arguments, and exit behavior. Source failure stops before POST; HTTP 4xx
-  stops before post-write GET; ambiguous writes recover only on exact match.
-- Focused results: branch creation `28/28`, visibility `30/30`, repository
-  deletion `48/48`, creation visibility `3/3`, and creation contract `42/42`
-  passed offline.
+- Regression before implementation: the new credential semantics contract
+  passed only `1/14`; the old predicate treated an incidental `401` count as an
+  authentication failure and provided no structured auth/permission distinction.
+- Implementation: `auth_error_kind` prefers integer status on dependency
+  responses, direct status attributes, and urllib HTTP errors. Its text fallback
+  accepts explicit HTTP/status/401/403 forms plus credential-specific wording;
+  arbitrary digits and local filesystem `PermissionError` are not credential
+  evidence. Existing `is_auth_error` remains the combined compatibility wrapper.
+- User semantics: download, upload, repository creation, and SDK translation now
+  direct 401 users to re-login and 403 users to repository/namespace permissions.
+  SDK 403 remains `AtomGitAuthenticationError`, preserving public catch behavior.
+- Focused results: credential semantics `15/15`; upload classification, upload
+  error handling, SDK exceptions, download recovery, and repository-type
+  resolution scripts all exited `0` offline.
 - Complete offline suite: `pytest -q` exited `0` with all `55` collected tests;
   `python -m compileall -q .`, `python -m pip check`, and `git diff --check`
   passed in the `atomgit_cli` environment.
-- Read-only live contract check used only `weixin_52273949/test_datasets`: V5
-  commit responses expose top-level `sha`, branch responses expose nested
-  `commit.id`, and both `main` and its complete SHA resolved to the same commit.
-  The repository had no tag, so tag resolution remains offline-tested only.
-- Security and scope: no live write, command, flag, retry, dependency change,
-  credential, generated artifact, or unrelated feature is present.
-- Independent review: one pre-approval field-shape weakness was reproduced at
-  `27/28` and resolved by strict source/target extractors (`28/28`). Final review
-  is `APPROVED` with no open P0-P3 findings. Residual risk is a safe false failure
-  if a mutable source advances between its pre-read and the POST.
-- Delivery implementation commit: `dd5700e` (`fix(repo): verify branch source
-  commit`). The closure commit is merged locally through the standing delivery
+- Security and scope: no live request, network behavior, command, flag, public
+  exception type, credential, dependency, generated artifact, or new feature is
+  present; user output remains sanitized.
+- Independent review: two pre-approval fallback weaknesses were resolved. Bare
+  leading status numbers are no longer accepted, and filesystem permission text
+  cannot become a remote 403. Final review is `APPROVED` with no open P0-P3
+  findings; residual unknown third-party text safely falls through unless it
+  exposes structured or explicit protocol evidence.
+- Delivery implementation commit: `58962fb` (`fix(auth): distinguish permission
+  failures`). The closure commit is merged locally through the standing delivery
   workflow; the task branch remains local-only and only `yuto` is pushed.

@@ -49,7 +49,7 @@ try:
         AtomGitUnsupportedError,
     )
     from .utils import (
-        is_auth_error,
+        auth_error_kind,
         is_retryable_download_error,
         normalize_repo_id,
         run_download_with_retry,
@@ -69,7 +69,7 @@ except ImportError:
             AtomGitUnsupportedError,
         )
         from utils import (
-            is_auth_error,
+            auth_error_kind,
             is_retryable_download_error,
             normalize_repo_id,
             run_download_with_retry,
@@ -88,7 +88,7 @@ except ImportError:
             AtomGitUnsupportedError,
         )
         from atomgit.utils import (
-            is_auth_error,
+            auth_error_kind,
             is_retryable_download_error,
             normalize_repo_id,
             run_download_with_retry,
@@ -100,7 +100,7 @@ def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGit
     """Classify a dependency failure without echoing remote or signed URLs."""
     name = type(error).__name__
     message = str(error).lower()
-    authentication_failure = is_auth_error(error)
+    credential_error = auth_error_kind(error)
     retryable_failure = is_retryable_download_error(error)
     if any(
         marker in message
@@ -108,9 +108,13 @@ def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGit
     ):
         error.args = (f"{name} details redacted",)
     target = f"：{repo_id}" if repo_id else ""
-    if authentication_failure:
+    if credential_error == "authentication":
         return AtomGitAuthenticationError(
-            f"{operation}认证失败或权限不足{target}；请检查 token 和仓库权限"
+            f"{operation}认证失败{target}；请重新登录后重试"
+        )
+    if credential_error == "permission":
+        return AtomGitAuthenticationError(
+            f"{operation}权限不足{target}；请检查仓库或命名空间权限"
         )
     if name == "RevisionNotFoundError" or (
         "revision" in message and ("not found" in message or "404" in message)

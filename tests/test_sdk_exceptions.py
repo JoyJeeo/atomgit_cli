@@ -46,8 +46,10 @@ def main():
     try:
         cases = [
             (
-                "authentication",
-                RuntimeError("403 https://signed.invalid/file?token=secret"),
+                "permission",
+                RuntimeError(
+                    "HTTP 403 Forbidden https://signed.invalid/file?token=secret"
+                ),
                 atomgit_hub.AtomGitAuthenticationError,
             ),
             (

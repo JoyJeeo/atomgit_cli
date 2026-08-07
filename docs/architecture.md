@@ -260,7 +260,9 @@ URL 或其查询参数。
 - upload timeout 在成功和失败后恢复；
 - 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
 - SDK 使用公开的 `AtomGitError` 层次区分认证、仓库、revision、网络、超时和
-  不支持语义，并保留脱敏后的原始 cause。
+  不支持语义，并保留脱敏后的原始 cause。401 与 403 均保持兼容的
+  `AtomGitAuthenticationError` 类型，但消息分别表达重新认证和权限不足；分类
+  优先读取结构化 HTTP 状态，任意文本中的孤立数字不会触发认证分类。
 
 ## 9. Repo ID 转换
 

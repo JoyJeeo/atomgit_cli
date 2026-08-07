@@ -80,9 +80,9 @@ def main():
     case("U1 401 文本 → 认证失败",
          Exception("401 Client Error. Unauthorized. Invalid username or password."),
          "认证失败")
-    case("U2 403 文本 → 认证失败",
+    case("U2 403 文本 → 权限不足",
          Exception("403 Client Error. Forbidden."),
-         "认证失败")
+         "权限不足")
 
     # --- 仓库不存在 ---
     if _HF_ERR_OK:

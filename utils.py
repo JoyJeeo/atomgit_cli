@@ -1,9 +1,11 @@
 import os
+import re
 import sys
 import subprocess
 import json
 import shlex
 import tempfile
+import urllib.error
 from pathlib import Path
 from typing import Optional, List
 from colorama import Fore, Style, init
@@ -17,11 +19,68 @@ _GIT_HELPER_STATE_VERSION = 1
 _GIT_HELPER_STATE_FILENAME = "git-helper-state.json"
 
 
-def is_auth_error(error: Exception) -> bool:
+_AUTH_STATUS_PATTERNS = (
+    re.compile(
+        r"\b(?:http(?:\s+status)?|status(?:\s+code)?)\s*[:=]?\s*(401|403)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(401|403)\s+(?:client\s+error|unauthorized|forbidden)\b",
+        re.IGNORECASE,
+    ),
+)
+
+
+def _structured_http_status(error: Exception) -> Optional[int]:
+    """Read a dependency HTTP status without interpreting arbitrary numbers."""
+    response = getattr(error, "response", None)
+    for candidate in (
+        getattr(response, "status_code", None),
+        getattr(response, "status", None),
+        getattr(error, "status_code", None),
+    ):
+        if isinstance(candidate, int) and not isinstance(candidate, bool):
+            return candidate
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code
+    return None
+
+
+def auth_error_kind(error: Exception) -> Optional[str]:
+    """Return ``authentication`` or ``permission`` from bounded evidence."""
+    status = _structured_http_status(error)
+    if status == 401:
+        return "authentication"
+    if status == 403:
+        return "permission"
+
     message = str(error).lower()
-    return any(marker in message for marker in (
-        "401", "403", "unauthorized", "forbidden", "no scopes",
-    ))
+    for pattern in _AUTH_STATUS_PATTERNS:
+        match = pattern.search(message)
+        if match:
+            return "authentication" if match.group(1) == "401" else "permission"
+    if any(marker in message for marker in (
+        "unauthorized",
+        "authentication failed",
+        "invalid token",
+        "token expired",
+        "expired token",
+        "token not found",
+        "invalid username or password",
+    )):
+        return "authentication"
+    if any(marker in message for marker in (
+        "forbidden",
+        "no scopes",
+        "insufficient scope",
+    )):
+        return "permission"
+    return None
+
+
+def is_auth_error(error: Exception) -> bool:
+    """Compatibility predicate for authentication and permission failures."""
+    return auth_error_kind(error) is not None
 
 
 def is_retryable_download_error(error: Exception) -> bool:
@@ -58,8 +117,11 @@ def sanitized_download_error(error: Exception) -> str:
     """Return an actionable category without exposing remote or signed URLs."""
     if "仓库类型不明确" in str(error):
         return "仓库类型不明确，请使用 --repo-type model 或 dataset"
-    if is_auth_error(error):
-        return "认证失败或权限不足，请检查登录状态和仓库权限"
+    credential_error = auth_error_kind(error)
+    if credential_error == "authentication":
+        return "认证失败，请重新登录后重试"
+    if credential_error == "permission":
+        return "权限不足，请检查仓库访问权限"
     message = str(error).lower()
     if "checksum metadata" in message:
         return "服务未提供受支持的 checksum，无法完成校验"
