@@ -1,95 +1,85 @@
 # Current Issue Contract
 
-# Issue LOGIN-ERROR-SEMANTICS
+# Issue LOGIN-RESPONSE-BOUND
 
-Status: `completed`
+Status: `active`
 
 ## Identity
 
-- Local Issue: `LOGIN-ERROR-SEMANTICS`
-- Title: `Preserve actionable login and whoami failure semantics`
-- Type: `bug`, `cli`, `authentication`, `diagnostics`
+- Local Issue: `LOGIN-RESPONSE-BOUND`
+- Title: `Bound AtomGit login identity responses before parsing`
+- Type: `bug`, `security`, `authentication`, `resource-safety`
 - Priority: `P2`
-- Branch: `codex/fix-login-error-semantics` (local only)
+- Branch: `codex/bound-login-response` (local only)
 - Base: `yuto`
-- Previous Issue: `REPO-INFO-STUB-SEMANTICS`, delivered by `9c2563a`.
+- Previous Issue: `LOGIN-ERROR-SEMANTICS`, delivered by `cdcbf17`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-`_get_login_user_by_token` catches every exception and returns `None`. Both
-`login` and `whoami` consequently erase the difference between invalid
-credentials, insufficient permission, network failure, timeout, service
-failure, and malformed responses. The CLI then tells every failed login to
-check the token, which is incorrect and can send users toward the wrong fix.
+`_get_login_user_by_token` calls `response.read()` without a byte count before
+JSON decoding. A faulty or hostile identity response can therefore consume
+unbounded process memory. The authenticated V5 request path already reads at
+most its fixed limit plus one byte and rejects oversized JSON before parsing.
 
-Authentication failures must remain failures, but output must retain a fixed,
-credential-safe and actionable category. Network and service failures must not
-be reported as an invalid token. Raw exception text, response bodies, and token
-values must never be printed.
+The identity endpoint must apply the same bounded-read pattern with a limit
+appropriate for one user profile. Oversized responses must fail through the
+existing safe malformed-response category without parsing or exposing their
+body, exception details, or token.
 
 ## Scope And Acceptance
 
-- Preserve command names, options, exit codes, API method signatures, endpoint,
-  request headers, timeout, credential persistence, and Git-helper behavior.
-- Categorize 401, 403, 429, 5xx, network/timeout, and malformed-response
-  failures using fixed credential-safe text.
-- Ensure `login` and `whoami` both surface the category once without misleading
-  token advice.
-- Preserve the existing short-token rejection and successful login behavior.
-- Add focused offline regression coverage proving prior failure and token/raw
-  exception redaction.
-- Do not add a command, option, exception type, retry policy, remote call, or
-  unrelated authentication feature.
+- Introduce one fixed identity JSON byte limit and read at most limit plus one.
+- Reject an oversized body before UTF-8 decoding or JSON parsing.
+- Preserve endpoint, headers, timeout, method signatures, successful identity
+  shape, credential persistence, error category, CLI behavior, and Git helper.
+- Add an offline regression that fails on the prior unbounded read, proves the
+  exact maximum read request, and proves oversized data never reaches JSON.
+- Document the identity response bound for maintainers.
+- Do not change the general V5 limit, add streaming JSON, add retries, change
+  token validation, or implement unrelated authentication functionality.
 
 ## Permissions
 
-- The user authorized fixing already audited defects one Issue at a time and
-  explicitly excluded new functionality.
+- The user authorized completion of all confirmed defects one Issue at a time.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
-- No live request, repository access, remote write, credential mutation, or
-  external side effect is authorized or required for this Issue.
+- No live request, repository access, remote write, real credential mutation,
+  or external side effect is authorized or required for this Issue.
 
 ## Required Evidence And Closure
 
-- [x] Previous behavior is reproduced by a failing focused regression.
-- [x] Login and whoami preserve safe actionable failure categories.
-- [x] Tokens and raw exception details are absent from output.
-- [x] Existing login/configuration and CLI compatibility tests pass.
+- [x] Previous unbounded read is reproduced by a failing focused regression.
+- [x] Identity responses are bounded and oversized data is rejected pre-parse.
+- [x] Existing login behavior and credential/error redaction remain compatible.
 - [x] Complete offline tests, compileall, pip, and diff checks pass.
 - [x] Scope, credentials, documentation, and independent review pass.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
-- Regression before implementation: `python tests/test_login_error_semantics.py`
-  exited `1` with `1/7` checks passing. Every remote failure returned only
-  `获取用户信息失败`, `whoami` emitted no category, and the CLI advised checking
-  the token for an arbitrary failure.
-- Focused result after implementation: the expanded regression exited `0` with
-  `11/11` checks covering the unchanged success request contract plus 401, 403,
-  429, 503, network, timeout, malformed JSON, `whoami`, CLI exit behavior, and
-  credential/raw-error redaction.
-- Compatibility result: `test_login_config.py` passed `16/16`,
-  `test_cli_surface.py` passed `50/50`, `test_auth_status_semantics.py` passed
-  `15/15`, and `test_cli_error_redaction.py` passed `20/20`.
-- Complete offline suite: `python -m pytest -q` exited `0` with all `59`
+- Regression before implementation: `python tests/test_login_response_bound.py`
+  exited `1` with `1/5` checks passing. The configured bound was absent, both
+  responses recorded `read(-1)`, and oversized data reached the JSON parser.
+- Focused result: the same regression exited `0` with `5/5` checks. A normal
+  response requests exactly `1,048,577` bytes; an oversized body is rejected
+  before decoding/parsing and uses the existing safe invalid-response message.
+- Compatibility result: `test_login_error_semantics.py` passed `11/11`,
+  `test_login_config.py` passed `16/16`, `test_cli_surface.py` passed `50/50`,
+  and `test_cli_error_redaction.py` passed `20/20`.
+- Complete offline suite: `python -m pytest -q` exited `0` with all `60`
   collected tests; `python -m compileall -q .`, `python -m pip check`, and
   `git diff --check` passed in the `atomgit_cli` environment.
-- Compatibility and isolation: the endpoint, authorization header, user agent,
-  accept header, ten-second timeout, method signatures, credential persistence,
-  exit codes, and Git-helper path are unchanged. Tests replace urllib and
-  configuration methods and perform no live request or real credential write.
+- Compatibility and scope: the new constant is one MiB, only the identity body
+  read changed, and the endpoint, headers, ten-second timeout, public method
+  signatures, successful result, persistence, CLI, and Git helper are unchanged.
 - Locked dependencies remain `huggingface-hub==1.1.7` and `datasets==4.4.1`;
-  this change introduces no dependency call or dependency version change.
-- Independent review: `APPROVED` with no open P0-P3 finding. The only residual
-  limitation is that live AtomGit status behavior was not exercised; the test
-  uses strict offline urllib failures and response fakes, as required by scope.
-- Human acceptance is covered by the maintainer's standing ordered-fix and
-  delivery authorization; no remote Issue transition is requested or made.
-- Delivery implementation commit: `8fabac8` (`fix(auth): preserve login failure
-  semantics`). The closure commit is merged locally through the standing
-  delivery workflow; the task branch remains local-only and only `yuto` is
-  pushed.
+  this Issue changes only Python standard-library response handling.
+- Security and isolation: fakes replace urllib and credential persistence; no
+  real token, HOME mutation, live request, repository access, or remote write
+  occurred. Oversized bytes and parser assertion text are absent from output.
+- Independent review: `APPROVED` with no open P0-P3 finding. No live test is
+  needed because the defect and the byte boundary are entirely client-local.
+- Human acceptance is covered by the maintainer's instruction to complete all
+  confirmed defects under the standing delivery workflow.

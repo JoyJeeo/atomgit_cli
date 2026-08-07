@@ -77,6 +77,8 @@ login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支�
 均使用 fake，不访问真实 HOME、Git 配置或网络。
 `tests/test_login_error_semantics.py` 进一步验证登录身份接口的 401、403、429、
 5xx、网络、超时和畸形响应分类，且 token 与原始异常文本不会进入输出。
+`tests/test_login_response_bound.py` 验证身份响应最多读取 1 MiB 加 1 字节，并在
+解码和 JSON 解析前拒绝超限正文。
 
 ### 依赖契约测试
 

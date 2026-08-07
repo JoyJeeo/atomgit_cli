@@ -81,7 +81,8 @@ atomgit = atomgit.cli:cli
 
 登录和 `whoami` 的远端失败采用固定、脱敏的类别提示：401、403、限流、服务端
 故障、网络/超时和无效响应分别保留可执行的诊断；CLI 不会把所有失败都归因为
-token 无效，也不会输出响应正文或底层异常详情。
+token 无效，也不会输出响应正文或底层异常详情。身份 JSON 最多接受 1 MiB，读取
+上限加 1 字节后会在 UTF-8 解码和 JSON 解析前拒绝超限响应。
 
 仓库列表使用 AtomGit V5 `GET /api/v5/user/repos`，凭据只通过
 `PRIVATE-TOKEN` 请求头发送；响应经过大小限制和 JSON 集合校验后才交给 CLI。
