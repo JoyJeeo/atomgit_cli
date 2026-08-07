@@ -224,7 +224,9 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 > 分支，因此 CLI 不依赖 HF 隐式建分支。先运行
 > `atomgit repo branch create REPO_ID BRANCH --from main`，再使用
 > `upload --revision BRANCH`。Python SDK 仍保持 `main`-only。详见
-> [上传实现分析](docs/upload_command_analysis.md)。
+> [上传实现分析](docs/upload_command_analysis.md)。V5 分支写入若遇到超时、
+> 网络中断或服务端错误，CLI 会读取目标分支恢复结果；4xx 拒绝不会按已有分支
+> 误报成功，无法验证时会明确提示远端状态未知。
 
 #### 错误处理
 

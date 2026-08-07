@@ -709,6 +709,14 @@ def _sanitized_v5_api_error(error: Exception) -> str:
     return f"AtomGit API 请求失败（{type(error).__name__}）"
 
 
+def _is_definitive_v5_write_error(error: Exception) -> bool:
+    """Return whether a V5 write was definitively rejected by the server."""
+    return (
+        isinstance(error, urllib.error.HTTPError)
+        and 400 <= error.code < 500
+    )
+
+
 def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
     """List repo files without calling repo_info.
 
@@ -1822,12 +1830,34 @@ class HuggingFaceAPI:
             if not isinstance(private, bool):
                 raise ValueError("private must be a boolean")
             path = _atomgit_v5_repo_path(repo_id)
-            _atomgit_v5_request_json(
-                "PATCH", path, credentials['token'], {"private": private}
-            )
-            repository = _atomgit_v5_get_json(path, credentials['token'])
+            write_error = None
+            try:
+                _atomgit_v5_request_json(
+                    "PATCH", path, credentials['token'], {"private": private}
+                )
+            except Exception as error:
+                if _is_definitive_v5_write_error(error):
+                    print(
+                        "修改仓库可见性失败: "
+                        + _sanitized_v5_api_error(error)
+                    )
+                    return False
+                write_error = error
+            try:
+                repository = _atomgit_v5_get_json(
+                    path, credentials['token']
+                )
+            except Exception:
+                print("仓库可见性修改状态未知：无法验证远端状态")
+                return False
             if _repo_private_state(repository) is not private:
-                print("仓库可见性验证失败：远端状态与请求不一致")
+                if write_error is None:
+                    print("仓库可见性验证失败：远端状态与请求不一致")
+                else:
+                    print(
+                        "仓库可见性写请求状态未知："
+                        "远端当前状态与请求不一致"
+                    )
                 return False
             return True
         except Exception as error:
@@ -1899,17 +1929,37 @@ class HuggingFaceAPI:
             if not source or not is_supported_upload_revision(source):
                 raise ValueError("invalid source revision")
             base_path = _atomgit_v5_repo_path(repo_id) + "/branches"
-            _atomgit_v5_request_json(
-                "POST",
-                base_path,
-                credentials['token'],
-                {"branch_name": branch_name, "refs": source},
-            )
+            write_error = None
+            try:
+                _atomgit_v5_request_json(
+                    "POST",
+                    base_path,
+                    credentials['token'],
+                    {"branch_name": branch_name, "refs": source},
+                )
+            except Exception as error:
+                if _is_definitive_v5_write_error(error):
+                    print(
+                        "创建分支失败: " + _sanitized_v5_api_error(error)
+                    )
+                    return False
+                write_error = error
             branch_path = base_path + "/" + quote(branch_name, safe="")
-            payload = _atomgit_v5_get_json(branch_path, credentials['token'])
+            try:
+                payload = _atomgit_v5_get_json(
+                    branch_path, credentials['token']
+                )
+            except Exception:
+                print("分支创建状态未知：无法验证远端状态")
+                return False
             name = payload.get("name") if isinstance(payload, dict) else None
             if name != branch_name:
-                print("分支创建验证失败：远端未返回目标分支")
+                if write_error is None:
+                    print("分支创建验证失败：远端未返回目标分支")
+                else:
+                    print(
+                        "分支创建写请求状态未知：远端未返回目标分支"
+                    )
                 return False
             return True
         except Exception as error:
