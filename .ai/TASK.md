@@ -2,7 +2,7 @@
 
 # Issue PYTHON-VERSION-CONTRACT
 
-Status: `ready-for-delivery`
+Status: `completed`
 
 ## Identity
 
@@ -71,7 +71,7 @@ checklist, and user documentation must all require Python 3.9 or newer.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -97,3 +97,6 @@ checklist, and user documentation must all require Python 3.9 or newer.
 - Independent review: `APPROVED` with no P0-P3 findings. Residual risk is that
   Python 3.9 was not executed locally; compatibility is proven here at package
   and dependency metadata level, while complete runtime evidence is Python 3.10.
+- Delivery implementation commit: `8d9b205` (`fix(packaging): require Python
+  3.9`). The closure commit is merged locally through the standing delivery
+  workflow; the task branch remains local-only and only `yuto` is pushed.
