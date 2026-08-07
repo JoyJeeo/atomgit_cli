@@ -44,13 +44,18 @@ as not applicable. Run it after implementation and after every subsequent fix,
 before human acceptance, Issue completion, delivery, or merge:
 
 ```bash
-python tests/test_cli_feature_baseline.py
+python tests/run_cli_baseline.py
 ```
 
-- [ ] The command ran in the `atomgit_cli` conda environment and every baseline
-      check passed.
+- [ ] The command ran in the `atomgit_cli` conda environment and the complete
+      isolated pytest matrix passed, including the exact CLI schema, capability
+      registry, leaf dispatch, dependency, security, packaging, and portability
+      contracts.
 - [ ] The command and passing result are recorded in `TASK.md` verification
       evidence.
+- [ ] A new feature added or updated a focused executable test; a new public
+      command or parameter updated the exact schema and dispatch contract; and
+      every new `test_*.py` script was added to the capability registry.
 - [ ] If the gate failed at any point, the Issue remained active, returned to
       implementation, and the regression was fixed before the gate was rerun.
 - [ ] A failing gate blocks acceptance, completion, commit for delivery, merge,

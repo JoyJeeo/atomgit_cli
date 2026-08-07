@@ -78,16 +78,30 @@ script as a separate pytest case and runs it in an isolated subprocess with a
 temporary HOME and Git configuration. Report the collected pytest case count,
 not internal custom assertion totals, as the pytest test count.
 
+`tests/cli_baseline_contract.py` is the authoritative monotonic inventory. It
+locks the exact public CLI schema, leaf dispatch coverage, and an explicit
+capability grouping for every offline script. `tests/test_cli_baseline_guard.py`
+proves that unregistered commands, parameters, tests, stale registrations,
+missing dispatches, and inert non-executing scripts fail the gate.
+
 ## Required Checks
 
 For a focused change, run the affected test scripts first. Before completion,
-run the complete isolated suite plus:
+run the mandatory comprehensive baseline plus:
 
 ```bash
-python -m pytest
+python tests/run_cli_baseline.py
 python -m compileall -q .
 git diff --check
 ```
+
+The baseline runner invokes the complete isolated pytest matrix. A new feature
+must add or update a focused self-executing regression, register every new test
+script, update the exact CLI schema and leaf dispatch inventory when public
+surface changes, and update matching documentation. A baseline failure must be
+fixed in implementation code and rerun; do not weaken an established contract
+unless the active Issue records explicit maintainer authorization for that
+compatibility change.
 
 If a required check cannot run, state the exact blocker and residual risk.
 

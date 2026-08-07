@@ -11,64 +11,31 @@ import click
 import atomgit  # noqa: F401
 from click.testing import CliRunner
 
+from cli_baseline_contract import (
+    BASELINE_LEAF_COMMAND_COUNT,
+    BASELINE_PUBLIC_COMMAND_COUNT,
+    BASELINE_PUBLIC_PARAMETER_COUNT,
+    BASELINE_TEST_SCRIPT_COUNT,
+    BASELINE_TEST_GROUPS,
+    EXPECTED_PUBLIC_SCHEMA,
+    LEAF_DISPATCH_PATHS,
+    discover_public_schema,
+    validate_leaf_dispatches,
+    validate_public_schema,
+    validate_test_entrypoints,
+    validate_test_registry,
+)
+
 
 cli_mod = sys.modules["atomgit.cli"]
 results = []
 
 
-COMMAND_PARAMS = {
-    ("login",): (set(), {"--token", "-t", "--token-stdin"}),
-    ("logout",): (set(), set()),
-    ("whoami",): (set(), set()),
-    ("config-show",): (set(), set()),
-    ("repo",): (set(), set()),
-    ("repo", "create"): (
-        {"repo_name"},
-        {"--type", "--private", "--public", "--exist-ok"},
-    ),
-    ("repo", "list"): (set(), set()),
-    ("repo", "visibility"): ({"repo_id", "visibility"}, set()),
-    ("repo", "delete"): ({"repo_id"}, {"--confirm"}),
-    ("repo", "branch"): (set(), set()),
-    ("repo", "branch", "create"): (
-        {"repo_id", "branch_name"},
-        {"--from"},
-    ),
-    ("upload",): (
-        {"path"},
-        {
-            "--repo-id", "--message", "-m", "--timeout", "-t",
-            "--no-progress-bar", "--path-in-repo", "-p", "--repo-type",
-            "-r", "--revision", "--ignore", "-i", "--resumable",
-            "--num-workers",
-        },
-    ),
-    ("download",): (
-        {"repo_id"},
-        {
-            "--directory", "-d", "--force", "--verify-checksum",
-            "--resume", "--prune", "--repo-type", "-r",
-        },
-    ),
-    ("download-file",): (
-        {"repo_id", "filename"},
-        {
-            "--directory", "-d", "--force", "--verify-checksum",
-            "--resume", "--repo-type", "-r",
-        },
-    ),
-}
-
-LEAF_COMMANDS = tuple(
-    path for path in COMMAND_PARAMS
-    if path not in (("repo",), ("repo", "branch"))
-)
-
-
 def check(name, condition, detail=""):
     results.append((name, condition, detail))
     flag = "PASS" if condition else "FAIL"
-    print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
+    suffix = f" -> {detail}" if detail and not condition else ""
+    print(f"[{flag}] {name}{suffix}")
 
 
 def command_at(path):
@@ -80,44 +47,68 @@ def command_at(path):
     return command
 
 
-def public_params(command):
-    arguments = set()
-    options = set()
-    for parameter in command.params:
-        if isinstance(parameter, click.Argument):
-            arguments.add(parameter.name)
-        elif isinstance(parameter, click.Option):
-            options.update(parameter.opts)
-            options.update(parameter.secondary_opts)
-    return arguments, options
-
-
 def main():
+    results.clear()
     runner = CliRunner()
 
-    for path, (expected_arguments, expected_options) in COMMAND_PARAMS.items():
+    actual_schema = discover_public_schema(cli_mod.cli)
+    schema_errors = validate_public_schema(actual_schema)
+    check(
+        "public CLI schema exactly matches the registered baseline",
+        not schema_errors,
+        repr(schema_errors),
+    )
+
+    for path, expected_spec in EXPECTED_PUBLIC_SCHEMA.items():
         command = command_at(path)
-        label = " ".join(path)
-        check(f"command remains available: {label}", command is not None)
+        label = " ".join(path) if path else "<root>"
+        actual_spec = actual_schema.get(path)
+        check(
+            f"exact command schema remains stable: {label}",
+            actual_spec == expected_spec,
+            f"expected={expected_spec!r}, actual={actual_spec!r}",
+        )
         if command is None:
             continue
-        arguments, options = public_params(command)
-        check(
-            f"public parameters remain available: {label}",
-            expected_arguments <= arguments and expected_options <= options,
-            f"arguments={sorted(arguments)!r}, options={sorted(options)!r}",
-        )
-        help_result = runner.invoke(cli_mod.cli, [*path, "--help"])
+        help_args = [*path, "--help"] if path else ["--help"]
+        help_result = runner.invoke(cli_mod.cli, help_args)
         check(
             f"help remains usable: {label}",
             help_result.exit_code == 0 and "--help" in help_result.output,
             f"exit={help_result.exit_code}",
         )
 
+    tests_directory = Path(__file__).resolve().parent
+    discovered_tests = {
+        path.name for path in tests_directory.glob("test_*.py")
+    }
+    registry_errors = validate_test_registry(discovered_tests)
     check(
-        "baseline covers every current leaf command",
-        len(LEAF_COMMANDS) == 12,
-        repr(LEAF_COMMANDS),
+        "every offline regression script is registered exactly once",
+        not registry_errors,
+        repr(registry_errors),
+    )
+
+    entrypoint_errors = validate_test_entrypoints(
+        {
+            path.name: path.read_text(encoding="utf-8")
+            for path in tests_directory.glob("test_*.py")
+        }
+    )
+    check(
+        "every offline regression script has an executable main entrypoint",
+        not entrypoint_errors,
+        repr(entrypoint_errors),
+    )
+
+    dispatch_errors = validate_leaf_dispatches(
+        LEAF_DISPATCH_PATHS,
+        actual_schema,
+    )
+    check(
+        "baseline dispatch registry exactly covers every leaf command",
+        not dispatch_errors,
+        repr(dispatch_errors),
     )
 
     calls = []
