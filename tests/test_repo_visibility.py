@@ -5,6 +5,7 @@ import contextlib
 import io
 import json
 import sys
+import urllib.error
 
 import atomgit  # noqa: F401
 from click.testing import CliRunner
@@ -101,6 +102,87 @@ def main():
         check("visibility mismatch fails", mismatch is False)
         check("visibility mismatch is explained", "验证失败" in captured.getvalue())
         check("visibility mismatch output omits token", fake_token not in captured.getvalue())
+
+        requests.clear()
+
+        def ambiguous_success(request, timeout=None):
+            requests.append((request, timeout))
+            if request.get_method() == "PATCH":
+                raise urllib.error.HTTPError(
+                    request.full_url, 503, "Unavailable", {}, None
+                )
+            return FakeResponse(json.dumps({"private": False}).encode("utf-8"))
+
+        api_mod._atomgit_open_url = ambiguous_success
+        recovered = api_mod.api.set_repo_visibility(
+            "user/repo", private=False
+        )
+        check("ambiguous visibility write recovers from matching GET", recovered)
+        check(
+            "ambiguous visibility recovery performs PATCH then GET",
+            [request.get_method() for request, _ in requests]
+            == ["PATCH", "GET"],
+        )
+
+        requests.clear()
+
+        def ambiguous_mismatch(request, timeout=None):
+            requests.append((request, timeout))
+            if request.get_method() == "PATCH":
+                raise urllib.error.URLError("offline after write")
+            return FakeResponse(json.dumps({"private": True}).encode("utf-8"))
+
+        api_mod._atomgit_open_url = ambiguous_mismatch
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            mismatched_write = api_mod.api.set_repo_visibility(
+                "user/repo", private=False
+            )
+        check("ambiguous mismatched visibility fails", mismatched_write is False)
+        check(
+            "ambiguous visibility mismatch reports unknown write status",
+            "状态未知" in captured.getvalue()
+            and fake_token not in captured.getvalue(),
+            captured.getvalue(),
+        )
+
+        requests.clear()
+
+        def ambiguous_unknown(request, timeout=None):
+            requests.append((request, timeout))
+            raise urllib.error.URLError("offline transport detail")
+
+        api_mod._atomgit_open_url = ambiguous_unknown
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            unknown = api_mod.api.set_repo_visibility(
+                "user/repo", private=False
+            )
+        check("unverifiable visibility write fails", unknown is False)
+        check(
+            "unverifiable visibility reports sanitized unknown state",
+            "状态未知" in captured.getvalue()
+            and "offline" not in captured.getvalue()
+            and fake_token not in captured.getvalue(),
+            captured.getvalue(),
+        )
+
+        requests.clear()
+
+        def forbidden_write(request, timeout=None):
+            requests.append((request, timeout))
+            raise urllib.error.HTTPError(
+                request.full_url, 403, "Forbidden", {}, None
+            )
+
+        api_mod._atomgit_open_url = forbidden_write
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            forbidden = api_mod.api.set_repo_visibility(
+                "user/repo", private=False
+            )
+        check("visibility 4xx remains failure", forbidden is False)
+        check("visibility 4xx skips recovery GET", len(requests) == 1)
     finally:
         api_mod._atomgit_open_url = original_open
         api_mod.config.get_credentials = original_credentials

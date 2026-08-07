@@ -1,56 +1,58 @@
 # Current Issue Contract
 
-# Issue PYTHON-VERSION-CONTRACT
+# Issue V5-AMBIGUOUS-WRITE-VERIFICATION
 
-Status: `completed`
+Status: `active`
 
 ## Identity
 
-- Local Issue: `PYTHON-VERSION-CONTRACT`
-- Title: `Align Python support metadata with locked dependencies`
-- Type: `bug`, `packaging`, `compatibility`
-- Priority: `P1`
-- Branch: `codex/fix-python-version-contract` (local only)
+- Local Issue: `V5-AMBIGUOUS-WRITE-VERIFICATION`
+- Title: `Verify V5 repository writes after ambiguous failures`
+- Type: `bug`, `cli`, `reliability`
+- Priority: `P2`
+- Branch: `codex/fix-v5-ambiguous-writes` (local only)
 - Base: `yuto`
-- Previous Issue: `WINDOWS-CLI-COMPATIBILITY`, delivered by `3db0b08`.
+- Previous Issue: `PYTHON-VERSION-CONTRACT`, delivered by `ad41df4`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-The package declares `python_requires='>=3.8'`, publishes a Python 3.8
-classifier, and documents Python 3.8 support. Both locked runtime contracts,
-`huggingface-hub==1.1.7` and `datasets==4.4.1`, declare
-`Requires-Python: >=3.9.0`. A Python 3.8 installation therefore cannot satisfy
-the project's required dependency set even though the AtomGit wheel claims it
-is compatible.
+Repository visibility and branch creation send a V5 PATCH or POST and then GET
+the target only when the write call returns normally. A timeout, connection
+loss, or 5xx can occur after AtomGit applied the change, but the CLI catches the
+write exception and reports failure without attempting its existing read-back.
 
-Package installers and maintainers must receive one truthful minimum-version
-contract. The AtomGit wheel, source metadata, engineering rules, review
-checklist, and user documentation must all require Python 3.9 or newer.
+For ambiguous transport/server failures, the final authenticated GET is the
+best available evidence and must decide success. A matching state may recover
+success; a mismatch or unverifiable GET must return nonzero with credential-safe
+unknown-state guidance. Client 4xx errors remain definitive and must not be
+converted into success by a pre-existing resource.
 
 ## Scope And Acceptance
 
-- Change package `python_requires` to `>=3.9` and remove only the Python 3.8
-  classifier; retain Python 3.9-3.13 classifiers.
-- Add a packaging regression that reads built wheel metadata and proves the
-  wheel minimum matches the installed locked dependency metadata.
-- Update all authoritative current support-policy references from 3.8 to 3.9,
-  including repository development and review instructions.
-- Preserve package version, dependencies, entry points, CLI/SDK interfaces,
-  source layout, and existing wheel smoke coverage.
-- Do not upgrade dependencies, add CI matrices, backport dependencies, change
-  runtime behavior, or fix another audited issue.
+- Apply the policy to existing CLI visibility mutation and branch creation.
+- After timeout, network, or 5xx write failure, perform the same bounded GET
+  verification used by the normal success path.
+- Recover success only when GET proves the exact currently verified target
+  state; otherwise report a sanitized unknown state and return false.
+- Treat every HTTP 4xx write result as definitive failure and do not issue a
+  recovery GET.
+- Preserve endpoints, request bodies, token headers, timeouts, normal success,
+  mismatch behavior, CLI arguments, and exit codes.
+- Add focused regressions for recovered success, mismatch/GET failure, 4xx, and
+  credential redaction on both operations.
+- Do not change branch-source verification semantics in this Issue; that is a
+  separately audited defect and the next selected repair.
+- Do not add commands, flags, retries, or unrelated functionality.
 
 ## Compatibility And Risks
 
-- Python 3.8 users will be rejected accurately by installers instead of
-  receiving an unsatisfiable environment; this is an intentional packaging
-  compatibility correction required by locked dependencies.
-- Python 3.9 is metadata compatibility evidence, not a real local execution
-  result. The current test environment is Python 3.10 and must be reported as
-  such.
-- Locked `huggingface-hub==1.1.7` and `datasets==4.4.1` remain unchanged.
+- Visibility writes are idempotent; matching read-back is sufficient recovery.
+- Branch verification currently proves only the target branch name. Source
+  commit verification remains an explicit residual defect outside this Issue.
+- No live write is authorized or required; strict offline request sequencing
+  must cover all recovery paths.
 
 ## Permissions
 
@@ -58,45 +60,41 @@ checklist, and user documentation must all require Python 3.9 or newer.
   excluded new functionality.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
-- No live AtomGit request, repository mutation, publication, release, or
-  dependency installation is required or authorized.
+- No live visibility mutation, branch creation, upload, deletion, or other
+  remote write is authorized or required.
 
 ## Required Evidence And Closure
 
-- [x] Previous wheel/source support metadata mismatch is reproduced.
-- [x] Built wheel declares Python `>=3.9` and no Python 3.8 classifier.
-- [x] Locked dependency metadata independently proves Python 3.9 minimum.
-- [x] Current user, development, style, and review policies agree on 3.9+.
-- [x] Existing wheel install/entry-point smoke behavior remains intact.
+- [x] Previous missing read-back behavior is reproduced by failing regressions.
+- [x] Ambiguous visibility and branch writes recover only from matching GET.
+- [x] Mismatch and unverifiable GET return credential-safe unknown state.
+- [x] HTTP 4xx writes remain definitive and skip recovery reads.
+- [x] Normal request bodies, paths, timeouts, CLI behavior, and locked contracts
+      remain compatible.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
-- Regression before implementation: the built-wheel smoke passed `19/21`;
-  METADATA still declared `Requires-Python: >=3.8` and included the Python 3.8
-  classifier. The same run independently found `>=3.9.0` on both locked
-  dependency distributions.
-- Implementation: `setup.py` now declares `python_requires='>=3.9'`, removes
-  only the 3.8 classifier, and preserves 3.9-3.13, package version, dependency
-  locks, entry points, package layout, and runtime source unchanged.
-- Policy alignment: README system/contributor/version guidance and repository
-  development, style, and review instructions now consistently require 3.9+;
-  a complete hidden-file search found no stale current 3.8 policy reference.
-- Focused wheel result: `21/21`, including actual wheel METADATA inspection,
-  exact locked dependency metadata, temporary no-dependency install, imports,
-  CLI/module entry points, all command help, and unchanged repository artifacts.
-- Complete offline suite: `pytest` collected `55` items and exited `0` under
-  Python `3.10.20`. `python -m compileall -q .`, `python -m pip check`, and
-  `git diff --check` passed in the `atomgit_cli` environment.
-- Security and scope: no dependency install, remote request, repository write,
-  credential, generated diff artifact, runtime behavior change, or unrelated
-  feature is present.
-- Independent review: `APPROVED` with no P0-P3 findings. Residual risk is that
-  Python 3.9 was not executed locally; compatibility is proven here at package
-  and dependency metadata level, while complete runtime evidence is Python 3.10.
-- Delivery implementation commit: `8d9b205` (`fix(packaging): require Python
-  3.9`). The closure commit is merged locally through the standing delivery
-  workflow; the task branch remains local-only and only `yuto` is pushed.
+- Regression before implementation: visibility tests passed `25/28` and branch
+  tests passed `11/14`; both operations returned immediately after an ambiguous
+  write exception instead of performing the existing GET verification.
+- Implementation: V5 visibility PATCH and branch POST classify HTTP 4xx as a
+  definitive rejection. Timeout, transport, response-decoding, and 5xx failures
+  continue to a bounded authenticated GET and recover success only when the
+  currently supported target state matches.
+- Failure semantics: mismatch and failed GET paths return false with sanitized
+  unknown-state guidance; regression output contains neither transport details
+  nor test credentials. HTTP 4xx regressions prove no recovery GET is sent.
+- Focused results: visibility `30/30`, branch creation `16/16`, repository
+  creation visibility `3/3`, creation contract `42/42`, and repository deletion
+  `48/48` passed offline.
+- Complete offline suite: `pytest -q` exited `0` with all `55` collected tests;
+  `python -m compileall -q .`, `python -m pip check`, and `git diff --check`
+  passed in the `atomgit_cli` environment.
+- Security and scope: no live request, remote write, dependency change, command,
+  flag, retry, credential, generated artifact, or unrelated feature is present.
+- Independent review: `APPROVED` with no P0-P3 findings. Residual branch-source
+  verification is explicitly deferred to its separately audited Issue.

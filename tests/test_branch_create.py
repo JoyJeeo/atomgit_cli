@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Offline V5 contract for explicit branch creation."""
+import contextlib
+import io
 import json
 import sys
+import urllib.error
 import atomgit  # noqa: F401
 from click.testing import CliRunner
 
@@ -35,6 +38,80 @@ def main():
         check("API sends exact branch JSON", json.loads(requests[0].data) == {"branch_name": "feature/x", "refs": "main"})
         check("branch verification path is encoded", requests[1].full_url.endswith("/branches/feature%2Fx"))
         check("unsafe branch is rejected", not api_mod.api.create_branch("user/repo", "bad..ref"))
+
+        requests.clear()
+
+        def ambiguous_success(request, timeout=None):
+            requests.append(request)
+            if request.get_method() == "POST":
+                raise urllib.error.URLError("offline after write")
+            return Response(json.dumps({"name": "feature/x"}).encode())
+
+        api_mod._atomgit_open_url = ambiguous_success
+        check(
+            "ambiguous branch write recovers from matching GET",
+            api_mod.api.create_branch("user/repo", "feature/x", "main"),
+        )
+        check(
+            "ambiguous branch recovery performs POST then GET",
+            [request.get_method() for request in requests] == ["POST", "GET"],
+        )
+
+        requests.clear()
+
+        def ambiguous_mismatch(request, timeout=None):
+            requests.append(request)
+            if request.get_method() == "POST":
+                raise urllib.error.URLError("offline after write")
+            return Response(json.dumps({"name": "different"}).encode())
+
+        api_mod._atomgit_open_url = ambiguous_mismatch
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            mismatched_write = api_mod.api.create_branch(
+                "user/repo", "feature/x", "main"
+            )
+        check("ambiguous mismatched branch fails", mismatched_write is False)
+        check(
+            "ambiguous branch mismatch reports unknown write status",
+            "状态未知" in captured.getvalue()
+            and "fake-branch-token" not in captured.getvalue(),
+        )
+
+        requests.clear()
+
+        def ambiguous_unknown(request, timeout=None):
+            requests.append(request)
+            raise urllib.error.URLError("offline transport detail")
+
+        api_mod._atomgit_open_url = ambiguous_unknown
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            unknown = api_mod.api.create_branch(
+                "user/repo", "feature/x", "main"
+            )
+        check("unverifiable branch write fails", unknown is False)
+        check(
+            "unverifiable branch reports sanitized unknown state",
+            "状态未知" in captured.getvalue()
+            and "offline" not in captured.getvalue()
+            and "fake-branch-token" not in captured.getvalue(),
+        )
+
+        requests.clear()
+
+        def forbidden_write(request, timeout=None):
+            requests.append(request)
+            raise urllib.error.HTTPError(
+                request.full_url, 403, "Forbidden", {}, None
+            )
+
+        api_mod._atomgit_open_url = forbidden_write
+        check(
+            "branch 4xx remains failure",
+            not api_mod.api.create_branch("user/repo", "feature/x", "main"),
+        )
+        check("branch 4xx skips recovery GET", len(requests) == 1)
     finally:
         api_mod._atomgit_open_url = original_open
         api_mod.config.get_credentials = original_credentials
