@@ -111,7 +111,7 @@ with open(os.environ["GENERIC_HELPER_MARKER"], "a", encoding="utf-8") as stream:
             check("T1 setup succeeds", utils.setup_git_credentials("fake-token-never-print"))
             helper_path = home / ".atomgit" / "git-credential-atomgit"
             state_path = home / ".atomgit" / "git-helper-state.json"
-            expected_managed = ["", f"!{helper_path}"]
+            expected_managed = ["", utils._git_helper_command(helper_path)]
             check("T2 atomgit host resets inherited helpers",
                   get_values(atomgit_key) == expected_managed,
                   repr(get_values(atomgit_key)))

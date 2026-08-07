@@ -13,6 +13,15 @@ def _is_safe_credential_text(value: Any) -> bool:
     )
 
 
+def _set_private_file_mode(file_descriptor: int, path: Path) -> None:
+    """Set private mode on Unix and pre-3.13 Windows Python."""
+    fchmod = getattr(os, "fchmod", None)
+    if callable(fchmod):
+        fchmod(file_descriptor, 0o600)
+    else:
+        os.chmod(path, 0o600)
+
+
 class Config:
     """配置管理类，用于管理用户认证信息和设置"""
     
@@ -53,7 +62,7 @@ class Config:
                 dir=str(self.config_dir),
             )
             temporary_path = Path(temporary_name)
-            os.fchmod(temporary_fd, 0o600)
+            _set_private_file_mode(temporary_fd, temporary_path)
             temporary_file = os.fdopen(temporary_fd, 'w', encoding='utf-8')
             temporary_fd = None  # ownership transferred to temporary_file
             with temporary_file as f:

@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import json
+import shlex
 import tempfile
 from pathlib import Path
 from typing import Optional, List
@@ -339,6 +340,24 @@ def _git_helper_key(host: str) -> str:
     return f"credential.https://{host}.helper"
 
 
+def _git_helper_command(
+    helper_path,
+    python_executable=None,
+    windows: bool = None,
+) -> str:
+    """Build one shell-safe Git helper command for POSIX or Windows Git."""
+    if python_executable is None:
+        python_executable = sys.executable
+    if windows is None:
+        windows = os.name == "nt"
+    executable = os.fspath(python_executable)
+    helper = os.fspath(helper_path)
+    if windows:
+        executable = executable.replace("\\", "/")
+        helper = helper.replace("\\", "/")
+    return f"!{shlex.quote(executable)} {shlex.quote(helper)}"
+
+
 def _get_global_git_values(key: str) -> List[str]:
     result = subprocess.run(
         ["git", "config", "--global", "--get-all", key],
@@ -451,10 +470,11 @@ def _load_helper_state(path: Path):
     return {host: list(hosts[host]) for host in _GIT_CREDENTIAL_HOSTS}
 
 
-def _legacy_cleanup_values(values: List[str], helper_value: str) -> List[str]:
+def _legacy_cleanup_values(values: List[str], helper_values) -> List[str]:
+    helper_values = set(helper_values)
     cleaned = []
     for value in values:
-        if value == helper_value:
+        if value in helper_values:
             if cleaned and cleaned[-1] == "":
                 cleaned.pop()
             continue
@@ -549,13 +569,21 @@ if __name__ == '__main__':
         }
         original_values = _load_helper_state(state_path)
         if original_values is None:
-            _write_helper_state(state_path, previous_values)
+            owned_helper_values = {
+                f"!{credential_helper_path}",
+                _git_helper_command(credential_helper_path),
+            }
+            original_values = {
+                host: _legacy_cleanup_values(values, owned_helper_values)
+                for host, values in previous_values.items()
+            }
+            _write_helper_state(state_path, original_values)
             created_state = True
 
         _write_bytes_atomic(
             credential_helper_path, helper_script.encode("utf-8"), 0o755
         )
-        managed_values = ["", f"!{credential_helper_path}"]
+        managed_values = ["", _git_helper_command(credential_helper_path)]
         for host in _GIT_CREDENTIAL_HOSTS:
             _set_global_git_values(_git_helper_key(host), managed_values)
         
@@ -601,9 +629,12 @@ def clear_git_credentials() -> bool:
         }
         restored_values = _load_helper_state(state_path)
         if restored_values is None:
-            helper_value = f"!{credential_helper_path}"
+            helper_values = {
+                f"!{credential_helper_path}",
+                _git_helper_command(credential_helper_path),
+            }
             restored_values = {
-                host: _legacy_cleanup_values(values, helper_value)
+                host: _legacy_cleanup_values(values, helper_values)
                 for host, values in current_values.items()
             }
 

@@ -641,7 +641,8 @@ if __name__ == "__main__":
 配置文件保存在 `~/.atomgit/config.json`，包含 token、登录时验证的用户名和其他设置。Git
 集成还会使用 `~/.atomgit/git-helper-state.json` 保存登录前两个 AtomGit 域名的
 helper 配置；该状态文件不会写入本次登录 token，并使用 `0600` 权限。既有
-helper 值会按原样保存，因此不应在 Git helper 命令中内嵌秘密。
+helper 值会按原样保存，因此不应在 Git helper 命令中内嵌秘密。托管 helper
+通过当前 Python 解释器启动，并安全引用包含空格的 Windows 或 POSIX 路径。
 
 ## API端点配置
 
