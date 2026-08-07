@@ -117,6 +117,8 @@ def sanitized_download_error(error: Exception) -> str:
     """Return an actionable category without exposing remote or signed URLs."""
     if "仓库类型不明确" in str(error):
         return "仓库类型不明确，请使用 --repo-type model 或 dataset"
+    if "download manifest is already in use" in str(error):
+        return "同一目标目录已有下载任务，请等待完成后重试"
     credential_error = auth_error_kind(error)
     if credential_error == "authentication":
         return "认证失败，请重新登录后重试"

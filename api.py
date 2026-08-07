@@ -1,7 +1,8 @@
 from typing import Optional, Dict, Any
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urljoin, urlsplit
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
+import errno
 import hashlib
 import ntpath
 import os
@@ -371,6 +372,98 @@ def _write_download_manifest(manifest_path: Path, managed_files) -> None:
     finally:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
+
+
+def _windows_file_lock_module():
+    """Load the Windows byte-range locking module only on Windows."""
+    import msvcrt
+
+    return msvcrt
+
+
+def _try_lock_download_manifest_descriptor_windows(
+    descriptor: int,
+) -> bool:
+    """Acquire a nonblocking one-byte Windows lock."""
+    locking = _windows_file_lock_module()
+    if os.fstat(descriptor).st_size == 0:
+        os.write(descriptor, b"\0")
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    try:
+        locking.locking(descriptor, locking.LK_NBLCK, 1)
+    except OSError as error:
+        busy_errors = {errno.EACCES, errno.EAGAIN}
+        if hasattr(errno, "EDEADLK"):
+            busy_errors.add(errno.EDEADLK)
+        if error.errno in busy_errors:
+            return False
+        raise
+    return True
+
+
+def _unlock_download_manifest_descriptor_windows(descriptor: int) -> None:
+    """Release a Windows one-byte manifest lock."""
+    locking = _windows_file_lock_module()
+    os.lseek(descriptor, 0, os.SEEK_SET)
+    locking.locking(descriptor, locking.LK_UNLCK, 1)
+
+
+def _try_lock_download_manifest_descriptor(
+    descriptor: int,
+) -> Optional[str]:
+    """Acquire one nonblocking OS advisory lock and return its backend."""
+    if os.name == "nt":
+        if not _try_lock_download_manifest_descriptor_windows(descriptor):
+            return None
+        return "windows"
+
+    import fcntl
+
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError as error:
+        if error.errno in (errno.EACCES, errno.EAGAIN):
+            return None
+        raise
+    return "posix"
+
+
+def _unlock_download_manifest_descriptor(
+    descriptor: int, backend: str
+) -> None:
+    """Release an advisory manifest lock acquired by the selected backend."""
+    if backend == "windows":
+        _unlock_download_manifest_descriptor_windows(descriptor)
+        return
+
+    import fcntl
+
+    fcntl.flock(descriptor, fcntl.LOCK_UN)
+
+
+@contextmanager
+def _download_manifest_lock(manifest_path: Path):
+    """Hold one OS-released transaction lock for an opaque manifest."""
+    lock_path = manifest_path.with_name(manifest_path.name + ".lock")
+    flags = os.O_CREAT | os.O_RDWR
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(str(lock_path), flags, 0o600)
+    backend = None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ValueError("下载 manifest 锁不是普通文件")
+        _set_private_file_mode(descriptor, lock_path)
+        backend = _try_lock_download_manifest_descriptor(descriptor)
+        if backend is None:
+            raise RuntimeError("download manifest is already in use")
+        yield
+    finally:
+        try:
+            if backend is not None:
+                _unlock_download_manifest_descriptor(descriptor, backend)
+        finally:
+            os.close(descriptor)
 
 
 def _resume_cache_identity(
@@ -2332,6 +2425,7 @@ class HuggingFaceAPI:
         repo_info 路由（GET /api/models/{repo} 返回 404），SDK 会在任何
         下载前中止；这里改为 list_repo_files + resolve 逐文件下载。
         """
+        manifest_locks = ExitStack()
         try:
             normalized_repo_id = self._normalize_repo_id(repo_id)
 
@@ -2356,9 +2450,6 @@ class HuggingFaceAPI:
                 manifest_path = _download_manifest_path(
                     normalized_repo_id, effective_type, local_path
                 )
-                manifest_exists, previously_managed = _load_download_manifest(
-                    manifest_path
-                )
             except Exception:
                 if prune:
                     raise
@@ -2367,6 +2458,23 @@ class HuggingFaceAPI:
                 print(
                     "⚠ 下载 manifest 不可用；本次下载文件不会纳入后续清理"
                 )
+            else:
+                manifest_locks.enter_context(
+                    _download_manifest_lock(manifest_path)
+                )
+                try:
+                    manifest_exists, previously_managed = (
+                        _load_download_manifest(manifest_path)
+                    )
+                except Exception:
+                    manifest_locks.close()
+                    if prune:
+                        raise
+                    manifest_available = False
+                    manifest_exists, previously_managed = False, set()
+                    print(
+                        "⚠ 下载 manifest 不可用；本次下载文件不会纳入后续清理"
+                    )
             downloaded_files = set()
             if not files:
                 print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
@@ -2435,6 +2543,8 @@ class HuggingFaceAPI:
         except Exception as e:
             print(f"仓库下载失败: {sanitized_download_error(e)}")
             return False
+        finally:
+            manifest_locks.close()
 
     def download_file(
         self,
