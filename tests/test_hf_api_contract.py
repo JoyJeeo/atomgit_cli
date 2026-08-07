@@ -14,6 +14,7 @@ from huggingface_hub import (
     upload_file,
     upload_folder,
 )
+from huggingface_hub.file_download import http_get
 
 
 results = []
@@ -110,6 +111,17 @@ def main():
                 "token": False,
                 "timeout": 60,
                 "endpoint": "https://hub.atomgit.com",
+            },
+        ),
+        (
+            "resumable HTTP download contract",
+            http_get,
+            ("https://cdn.example/file.bin", object()),
+            {
+                "resume_size": 10,
+                "headers": {"Range": "bytes=10-"},
+                "expected_size": 100,
+                "displayed_filename": "file.bin",
             },
         ),
         (

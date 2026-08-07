@@ -275,6 +275,16 @@ atomgit download your-username/your-model-name -d ./models/ --verify-checksum
 checksum 不匹配或服务未提供受支持的强校验值时命令会失败，不会用错误内容替换
 已有文件；已有文件不匹配时可结合 `--force --verify-checksum` 重新下载并校验。
 
+大文件下载中断后需要保留进度时使用 `--resume`：
+
+```bash
+atomgit download your-username/your-model-name -d ./models/ --resume
+```
+
+未完成数据保存在权限受限的 AtomGit 缓存中；再次执行相同命令会从已保存字节
+继续。完成后自动校验仓库 checksum，再原子替换目标文件并清理缓存。该选项不会
+改变默认策略：目标文件已经存在且未使用 `--force` 时仍直接跳过。
+
 #### 只下载一个文件
 
 仓库内文件名可以包含子目录；本地会保留该相对目录结构：

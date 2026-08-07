@@ -32,6 +32,7 @@ every remote path is verified; known status follows the interface list.
 - Repository download to a default or explicit directory
 - Single-file CLI download
 - Opt-in checksum verification for existing and newly downloaded CLI files
+- Opt-in persistent resume for interrupted CLI downloads
 - Authenticated repository list and verified visibility changes
 - Explicit private creation and verified public creation
 - Explicit branch creation and CLI upload to existing non-main branches
