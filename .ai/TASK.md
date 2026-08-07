@@ -2,7 +2,7 @@
 
 # Issue UPLOAD-SYMLINK-SAFETY
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -92,7 +92,7 @@ files and directories must retain their existing behavior.
 - [x] Independent review records no open P0/P1/P2/P3 finding and returns
       `APPROVED`.
 - [x] Human acceptance is covered by the user's standing ordered-fix approval.
-- [ ] The completed task branch is committed, merged locally into `yuto`, and
+- [x] The completed task branch is committed, merged locally into `yuto`, and
       only `yuto` is pushed.
 
 ## Implementation Evidence
@@ -136,3 +136,7 @@ files and directories must retain their existing behavior.
   run because the defect and fix are fully observable offline. Symlink fixtures
   may be skipped only when the host cannot create them; the current macOS run
   exercised every fixture. Verdict: `APPROVED`.
+- Delivery: implementation commit `ff27f2e` uses the approved conventional
+  subject `fix(upload): reject symlink sources`. The task branch remains local;
+  it is merged into `yuto` under the standing delivery rules and only `yuto`
+  is pushed.
