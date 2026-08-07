@@ -2,7 +2,7 @@
 
 # Issue V5-AMBIGUOUS-WRITE-VERIFICATION
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -74,7 +74,7 @@ converted into success by a pre-existing resource.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -98,3 +98,6 @@ converted into success by a pre-existing resource.
   flag, retry, credential, generated artifact, or unrelated feature is present.
 - Independent review: `APPROVED` with no P0-P3 findings. Residual branch-source
   verification is explicitly deferred to its separately audited Issue.
+- Delivery implementation commit: `591afb4` (`fix(repo): verify ambiguous V5
+  writes`). The closure commit is merged locally through the standing delivery
+  workflow; the task branch remains local-only and only `yuto` is pushed.
