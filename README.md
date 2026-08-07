@@ -279,6 +279,7 @@ atomgit download your-username/your-model-name -d ./models/ --verify-checksum
 文件前完成校验。普通 Git 文件使用 Git blob SHA-1，LFS 文件使用内容 SHA-256。
 checksum 不匹配或服务未提供受支持的强校验值时命令会失败，不会用错误内容替换
 已有文件；已有文件不匹配时可结合 `--force --verify-checksum` 重新下载并校验。
+仓库中的嵌套非 ASCII 文件名同样支持 checksum 校验和断点续传。
 
 大文件下载中断后需要保留进度时使用 `--resume`：
 
