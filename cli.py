@@ -399,10 +399,12 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
 @click.option('--force', is_flag=True, help='强制覆盖已存在的文件')
 @click.option('--verify-checksum', is_flag=True,
               help='使用仓库 checksum 校验已有文件和下载内容')
+@click.option('--resume', 'resume_download', is_flag=True,
+              help='保留未完成数据，并从中断位置继续下载')
 @click.option('--repo-type', '-r', 'repo_type',
               type=click.Choice(['model', 'dataset']), default=None,
               help='明确仓库类型；不指定时自动探测 model/dataset')
-def download(repo_id, directory, force, verify_checksum, repo_type):
+def download(repo_id, directory, force, verify_checksum, resume_download, repo_type):
     """下载仓库到本地（公开仓库无需登录）"""
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -439,6 +441,8 @@ def download(repo_id, directory, force, verify_checksum, repo_type):
     print_info(f"下载到: {local_path}")
     if verify_checksum:
         print_info("checksum 校验已启用")
+    if resume_download:
+        print_info("断点续传已启用（完成后自动校验 checksum）")
     
     # 如果未登录，提示用户这是公开仓库下载模式
     if not config.is_logged_in():
@@ -450,6 +454,8 @@ def download(repo_id, directory, force, verify_checksum, repo_type):
     }
     if verify_checksum:
         download_options["verify_checksum"] = True
+    if resume_download:
+        download_options["resume_download"] = True
     if api.download_repo(repo_id, local_path, **download_options):
         print_success(f"仓库下载成功: {local_path}")
     else:
@@ -467,10 +473,15 @@ def download(repo_id, directory, force, verify_checksum, repo_type):
 @click.option('--force', is_flag=True, help='强制覆盖已存在的文件')
 @click.option('--verify-checksum', is_flag=True,
               help='使用仓库 checksum 校验已有文件和下载内容')
+@click.option('--resume', 'resume_download', is_flag=True,
+              help='保留未完成数据，并从中断位置继续下载')
 @click.option('--repo-type', '-r', 'repo_type',
               type=click.Choice(['model', 'dataset']), default=None,
               help='明确仓库类型；不指定时自动探测 model/dataset')
-def download_file(repo_id, filename, directory, force, verify_checksum, repo_type):
+def download_file(
+    repo_id, filename, directory, force, verify_checksum, resume_download,
+    repo_type,
+):
     """下载仓库中的单个文件（公开仓库无需登录）"""
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -495,6 +506,8 @@ def download_file(repo_id, filename, directory, force, verify_checksum, repo_typ
     print_info(f"下载到: {local_path}")
     if verify_checksum:
         print_info("checksum 校验已启用")
+    if resume_download:
+        print_info("断点续传已启用（完成后自动校验 checksum）")
     if not config.is_logged_in():
         print_info("当前未登录，尝试从公开仓库下载...")
 
@@ -504,6 +517,8 @@ def download_file(repo_id, filename, directory, force, verify_checksum, repo_typ
     }
     if verify_checksum:
         download_options["verify_checksum"] = True
+    if resume_download:
+        download_options["resume_download"] = True
     if api.download_file(repo_id, filename, local_path, **download_options):
         print_success(f"文件下载成功: {filename}")
     else:

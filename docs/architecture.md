@@ -183,6 +183,12 @@ Token 发送到 AtomGit。
 中校验通过后才原子替换。checksum 不匹配会重试一次，仍失败或元数据不受支持
 时保留已有目标并返回非零。该选项不改变默认的已有文件跳过策略。
 
+`--resume` 使用锁定 HF Hub 的 `http_get(resume_size=...)` 续传标准 URL；raw
+UTF-8 路径使用同等严格的 Range/Content-Range 校验。未完成数据位于权限为
+`0700` 的 AtomGit resume 缓存中，partial 文件为 `0600`，缓存键不含 token、
+签名 URL 或明文仓库名。完成数据通过 checksum 后复制到目标目录的唯一临时
+文件，再次校验并原子替换；成功后清理 partial，失败时保留原目标。
+
 整仓和 CLI API 单文件下载在响应体不完整、读取超时或连接中断时从头自动
 重试一次；SDK 的 snapshot/file 下载和 `load_dataset` 则由 HF 缓存保留可恢复
 状态。认证、权限、仓库、文件或 revision 不存在等确定性错误不会重试。
