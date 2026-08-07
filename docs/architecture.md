@@ -82,9 +82,10 @@ atomgit = atomgit.cli:cli
 仓库列表使用 AtomGit V5 `GET /api/v5/user/repos`，凭据只通过
 `PRIVATE-TOKEN` 请求头发送；响应经过大小限制和 JSON 集合校验后才交给 CLI。
 可见性修改使用 `PATCH /api/v5/repos/:owner/:repo`，随后 GET 同一资源验证远端
-状态。公开建仓仍通过已验证的 HF model 兼容路由先创建私有仓库，再执行上述
-转换；任何转换或验证失败都会返回失败且不自动删除，并提示远端状态可能未知，
-必须重新检查和设置可见性。
+状态。建仓通过已验证的 HF model 兼容路由先请求私有仓库，再对明确请求的公开
+或私有状态执行上述收敛和验证，包括 `--exist-ok` 命中已有仓库的路径。任何转换
+或验证失败都会返回失败且不自动删除，并提示远端状态可能未知，必须重新检查和
+设置可见性。
 
 仓库删除使用官方 V5 `DELETE /api/v5/repos/:owner/:repo`，不经过需要 repo type
 的 HF 删除接口。CLI 要求 `--confirm` 与输入仓库 ID 完全一致，API 在 DELETE 前

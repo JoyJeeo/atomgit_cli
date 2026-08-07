@@ -1553,7 +1553,7 @@ class HuggingFaceAPI:
             # 使用Hugging Face Hub SDK创建仓库
             # HF public creation can report success while AtomGit keeps the
             # repository private. Always create safely as private, then use the
-            # V5 settings API and verify when public visibility was requested.
+            # V5 settings API and verify the explicitly requested visibility.
             create_repo(
                 repo_id=normalized_repo_id,
                 token=credentials['token'],
@@ -1561,11 +1561,11 @@ class HuggingFaceAPI:
                 private=True,
                 exist_ok=exist_ok,
             )
-            if not private and not self.set_repo_visibility(
-                repo_name, private=False
-            ):
+            if not self.set_repo_visibility(repo_name, private=private):
+                requested_visibility = "私有" if private else "公开"
                 print(
-                    "公开仓库创建未验证完成；远端可能仍为私有，也可能已公开，"
+                    f"{requested_visibility}仓库创建未验证完成；"
+                    "远端可能未达到目标可见性，"
                     "请立即使用 repo visibility 检查并设置目标状态"
                 )
                 return False

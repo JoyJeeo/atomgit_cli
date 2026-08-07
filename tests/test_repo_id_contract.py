@@ -75,6 +75,7 @@ def main():
 
     original_credentials = config.get_credentials
     original_create = api_mod.create_repo
+    original_visibility = api_mod.api.set_repo_visibility
     original_exists = api_mod._atomgit_repo_exists
     original_file_upload = api_mod.hf_upload_file
     original_folder_upload = api_mod.upload_folder
@@ -84,6 +85,12 @@ def main():
     api_calls = {}
     config.get_credentials = lambda: {"token": "fake-token"}
     api_mod.create_repo = lambda **kwargs: api_calls.setdefault("create", kwargs)
+
+    def fake_set_visibility(repo_id, private):
+        api_calls["visibility"] = {"repo_id": repo_id, "private": private}
+        return True
+
+    api_mod.api.set_repo_visibility = fake_set_visibility
     api_mod._atomgit_repo_exists = lambda repo_id, token: False
     api_mod.hf_upload_file = lambda **kwargs: api_calls.setdefault("file", kwargs)
     api_mod.upload_folder = lambda **kwargs: api_calls.setdefault("folder", kwargs)
@@ -117,9 +124,18 @@ def main():
                 f"API {operation} uses normalized ID",
                 api_calls[operation]["repo_id"] == NORMALIZED_ID,
             )
+        check(
+            "API visibility uses logical ID",
+            api_calls["visibility"]["repo_id"] == RAW_ID,
+        )
+        check(
+            "API visibility preserves private request",
+            api_calls["visibility"]["private"] is True,
+        )
     finally:
         config.get_credentials = original_credentials
         api_mod.create_repo = original_create
+        api_mod.api.set_repo_visibility = original_visibility
         api_mod._atomgit_repo_exists = original_exists
         api_mod.hf_upload_file = original_file_upload
         api_mod.upload_folder = original_folder_upload

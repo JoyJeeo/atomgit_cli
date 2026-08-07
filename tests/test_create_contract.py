@@ -68,7 +68,15 @@ def main():
         )
         check("API public create uses locked HF signature", calls[-1]["repo_id"] == "user/public-repo")
         check("API public create starts private", calls[-1]["private"] is True)
-        check("API public create requests verified transition", visibility_calls == [("user/public-repo", False)])
+        check(
+            "API create requests verified visibility for every target",
+            visibility_calls
+            == [
+                ("user/model-repo", True),
+                ("user/dataset-repo", True),
+                ("user/public-repo", False),
+            ],
+        )
 
         check(
             "API explicit exist_ok succeeds",
@@ -78,6 +86,10 @@ def main():
             is True,
         )
         check("API explicit exist_ok forwarded", calls[-1]["exist_ok"] is True)
+        check(
+            "API private exist_ok requests verified privacy",
+            visibility_calls[-1] == ("user/model-repo", True),
+        )
 
         before = len(calls)
         api_mod._atomgit_repo_exists = lambda repo_id, token: True
