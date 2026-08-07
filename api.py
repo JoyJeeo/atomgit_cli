@@ -37,6 +37,7 @@ from huggingface_hub.file_download import http_get as hf_http_get
 try:
     from .config import config
     from .utils import (
+        auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
         normalize_repo_id,
@@ -49,6 +50,7 @@ try:
 except ImportError:
     from config import config
     from utils import (
+        auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
         normalize_repo_id,
@@ -1690,9 +1692,18 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
         return "请求参数错误", "请求参数不合法。请检查 repo_id、repo_type、path_in_repo 等参数。"
 
-    # 认证失败（401/403 且不属于上述仓库类错误）
-    if "401" in msg or "403" in msg or "unauthorized" in msg.lower() or "forbidden" in msg.lower():
-        return "认证失败", "认证失败或权限不足。请使用 'atomgit login' 重新登录获取有效 token。"
+    # 认证/权限失败（且不属于上述仓库类错误）
+    credential_error = auth_error_kind(e)
+    if credential_error == "authentication":
+        return (
+            "认证失败",
+            "登录凭证无效或已过期。请使用 'atomgit login' 重新登录后重试。",
+        )
+    if credential_error == "permission":
+        return (
+            "权限不足",
+            "当前登录凭证无权上传到目标仓库。请检查仓库权限或目标命名空间。",
+        )
 
     # 超时
     if "timeout" in msg.lower() or "timed out" in msg.lower() or ename == "TimeoutError":
@@ -1720,18 +1731,16 @@ def _classify_create_repo_error(e: Exception) -> tuple:
     msg = str(e)
     ename = type(e).__name__
 
-    # 认证失败：401/403 或 token 无效/无权限
-    if (
-        "401" in msg
-        or "403" in msg
-        or "unauthorized" in msg.lower()
-        or "forbidden" in msg.lower()
-        or "token not found" in msg.lower()
-        or "no scopes" in msg.lower()
-    ):
+    credential_error = auth_error_kind(e)
+    if credential_error == "authentication":
         return (
             "认证失败",
             "登录凭证无效或已过期。请使用 'atomgit login' 重新登录获取有效 token，再重试创建。",
+        )
+    if credential_error == "permission":
+        return (
+            "权限不足",
+            "当前登录凭证缺少目标命名空间的仓库创建权限。请检查组织或命名空间权限。",
         )
 
     # 请求参数错误
