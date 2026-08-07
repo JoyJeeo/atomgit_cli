@@ -23,7 +23,8 @@ try:
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, get_atomgit_git_helper_status
+        parse_ignore_patterns, get_atomgit_git_helper_status,
+        validate_upload_path_no_symlinks,
     )
 except ImportError:
     from config import config
@@ -35,7 +36,8 @@ except ImportError:
         format_file_size, count_files_in_directory, confirm_action,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, get_atomgit_git_helper_status
+        parse_ignore_patterns, get_atomgit_git_helper_status,
+        validate_upload_path_no_symlinks,
     )
 
 
@@ -357,6 +359,12 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             sys.exit(2)
     else:
         print_error(f"不支持的路径类型: {path}")
+        sys.exit(1)
+
+    try:
+        validate_upload_path_no_symlinks(path)
+    except ValueError as error:
+        print_error(str(error))
         sys.exit(1)
 
     if not config.is_logged_in():

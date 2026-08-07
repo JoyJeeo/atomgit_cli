@@ -115,6 +115,8 @@ CLI 中断、恢复、下载与 SHA-256 验证。
 
 HF large-folder 模式的其他限制：
 
+- CLI 和 SDK 在凭证或上传调用前拒绝上传根路径及目录树中的全部符号链接；
+  `ignore_patterns` 不会绕过该安全检查；
 - 不支持 `path_in_repo`，CLI 在远端调用前拒绝该组合；
 - 不支持用户指定的单一 commit message，CLI 在远端调用前拒绝
   `--message`；服务过程可产生多次提交；

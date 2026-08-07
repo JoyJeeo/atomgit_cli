@@ -144,7 +144,9 @@ atomgit login
 
 ```text
 atomgit upload PATH
-  -> 登录/repo ID/path/path-in-repo 校验
+  -> repo ID/path/path-in-repo 和选项冲突校验
+  -> 拒绝上传根路径或目录树中的任何符号链接
+  -> 登录校验
   -> 文件
        -> 默认 hf upload_file（直接读取原文件）
        -> 传 ignore 或旧 HF 无 upload_file 时：临时目录 + upload_folder
@@ -152,6 +154,10 @@ atomgit upload PATH
        -> 普通模式：upload_folder
        -> resumable：HfApi.upload_large_folder
 ```
+
+符号链接检查先于凭证读取、HF 上传调用和 resumable worker 创建。普通、失效、
+指向目录外或原本会被 `--ignore` 排除的符号链接都统一失败关闭，避免锁定版 HF
+上传逻辑把链接目标内容作为普通文件提交。检查不跟随目录符号链接。
 
 已知问题：
 
