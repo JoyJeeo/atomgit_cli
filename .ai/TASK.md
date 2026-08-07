@@ -2,7 +2,7 @@
 
 # Issue LOGIN-ERROR-SEMANTICS
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -60,7 +60,7 @@ values must never be printed.
 - [x] Existing login/configuration and CLI compatibility tests pass.
 - [x] Complete offline tests, compileall, pip, and diff checks pass.
 - [x] Scope, credentials, documentation, and independent review pass.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -89,3 +89,7 @@ values must never be printed.
   uses strict offline urllib failures and response fakes, as required by scope.
 - Human acceptance is covered by the maintainer's standing ordered-fix and
   delivery authorization; no remote Issue transition is requested or made.
+- Delivery implementation commit: `8fabac8` (`fix(auth): preserve login failure
+  semantics`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
