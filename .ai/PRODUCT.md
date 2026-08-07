@@ -33,6 +33,7 @@ every remote path is verified; known status follows the interface list.
 - Single-file CLI download
 - Opt-in checksum verification for existing and newly downloaded CLI files
 - Opt-in persistent resume for interrupted CLI downloads
+- Opt-in manifest-scoped pruning for remotely removed repository files
 - Authenticated repository list and verified visibility changes
 - Explicit private creation and verified public creation
 - Explicit branch creation and CLI upload to existing non-main branches
@@ -76,6 +77,9 @@ every remote path is verified; known status follows the interface list.
 - User-facing failures should identify authentication, permission, repository,
   revision, request, timeout, or network causes when evidence allows it.
 - Existing command names and Python imports are compatibility surfaces.
+- Repository pruning is explicit and may delete only regular files previously
+  written and recorded by successful whole-repository CLI downloads; it must
+  not scan or adopt unrelated local content.
 - SDK failures expose stable `AtomGitError` subclasses while remaining
   compatible with callers that catch `Exception` or validation `ValueError`.
 

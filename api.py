@@ -8,6 +8,7 @@ import shutil
 import json
 import socket
 import ssl
+import stat
 import urllib.request
 import urllib.error
 import multiprocessing
@@ -236,6 +237,112 @@ def _resume_cache_root() -> Path:
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(root, 0o700)
     return root
+
+
+_DOWNLOAD_MANIFEST_VERSION = 1
+_DOWNLOAD_MANIFEST_MAX_BYTES = 10 * 1024 * 1024
+
+
+def _download_manifest_root() -> Path:
+    """Return the private state directory for repository download manifests."""
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
+    root = hf_home / "download-manifests"
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("下载 manifest 缓存目录不安全")
+    os.chmod(root, 0o700)
+    return root
+
+
+def _download_manifest_path(
+    repo_id: str, repo_type: str, local_root: Path
+) -> Path:
+    """Return a credential-free opaque manifest path for one local checkout."""
+    identity = "\0".join(
+        (
+            _atomgit_hf_endpoint(),
+            repo_id,
+            repo_type,
+            str(Path(local_root).resolve()),
+        )
+    ).encode("utf-8")
+    return _download_manifest_root() / f"{hashlib.sha256(identity).hexdigest()}.json"
+
+
+def _load_download_manifest(manifest_path: Path) -> tuple:
+    """Load and validate managed repository filenames, failing closed."""
+    descriptor = None
+    try:
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(str(manifest_path), flags)
+    except FileNotFoundError:
+        return False, set()
+    except OSError as error:
+        if manifest_path.is_symlink():
+            raise ValueError("下载 manifest 不是普通文件") from error
+        raise
+    try:
+        file_status = os.fstat(descriptor)
+        if not stat.S_ISREG(file_status.st_mode):
+            raise ValueError("下载 manifest 不是普通文件")
+        if file_status.st_size > _DOWNLOAD_MANIFEST_MAX_BYTES:
+            raise ValueError("下载 manifest 过大，已拒绝清理")
+        try:
+            with os.fdopen(descriptor, "r", encoding="utf-8") as manifest_file:
+                descriptor = None
+                payload = json.load(manifest_file)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("下载 manifest 无效，已拒绝清理") from error
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+    if (
+        not isinstance(payload, dict)
+        or payload.get("version") != _DOWNLOAD_MANIFEST_VERSION
+        or not isinstance(payload.get("files"), list)
+    ):
+        raise ValueError("下载 manifest 格式不受支持，已拒绝清理")
+    managed_files = set()
+    for filename in payload["files"]:
+        _repository_filename_parts(filename)
+        managed_files.add(filename)
+    return True, managed_files
+
+
+def _write_download_manifest(manifest_path: Path, managed_files) -> None:
+    """Atomically persist managed filenames with restrictive permissions."""
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=f".{manifest_path.name}.",
+            suffix=".tmp",
+            dir=manifest_path.parent,
+            delete=False,
+        ) as manifest_file:
+            temporary_path = Path(manifest_file.name)
+            os.fchmod(manifest_file.fileno(), 0o600)
+            json.dump(
+                {
+                    "version": _DOWNLOAD_MANIFEST_VERSION,
+                    "files": sorted(managed_files),
+                },
+                manifest_file,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            manifest_file.write("\n")
+            manifest_file.flush()
+            os.fsync(manifest_file.fileno())
+        temporary_path.replace(manifest_path)
+        os.chmod(manifest_path, 0o600)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def _resume_cache_identity(
@@ -647,8 +754,8 @@ def _atomgit_repo_exists(repo_id: str, token: str) -> bool:
         raise
 
 
-def _safe_download_destination(local_root: Path, filename: str) -> Path:
-    """Resolve a repository filename without allowing it to escape local_root."""
+def _repository_filename_parts(filename: str) -> tuple:
+    """Validate a repository filename and return its POSIX path parts."""
     if not isinstance(filename, str) or not filename:
         raise ValueError("仓库文件名为空或格式无效")
     if "\\" in filename:
@@ -664,6 +771,12 @@ def _safe_download_destination(local_root: Path, filename: str) -> Path:
     windows_path = PureWindowsPath(filename)
     if posix_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
         raise ValueError(f"仓库文件名不能是绝对路径: {filename!r}")
+    return tuple(raw_parts)
+
+
+def _safe_download_destination(local_root: Path, filename: str) -> Path:
+    """Resolve a repository filename without allowing it to escape local_root."""
+    raw_parts = _repository_filename_parts(filename)
 
     resolved_root = Path(local_root).resolve()
     destination = resolved_root.joinpath(*raw_parts).resolve(strict=False)
@@ -674,6 +787,50 @@ def _safe_download_destination(local_root: Path, filename: str) -> Path:
             f"仓库文件路径超出下载目录: {filename!r}"
         ) from error
     return destination
+
+
+def _prune_managed_download_file(local_root: Path, filename: str) -> bool:
+    """Delete one managed regular file without following directory symlinks."""
+    parts = _repository_filename_parts(filename)
+    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
+        raise RuntimeError("当前平台不支持安全的下载文件清理")
+    directory_flags = os.O_RDONLY
+    directory_flags |= os.O_DIRECTORY | os.O_NOFOLLOW
+
+    descriptor = os.open(str(Path(local_root).resolve()), directory_flags)
+    try:
+        for part in parts[:-1]:
+            try:
+                next_descriptor = os.open(
+                    part, directory_flags, dir_fd=descriptor
+                )
+            except FileNotFoundError:
+                return False
+            os.close(descriptor)
+            descriptor = next_descriptor
+        try:
+            file_status = os.stat(
+                parts[-1], dir_fd=descriptor, follow_symlinks=False
+            )
+        except FileNotFoundError:
+            return False
+        if not stat.S_ISREG(file_status.st_mode):
+            raise ValueError(
+                f"受管理路径不再是普通文件，已拒绝清理: {filename!r}"
+            )
+        os.unlink(parts[-1], dir_fd=descriptor)
+        return True
+    finally:
+        os.close(descriptor)
+
+
+def _prune_managed_download_files(local_root: Path, filenames) -> int:
+    """Delete only previously managed regular files and leave directories."""
+    removed = 0
+    for filename in sorted(filenames):
+        if _prune_managed_download_file(local_root, filename):
+            removed += 1
+    return removed
 
 
 def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str:
@@ -1622,6 +1779,7 @@ class HuggingFaceAPI:
         repo_type: str = None,
         verify_checksum: bool = False,
         resume_download: bool = False,
+        prune: bool = False,
     ) -> bool:
         """下载仓库到本地目录（公开仓库无需token）。
 
@@ -1641,14 +1799,32 @@ class HuggingFaceAPI:
             token = credentials['token'] if credentials and 'token' in credentials else None
 
             effective_type, files = _atomgit_list_repo_files(normalized_repo_id, token, repo_type)
-            if not files:
-                print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
-                return True
 
             destinations = [
                 (filename, _safe_download_destination(local_path, filename))
                 for filename in files
             ]
+            remote_files = set(files)
+            manifest_path = None
+            manifest_available = True
+            try:
+                manifest_path = _download_manifest_path(
+                    normalized_repo_id, effective_type, local_path
+                )
+                manifest_exists, previously_managed = _load_download_manifest(
+                    manifest_path
+                )
+            except Exception:
+                if prune:
+                    raise
+                manifest_available = False
+                manifest_exists, previously_managed = False, set()
+                print(
+                    "⚠ 下载 manifest 不可用；本次下载文件不会纳入后续清理"
+                )
+            downloaded_files = set()
+            if not files:
+                print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
             for filename, dest in destinations:
                 if dest.exists() and not force_download:
                     if verify_checksum:
@@ -1665,6 +1841,7 @@ class HuggingFaceAPI:
                         normalized_repo_id, effective_type, filename, dest, token
                     )
                     print(f"✓ 可续传下载完成并通过 checksum 校验: {filename}")
+                    downloaded_files.add(filename)
                     continue
                 checksum = None
                 if verify_checksum:
@@ -1686,6 +1863,28 @@ class HuggingFaceAPI:
                         checksum=checksum,
                     )
                     print(f"✓ 已下载并通过 checksum 校验: {filename}")
+                downloaded_files.add(filename)
+            if prune:
+                if not manifest_exists:
+                    print("ℹ 未找到历史下载 manifest；未删除未受管理的本地文件")
+                removed = _prune_managed_download_files(
+                    local_path, previously_managed - remote_files
+                )
+                managed_files = (
+                    (previously_managed & remote_files) | downloaded_files
+                )
+                print(f"✓ 已清理受管理的本地多余文件: {removed}")
+            else:
+                managed_files = previously_managed | downloaded_files
+            if prune:
+                _write_download_manifest(manifest_path, managed_files)
+            elif manifest_available:
+                try:
+                    _write_download_manifest(manifest_path, managed_files)
+                except Exception:
+                    print(
+                        "⚠ 下载 manifest 写入失败；本次下载文件不会纳入后续清理"
+                    )
             print("✅ 仓库下载成功")
             return True
         except Exception as e:
