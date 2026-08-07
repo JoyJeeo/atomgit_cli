@@ -1,90 +1,103 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-PRUNE
+# Issue REPO-DELETE
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-PRUNE`
-- Title: `Safely prune files removed from remote repositories`
+- Local Issue: `REPO-DELETE`
+- Title: `Delete repositories with explicit confirmation and verification`
 - Type: `cli`, `feature`, `data-safety`
 - Priority: `P1`
-- Branch: `codex/add-download-prune` (local only)
+- Branch: `codex/add-repo-delete` (local only)
 - Base: `yuto`
-- Previous Issue: `DOWNLOAD-RESUME`, delivered by `2f5a7ee` and merged by
-  `108e5c0`.
+- Previous Issue: `DOWNLOAD-PRUNE`, delivered by `19b5222` and merged by
+  `c13a859`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-Repository downloads intentionally skip existing files and never remove local
-content. A blind `--force` cleanup would risk deleting user-owned files that
-were never downloaded by the CLI.
+The repository-management CLI can create, list, and change visibility but has
+no deletion command. AtomGit's official V5 documentation defines repository
+deletion as `DELETE /api/v5/repos/:owner/:repo`, matching the endpoint already
+used for repository visibility and detail verification.
 
-Add opt-in `--prune` to whole-repository downloads. Track only files actually
-downloaded by the CLI in a private external manifest, then remove only tracked
-regular files that are absent from a successfully validated remote file list.
-Default download and single-file behavior remain unchanged.
+Add `atomgit repo delete REPO_ID --confirm REPO_ID`. Require login, a valid
+repository ID, and an exact literal confirmation before any API call. Perform
+an authenticated preflight GET, issue DELETE, then require a GET 404 before
+reporting success. Ambiguous network outcomes must be verified when possible
+and otherwise reported as unknown, without exposing credentials.
 
 ## Scope And Acceptance
 
-- Store a versioned, credential-free manifest outside the destination tree,
-  keyed by endpoint, repository, type, and resolved destination path.
-- Use restrictive directory/file permissions and atomic manifest replacement.
-- Never adopt pre-existing skipped files as managed files.
-- Prune only after every download succeeds and only from the prior manifest;
-  never scan the destination tree or delete directories, symlinks, or
-  untracked files.
-- Handle empty repositories, missing/malformed manifests, missing managed
-  files, download failure, and path/symlink replacement safely.
-- Add CLI/API and compatibility regressions, update documentation, and run the
-  complete offline verification and independent review.
+- Extend the bounded V5 request helper to support bodyless DELETE requests.
+- Reuse normalized and percent-encoded V5 repository paths for multi-level IDs.
+- Reject missing or mismatched confirmation locally with a nonzero exit and no
+  API call.
+- Preflight the exact target, delete it, and verify absence; never report
+  success merely because the DELETE request returned.
+- Recover an ambiguous DELETE response as success only when the verification
+  GET proves the repository is absent; distinguish still-present and unknown
+  states with credential-safe output.
+- Keep this a CLI-only capability; do not add or alter the public Python SDK.
+- Add strict request, failure, CLI, compatibility, and credential regressions;
+  update user/product/architecture documentation.
+- Run focused and complete offline tests, compileall, diff checks, and an
+  independent review.
 
 ## Permissions
 
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - Live read-only tests may use only `weixin_52273949/test_model` and
-  `weixin_52273949/test_datasets`. No remote writes or deletion are authorized.
+  `weixin_52273949/test_datasets`. No remote deletion or other remote write is
+  authorized, so this Issue must not execute a live DELETE request.
 - Human acceptance is standing-approved for the ordered plan.
 
 ## Evidence And Closure
 
-- Implementation: whole-repository downloads maintain an external versioned
-  manifest keyed by endpoint, normalized repository ID, effective type, and
-  resolved destination. Only files actually written by successful downloads
-  are managed; skipped pre-existing files are never adopted. `--prune` runs
-  only after all transfers succeed and removes only prior-manifest regular
-  files absent from the complete remote list.
-- Data safety: manifest directories/files use `0700`/`0600`, opaque keys contain
-  no token or URL, writes are atomic, malformed or unavailable state fails
-  closed for explicit prune, and descriptor-relative deletion refuses leaf or
-  parent symlinks and directories. Missing paths are already clean; untracked
-  files are never scanned. Ordinary downloads preserve their existing success
-  behavior when manifest state is unavailable and emit a safe warning.
-- Focused regression: `tests/test_download_prune.py` passed 49/49 checks for
-  initial tracking, prune transitions, empty repositories, first-run adoption,
-  restrictive permissions, download/write failures, missing parents, malformed
-  state, symlink/directory replacement, CLI forwarding, and default/single-file
-  compatibility. Existing download contract, path, checksum, resume, and skip
-  regressions also passed.
-- Complete offline suite: `python -m pytest -ra` collected and passed 51/51
-  isolated scripts. `python -m compileall -q .` and `git diff --check` passed.
-- Live evidence: not run. Proving remote removal requires a remote mutation or
-  deletion, which is outside the standing authorization for the two fixed test
-  repositories. No remote state was changed.
-- Independent review: the first pass found a P1 default-compatibility issue
-  because manifest errors could fail ordinary downloads. It was fixed with
-  best-effort default tracking and strict explicit-prune behavior, with focused
-  regressions and documentation. The second pass found no open P0/P1/P2/P3
-  finding and confirmed manifest scoping, permission and path safety, atomic
-  state, failure ordering, CLI compatibility, and credential isolation.
-  Residual live-service risk is limited to server-side list completeness, which
-  cannot be exercised without an authorized remote content change. Verdict:
-  `APPROVED`.
-- DoD: implementation, documentation, focused and complete tests, compileall,
-  diff check, independent review, credential scan, scope audit, and standing
-  human acceptance agree; no secret, artifact, unrelated edit, remote mutation,
-  or open finding is present.
+- Official contract: the AtomGit V5 documentation page
+  `/docs/apis/delete-api-v-5-repos-owner-repo` identifies repository deletion
+  as `DELETE /api/v5/repos/:owner/:repo`. The implementation reuses the existing
+  bounded V5 client, `PRIVATE-TOKEN` header, normalized repository path, and
+  credential-safe redirect handler; it does not use the type-dependent HF
+  deletion method.
+- Implementation: `atomgit repo delete REPO_ID --confirm REPO_ID` requires
+  login, a valid ID, and exact literal confirmation at both CLI and exported API
+  boundaries. It performs GET preflight, a bodyless DELETE, and a final GET;
+  success requires the final request to return 404. Confirmations, credentials,
+  and multi-level normalized paths are never mixed or silently rewritten.
+- Failure semantics: deterministic HTTP 4xx DELETE responses fail immediately
+  and cannot be converted to success. Network loss, timeout, server failure, or
+  a successful response that cannot be parsed is treated as ambiguous and may
+  recover only through a final GET 404. A still-present repository or failed
+  verification returns nonzero with credential-safe present/unknown guidance.
+- Focused regression: `python tests/test_repo_delete.py` passed 48/48 checks for
+  request method/path/body/header/timeout, preflight and absence verification,
+  multi-level IDs, confirmation at both boundaries, deterministic 4xx,
+  ambiguous recovery, present/unknown/malformed/missing states, token isolation,
+  CLI help, argument rejection, forwarding, and exit codes. Repository list and
+  visibility regressions also passed.
+- Complete offline suite: `python -m pytest -ra` collected and passed 52/52
+  isolated scripts. `python -m compileall -q .` and `git diff --check` passed in
+  the `atomgit_cli` conda environment.
+- Live evidence: no live DELETE was run. The standing test-repository permission
+  expressly excludes remote deletion, so neither fixed test repository nor any
+  other remote state was changed.
+- Independent review: the first pass found a P1 false-success path where a
+  deterministic HTTP 4xx could be followed by GET 404 and incorrectly recover.
+  The implementation now allows recovery only for ambiguous outcomes and has a
+  strict regression. The second pass found no open P0/P1/P2/P3 finding and
+  confirmed official endpoint alignment, dual confirmation, bounded requests,
+  deterministic/ambiguous separation, absence verification, CLI-only SDK
+  scope, multi-level normalization, and token-safe output. Residual risk: a GET
+  404 means inaccessible according to the remote API and cannot distinguish a
+  rare concurrent access revocation from deletion without broader server-side
+  evidence. Verdict: `APPROVED`.
+- DoD: implementation, documentation, focused and complete offline tests,
+  compileall, diff check, dependency-signature inspection, independent review,
+  credential scan, scope audit, and standing human acceptance agree; no secret,
+  generated artifact, unrelated edit, unauthorized remote mutation, or open
+  finding is present.
 - Commit/merge/push: authorized; references will be reported after delivery.
