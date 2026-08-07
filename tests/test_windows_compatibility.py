@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise Windows-compatible persistence, Git helper, and prune contracts."""
 
+import errno
 import json
 import ntpath
 import os
@@ -78,6 +79,20 @@ class FakeWindowsAPI:
         self.closed.append(handle)
 
 
+class FakeWindowsLocking:
+    LK_NBLCK = 1
+    LK_UNLCK = 2
+
+    def __init__(self):
+        self.calls = []
+        self.busy = False
+
+    def locking(self, descriptor, mode, size):
+        self.calls.append((descriptor, mode, size))
+        if self.busy and mode == self.LK_NBLCK:
+            raise OSError(errno.EACCES, "offline lock busy")
+
+
 def run_git(*args, environment):
     return subprocess.run(
         ["git", *args],
@@ -133,6 +148,45 @@ def main():
                 type(manifest_error).__name__ if manifest_error else "",
             )
             os.fchmod = original_fchmod
+
+            original_lock_module = api_mod._windows_file_lock_module
+            fake_locking = FakeWindowsLocking()
+            api_mod._windows_file_lock_module = lambda: fake_locking
+            lock_file = root / "windows-manifest.lock"
+            descriptor = os.open(
+                str(lock_file), os.O_CREAT | os.O_RDWR, 0o600
+            )
+            try:
+                windows_locked = (
+                    api_mod._try_lock_download_manifest_descriptor_windows(
+                        descriptor
+                    )
+                )
+                api_mod._unlock_download_manifest_descriptor_windows(
+                    descriptor
+                )
+                fake_locking.busy = True
+                windows_busy = (
+                    api_mod._try_lock_download_manifest_descriptor_windows(
+                        descriptor
+                    )
+                )
+            finally:
+                os.close(descriptor)
+                api_mod._windows_file_lock_module = original_lock_module
+            check(
+                "Windows manifest lock uses nonblocking byte-range contract",
+                windows_locked is True
+                and windows_busy is False
+                and lock_file.stat().st_size == 1
+                and [call[1] for call in fake_locking.calls]
+                == [
+                    fake_locking.LK_NBLCK,
+                    fake_locking.LK_UNLCK,
+                    fake_locking.LK_NBLCK,
+                ],
+                repr(fake_locking.calls),
+            )
 
             helper_builder = getattr(utils_mod, "_git_helper_command", None)
             if helper_builder is None:

@@ -223,6 +223,12 @@ UTF-8 路径使用同等严格的 Range/Content-Range 校验。未完成数据�
 下载成功语义，未记录的文件不会被后续清理；显式 `--prune` 对 manifest 错误失败
 关闭。首次对既有目录执行 `--force --prune` 可用成功重下的文件建立管理基线。
 
+每个 manifest 身份旁维护一个不含仓库名或凭据的私有 advisory lock 文件。
+POSIX 使用非阻塞 `flock`，Windows 使用非阻塞单字节 `msvcrt.locking`；锁从
+manifest 读取前持续到下载、可选 prune 和原子写入结束。OS 会在进程退出时释放
+所有权，锁文件可持久存在。同一 checkout 的竞争命令在任何传输或清理前失败，
+不同仓库类型或目标目录的锁互不影响。
+
 `--prune` 只计算“上次 manifest 中受管理文件 - 本次完整远端文件清单”，且必须
 在全部下载成功后才执行。POSIX 通过目录文件描述符逐层打开并拒绝跟随符号链接；
 Windows 通过 Win32 句柄打开根目录和目标，拒绝目录与重解析点，比较句柄解析后的
