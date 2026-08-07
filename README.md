@@ -285,6 +285,20 @@ atomgit download your-username/your-model-name -d ./models/ --resume
 继续。完成后自动校验仓库 checksum，再原子替换目标文件并清理缓存。该选项不会
 改变默认策略：目标文件已经存在且未使用 `--force` 时仍直接跳过。
 
+需要删除远端已经移除的本地文件时，显式使用 `--prune`：
+
+```bash
+atomgit download your-username/your-model-name -d ./models/ --prune
+```
+
+清理范围由 AtomGit 缓存中的私有下载 manifest 限定：只删除此前由整仓下载实际
+写入并登记、且本次完整远端文件清单中已不存在的普通文件。命令不会扫描或删除
+未登记文件、目录、符号链接；首次对已有目录使用 `--prune` 也不会把跳过的本地
+文件自动纳入管理。全部下载成功后才执行清理并原子更新 manifest。默认不清理，
+`--force` 仍只表示重新下载和覆盖，不会删除本地多余文件；首次使用时可执行一次
+`--force --prune`，将成功重下的远端文件建立为受管理基线。普通下载遇到 manifest
+不可用时会警告但仍完成下载，这些文件不会被后续清理；显式 `--prune` 则失败关闭。
+
 #### 只下载一个文件
 
 仓库内文件名可以包含子目录；本地会保留该相对目录结构：

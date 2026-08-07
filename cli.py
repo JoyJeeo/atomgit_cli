@@ -401,10 +401,15 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
               help='使用仓库 checksum 校验已有文件和下载内容')
 @click.option('--resume', 'resume_download', is_flag=True,
               help='保留未完成数据，并从中断位置继续下载')
+@click.option('--prune', is_flag=True,
+              help='清理 manifest 记录且远端已删除的本地文件')
 @click.option('--repo-type', '-r', 'repo_type',
               type=click.Choice(['model', 'dataset']), default=None,
               help='明确仓库类型；不指定时自动探测 model/dataset')
-def download(repo_id, directory, force, verify_checksum, resume_download, repo_type):
+def download(
+    repo_id, directory, force, verify_checksum, resume_download, prune,
+    repo_type,
+):
     """下载仓库到本地（公开仓库无需登录）"""
     if not validate_repo_name(repo_id):
         print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -443,6 +448,8 @@ def download(repo_id, directory, force, verify_checksum, resume_download, repo_t
         print_info("checksum 校验已启用")
     if resume_download:
         print_info("断点续传已启用（完成后自动校验 checksum）")
+    if prune:
+        print_info("安全清理已启用（仅删除下载 manifest 记录的文件）")
     
     # 如果未登录，提示用户这是公开仓库下载模式
     if not config.is_logged_in():
@@ -456,6 +463,8 @@ def download(repo_id, directory, force, verify_checksum, resume_download, repo_t
         download_options["verify_checksum"] = True
     if resume_download:
         download_options["resume_download"] = True
+    if prune:
+        download_options["prune"] = True
     if api.download_repo(repo_id, local_path, **download_options):
         print_success(f"仓库下载成功: {local_path}")
     else:

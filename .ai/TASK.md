@@ -1,51 +1,46 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-RESUME
+# Issue DOWNLOAD-PRUNE
 
 Status: `completed`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-RESUME`
-- Title: `Resume interrupted CLI downloads`
-- Type: `cli`, `feature`, `data-integrity`
+- Local Issue: `DOWNLOAD-PRUNE`
+- Title: `Safely prune files removed from remote repositories`
+- Type: `cli`, `feature`, `data-safety`
 - Priority: `P1`
-- Branch: `codex/add-download-resume` (local only)
+- Branch: `codex/add-download-prune` (local only)
 - Base: `yuto`
-- Previous Issue: `DOWNLOAD-CHECKSUM-VERIFICATION`, delivered by `8ec7300`
-  and merged by `a616797`.
+- Previous Issue: `DOWNLOAD-RESUME`, delivered by `2f5a7ee` and merged by
+  `108e5c0`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-CLI downloads retry interrupted transfers once but delete temporary data and
-restart from byte zero on the next command. Authorized read-only probes confirm
-that both test repositories honor Range with HTTP 206 and an exact
-Content-Range.
+Repository downloads intentionally skip existing files and never remove local
+content. A blind `--force` cleanup would risk deleting user-owned files that
+were never downloaded by the CLI.
 
-Add opt-in `--resume` to repository and single-file CLI downloads. Incomplete
-bytes persist in a restrictive AtomGit cache without credentials or signed
-URLs. A later invocation requests only the remaining range, verifies size and
-the repository checksum, copies to a unique destination temporary, and then
-atomically replaces the target. Default existing-file skip behavior remains
-unchanged.
+Add opt-in `--prune` to whole-repository downloads. Track only files actually
+downloaded by the CLI in a private external manifest, then remove only tracked
+regular files that are absent from a successfully validated remote file list.
+Default download and single-file behavior remain unchanged.
 
 ## Scope And Acceptance
 
-- Bind to locked HF `http_get` resume semantics for standard URLs; support raw
-  UTF-8 fallback with strict Range/Content-Range validation.
-- Keep cached partials private, collision-resistant, credential-free, and
-  isolated by endpoint/repository/type/file/checksum.
-- Strip credentials for cross-origin download locations and never persist or
-  print signed URLs.
-- Preserve partial data after retryable interruption, remove corrupt/stale
-  partials, checksum before replacement, and preserve existing destinations on
-  every failure.
-- Add CLI/API, interruption/restart, checksum, redirect, cleanup, default
-  compatibility, and raw fallback regressions; update documentation.
-- Run focused and full offline tests, compileall, diff checks, authorized
-  read-only live interruption/resume evidence, and independent review.
+- Store a versioned, credential-free manifest outside the destination tree,
+  keyed by endpoint, repository, type, and resolved destination path.
+- Use restrictive directory/file permissions and atomic manifest replacement.
+- Never adopt pre-existing skipped files as managed files.
+- Prune only after every download succeeds and only from the prior manifest;
+  never scan the destination tree or delete directories, symlinks, or
+  untracked files.
+- Handle empty repositories, missing/malformed manifests, missing managed
+  files, download failure, and path/symlink replacement safely.
+- Add CLI/API and compatibility regressions, update documentation, and run the
+  complete offline verification and independent review.
 
 ## Permissions
 
@@ -56,32 +51,40 @@ unchanged.
 
 ## Evidence And Closure
 
-- Implementation: both CLI download commands accept `--resume`; standard
-  transfers use locked `http_get` with a safe resolve URL, raw UTF-8 transfers
-  enforce exact Range/Content-Range, and all completed content is checksum
-  verified before and after copying to the atomic destination temporary.
-  Cache/partial/lock permissions are restrictive; keys contain hashes rather
-  than credentials, signed URLs, or plaintext repository names.
-- Focused regression: `tests/test_download_resume_cli.py` passed 17/17 checks
-  for interruption persistence, exact offset reuse, permissions, signed-URL
-  exclusion, cross-origin auth stripping, raw range validation, checksum/atomic
-  replacement, corrupt-partial restart, stale-checksum cleanup, and both CLI
-  paths. All download-focused scripts and locked HF contract tests passed.
-- Complete offline suite: `python -m pytest -ra` collected and passed 50/50
+- Implementation: whole-repository downloads maintain an external versioned
+  manifest keyed by endpoint, normalized repository ID, effective type, and
+  resolved destination. Only files actually written by successful downloads
+  are managed; skipped pre-existing files are never adopted. `--prune` runs
+  only after all transfers succeed and removes only prior-manifest regular
+  files absent from the complete remote list.
+- Data safety: manifest directories/files use `0700`/`0600`, opaque keys contain
+  no token or URL, writes are atomic, malformed or unavailable state fails
+  closed for explicit prune, and descriptor-relative deletion refuses leaf or
+  parent symlinks and directories. Missing paths are already clean; untracked
+  files are never scanned. Ordinary downloads preserve their existing success
+  behavior when manifest state is unavailable and emit a safe warning.
+- Focused regression: `tests/test_download_prune.py` passed 49/49 checks for
+  initial tracking, prune transitions, empty repositories, first-run adoption,
+  restrictive permissions, download/write failures, missing parents, malformed
+  state, symlink/directory replacement, CLI forwarding, and default/single-file
+  compatibility. Existing download contract, path, checksum, resume, and skip
+  regressions also passed.
+- Complete offline suite: `python -m pytest -ra` collected and passed 51/51
   isolated scripts. `python -m compileall -q .` and `git diff --check` passed.
-- Live read-only evidence: an authorized dataset LFS partial of 1,048,576 bytes
-  resumed from exactly that offset to 12,582,912 bytes; final checksum returned
-  true and partial/lock cache was empty. No remote state changed.
-- Independent review: the first pass requested explicit corrupt/stale partial
-  regressions and accurate from-zero wording. Both were fixed. The final pass
-  found no open P0/P1/P2/P3 finding and confirmed locked signature compatibility,
-  exact range validation, credential/signed-URL isolation, private cache state,
-  atomic replacement, cleanup, CLI compatibility, and documentation. Residual
-  non-blocking risk: an intentionally abandoned download retains its partial
-  until the same file is resumed or the AtomGit cache is cleared. Verdict:
+- Live evidence: not run. Proving remote removal requires a remote mutation or
+  deletion, which is outside the standing authorization for the two fixed test
+  repositories. No remote state was changed.
+- Independent review: the first pass found a P1 default-compatibility issue
+  because manifest errors could fail ordinary downloads. It was fixed with
+  best-effort default tracking and strict explicit-prune behavior, with focused
+  regressions and documentation. The second pass found no open P0/P1/P2/P3
+  finding and confirmed manifest scoping, permission and path safety, atomic
+  state, failure ordering, CLI compatibility, and credential isolation.
+  Residual live-service risk is limited to server-side list completeness, which
+  cannot be exercised without an authorized remote content change. Verdict:
   `APPROVED`.
-- DoD: implementation, focused and complete tests, compileall, diff check,
-  documentation, live evidence, independent review, credential safety, and
-  final scope audit agree; no secret, artifact, unrelated edit, remote mutation,
+- DoD: implementation, documentation, focused and complete tests, compileall,
+  diff check, independent review, credential scan, scope audit, and standing
+  human acceptance agree; no secret, artifact, unrelated edit, remote mutation,
   or open finding is present.
 - Commit/merge/push: authorized; references will be reported after delivery.
