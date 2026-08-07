@@ -177,6 +177,12 @@ Token 发送到 AtomGit。
 替换。标准 URL 与非 ASCII raw UTF-8 回退都在目标目录创建唯一临时文件，完整
 成功后替换目标，普通异常和重试失败会清理临时文件并保留原目标。
 
+`--verify-checksum` 通过锁定 HF Hub 的 `get_hf_file_metadata` 读取 resolve
+元数据：40 位十六进制 ETag 按 Git blob SHA-1 校验，64 位按内容 SHA-256
+校验，并同时要求文件大小一致。已有文件只读取校验；新下载内容在唯一临时文件
+中校验通过后才原子替换。checksum 不匹配会重试一次，仍失败或元数据不受支持
+时保留已有目标并返回非零。该选项不改变默认的已有文件跳过策略。
+
 整仓和 CLI API 单文件下载在响应体不完整、读取超时或连接中断时从头自动
 重试一次；SDK 的 snapshot/file 下载和 `load_dataset` 则由 HF 缓存保留可恢复
 状态。认证、权限、仓库、文件或 revision 不存在等确定性错误不会重试。

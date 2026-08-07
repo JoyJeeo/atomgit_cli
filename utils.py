@@ -33,6 +33,7 @@ def is_retryable_download_error(error: Exception) -> bool:
         "ReadError",
         "ReadTimeout",
         "RemoteProtocolError",
+        "DownloadChecksumMismatchError",
     } or any(marker in message for marker in (
         "incomplete message body",
         "peer closed connection",
@@ -43,7 +44,7 @@ def is_retryable_download_error(error: Exception) -> bool:
 
 
 def run_download_with_retry(operation):
-    """Retry once when an interrupted response can reuse HF partial state."""
+    """Retry once after a retryable connection or integrity failure."""
     try:
         return operation()
     except Exception as error:
@@ -58,9 +59,13 @@ def sanitized_download_error(error: Exception) -> str:
         return "仓库类型不明确，请使用 --repo-type model 或 dataset"
     if is_auth_error(error):
         return "认证失败或权限不足，请检查登录状态和仓库权限"
+    message = str(error).lower()
+    if "checksum metadata" in message:
+        return "服务未提供受支持的 checksum，无法完成校验"
+    if type(error).__name__ == "DownloadChecksumMismatchError":
+        return "checksum 校验失败，文件未被替换；请使用 --force 重新下载"
     if is_retryable_download_error(error):
         return "下载连接中断，自动重试后仍失败，请重新执行下载命令"
-    message = str(error).lower()
     if "404" in message or "not found" in message:
         return "仓库、文件或 revision 不存在"
     if "timeout" in message or "timed out" in message:

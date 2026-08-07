@@ -31,6 +31,7 @@ every remote path is verified; known status follows the interface list.
 - Large-folder resumable mode and worker selection
 - Repository download to a default or explicit directory
 - Single-file CLI download
+- Opt-in checksum verification for existing and newly downloaded CLI files
 - Authenticated repository list and verified visibility changes
 - Explicit private creation and verified public creation
 - Explicit branch creation and CLI upload to existing non-main branches

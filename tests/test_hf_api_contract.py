@@ -8,6 +8,7 @@ import huggingface_hub
 from huggingface_hub import (
     HfApi,
     create_repo,
+    get_hf_file_metadata,
     hf_hub_download,
     snapshot_download,
     upload_file,
@@ -99,6 +100,16 @@ def main():
                 "local_dir": "/tmp/download",
                 "force_download": False,
                 "token": "fake-token",
+            },
+        ),
+        (
+            "file metadata contract",
+            get_hf_file_metadata,
+            ("https://hub.atomgit.com/user/repo/resolve/main/file.bin",),
+            {
+                "token": False,
+                "timeout": 60,
+                "endpoint": "https://hub.atomgit.com",
             },
         ),
         (
