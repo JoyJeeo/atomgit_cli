@@ -2,7 +2,7 @@
 
 # Issue CLI-BASELINE-DOD-GATE
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -51,7 +51,7 @@ is fixed and the gate passes.
       updated passing baseline rather than silently weakening the test.
 - [x] The baseline test and documentation checks pass.
 - [x] Diff, scope, credentials, and independent review pass.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -75,3 +75,7 @@ is fixed and the gate passes.
   service residual risk introduced by this change.
 - Human acceptance is provided by the maintainer's explicit instruction to add
   this mandatory blocking and repair loop to the DoD.
+- Delivery implementation commit: `0f4c814` (`docs(ai): require CLI baseline
+  DoD gate`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
