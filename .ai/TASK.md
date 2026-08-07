@@ -2,7 +2,7 @@
 
 # Issue CLI-BASELINE-MONOTONIC
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -74,7 +74,7 @@ or a genuine new capability with matching tests and documentation.
       and implementation-first regression repair.
 - [x] Focused regressions, comprehensive baseline, full suite, compileall, pip,
       diff, scope, credentials, and independent review pass.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -114,3 +114,7 @@ or a genuine new capability with matching tests and documentation.
   explicit compatibility authorization rule and independent diff review.
 - Human acceptance is provided by the maintainer's explicit request for this
   comprehensive monotonic baseline and implementation-first repair loop.
+- Delivery implementation commit: `9f471bf` (`test(cli): enforce monotonic
+  feature baseline`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
