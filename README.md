@@ -226,7 +226,8 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 > `upload --revision BRANCH`。Python SDK 仍保持 `main`-only。详见
 > [上传实现分析](docs/upload_command_analysis.md)。V5 分支写入若遇到超时、
 > 网络中断或服务端错误，CLI 会读取目标分支恢复结果；4xx 拒绝不会按已有分支
-> 误报成功，无法验证时会明确提示远端状态未知。
+> 误报成功。创建前会将 `--from` 解析为不可变提交，并在创建后校验目标分支
+> 指向同一提交；无法验证时会明确提示远端状态未知。
 
 #### 错误处理
 

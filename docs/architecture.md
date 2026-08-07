@@ -90,6 +90,9 @@ atomgit = atomgit.cli:cli
 可见性 PATCH 与分支创建 POST 若返回超时、连接错误或 5xx，会继续执行原有的
 目标 GET，并只在读取状态匹配时恢复成功；4xx 属于确定拒绝，不执行恢复读取。
 GET 不可用或读取状态不匹配时返回失败，并以脱敏信息说明写请求状态未知。
+分支创建在 POST 前通过 V5 commit 读取把来源分支、标签或提交解析为不可变
+commit ID，POST 后的分支读取必须同时匹配目标名称和该 commit ID；来源解析
+失败时不发送写请求，同名但来源提交不同的分支不能恢复为成功。
 
 仓库删除使用官方 V5 `DELETE /api/v5/repos/:owner/:repo`，不经过需要 repo type
 的 HF 删除接口。CLI 要求 `--confirm` 与输入仓库 ID 完全一致，API 在 DELETE 前

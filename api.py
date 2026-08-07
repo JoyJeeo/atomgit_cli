@@ -717,6 +717,29 @@ def _is_definitive_v5_write_error(error: Exception) -> bool:
     )
 
 
+def _atomgit_v5_commit_sha(payload: object) -> Optional[str]:
+    """Extract the immutable SHA from one V5 commit response."""
+    if not isinstance(payload, dict):
+        return None
+    sha = payload.get("sha")
+    if isinstance(sha, str) and sha.strip():
+        return sha.strip()
+    return None
+
+
+def _atomgit_v5_branch_commit_id(payload: object) -> Optional[str]:
+    """Extract the immutable commit ID from one V5 branch response."""
+    if not isinstance(payload, dict):
+        return None
+    commit = payload.get("commit")
+    if not isinstance(commit, dict):
+        return None
+    commit_id = commit.get("id")
+    if isinstance(commit_id, str) and commit_id.strip():
+        return commit_id.strip()
+    return None
+
+
 def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
     """List repo files without calling repo_info.
 
@@ -1928,7 +1951,16 @@ class HuggingFaceAPI:
                 raise ValueError("invalid branch name")
             if not source or not is_supported_upload_revision(source):
                 raise ValueError("invalid source revision")
-            base_path = _atomgit_v5_repo_path(repo_id) + "/branches"
+            repo_path = _atomgit_v5_repo_path(repo_id)
+            source_path = repo_path + "/commits/" + quote(source, safe="")
+            source_payload = _atomgit_v5_get_json(
+                source_path, credentials['token']
+            )
+            source_commit = _atomgit_v5_commit_sha(source_payload)
+            if source_commit is None:
+                print("创建分支失败: 无法解析来源 revision 的提交")
+                return False
+            base_path = repo_path + "/branches"
             write_error = None
             try:
                 _atomgit_v5_request_json(
@@ -1953,12 +1985,17 @@ class HuggingFaceAPI:
                 print("分支创建状态未知：无法验证远端状态")
                 return False
             name = payload.get("name") if isinstance(payload, dict) else None
-            if name != branch_name:
+            target_commit = _atomgit_v5_branch_commit_id(payload)
+            if name != branch_name or target_commit != source_commit:
                 if write_error is None:
-                    print("分支创建验证失败：远端未返回目标分支")
+                    print(
+                        "分支创建验证失败：远端分支名称或来源提交"
+                        "与请求不一致"
+                    )
                 else:
                     print(
-                        "分支创建写请求状态未知：远端未返回目标分支"
+                        "分支创建写请求状态未知：远端分支名称或"
+                        "来源提交与请求不一致"
                     )
                 return False
             return True
