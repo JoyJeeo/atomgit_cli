@@ -599,8 +599,10 @@ def _atomgit_v5_request_json(
     if not path.startswith("/") or "?" in path or "#" in path:
         raise ValueError("invalid AtomGit API path")
     method = method.upper()
-    if method not in ("GET", "POST", "PATCH"):
+    if method not in ("GET", "POST", "PATCH", "DELETE"):
         raise ValueError("unsupported AtomGit API method")
+    if method == "DELETE" and body is not None:
+        raise ValueError("DELETE request body is unsupported")
 
     data = None
     headers = {
@@ -1444,6 +1446,57 @@ class HuggingFaceAPI:
             return True
         except Exception as error:
             print(f"修改仓库可见性失败: {_sanitized_v5_api_error(error)}")
+            return False
+
+    def delete_repo(self, repo_id: str, confirmation: str) -> bool:
+        """Delete one V5 repository and require verified remote absence."""
+        try:
+            if confirmation != repo_id:
+                print("删除仓库失败: 确认仓库 ID 与目标不一致")
+                return False
+            credentials = config.get_credentials()
+            if not credentials or not credentials.get('token'):
+                print("❌ 未找到登录凭证")
+                return False
+            token = credentials['token']
+            path = _atomgit_v5_repo_path(repo_id)
+            repository = _atomgit_v5_get_json(path, token)
+            if not isinstance(repository, dict):
+                raise ValueError("repository response is malformed")
+
+            delete_error = None
+            try:
+                _atomgit_v5_request_json("DELETE", path, token)
+            except urllib.error.HTTPError as error:
+                if 400 <= error.code < 500:
+                    print(
+                        f"删除仓库失败: {_sanitized_v5_api_error(error)}"
+                    )
+                    return False
+                delete_error = error
+            except Exception as error:
+                delete_error = error
+
+            try:
+                _atomgit_v5_get_json(path, token)
+            except urllib.error.HTTPError as error:
+                if error.code == 404:
+                    return True
+                print("仓库删除请求状态未知：无法验证远端仓库是否仍存在")
+                return False
+            except Exception:
+                print("仓库删除请求状态未知：无法验证远端仓库是否仍存在")
+                return False
+
+            if delete_error is not None:
+                print(
+                    f"删除仓库失败: {_sanitized_v5_api_error(delete_error)}"
+                )
+            else:
+                print("仓库删除验证失败：远端仓库仍存在")
+            return False
+        except Exception as error:
+            print(f"删除仓库失败: {_sanitized_v5_api_error(error)}")
             return False
 
     def create_branch(

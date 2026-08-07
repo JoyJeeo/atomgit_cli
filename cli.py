@@ -227,6 +227,31 @@ def set_repository_visibility(repo_id, visibility):
         sys.exit(1)
 
 
+@repo.command(name='delete')
+@click.argument('repo_id')
+@click.option(
+    '--confirm', required=True, metavar='REPO_ID',
+    help='必须原样重复仓库 ID，确认永久删除',
+)
+def delete_repository(repo_id, confirm):
+    """永久删除仓库并验证远端已不存在"""
+    if not config.is_logged_in():
+        print_error("请先登录：atomgit login")
+        sys.exit(1)
+    if not validate_repo_name(repo_id):
+        print_error("仓库ID格式不正确，应为: username/repo-name")
+        sys.exit(1)
+    if confirm != repo_id:
+        raise click.UsageError("--confirm 必须与仓库 ID 完全一致")
+
+    print_warning(f"正在永久删除仓库: {repo_id}")
+    if api.delete_repo(repo_id, confirmation=confirm):
+        print_success(f"仓库 {repo_id} 已删除并验证不存在")
+    else:
+        print_error(f"仓库 {repo_id} 删除失败或远端状态未知")
+        sys.exit(1)
+
+
 @repo.group(name='branch')
 def branch_commands():
     """仓库分支管理"""

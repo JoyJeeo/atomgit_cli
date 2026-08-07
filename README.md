@@ -377,6 +377,20 @@ atomgit repo visibility your-username/your-repo private
 `--exist-ok --public` 命中已有仓库时仍会确保并验证公开状态；`--exist-ok
 --private` 不承诺把已有公开仓库改为私有，需要变更时使用 `repo visibility`。
 
+#### 永久删除仓库
+
+删除不可恢复，必须登录并通过 `--confirm` 原样重复仓库 ID：
+
+```bash
+atomgit repo delete your-username/your-repo \
+  --confirm your-username/your-repo
+```
+
+命令会先读取并确认目标仓库，再调用 AtomGit V5 删除接口，最后重新读取同一地址；
+只有远端返回 404 才报告成功。确认值缺失或不完全一致时不会发送 API 请求。若删除
+响应丢失但随后验证仓库已不存在，命令仍可确认成功；无法验证时返回非零并明确提示
+远端状态未知。此功能仅属于 CLI，不新增 Python SDK 删除接口。
+
 ## SDK使用方法
 
 AtomGit除了提供CLI工具外，还提供了类似huggingface_hub的Python SDK接口，让您可以在Python代码中直接使用AtomGit的功能。

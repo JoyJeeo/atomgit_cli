@@ -34,7 +34,8 @@ every remote path is verified; known status follows the interface list.
 - Opt-in checksum verification for existing and newly downloaded CLI files
 - Opt-in persistent resume for interrupted CLI downloads
 - Opt-in manifest-scoped pruning for remotely removed repository files
-- Authenticated repository list and verified visibility changes
+- Authenticated repository list, verified visibility changes, and confirmed
+  repository deletion with absence verification
 - Explicit private creation and verified public creation
 - Explicit branch creation and CLI upload to existing non-main branches
 - Configuration-state display
@@ -80,6 +81,9 @@ every remote path is verified; known status follows the interface list.
 - Repository pruning is explicit and may delete only regular files previously
   written and recorded by successful whole-repository CLI downloads; it must
   not scan or adopt unrelated local content.
+- Remote repository deletion is CLI-only, requires an exact repeated repository
+  ID, and may report success only after a post-delete detail request proves the
+  target is no longer accessible.
 - SDK failures expose stable `AtomGitError` subclasses while remaining
   compatible with callers that catch `Exception` or validation `ValueError`.
 
