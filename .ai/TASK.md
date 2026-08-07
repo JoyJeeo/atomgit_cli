@@ -2,7 +2,7 @@
 
 # Issue UNICODE-DOWNLOAD-METADATA
 
-Status: `ready-for-delivery`
+Status: `completed`
 
 ## Identity
 
@@ -78,7 +78,7 @@ rules.
 - [x] Scoped read-only live evidence passes without changing remote state.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -110,3 +110,7 @@ rules.
 - Independent review: first pass `REQUEST CHANGES` for missing anonymous model
   test evidence; after adding it and rerunning the complete suite, final verdict
   `APPROVED` with no P0-P3 findings.
+- Delivery implementation commit: `adbb7f0` (`fix(download): support Unicode
+  metadata fallback`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
