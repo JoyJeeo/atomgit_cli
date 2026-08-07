@@ -43,6 +43,7 @@ try:
         parse_ignore_patterns,
         run_download_with_retry,
         sanitized_download_error,
+        validate_upload_path_no_symlinks,
     )
 except ImportError:
     from config import config
@@ -54,6 +55,7 @@ except ImportError:
         parse_ignore_patterns,
         run_download_with_retry,
         sanitized_download_error,
+        validate_upload_path_no_symlinks,
     )
 
 try:
@@ -1604,6 +1606,11 @@ class HuggingFaceAPI:
             print("上传 revision 名称不合法，已拒绝上传")
             return False
         try:
+            try:
+                validate_upload_path_no_symlinks(file_path)
+            except ValueError as error:
+                print(str(error))
+                return False
             if not file_path.exists():
                 print(f"文件不存在: {file_path}")
                 return False
@@ -1723,6 +1730,11 @@ class HuggingFaceAPI:
             print("上传 revision 名称不合法，已拒绝上传")
             return False
         try:
+            try:
+                validate_upload_path_no_symlinks(dir_path)
+            except ValueError as error:
+                print(str(error))
+                return False
             if not dir_path.exists() or not dir_path.is_dir():
                 print(f"目录不存在: {dir_path}")
                 return False

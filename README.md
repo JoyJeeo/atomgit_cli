@@ -191,6 +191,11 @@ atomgit upload <path> --repo-id <id> [options]
 `--path-in-repo` 或 `--message` 同用；`--num-workers` 必须搭配
 `--resumable`；`--ignore` 仅适用于目录上传。
 
+为避免 Hugging Face 上传实现读取选定路径之外的内容，上传文件、上传目录根路径
+以及目录树中的文件、目录或失效符号链接都会在读取登录凭证和发送远端请求前被
+拒绝。`--ignore` 不能绕过这项安全检查；需要上传目标内容时，请先将其复制为上传
+目录内的普通文件。
+
 #### 进阶示例
 
 ```bash

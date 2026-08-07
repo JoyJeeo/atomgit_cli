@@ -53,6 +53,7 @@ try:
         is_retryable_download_error,
         normalize_repo_id,
         run_download_with_retry,
+        validate_upload_path_no_symlinks,
     )
 except ImportError:
     try:
@@ -72,6 +73,7 @@ except ImportError:
             is_retryable_download_error,
             normalize_repo_id,
             run_download_with_retry,
+            validate_upload_path_no_symlinks,
         )
     except ImportError:
         from atomgit.config import config
@@ -90,6 +92,7 @@ except ImportError:
             is_retryable_download_error,
             normalize_repo_id,
             run_download_with_retry,
+            validate_upload_path_no_symlinks,
         )
 
 
@@ -395,6 +398,8 @@ def upload_folder(
     
     # 转换为Path对象
     folder_path = Path(folder_path)
+
+    validate_upload_path_no_symlinks(folder_path)
     
     if not folder_path.exists():
         raise FileNotFoundError(f"文件夹不存在: {folder_path}")

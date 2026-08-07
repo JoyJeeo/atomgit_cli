@@ -202,6 +202,42 @@ def parse_ignore_patterns(raw: Optional[str]) -> Optional[List[str]]:
     return patterns or None
 
 
+def validate_upload_path_no_symlinks(upload_path: Path) -> None:
+    """Reject an upload root or tree containing any symbolic link.
+
+    Hugging Face Hub 1.1.7 treats file symlinks as regular upload sources and
+    reads their targets. Directory symlinks are not followed here, but are
+    rejected along with file and broken symlinks so an upload cannot silently
+    include content outside the path selected by the user.
+    """
+    upload_path = Path(upload_path)
+    if upload_path.is_symlink():
+        raise ValueError("上传路径包含符号链接，已拒绝上传: .")
+    if not upload_path.is_dir():
+        return
+
+    def raise_walk_error(error):
+        raise error
+
+    try:
+        for root, directory_names, filenames in os.walk(
+            str(upload_path),
+            topdown=True,
+            onerror=raise_walk_error,
+            followlinks=False,
+        ):
+            root_path = Path(root)
+            for name in directory_names + filenames:
+                candidate = root_path / name
+                if candidate.is_symlink():
+                    relative = candidate.relative_to(upload_path).as_posix()
+                    raise ValueError(
+                        f"上传路径包含符号链接，已拒绝上传: {relative}"
+                    )
+    except OSError as error:
+        raise ValueError("无法安全检查上传路径，已拒绝上传") from error
+
+
 def get_file_size(file_path: Path) -> int:
     """获取文件大小"""
     try:
