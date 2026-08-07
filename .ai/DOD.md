@@ -36,6 +36,30 @@ applicable or reported with its residual risk; silence is not a pass.
 - [ ] `python -m compileall -q .` passes.
 - [ ] Externally visible behavior has matching documentation.
 
+## Mandatory CLI Feature Baseline Gate
+
+This gate applies to every feature and bug-fix Issue, including changes that
+are not expected to affect the CLI. It is not optional and may not be reported
+as not applicable. Run it after implementation and after every subsequent fix,
+before human acceptance, Issue completion, delivery, or merge:
+
+```bash
+python tests/test_cli_feature_baseline.py
+```
+
+- [ ] The command ran in the `atomgit_cli` conda environment and every baseline
+      check passed.
+- [ ] The command and passing result are recorded in `TASK.md` verification
+      evidence.
+- [ ] If the gate failed at any point, the Issue remained active, returned to
+      implementation, and the regression was fixed before the gate was rerun.
+- [ ] A failing gate blocks acceptance, completion, commit for delivery, merge,
+      and push; repeat the repair-and-test loop until every check passes.
+- [ ] The baseline was not removed, skipped, or weakened to make a regression
+      pass. An intentional public compatibility break requires explicit
+      maintainer authorization in the active Issue, matching documentation and
+      baseline updates, and a final passing gate.
+
 ## Documentation-Only Changes
 
 - [ ] Claims were checked against source, tests, and dependency versions.
