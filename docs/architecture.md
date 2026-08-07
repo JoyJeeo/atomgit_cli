@@ -191,11 +191,13 @@ Token 发送到 AtomGit。
 替换。标准 URL 与非 ASCII raw UTF-8 回退都在目标目录创建唯一临时文件，完整
 成功后替换目标，普通异常和重试失败会清理临时文件并保留原目标。
 
-`--verify-checksum` 通过锁定 HF Hub 的 `get_hf_file_metadata` 读取 resolve
-元数据：40 位十六进制 ETag 按 Git blob SHA-1 校验，64 位按内容 SHA-256
-校验，并同时要求文件大小一致。已有文件只读取校验；新下载内容在唯一临时文件
-中校验通过后才原子替换。checksum 不匹配会重试一次，仍失败或元数据不受支持
-时保留已有目标并返回非零。该选项不改变默认的已有文件跳过策略。
+`--verify-checksum` 对标准路径通过锁定 HF Hub 的 `get_hf_file_metadata` 读取
+resolve 元数据；嵌套非 ASCII 路径仅在编码请求返回 404 时，改用 raw UTF-8
+HEAD 读取同一组强元数据，并沿用跨域凭据剥离和 HTTPS 降级拒绝规则。40 位
+十六进制 ETag 按 Git blob SHA-1 校验，64 位按内容 SHA-256 校验，并同时要求
+文件大小一致；冲突或缺失的大小会失败关闭。已有文件只读取校验；新下载内容在
+唯一临时文件中校验通过后才原子替换。checksum 不匹配会重试一次，仍失败或
+元数据不受支持时保留已有目标并返回非零。该选项不改变默认的已有文件跳过策略。
 
 `--resume` 使用锁定 HF Hub 的 `http_get(resume_size=...)` 续传标准 URL；raw
 UTF-8 路径使用同等严格的 Range/Content-Range 校验。未完成数据位于权限为

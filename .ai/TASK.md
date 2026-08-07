@@ -1,67 +1,60 @@
 # Current Issue Contract
 
-# Issue PRIVATE-EXIST-OK-VERIFY
+# Issue UNICODE-DOWNLOAD-METADATA
 
-Status: `completed`
+Status: `ready-for-delivery`
 
 ## Identity
 
-- Local Issue: `PRIVATE-EXIST-OK-VERIFY`
-- Title: `Converge and verify private visibility for idempotent CLI creation`
-- Type: `security`, `bug`, `cli`
+- Local Issue: `UNICODE-DOWNLOAD-METADATA`
+- Title: `Support checksum metadata for nested non-ASCII download paths`
+- Type: `bug`, `cli`, `download`
 - Priority: `P1`
-- Branch: `codex/fix-private-exist-ok-verify` (local only)
+- Branch: `codex/fix-unicode-download-paths` (local only)
 - Base: `yuto`
-- Previous Issue: `UPLOAD-SYMLINK-SAFETY`, delivered by `708d47f`.
+- Previous Issue: `PRIVATE-EXIST-OK-VERIFY`, delivered by `b7f5afe`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-The CLI accepts `atomgit repo create REPO --type TYPE --private --exist-ok` and
-reports that the repository exists or was created. The current implementation
-passes `private=True, exist_ok=True` to locked HF `create_repo` but verifies
-visibility only when public was requested.
+Plain downloads already work around AtomGit resolve routing for nested
+non-ASCII filenames by retrying a 404 with raw UTF-8 request-target bytes.
+Checksum and resumable downloads first call locked HF metadata lookup with the
+percent-encoded resolve URL and have no equivalent fallback. On the authorized
+dataset test path `sub/中文样本.csv`, that metadata request can fail before the
+working raw transfer path is reached.
 
-The installed `huggingface-hub==1.1.7` implementation treats an HTTP 409 with
-`exist_ok=True` as success and returns the existing repository response; it
-does not update that repository's visibility. An existing public repository can
-therefore remain public while the CLI reports success for an explicit private
-request.
-
-Every successful CLI create must converge the repository to the explicitly
-requested visibility and GET-verify the final state. A mismatch or unverifiable
-state must return nonzero and explain that the remote visibility may be
-unknown; it must never claim private success based only on the HF create call.
+The existing `--verify-checksum` and `--resume` options must work for every safe
+repository filename returned by the listing endpoint, including nested
+non-ASCII paths. Metadata fallback must preserve strong-checksum validation,
+bounded redirects, credential isolation, and the existing atomic destination
+rules.
 
 ## Scope And Acceptance
 
-- Preserve the existing safe sequence that asks HF to create privately.
-- After HF returns, use the existing V5 visibility update and verification for
-  both requested private and public states, including `--exist-ok`.
-- Report success only after the verified V5 state matches the explicit CLI
-  request; retain credential-safe unknown-state guidance on failure.
-- Keep non-`--exist-ok` preflight behavior, model/dataset compatibility route,
-  CLI arguments, and exit codes unchanged except for correcting false success.
-- Add a regression proving private `exist_ok` invokes verified visibility and
-  fails when convergence cannot be verified.
-- Confirm public, new private, dataset, existing-default rejection, locked HF
-  signature, and CLI forwarding compatibility.
-- Update the smallest authoritative CLI/architecture documentation.
-- Do not change the public Python SDK `create_repository` contract in this CLI
-  Issue, implement another audited defect, or add any new feature.
+- Reproduce the metadata failure on the fixed authorized read-only test path
+  and in a strict offline regression.
+- Add one shared metadata lookup path that tries the standard locked HF request
+  first and uses raw UTF-8 request-target bytes only for a non-ASCII 404.
+- Extract and validate the same ETag, size, and final location needed by
+  checksum and resume flows; accept no weaker checksum or ambiguous response.
+- Preserve redirect credential stripping, HTTPS downgrade rejection, bounded
+  response handling, timeout behavior, destination containment, atomic writes,
+  and cache isolation.
+- Cover model/dataset URL selection, nested Unicode paths, authenticated and
+  anonymous calls, error behavior, checksum download, and resumable download.
+- Update only the authoritative download documentation affected by the fix.
+- Do not add commands, flags, capabilities, or fix another audited defect.
 
 ## Compatibility And Risks
 
-- Private creation now performs the same authenticated V5 PATCH/GET verification
-  already required for public creation. A transient verification failure may
-  turn a previously successful exit into an accurate nonzero unknown-state
-  result even when HF created the repository.
-- No live visibility mutation is authorized or required. Strict offline tests
-  must prove request sequencing and false-success prevention.
-- The public Python SDK remains private-only and outside this CLI Issue; its
-  idempotent visibility semantics require a separately selected SDK Issue if
-  the maintainer later includes SDK defects in the repair scope.
+- Keep `huggingface-hub==1.1.7` and `datasets==4.4.1` compatibility; standard
+  ASCII metadata requests must continue through locked `get_hf_file_metadata`.
+- Raw metadata handling is an AtomGit interoperability fallback, not a generic
+  replacement for HF metadata behavior, and must be limited to non-ASCII 404s.
+- Live testing is read-only and limited to `weixin_52273949/test_model` and
+  `weixin_52273949/test_datasets`; no remote mutation is needed or allowed.
 
 ## Permissions
 
@@ -69,41 +62,51 @@ unknown; it must never claim private success based only on the HF create call.
   excluded new functionality.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
-- No live repository creation, upload, visibility mutation, deletion, Git
-  credential change, release, or publication is authorized or required.
+- Read-only live download tests may use only the two fixed test repositories.
+  No create, upload, branch, visibility, delete, credential-helper mutation,
+  release, publication, or other remote write is authorized.
 
 ## Required Evidence And Closure
 
-- [x] Previous behavior is reproduced by a failing regression.
-- [x] Private and public create paths both call verified visibility convergence.
-- [x] `--private --exist-ok` cannot succeed when visibility verification fails.
-- [x] Model/dataset routing, preflight, CLI forwarding, and HF 1.1.7 signatures
-      remain compatible.
-- [x] Focused and complete offline tests, compileall, and diff checks pass.
+- [x] Existing live and offline behavior reproduces the failure.
+- [x] Checksum metadata succeeds for nested non-ASCII paths without weakening
+      validation or credential boundaries.
+- [x] `--verify-checksum` and `--resume` both use the corrected metadata path.
+- [x] ASCII, model/dataset, anonymous/authenticated, redirect, and failure
+      compatibility remain covered.
+- [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
+- [x] Scoped read-only live evidence passes without changing remote state.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
-- Previous behavior: the new regression passed only the public-failure case
-  (`1/3`); private creation and private `exist_ok` did not request verified V5
-  convergence.
-- Focused offline scripts: create visibility `3/3`, create contract `42/42`,
-  repository visibility `22/22`, and repository ID contract `68/68`.
-- Complete offline suite: `pytest` collected `53` items and exited `0`.
-- Compatibility: installed `huggingface-hub==1.1.7`; the real `create_repo`
-  signature accepts the exact keyword set used by the implementation.
-- Static checks: `python -m compileall -q .`, `python -m pip check`, and
-  `git diff --check` passed.
-- Security and scope: credential-pattern scan found no secret material; no live
-  request or remote repository mutation ran; only this Issue's CLI create
-  convergence, regression coverage, and authoritative docs changed.
-- Independent review: initial `REQUEST CHANGES` for one stale code comment;
-  after correction and complete revalidation, `APPROVED` with no P0-P3
-  findings. Residual risk is limited to the intentionally unrun live visibility
-  mutation test.
-- Delivery implementation commit: `eb21d05` (`fix(repo): verify private
-  exist-ok visibility`). The closure commit is merged locally through the
-  standing delivery workflow; the task branch remains local-only and only
-  `yuto` is pushed.
+- Live reproduction before implementation: the fixed authorized dataset path
+  `sub/中文样本.csv` failed under `download-file --force --verify-checksum`
+  with a sanitized not-found result and produced no local file; login identity
+  was verified without exposing the stored token.
+- Regression before implementation: the strict Unicode metadata script passed
+  only `2/5`; checksum fallback, raw UTF-8 request bytes, and redirect credential
+  stripping were absent from the metadata path.
+- Implementation: standard ASCII and successful encoded metadata keep using
+  locked HF `get_hf_file_metadata`; only a non-ASCII encoded 404 retries through
+  bounded raw UTF-8 HEAD. Strong ETag/size validation is shared, conflicting
+  sizes fail closed, redirects reuse the existing downgrade and credential
+  isolation policy, and checksum/resume consume the same metadata result.
+- Focused offline evidence: Unicode metadata `9/9`, checksum `23/23`, resume
+  `17/17`, download contract `45/45`, redirect security `9/9`, path security
+  `15/15`, and locked HF contract `12/12` passed.
+- Complete offline suite: `pytest` collected `54` items and exited `0`.
+  `python -m compileall -q .`, `python -m pip check`, and `git diff --check`
+  passed in the `atomgit_cli` environment.
+- Live read-only evidence after implementation: both `--verify-checksum` and
+  `--resume` downloaded the authorized dataset Unicode path, independently
+  verified the 31-byte result, and produced identical bytes. Temporary local
+  files were removed and no remote state changed.
+- Security and scope: the diff contains no real credential or generated
+  artifact; signed locations are neither printed nor persisted; changes are
+  limited to this download defect, its regression, and authoritative docs.
+- Independent review: first pass `REQUEST CHANGES` for missing anonymous model
+  test evidence; after adding it and rerunning the complete suite, final verdict
+  `APPROVED` with no P0-P3 findings.
