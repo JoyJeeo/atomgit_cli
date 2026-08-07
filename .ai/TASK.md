@@ -2,7 +2,7 @@
 
 # Issue DOWNLOAD-MANIFEST-CONCURRENCY
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -75,7 +75,7 @@ without downloading, pruning, or advancing the manifest.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -106,3 +106,6 @@ without downloading, pruning, or advancing the manifest.
   standard context management and descriptor close as the final backstop.
   Residual platform risk is that the Windows backend has strict mocked contract
   evidence but no real Windows execution in the current environment.
+- Delivery implementation commit: `1d70ba8` (`fix(download): serialize manifest
+  updates`). The closure commit is merged locally through the standing delivery
+  workflow; the task branch remains local-only and only `yuto` is pushed.
