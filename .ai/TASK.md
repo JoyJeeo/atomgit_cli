@@ -1,60 +1,50 @@
 # Current Issue Contract
 
-# Issue DOWNLOAD-MANIFEST-CONCURRENCY
+# Issue REPO-INFO-STUB-SEMANTICS
 
-Status: `completed`
+Status: `active`
 
 ## Identity
 
-- Local Issue: `DOWNLOAD-MANIFEST-CONCURRENCY`
-- Title: `Serialize repository download manifest transactions`
-- Type: `bug`, `cli`, `download`, `reliability`
+- Local Issue: `REPO-INFO-STUB-SEMANTICS`
+- Title: `Stop reporting fabricated repository information`
+- Type: `bug`, `api`, `diagnostics`
 - Priority: `P3`
-- Branch: `codex/fix-download-manifest-concurrency` (local only)
+- Branch: `codex/fix-repo-info-stub` (local only)
 - Base: `yuto`
-- Previous Issue: `AUTH-STATUS-SEMANTICS`, delivered by `4b071b1`.
+- Previous Issue: `DOWNLOAD-MANIFEST-CONCURRENCY`, delivered by `ab7bd98`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-Repository downloads load a manifest, transfer files, then atomically replace
-the manifest. Atomic replacement prevents partial JSON, but it does not make the
-read-modify-write sequence atomic. Two commands targeting the same repository,
-type, and local directory can both read the old set and overwrite each other's
-managed-file updates; concurrent prune can also act on stale ownership state.
+`HuggingFaceAPI.get_repo_info` never queries AtomGit or validates its input. It
+returns a truthy dictionary containing the caller's repository ID plus a fixed
+"SDK support required" status. Callers can mistake this fabricated object for
+verified repository metadata or repository existence.
 
-Only one manifest transaction may operate on an identical checkout identity at
-a time. A competing command must fail safely with actionable sanitized guidance,
-without downloading, pruning, or advancing the manifest.
+Repository information retrieval is not an advertised CLI feature and real V5
+detail support would be new functionality. The existing method must therefore
+fail explicitly and safely instead of returning invented success data.
 
 ## Scope And Acceptance
 
-- Add an OS-backed nonblocking advisory lock beside each opaque manifest.
-- Hold the lock from immediately before manifest load until download, optional
-  prune, and manifest write have completed or failed.
-- Use automatic OS lock release on process exit; do not depend on stale PID-file
-  deletion. Keep lock files credential-free and private.
-- If the manifest cache is unavailable in default non-prune mode, preserve the
-  existing best-effort download behavior and warning.
-- If a valid manifest identity is busy, fail both normal and prune downloads
-  before reading ownership state or transferring files.
-- Preserve manifest validation, atomic write, prune boundaries, default skip,
-  CLI arguments, remote calls, and existing exit behavior.
-- Add focused regressions for exclusive acquisition, release after success and
-  exceptions, busy download behavior, state preservation, and permissions.
-- Do not add commands, flags, waiting/retry policy, download functionality, or
-  unrelated changes.
+- Preserve the public method name, parameters, and `Optional[Dict]` signature.
+- Return `None` with one fixed actionable unsupported message.
+- Do not echo caller input, exception details, repository data, or credentials.
+- Do not read credentials or issue any network request.
+- Add a focused regression proving no truthy/fabricated data and no side effect.
+- Document the compatibility boundary for maintainers.
+- Do not implement repository detail retrieval, add a command/flag, change V5
+  calls, add an exception type, or modify unrelated functionality.
 
 ## Compatibility And Risks
 
-- Concurrent commands for the same checkout now fail fast and can be retried;
-  different repositories, types, or local directories retain independent locks.
-- Advisory locking must support POSIX and Windows using Python standard-library
-  primitives, while the current environment provides real execution only on
-  POSIX. Windows behavior requires strict mocked contract evidence.
-- Persistent small lock files are safe private state; the OS releases ownership
-  automatically after normal exit, exceptions, or process termination.
+- Callers that incorrectly treated the placeholder dictionary as verified data
+  will now receive the method's existing failure sentinel, `None`.
+- Method presence and type signature remain stable; no supported CLI path calls
+  this method.
+- No live request is needed or allowed.
 
 ## Permissions
 
@@ -63,49 +53,36 @@ without downloading, pruning, or advancing the manifest.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
 - No live request, repository access, remote write, credential mutation, or
-  destructive external action is authorized or required for this Issue.
+  external side effect is authorized or required for this Issue.
 
 ## Required Evidence And Closure
 
-- [x] Unserialized lost-update behavior is reproduced by a failing regression.
-- [x] One checkout identity permits only one active manifest transaction.
-- [x] Busy commands fail before transfer/prune and preserve manifest state.
-- [x] Lock release, permissions, identity isolation, and Windows contract pass.
-- [x] Existing manifest/prune/download behavior remains compatible.
+- [x] Fabricated truthy metadata is reproduced by a failing regression.
+- [x] The method returns `None` with fixed safe unsupported guidance.
+- [x] Credential and network access are impossible on this path.
+- [x] Public signature and all supported CLI/API behavior remain compatible.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
-- Regression before implementation: the concurrent-download contract passed
-  `2/5`. Both commands transferred and returned success after reading the same
-  empty manifest, while the delayed last writer replaced the other command's
-  managed-file record.
-- Implementation: each opaque manifest has a private `.lock` sibling. POSIX
-  uses nonblocking `flock`; Windows uses one-byte nonblocking `msvcrt.locking`.
-  An `ExitStack` holds ownership from before manifest load through transfer,
-  optional prune, atomic manifest replacement, and every failure path.
-- Busy behavior: a competing normal or prune command returns false with
-  sanitized retry guidance before file transfer or deletion. The existing
-  manifest remains byte-for-byte unchanged, and the winning transaction alone
-  advances it. Sequential reuse merges ownership after lock release.
-- Lock safety: exception release, independent manifest identities, opaque names,
-  `0600` permissions, persistent-file reuse, and Windows busy/unlock calls are
-  covered. OS advisory ownership requires no stale PID-file cleanup.
-- Focused results: concurrency `9/9`, manifest/prune `49/49`, and Windows
-  compatibility `12/12` passed offline.
+- Regression before implementation: the focused contract passed `3/5`; the
+  method returned a truthy placeholder dictionary and emitted no unsupported
+  failure, even for a deliberately untrusted repository ID.
+- Implementation: the existing method and `Optional[Dict[str, Any]]` signature
+  remain present. Every call now returns `None` and prints one fixed, actionable
+  unsupported message without interpolating input or exception details.
+- Side-effect contract: credential and urllib access were replaced with
+  assertion-raising spies; the focused `5/5` run proved neither was called and
+  the input marker was absent from output.
 - Complete offline suite: `pytest -q` exited `0` with all `55` collected tests;
   `python -m compileall -q .`, `python -m pip check`, and `git diff --check`
   passed in the `atomgit_cli` environment.
-- Security and scope: no live request, repository access, remote or destructive
-  write, command, flag, retry/wait policy, credential, dependency, generated
-  artifact, or new feature is present.
-- Independent review: `APPROVED` with no open P0-P3 findings. Lock release uses
-  standard context management and descriptor close as the final backstop.
-  Residual platform risk is that the Windows backend has strict mocked contract
-  evidence but no real Windows execution in the current environment.
-- Delivery implementation commit: `1d70ba8` (`fix(download): serialize manifest
-  updates`). The closure commit is merged locally through the standing delivery
-  workflow; the task branch remains local-only and only `yuto` is pushed.
+- Security and scope: no live request, repository access, remote write,
+  credential access, command, flag, exception type, dependency, generated
+  artifact, or repository-detail feature is present.
+- Independent review: `APPROVED` with no open P0-P3 findings. The intentional
+  compatibility correction affects only callers that treated explicitly
+  unsupported placeholder text as verified repository metadata.
