@@ -33,7 +33,7 @@ non-trivial changes.
 ### Compatibility
 
 - Does the change work with `huggingface-hub==1.1.7`, `datasets==4.4.1`, and
-  Python 3.8+?
+  Python 3.9+?
 - Are existing CLI commands, option names, imports, and public SDK signatures
   preserved unless the task authorizes a break?
 - Do multi-level repository IDs behave consistently across operations?

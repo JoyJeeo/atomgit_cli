@@ -36,7 +36,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 
 ## 系统要求
 
-- **Python 3.8+** (推荐Python 3.11+)
+- **Python 3.9+** (推荐Python 3.11+)
 - 支持的操作系统：Windows, macOS, Linux
 
 ## 安装
@@ -776,9 +776,8 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 
 ## Python版本兼容性
 
-`setup.py` 声明支持 Python 3.8+，列出的目标版本包括：
+`setup.py` 声明支持 Python 3.9+，列出的目标版本包括：
 
-- Python 3.8
 - Python 3.9
 - Python 3.10
 - Python 3.11
@@ -786,7 +785,7 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 - Python 3.13
 
 当前 wheel 已在项目 Python 3.10 conda 环境中通过自动化隔离安装和入口冒烟。
-仓库尚无覆盖 Python 3.8–3.13 的完整 CI/conda 版本矩阵，因此这些版本除当前
+仓库尚无覆盖 Python 3.9–3.13 的完整 CI/conda 版本矩阵，因此这些版本除当前
 环境外仍属于打包兼容声明，而不是逐版本运行证据。
 
 ## 项目文档
@@ -806,7 +805,7 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 
 在贡献代码时，请确保：
 
-1. 代码兼容Python 3.8+
+1. 代码兼容Python 3.9+
 2. 运行兼容性测试
 3. 更新相关文档
 
