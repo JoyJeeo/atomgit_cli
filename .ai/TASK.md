@@ -1,60 +1,68 @@
 # Current Issue Contract
 
-# Issue UNICODE-DOWNLOAD-METADATA
+# Issue WINDOWS-CLI-COMPATIBILITY
 
-Status: `completed`
+Status: `ready-for-delivery`
 
 ## Identity
 
-- Local Issue: `UNICODE-DOWNLOAD-METADATA`
-- Title: `Support checksum metadata for nested non-ASCII download paths`
-- Type: `bug`, `cli`, `download`
+- Local Issue: `WINDOWS-CLI-COMPATIBILITY`
+- Title: `Restore advertised Windows CLI compatibility safely`
+- Type: `bug`, `compatibility`, `security`, `cli`
 - Priority: `P1`
-- Branch: `codex/fix-unicode-download-paths` (local only)
+- Branch: `codex/fix-windows-cli-compatibility` (local only)
 - Base: `yuto`
-- Previous Issue: `PRIVATE-EXIST-OK-VERIFY`, delivered by `b7f5afe`.
+- Previous Issue: `UNICODE-DOWNLOAD-METADATA`, delivered by `7aebd21`.
 - Delivery mode: standing-authorized implementation, review, commit, local
   merge into `yuto`, and push only `yuto`; task branch remains local-only.
 
 ## Evidence And Expected Behavior
 
-Plain downloads already work around AtomGit resolve routing for nested
-non-ASCII filenames by retrying a 404 with raw UTF-8 request-target bytes.
-Checksum and resumable downloads first call locked HF metadata lookup with the
-percent-encoded resolve URL and have no equivalent fallback. On the authorized
-dataset test path `sub/中文样本.csv`, that metadata request can fail before the
-working raw transfer path is reached.
+The package advertises Windows, macOS, and Linux support, but three existing
+CLI paths depend on Unix behavior:
 
-The existing `--verify-checksum` and `--resume` options must work for every safe
-repository filename returned by the listing endpoint, including nested
-non-ASCII paths. Metadata fallback must preserve strong-checksum validation,
-bounded redirects, credential isolation, and the existing atomic destination
-rules.
+- Python 3.8-3.12 on Windows has no `os.fchmod`, so credential saving and
+  download-manifest writes fail before atomic replacement.
+- `--prune` requires `O_DIRECTORY`, `O_NOFOLLOW`, and descriptor-relative
+  unlink, so it always rejects Windows even for a safe managed regular file.
+- the Git helper is configured as an unquoted `!<path>` shell command; Windows
+  backslashes and paths containing spaces do not identify the helper reliably.
+
+Existing login, Git credential integration, default downloads, and explicit
+manifest-scoped pruning must work on supported Windows Python versions without
+weakening credential handling or allowing prune to follow reparse points or
+delete outside the selected download root.
 
 ## Scope And Acceptance
 
-- Reproduce the metadata failure on the fixed authorized read-only test path
-  and in a strict offline regression.
-- Add one shared metadata lookup path that tries the standard locked HF request
-  first and uses raw UTF-8 request-target bytes only for a non-ASCII 404.
-- Extract and validate the same ETag, size, and final location needed by
-  checksum and resume flows; accept no weaker checksum or ambiguous response.
-- Preserve redirect credential stripping, HTTPS downgrade rejection, bounded
-  response handling, timeout behavior, destination containment, atomic writes,
-  and cache isolation.
-- Cover model/dataset URL selection, nested Unicode paths, authenticated and
-  anonymous calls, error behavior, checksum download, and resumable download.
-- Update only the authoritative download documentation affected by the fix.
-- Do not add commands, flags, capabilities, or fix another audited defect.
+- Use descriptor permission setting where available and a path-based chmod
+  fallback where `os.fchmod` is unavailable, preserving atomic writes.
+- Build the managed Git helper command from the running Python interpreter and
+  helper script with shell-safe quoting and Windows separator normalization;
+  preserve backup, rollback, repeated login, status, and legacy cleanup.
+- Keep the existing POSIX descriptor-relative prune implementation unchanged.
+- On Windows, open root and target through Win32 handles, reject directories and
+  reparse points, compare fully resolved handle paths, and mark only the opened
+  in-root regular file for deletion by handle.
+- Treat missing managed files as already clean and fail closed on every Windows
+  API, path-containment, type, or reparse-point uncertainty.
+- Add strict platform regressions with an injected fake Windows API, plus an
+  executable helper test from paths containing spaces.
+- Update only affected compatibility/security documentation; do not add CLI
+  commands, flags, or unrelated functionality.
 
 ## Compatibility And Risks
 
-- Keep `huggingface-hub==1.1.7` and `datasets==4.4.1` compatibility; standard
-  ASCII metadata requests must continue through locked `get_hf_file_metadata`.
-- Raw metadata handling is an AtomGit interoperability fallback, not a generic
-  replacement for HF metadata behavior, and must be limited to non-ASCII 404s.
-- Live testing is read-only and limited to `weixin_52273949/test_model` and
-  `weixin_52273949/test_datasets`; no remote mutation is needed or allowed.
+- Preserve Python 3.8 syntax and the locked HF/datasets contracts.
+- Windows file-mode bits have platform-defined semantics; the fix prevents the
+  current crash and retains inherited Windows ACLs rather than claiming POSIX
+  ACL equivalence.
+- Win32 deletion must use `CreateFileW` with reparse-point handling,
+  `GetFinalPathNameByHandleW`, attribute inspection, and
+  `SetFileInformationByHandle(FileDispositionInfo)` with DELETE access.
+- No Windows runtime is installed locally. Pure policy/dispatch tests and a
+  fake Win32 handle backend are required; absence of a real Windows acceptance
+  run must be reported as residual risk, not hidden.
 
 ## Permissions
 
@@ -62,55 +70,53 @@ rules.
   excluded new functionality.
 - Standing local development, commit, merge, and `yuto` push permissions apply.
 - The task branch must remain local and must not be pushed.
-- Read-only live download tests may use only the two fixed test repositories.
-  No create, upload, branch, visibility, delete, credential-helper mutation,
-  release, publication, or other remote write is authorized.
+- No live AtomGit request or remote repository mutation is required or allowed.
+- Git helper tests must isolate HOME and global Git configuration and must not
+  modify the user's real credential helper state.
 
 ## Required Evidence And Closure
 
-- [x] Existing live and offline behavior reproduces the failure.
-- [x] Checksum metadata succeeds for nested non-ASCII paths without weakening
-      validation or credential boundaries.
-- [x] `--verify-checksum` and `--resume` both use the corrected metadata path.
-- [x] ASCII, model/dataset, anonymous/authenticated, redirect, and failure
-      compatibility remain covered.
+- [x] Previous behavior is reproduced by strict platform regressions.
+- [x] Credential and manifest atomic writes tolerate missing `os.fchmod`.
+- [x] Managed Git helper commands are executable and reversible with Windows or
+      space-containing paths.
+- [x] Windows prune deletes only an opened in-root regular file and rejects
+      reparse points, directories, escaped final paths, and API uncertainty.
+- [x] Existing POSIX prune and Git credential isolation behavior remains intact.
 - [x] Focused and complete offline tests, compileall, pip, and diff checks pass.
-- [x] Scoped read-only live evidence passes without changing remote state.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
-- Live reproduction before implementation: the fixed authorized dataset path
-  `sub/中文样本.csv` failed under `download-file --force --verify-checksum`
-  with a sanitized not-found result and produced no local file; login identity
-  was verified without exposing the stored token.
-- Regression before implementation: the strict Unicode metadata script passed
-  only `2/5`; checksum fallback, raw UTF-8 request bytes, and redirect credential
-  stripping were absent from the metadata path.
-- Implementation: standard ASCII and successful encoded metadata keep using
-  locked HF `get_hf_file_metadata`; only a non-ASCII encoded 404 retries through
-  bounded raw UTF-8 HEAD. Strong ETag/size validation is shared, conflicting
-  sizes fail closed, redirects reuse the existing downgrade and credential
-  isolation policy, and checksum/resume consume the same metadata result.
-- Focused offline evidence: Unicode metadata `9/9`, checksum `23/23`, resume
-  `17/17`, download contract `45/45`, redirect security `9/9`, path security
-  `15/15`, and locked HF contract `12/12` passed.
-- Complete offline suite: `pytest` collected `54` items and exited `0`.
+- Regression before implementation: `tests/test_windows_compatibility.py`
+  passed `0/8`; credential and manifest saves failed without `os.fchmod`, the
+  helper command builder and Windows prune backend did not exist, and an actual
+  isolated Git fill failed from a helper path containing spaces.
+- Persistence: both credential and manifest atomic writes pass when `os.fchmod`
+  is unavailable, while existing mode, replacement-failure, memory-state, and
+  cleanup checks remain `15/15`.
+- Git integration: the managed command explicitly invokes the current Python
+  interpreter with shell-safe paths; an isolated helper under a space-containing
+  HOME executes successfully. Old/current managed values are removed from
+  legacy backup/cleanup, while user values, repeated setup, rollback, recovery,
+  status, and identity behavior remain intact.
+- Windows prune: injected-handle tests cover regular deletion, missing paths,
+  parent traversal, platform dispatch, directory/reparse rejection, escaped
+  final paths, and API uncertainty. Production uses Win32 CreateFileW handles,
+  attribute and final-path queries, and FileDispositionInfo; root, parent, and
+  target handles remain held without DELETE sharing until disposition completes.
+- Focused offline results: Windows compatibility `11/11`, POSIX prune `49/49`,
+  Git isolation `33/33`, Git identity `6/6`, CLI surface `50/50`, and config
+  permissions `15/15` passed.
+- Complete offline suite: `pytest` collected `55` items and exited `0`.
   `python -m compileall -q .`, `python -m pip check`, and `git diff --check`
   passed in the `atomgit_cli` environment.
-- Live read-only evidence after implementation: both `--verify-checksum` and
-  `--resume` downloaded the authorized dataset Unicode path, independently
-  verified the 31-byte result, and produced identical bytes. Temporary local
-  files were removed and no remote state changed.
-- Security and scope: the diff contains no real credential or generated
-  artifact; signed locations are neither printed nor persisted; changes are
-  limited to this download defect, its regression, and authoritative docs.
-- Independent review: first pass `REQUEST CHANGES` for missing anonymous model
-  test evidence; after adding it and rerunning the complete suite, final verdict
-  `APPROVED` with no P0-P3 findings.
-- Delivery implementation commit: `adbb7f0` (`fix(download): support Unicode
-  metadata fallback`). The closure commit is merged locally through the standing
-  delivery workflow; the task branch remains local-only and only `yuto` is
-  pushed.
+- Security and scope: all Git tests used isolated HOME/global config; the diff
+  contains no real credential, generated artifact, remote request, or unrelated
+  feature. No user Git configuration or remote repository state changed.
+- Independent review: `APPROVED` with no P0-P3 findings. Residual risk is the
+  absence of a real Windows runtime acceptance run; Win32 calls were checked
+  against official Microsoft contracts and exercised through a strict injected
+  backend, but this is not presented as live Windows evidence.
