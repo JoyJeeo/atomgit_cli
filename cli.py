@@ -88,7 +88,7 @@ def login(token, token_stdin):
         else:
             print_warning("未检测到Git，跳过Git凭证配置")
     else:
-        print_error("登录失败，请检查令牌是否正确")
+        print_error("登录失败，请根据上方提示处理")
         sys.exit(1)
 
 
@@ -131,7 +131,7 @@ def whoami():
     if user_info:
         print_success(f"当前登录用户: {user_info['login']}")
     else:
-        print_error("获取用户信息失败")
+        print_error("无法确认当前登录用户，请根据上方提示处理")
         sys.exit(1)
 
 

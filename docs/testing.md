@@ -75,6 +75,8 @@ git diff --check
 必须分别覆盖。`tests/test_cli_surface.py` 还会枚举根命令公开的全部子命令，验证
 login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支；所有依赖
 均使用 fake，不访问真实 HOME、Git 配置或网络。
+`tests/test_login_error_semantics.py` 进一步验证登录身份接口的 401、403、429、
+5xx、网络、超时和畸形响应分类，且 token 与原始异常文本不会进入输出。
 
 ### 依赖契约测试
 

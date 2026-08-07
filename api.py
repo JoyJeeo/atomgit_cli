@@ -1870,9 +1870,13 @@ class HuggingFaceAPI:
         if not token or len(token) < 10:
             print("❌ Token格式不正确")
             return False
-        user_info = self._get_login_user_by_token(token)
+        try:
+            user_info = self._get_login_user_by_token(token)
+        except Exception as error:
+            print(f"❌ 登录验证失败: {_sanitized_v5_api_error(error)}")
+            return False
         if not user_info:
-            print("❌ 获取用户信息失败")
+            print("❌ 登录验证失败: AtomGit API 响应格式无效")
             return False
         try:
             config.set_credentials(token, username=user_info['login'])
@@ -1883,32 +1887,38 @@ class HuggingFaceAPI:
         return True
     
     def _get_login_user_by_token(self, token: str) -> Optional[Dict[str, Any]]:
-        try:
-            if not token:
-                print("❌ 未找到登录凭证")
-                return None
-            api_url = 'https://atomgit.com/api/v5/user'
-            req = urllib.request.Request(
-                api_url,
-                headers={
-                    'Authorization': token,
-                    'User-Agent': 'atomgit-cli',
-                    'Accept': 'application/json'
-                }
-            )
-            with urllib.request.urlopen(req, timeout=10) as response:
-                if response.status == 200:
-                    data = json.loads(response.read().decode('utf-8'))
-                    login = data.get('login')
-                    if login and login.strip():
-                        return {
-                            'login': login,
-                            'name': data.get('name'),
-                            'email': data.get('email')
-                        }
+        if not token:
+            print("❌ 未找到登录凭证")
             return None
-        except Exception as e:
-            return None
+        api_url = 'https://atomgit.com/api/v5/user'
+        req = urllib.request.Request(
+            api_url,
+            headers={
+                'Authorization': token,
+                'User-Agent': 'atomgit-cli',
+                'Accept': 'application/json'
+            }
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status != 200:
+                raise urllib.error.HTTPError(
+                    api_url,
+                    response.status,
+                    "unexpected AtomGit identity response",
+                    getattr(response, "headers", {}),
+                    None,
+                )
+            data = json.loads(response.read().decode('utf-8'))
+        if not isinstance(data, dict):
+            raise ValueError("identity response is malformed")
+        login = data.get('login')
+        if not isinstance(login, str) or not login.strip():
+            raise ValueError("identity response is missing login")
+        return {
+            'login': login,
+            'name': data.get('name'),
+            'email': data.get('email')
+        }
 
     def get_login_user(self):
         try:
@@ -1919,7 +1929,15 @@ class HuggingFaceAPI:
         if not credentials:
             print("❌ 未找到登录凭证")
             return None
-        return self._get_login_user_by_token(credentials['token'])
+        try:
+            user_info = self._get_login_user_by_token(credentials['token'])
+        except Exception as error:
+            print(f"❌ 获取用户信息失败: {_sanitized_v5_api_error(error)}")
+            return None
+        if not user_info:
+            print("❌ 获取用户信息失败: AtomGit API 响应格式无效")
+            return None
+        return user_info
 
     def list_repos(self):
         """List repositories available to the stored AtomGit credential."""
