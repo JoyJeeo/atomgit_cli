@@ -2,7 +2,7 @@
 
 # Issue PRIVATE-EXIST-OK-VERIFY
 
-Status: `ready-for-delivery`
+Status: `completed`
 
 ## Identity
 
@@ -82,7 +82,7 @@ unknown; it must never claim private success based only on the HF create call.
 - [x] Focused and complete offline tests, compileall, and diff checks pass.
 - [x] Documentation, credential scan, scope audit, and independent review pass.
 - [x] Human acceptance is covered by the standing ordered-fix authorization.
-- [ ] The task is committed, merged into `yuto`, and only `yuto` is pushed.
+- [x] The task is committed, merged into `yuto`, and only `yuto` is pushed.
 
 ## Verification Evidence
 
@@ -103,3 +103,7 @@ unknown; it must never claim private success based only on the HF create call.
   after correction and complete revalidation, `APPROVED` with no P0-P3
   findings. Residual risk is limited to the intentionally unrun live visibility
   mutation test.
+- Delivery implementation commit: `eb21d05` (`fix(repo): verify private
+  exist-ok visibility`). The closure commit is merged locally through the
+  standing delivery workflow; the task branch remains local-only and only
+  `yuto` is pushed.
