@@ -2,7 +2,7 @@
 
 # Issue CLI-UPLOAD-DEFAULT-RESUME
 
-Status: `active`
+Status: `completed`
 
 ## Identity
 
@@ -71,7 +71,7 @@ resume metadata across repeated commands.
 - [x] The exact CLI schema and comprehensive baseline pass.
 - [x] Locked dependency signatures, compileall, pip check, diff check, scope,
       credentials, documentation, and independent review pass.
-- [ ] Human acceptance is recorded and the authorized local delivery completes.
+- [x] Human acceptance is recorded and the authorized local delivery completes.
 
 ## Verification Evidence
 
@@ -114,5 +114,8 @@ resume metadata across repeated commands.
   `APPROVED`. No live AtomGit upload ran; remote acceptance remains the only
   uncollected evidence and is not required or authorized for this Issue.
 - Human acceptance: the maintainer's explicit request defines and accepts the
-  requested default-resume and `--path-in-repo` outcome. Authorized delivery
-  remains pending.
+  requested default-resume and `--path-in-repo` outcome.
+- Delivery implementation commit: `1fa64de` (`feat(upload): default directory
+  uploads to resume`). The closure commit is merged locally through the standing
+  delivery workflow; the task branch remains local-only and only `yuto` is
+  pushed.
