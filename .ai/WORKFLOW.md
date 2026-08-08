@@ -57,6 +57,65 @@ Evidence / user request / approved GitHub Issue
            Close task and select next Issue
 ```
 
+## Conversation Continuity
+
+Conversation transcripts are task-local context, not repository memory. The
+repository handoff is `TASK.md`, verified against Git and the affected code.
+
+### Recover In A New Conversation
+
+Before editing, the new conversation must:
+
+1. Read `AGENTS.md`, `.ai/README.md`, and `.ai/TASK.md`.
+2. Resolve the repository root, branch, HEAD, worktree list, status, recent
+   commits, and relevant staged and unstaged diff.
+3. Compare that evidence with the `TASK.md` handoff snapshot.
+4. Read the task-specific `.ai` references selected by `.ai/README.md`, then
+   inspect the affected source, tests, and human documentation.
+5. Report the recovered objective, current phase, repository state, next exact
+   action, tests already evidenced, and any mismatch before continuing.
+
+Git, source, tests, and locked dependency signatures override stale handoff or
+design prose. A mismatch must be explained and reconciled; it must not be
+silently rewritten to match a previous conversation's intent. Ignored build,
+cache, log, download, and temporary directories are not task context unless the
+active Issue explicitly concerns them.
+
+### Create A Handoff Checkpoint
+
+Update the `TASK.md` handoff snapshot at meaningful boundaries: after
+investigation, after a reproducing failure, after implementation, after a test
+or review phase, before intentionally switching conversations, and when work
+becomes blocked. Do not rewrite it after every command.
+
+The snapshot records only durable facts:
+
+- updated time, Issue status, and current phase;
+- base branch, task branch, base commit, and current HEAD;
+- clean or dirty worktree state and changed paths;
+- last completed action and next exact action;
+- blockers, open questions, and decisions that constrain the next action;
+- exact tests passed, failed, or not run;
+- whether uncommitted work requires resuming the same worktree.
+
+Do not paste long command output, credentials, signed URLs, token-bearing error
+text, or a transcript summary into the handoff. Put stable product or
+architecture decisions in their authoritative document and retain only the
+task-specific consequence and rationale in `TASK.md`.
+
+### Worktree Boundary
+
+A new conversation using the same worktree can inspect its uncommitted changes.
+An isolated worktree reliably starts only from committed Git state and cannot
+inherit another worktree's staged or unstaged files, including an uncommitted
+`TASK.md` update.
+
+When an active task is dirty, resume it in the same worktree. Move it to an
+isolated worktree only from a clean state or an explicitly authorized checkpoint
+commit. Do not create a commit merely to make conversation switching convenient;
+the normal commit authorization and delivery rules still apply. Record the
+required worktree in the handoff whenever uncommitted work exists.
+
 ## Issue Contract
 
 Every Issue selected for implementation must provide:

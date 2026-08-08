@@ -1,23 +1,29 @@
 # AtomGit CLI AI Development Instructions
 
-This repository uses repository-level instructions plus task-scoped work. Before
-changing anything, read these files in order:
+This repository uses repository-level instructions plus task-scoped work.
 
-1. `.ai/MASTER_PROMPT.md`
-2. `.ai/PRODUCT.md`
-3. `.ai/ARCHITECTURE.md`
-4. `.ai/DEVELOPMENT_RULES.md`
-5. `.ai/WORKFLOW.md`
-6. `.ai/STYLE_GUIDE.md`
-7. `.ai/TESTING.md`
-8. `.ai/DOD.md`
-9. `.ai/REVIEW.md`
-10. `.ai/ROADMAP.md`
-11. `.ai/TASK.md`
+## Startup And Context Recovery
+
+At the start of every new conversation or resumed task:
+
+1. Read `.ai/README.md` for the task-specific document map.
+2. Read `.ai/TASK.md` for the single persistent task handoff.
+3. Inspect the real repository state: Git root, current branch and HEAD,
+   worktree list, status, recent log, and relevant diff.
+4. Read the source, tests, and human documentation related to the request.
+5. Before editing, summarize the recovered objective, phase, repository state,
+   next action, and any mismatch that requires reconciliation.
+
+Do not assume another conversation's transcript is available. Do not read every
+`.ai` document by default; load the references selected by `.ai/README.md` for
+the current task and phase so irrelevant roadmap or review context does not
+crowd out the affected code and tests.
 
 The current user request has higher priority than `.ai/TASK.md`. `TASK.md` is a
 persistent handoff for autonomous or multi-turn work; it is not permission to
-start roadmap items on its own.
+start roadmap items on its own. Git, source, tests, and locked dependency
+signatures are the authority for actual state. If they disagree with the
+handoff, report and reconcile the mismatch before editing.
 
 Only one Issue may be active in `.ai/TASK.md` at a time. Do not create remote
 Issues, change milestones, or transition Issue state without explicit user

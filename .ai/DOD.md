@@ -17,6 +17,11 @@ applicable or reported with its residual risk; silence is not a pass.
 - [ ] `git diff --check` passes.
 - [ ] Tests or checks not run are reported.
 - [ ] Remaining risks are reported.
+- [ ] If work is paused or moved to another conversation, `TASK.md` records the
+      current phase, Git identity, changed paths, last completed action, next
+      exact action, blockers, and test status without credentials or raw logs.
+- [ ] If uncommitted work exists at handoff, `TASK.md` states that continuation
+      must use the same worktree; no unauthorized checkpoint commit was made.
 - [ ] The independent review verdict is recorded for substantial or high-risk
       changes.
 - [ ] No P0 or P1 review finding remains open.
@@ -81,6 +86,8 @@ python tests/run_cli_baseline.py
       within their individual permissions.
 - [ ] Approved follow-up work is recorded without silently implementing it.
 - [ ] `TASK.md` will return to `inactive` before the next Issue starts.
+- [ ] The final `TASK.md` status, branch/commit references, and delivery evidence
+      agree with the actual Git state.
 
 ## Packaging Or Release Changes
 

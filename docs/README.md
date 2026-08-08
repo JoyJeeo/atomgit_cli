@@ -7,7 +7,8 @@
 - [cli_feature_baseline.md](cli_feature_baseline.md)：当前公开 CLI 功能清单及不可回退的测试契约。
 - [upload_command_analysis.md](upload_command_analysis.md)：当前 upload 参数、分支和
   已知缺陷。
-- [development.md](development.md)：conda 环境、分支和 Issue 开发流程。
+- [development.md](development.md)：conda 环境、分支、Issue 开发流程，以及
+  Codex 对话切换和 worktree 交接规则。
 - [testing.md](testing.md)：离线、契约、打包和远程测试规范。
 - [release.md](release.md)：当前打包方式和 `yuto` 独立分发目标。
 - [faq.md](faq.md)：常见开发和使用问题。

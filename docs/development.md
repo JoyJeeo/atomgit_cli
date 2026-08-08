@@ -110,6 +110,55 @@ Reviewer 阶段只报告问题，不直接修改。存在 P0/P1、超出 Issue �
 `TASK.md` 会分别记录 commit、push、PR、merge、Issue 状态和 release 权限，
 不能用其中一个权限推导另一个权限。
 
+## Codex 对话切换与任务恢复
+
+Codex 对话记录不是项目事实来源。需要跨对话保留的目标、权限、决定、验证证据和
+下一步统一写入 `.ai/TASK.md`，长期产品或架构事实写入对应 `.ai` 或 `docs` 文档。
+不要另建并行的 `HANDOFF.md`、`PROJECT_STATE.md` 或聊天摘要文件。
+
+### 准备切换对话
+
+在调查完成、复现失败、实现完成、测试或 Review 结束、工作阻塞，以及计划切换
+对话时，更新一次 `TASK.md` 的 `Handoff Snapshot`：
+
+1. 记录 Issue 状态和当前阶段。
+2. 记录 base/task branch、base commit、当前 HEAD 和工作树状态。
+3. 工作树不干净时记录变更文件，并注明必须继续使用的 worktree。
+4. 记录最后完成的动作、下一项可以直接执行的动作、阻塞和开放问题。
+5. 记录准确的测试结果、失败和未运行项。
+6. 只记录会约束后续工作的技术决定，不复制长命令输出或聊天内容。
+
+交接内容禁止包含 token、真实配置内容、签名 URL 或可能携带凭据的原始异常。
+
+### 在新对话中恢复
+
+新对话应从仓库根目录或原任务 worktree 启动。根目录 `AGENTS.md` 会要求 Codex：
+
+1. 读取 `.ai/README.md` 和 `.ai/TASK.md`；
+2. 检查 Git 根目录、branch、HEAD、worktree、status、近期提交和相关 diff；
+3. 将真实 Git 状态与交接快照比较；
+4. 按任务类型读取需要的 `.ai` 文档和受影响源码、测试、用户文档；
+5. 在编辑前报告恢复出的目标、阶段、下一步以及任何不一致。
+
+可以用以下请求开始新对话：
+
+```text
+读取 AGENTS.md，按 .ai/README.md 和 .ai/TASK.md 恢复当前任务；先核对 Git、
+相关源码和测试并汇报恢复结果，不要仅依据旧聊天或 TASK.md 推测代码状态。
+```
+
+### Worktree 边界
+
+- 同一 worktree 中的新对话可以读取现有未提交修改。
+- 独立 worktree 只能可靠继承已经提交的 Git 状态，不能看到另一个 worktree 的
+  staged、unstaged 或尚未提交的 `TASK.md`。
+- 有未提交工作时必须在原 worktree 继续。只有工作树干净，或已得到明确授权形成
+  checkpoint commit 后，才能将任务转到独立 worktree。
+- 不得仅为切换对话而绕过仓库的 commit、push 或 merge 授权规则。
+
+`TASK.md` 为 `completed` 时不得推断仍需继续实现；选择下一个 Issue 前应按流程
+将其重置为 `inactive`。历史合同和完成证据由 Git 历史保留。
+
 ## 修改范围
 
 - 对外行为变化需要同步用户文档和示例。

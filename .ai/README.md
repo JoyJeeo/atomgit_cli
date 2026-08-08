@@ -18,6 +18,27 @@ It complements the source code and tests; it does not replace reading them.
 - `ROADMAP.md`: prioritized direction; roadmap entries are not active tasks.
 - `TASK.md`: the single persistent task handoff for autonomous work.
 
+## Conversation Startup
+
+After reading this routing file, every new conversation reads `TASK.md` before
+the task-specific references, reconciles it with the current Git worktree, and
+then loads only the references needed for the requested task:
+
+| Task or phase | Required references |
+|---|---|
+| Any repository change | `MASTER_PROMPT.md`, `DEVELOPMENT_RULES.md`, `DOD.md` |
+| Product behavior or scope | `PRODUCT.md` |
+| Runtime or structural change | `ARCHITECTURE.md` |
+| Python, CLI, SDK, or documentation implementation | `STYLE_GUIDE.md` |
+| Tests or verification | `TESTING.md` |
+| Issue activation, handoff, delivery, or closure | `WORKFLOW.md` |
+| Independent review | `REVIEW.md` |
+| Planning or selecting future work | `ROADMAP.md` |
+
+Do not load `ROADMAP.md` during ordinary implementation unless the current
+request needs it. A new conversation must not infer an active task from a
+completed task, a local branch name, or roadmap priority.
+
 ## Authority
 
 Use this order when instructions conflict:
