@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -17,22 +17,22 @@ Populate this section when an Issue becomes active and refresh it at meaningful
 workflow checkpoints. Use repository-relative paths and never include tokens,
 credential contents, signed URLs, or raw secret-bearing logs.
 
-- Updated: `2026-08-08 16:45:00 +0800`
-- Status: `active`
-- Phase: `release implementation verified; awaiting commit and tag`
+- Updated: `2026-08-08 16:55:00 +0800`
+- Status: `completed`
+- Phase: `1.0.6 GitHub Release delivered and verified`
 - Base branch: `yuto`
 - Task branch: `none; release changes on yuto`
 - Base commit: `01d9669`
-- Current HEAD: `01d9669`
-- Worktree state: `dirty with uncommitted release-version changes`
-- Changed paths: `version metadata, installer, changelog, release docs, version tests`
-- Required worktree: `continue in this root worktree while release changes are uncommitted`
-- Last completed action: `verified version-specific CLI, installer, wheel, baseline, compile, and diff checks; fixed release installer URLs`
-- Next exact action: `commit release changes, rebuild artifacts from commit, then create tag and GitHub Release`
+- Current HEAD: `5a41e6a`
+- Worktree state: `clean before this closure update`
+- Changed paths: `.ai/TASK.md closure record only`
+- Required worktree: `none after closure commit`
+- Last completed action: `published and post-download verified GitHub Release v1.0.6`
+- Next exact action: `await next explicit user request`
 - Blockers / open questions: `none; PyPI publication remains out of scope`
 - Decisions constraining the next action: `package version and Git tag are both 1.0.6/v1.0.6; GitHub Release publication is authorized by the direct user request; no PyPI or AtomGit remote writes`
-- Tests passed: `CLI surface 50/50; installer 14/14; wheel smoke 21/21; deploy script 13/13; complete CLI baseline 62/62; compileall, pip check, and git diff --check passed`
-- Tests failed or not run: `post-publication artifact download verification pending; final artifacts will be rebuilt after commit`
+- Tests passed: `CLI surface 50/50; installer 14/14; wheel smoke 21/21; deploy script 13/13; complete CLI baseline 62/62; compileall, pip check, and git diff --check; final wheel/sdist/LICENSE checksums; post-publication download checksum verification`
+- Tests failed or not run: `no failures; PyPI publication intentionally not run`
 
 ## Active Issue Identity
 
@@ -83,8 +83,10 @@ run. A statement such as "tests pass" is not sufficient.
 
 ## Closure
 
-After authorized delivery, record commit or PR references, final evidence,
-review verdict, human acceptance, and remaining follow-ups. Set the status to
-`completed` only after the Issue contract is satisfied, then reset this file to
-`inactive` before selecting another Issue. Git history retains the completed
-contract.
+- Release commit: `5a41e6a release: publish atomgit 1.0.6`
+- Annotated tag: `v1.0.6`, peeled commit `5a41e6a`
+- GitHub Release: `https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.6`
+- Assets: `atomgit-1.0.6-py3-none-any.whl`, `atomgit-1.0.6.tar.gz`, `LICENSE`, `SHA256SUMS`
+- Review: `APPROVED after correcting mutable yuto installer URLs to v1.0.6`
+- Human acceptance: `explicit publication request received`
+- Excluded actions: `no PyPI publication, AtomGit remote write, Issue transition, deletion, or history rewrite`
