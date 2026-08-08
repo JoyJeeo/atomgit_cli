@@ -17,22 +17,23 @@ Populate this section when an Issue becomes active and refresh it at meaningful
 workflow checkpoints. Use repository-relative paths and never include tokens,
 credential contents, signed URLs, or raw secret-bearing logs.
 
-- Updated: `not applicable while inactive`
+- Updated: `2026-08-08 15:04:38 +0800`
 - Status: `inactive`
-- Phase: `idle`
-- Base branch: `not assigned`
-- Task branch: `not assigned`
-- Base commit: `not assigned`
-- Current HEAD: `verify from Git before activation`
-- Worktree state: `verify from Git before activation`
-- Changed paths: `none assigned to an active Issue`
-- Required worktree: `not assigned`
-- Last completed action: `previous Issue delivered; see Git history`
-- Next exact action: `await an explicit user request or approved Issue`
-- Blockers / open questions: `none`
-- Decisions constraining the next action: `none`
-- Tests passed: `none for an active Issue`
-- Tests failed or not run: `none for an active Issue`
+- Phase: `direct documentation task complete; awaiting human review`
+- Base branch: `yuto`
+- Task branch: `none; direct documentation update on yuto`
+- Base commit: `b2db741`
+- Current HEAD: `b2db741`
+- Worktree state: `dirty with uncommitted documentation-only changes`
+- Changed paths: `.ai/TASK.md`, `README.md`, `docs/faq.md`,
+  `docs/upload_command_analysis.md`
+- Required worktree: `continue in this root worktree while changes are uncommitted`
+- Last completed action: `documented durable large-upload behavior and operator guidance`
+- Next exact action: `review the documentation diff; commit only with explicit authorization`
+- Blockers / open questions: `commit and push are not authorized by this direct documentation request`
+- Decisions constraining the next action: `no runtime, tests, dependencies, packaging, credentials, or remote state changed`
+- Tests passed: `locked huggingface-hub 1.1.7 thresholds and five-thread defaults verified by introspection; local Markdown links exist; python -m pip check and git diff --check passed; sensitive task identifiers were absent from the diff`
+- Tests failed or not run: `no failures; pytest and the CLI baseline were not run because this was documentation-only`
 
 ## Active Issue Identity
 

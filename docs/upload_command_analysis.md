@@ -42,6 +42,12 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
+第 7 步的统计只排除 resumable 自身的 HF 元数据，不应用用户的
+`ignore_patterns`。因此 CLI 打印的是原目录统计，可能大于底层实际接收的过滤后
+文件集合。`--ignore` 由逗号分隔器解析，再交给锁定 HF 的
+`filter_repo_objects`；shell 中整体使用双引号即可，写成 `\*\*` 会把反斜杠作为
+模式内容传入。
+
 CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--resumable`、
 `--num-workers` 或 `--ignore`；`--num-workers` 不接受 `--no-resumable`；显式
 `--resumable` 不接受 `--message`。`--path-in-repo` 可用于两种目录上传模式。
@@ -97,6 +103,21 @@ cli.upload
 目录不会复制到临时目录。`path_in_repo`、repo type、revision 和 ignore patterns
 都会按条件传给 HF `upload_folder`。
 
+锁定的 `huggingface-hub==1.1.7` 先过滤目录对象；过滤后超过 30 个文件时记录
+大目录提示，超过 200 个文件时提升为 warning。随后它为全部待上传对象构造
+`CommitOperationAdd` 并读取文件计算哈希，完成前可能没有逐文件上传进度。普通
+LFS 上传由 `create_commit(num_threads=5)` 的默认值控制，最多同时上传 5 个仍需
+传输的 LFS 文件；CLI 的 `--num-workers` 不适用于该路径。
+
+LFS batch 响应没有 upload action 时，表示相同内容 OID 已存在于服务端，客户端
+跳过数据传输并在提交中引用该对象。换一个 `path_in_repo` 后近乎立即成功属于
+服务端内容去重，不是普通模式获得了本地断点续传。部分传输的单个新文件没有
+large-folder 元数据保证；重新执行时只能可靠依赖已经完整存在或提交的对象去重。
+
+普通模式会在一次调用中哈希并提交整个过滤后集合。超大目录应在调用方按自然
+目录或小批次顺序执行同一 CLI 命令，所有批次可使用相同远端前缀。这样不需要
+修改 CLI，也避免 resumable 跨文件系统投影复制，但批次状态需由操作者记录。
+
 ## 5. Resumable 目录上传
 
 目录在没有显式选择且没有 `--message` 时默认进入该分支。`--resumable` 可继续
@@ -146,6 +167,11 @@ SHA-256 均一致。
 上传前保存完整进度条状态和 `hf_constants.DEFAULT_REQUEST_TIMEOUT`，退出上传
 分支时在 `finally` 中恢复调用前状态。由于这些仍是进程级全局值，并发调用需
 谨慎。
+
+两种目录模式对同一个 `--timeout` 还有不同的上层语义：普通模式把它设置为 HF
+请求超时，不以整个哈希加上传过程的墙钟时间强制结束；resumable 模式除此之外
+还以该秒数等待隔离上传进程，超过后终止该进程。因此 resumable 的 timeout 是
+本次命令的硬总时限，不会因某个分块完成而重新计时。
 
 ## 7. Repo ID
 

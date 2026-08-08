@@ -193,6 +193,20 @@ atomgit upload <path> --repo-id <id> [options]
 `--message` 同用；`--num-workers` 不能与 `--no-resumable` 或单文件同用；
 `--ignore` 仅适用于目录上传。
 
+`--ignore` 使用逗号分隔的 Unix shell 风格通配符。通配符整体使用双引号时，
+不要再给 `*` 添加反斜杠。例如，递归忽略隐藏内容、JSON 文件和以 `output`
+开头的内容：
+
+```bash
+atomgit upload ./data --repo-id user/my-dataset \
+  --ignore ".*,**/.*,*.json,**/*.json,output*,**/output*" \
+  --repo-type dataset
+```
+
+CLI 在应用 `--ignore` 前打印原目录的文件数量和大小，因此该统计可能大于实际
+上传集合。底层的 `Upload N LFS files` 只统计过滤后仍需传输的 LFS 文件，也不
+包含随提交发送的普通小文件。
+
 为避免 Hugging Face 上传实现读取选定路径之外的内容，上传文件、上传目录根路径
 以及目录树中的文件、目录或失效符号链接都会在读取登录凭证和发送远端请求前被
 拒绝。`--ignore` 不能绕过这项安全检查；需要上传目标内容时，请先将其复制为上传
@@ -228,6 +242,14 @@ atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
 > 无法硬链接时会复制并占用额外磁盘。large-folder 仍不支持单一提交说明，需指定
 > `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
 > CLI 未指定时自动使用 `model`。
+
+> 显式 `--no-resumable` 会直接读取源目录，不建立上述完整投影；普通 LFS 上传
+> 默认最多并行传输 5 个文件，并会跳过服务端已有的相同内容。它不提供单个文件
+> 的中途续传。锁定 HF 版本会对过滤后超过 30 个文件的普通目录上传给出大目录
+> 提示，超过 200 个文件时使用 warning 级别；这不是立即失败，但一次性哈希和
+> 提交大量文件可能在长时间运行后失败。超大目录应优先按可重试的小批次顺序
+> 上传。详见 [常见问题](docs/faq.md) 和
+> [上传实现分析](docs/upload_command_analysis.md)。
 
 > 当前实现通过 `HfApi(token=...)` 认证，并已分别对 model 和 dataset 完成约
 > 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认
