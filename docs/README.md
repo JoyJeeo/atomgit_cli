@@ -26,6 +26,6 @@
 
 ## 发布状态
 
-- `yuto` 独立版本使用 `1.0.5+yuto.1` 包版本和 `v1.0.5-yuto.1` Git tag。
+- `yuto` 独立版本使用 `1.0.6` 包版本和 `v1.0.6` Git tag。
 - GitHub Release 提供 wheel、源码包和 `SHA256SUMS`；PyPI 仍代表上游渠道。
 - 项目由 JoyJeeo 以 Apache License 2.0 授权。

@@ -8,7 +8,7 @@ AtomGit CLI - 基于Transformers和Hugging Face Hub的模型文件上传下载�
 支持模型和数据集的上传、下载等操作。
 """
 
-__version__ = '1.0.5+yuto.1'
+__version__ = '1.0.6'
 __author__ = 'JoyJeeo'
 __description__ = 'AtomGit模型文件上传下载CLI工具'
 

@@ -10,8 +10,8 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = REPOSITORY_ROOT / "install.sh"
-VERSION = "1.0.5-yuto.1"
-PACKAGE_VERSION = "1.0.5+yuto.1"
+VERSION = "1.0.6"
+PACKAGE_VERSION = "1.0.6"
 WHEEL_NAME = f"atomgit-{PACKAGE_VERSION}-py3-none-any.whl"
 results = []
 

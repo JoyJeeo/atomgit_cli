@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `inactive`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -17,34 +17,45 @@ Populate this section when an Issue becomes active and refresh it at meaningful
 workflow checkpoints. Use repository-relative paths and never include tokens,
 credential contents, signed URLs, or raw secret-bearing logs.
 
-- Updated: `2026-08-08 15:04:38 +0800`
-- Status: `inactive`
-- Phase: `direct documentation task complete; awaiting human review`
+- Updated: `2026-08-08 16:45:00 +0800`
+- Status: `active`
+- Phase: `release implementation verified; awaiting commit and tag`
 - Base branch: `yuto`
-- Task branch: `none; direct documentation update on yuto`
-- Base commit: `b2db741`
-- Current HEAD: `b2db741`
-- Worktree state: `dirty with uncommitted documentation-only changes`
-- Changed paths: `.ai/TASK.md`, `README.md`, `docs/faq.md`,
-  `docs/upload_command_analysis.md`
-- Required worktree: `continue in this root worktree while changes are uncommitted`
-- Last completed action: `documented durable large-upload behavior and operator guidance`
-- Next exact action: `review the documentation diff; commit only with explicit authorization`
-- Blockers / open questions: `commit and push are not authorized by this direct documentation request`
-- Decisions constraining the next action: `no runtime, tests, dependencies, packaging, credentials, or remote state changed`
-- Tests passed: `locked huggingface-hub 1.1.7 thresholds and five-thread defaults verified by introspection; local Markdown links exist; python -m pip check and git diff --check passed; sensitive task identifiers were absent from the diff`
-- Tests failed or not run: `no failures; pytest and the CLI baseline were not run because this was documentation-only`
+- Task branch: `none; release changes on yuto`
+- Base commit: `01d9669`
+- Current HEAD: `01d9669`
+- Worktree state: `dirty with uncommitted release-version changes`
+- Changed paths: `version metadata, installer, changelog, release docs, version tests`
+- Required worktree: `continue in this root worktree while release changes are uncommitted`
+- Last completed action: `verified version-specific CLI, installer, wheel, baseline, compile, and diff checks; fixed release installer URLs`
+- Next exact action: `commit release changes, rebuild artifacts from commit, then create tag and GitHub Release`
+- Blockers / open questions: `none; PyPI publication remains out of scope`
+- Decisions constraining the next action: `package version and Git tag are both 1.0.6/v1.0.6; GitHub Release publication is authorized by the direct user request; no PyPI or AtomGit remote writes`
+- Tests passed: `CLI surface 50/50; installer 14/14; wheel smoke 21/21; deploy script 13/13; complete CLI baseline 62/62; compileall, pip check, and git diff --check passed`
+- Tests failed or not run: `post-publication artifact download verification pending; final artifacts will be rebuilt after commit`
 
 ## Active Issue Identity
 
-No Issue is active. On activation, record:
+- ID: `RELEASE-1.0.6`
+- Title: `Publish AtomGit CLI 1.0.6`
+- Primary type: `release`
+- Priority: `P1`
+- Base branch: `yuto`
+- Delivery mode: `local commit, annotated tag, GitHub Release`
+- Permissions: `commit=yes; tag=yes; push=yes; GitHub Release=yes; PyPI=no; AtomGit remote writes=no; Issue transitions=no`
 
-- stable local or remote Issue ID and title;
-- primary type and priority;
-- base and task branch;
-- delivery mode;
-- individual permissions for commit, push, PR, merge, Issue transition,
-  release, live requests, credentials, and remote writes.
+## Evidence And Objective
+
+- Objective: publish a reproducible `1.0.6` wheel/source release whose installed CLI and SDK report the same version.
+- Scope: version metadata, installer defaults, release notes, packaging tests, artifacts, checksum file, annotated tag, and GitHub Release.
+- Non-goals: PyPI publication, AtomGit operations, dependency upgrades, and unrelated refactoring.
+
+## Scope And Acceptance
+
+- `setup.py`, `__init__.py`, CLI version output, installer, tests, and release documentation agree on `1.0.6`.
+- Complete offline baseline and packaging smoke checks pass.
+- Wheel, source archive, and `SHA256SUMS` contain no credentials or generated repository state.
+- Tag `v1.0.6` points at the release commit and GitHub Release assets are downloadable and checksum-verifiable.
 
 ## Evidence And Objective
 

@@ -2,7 +2,7 @@
 
 set -eu
 
-DEFAULT_VERSION="1.0.5-yuto.1"
+DEFAULT_VERSION="1.0.6"
 RELEASE_BASE_URL="${ATOMGIT_INSTALL_BASE_URL:-https://github.com/JoyJeeo/atomgit_cli/releases/download}"
 
 usage() {
@@ -12,7 +12,7 @@ Install a checksummed AtomGit CLI yuto wheel into the active conda environment.
 Usage: install.sh [--version VERSION]
 
 Options:
-  --version VERSION  Release version, default: 1.0.5-yuto.1
+  --version VERSION  Release version, default: 1.0.6
   -h, --help         Show this help
 EOF
 }

@@ -59,7 +59,7 @@ def main():
                 "#!/bin/sh\n"
                 "printf '%s\\n' \"$*\" >> \"$DEPLOY_TEST_LOG\"\n"
                 "case \"$*\" in *'pip show atomgit'*) "
-                "printf 'Version: 1.0.5+yuto.1\\nLocation: /fake\\n' ;; esac\n"
+                "printf 'Version: 1.0.6\\nLocation: /fake\\n' ;; esac\n"
             ),
             encoding="utf-8",
         )

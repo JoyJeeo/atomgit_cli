@@ -46,7 +46,7 @@ PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` �
 
 `yuto` 使用与上游 PyPI 区分的 GitHub Release 渠道：
 
-1. 包版本使用 `1.0.5+yuto.1`，Git tag 使用 `v1.0.5-yuto.1`。
+1. 包版本使用 `1.0.6`，Git tag 使用 `v1.0.6`。
 2. 创建 GitHub Release，并上传 wheel 和源码归档。
 3. 为每个产物发布 SHA256。
 4. 提供仓库自有 `install.sh`，默认下载固定 Release，而不是不断变化的分支。
@@ -55,11 +55,11 @@ PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` �
 仓库提供版本化、校验和安装脚本。激活目标 conda 环境后可运行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.sh | sh
 ```
 
-默认安装 `v1.0.5-yuto.1`；显式版本可用
-`sh install.sh --version 1.0.5-yuto.1`。脚本只从对应固定 GitHub Release
+默认安装 `v1.0.6`；显式版本可用
+`sh install.sh --version 1.0.6`。脚本只从对应固定 GitHub Release
 下载 wheel 和 `SHA256SUMS`，校验成功后使用当前 conda 环境的
 `python -m pip` 安装。未激活 conda 或缺少校验工具时会停止，不会回退到系统
 Python。

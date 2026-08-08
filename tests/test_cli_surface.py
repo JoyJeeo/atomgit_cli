@@ -41,7 +41,7 @@ def main():
     version = runner.invoke(cli_mod.cli, ["--version"])
     check(
         "version succeeds",
-        version.exit_code == 0 and "1.0.5+yuto.1" in version.output,
+        version.exit_code == 0 and "1.0.6" in version.output,
     )
 
     for command in (

@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.0.5+yuto.1"
+EXPECTED_VERSION = "1.0.6"
 SOURCE_FILES = (
     "__init__.py",
     "__main__.py",

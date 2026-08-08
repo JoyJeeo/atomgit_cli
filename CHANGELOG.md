@@ -9,6 +9,16 @@ PyPI releases.
 - Make CLI directory uploads resumable by default, add `--no-resumable`, and
   support `--path-in-repo` through stable local large-folder projections.
 
+## 1.0.6 - 2026-08-08
+
+- Make directory uploads resumable by default, with an explicit ordinary-upload
+  opt-out and stable prefix-aware upload projections.
+- Add the monotonic CLI baseline gate and complete offline contract coverage for
+  authentication, repository management, uploads, downloads, packaging, and
+  portability.
+- Clarify ordinary large-directory upload behavior, ignore-pattern statistics,
+  server-side LFS deduplication, batching guidance, and sleep/wake expectations.
+
 ## 1.0.5+yuto.1 - 2026-08-03
 
 - Add upload progress, repository path/type/revision/ignore controls, resumable

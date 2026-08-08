@@ -17,7 +17,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 - 🎨 彩色终端输出
 - 📊 上传进度条（可禁用）
 - 🔧 配置文件管理
-- 🧩 **上传能力增强（v1.0.5+yuto.1）**：
+- 🧩 **上传能力增强（v1.0.6）**：
   - 进度条开关（`--no-progress-bar`）
   - 仓库内目标路径（`-p/--path-in-repo`）
   - 仓库类型选择（`-r/--repo-type model|dataset`）
@@ -56,18 +56,18 @@ python -m pip install -e .
 激活目标 conda 环境后，可使用固定版本和 SHA-256 校验安装器：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.sh | sh
 ```
 
-从 `v1.0.5-yuto.1` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
+从 `v1.0.6` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
 完整校验后安装：
 
 ```bash
 shasum -a 256 -c SHA256SUMS
-python -m pip install atomgit-1.0.5+yuto.1-py3-none-any.whl
+python -m pip install atomgit-1.0.6-py3-none-any.whl
 ```
 
-发布页：<https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.5-yuto.1>
+发布页：<https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.6>
 
 ### 使用 PyPI 安装上游版本
 

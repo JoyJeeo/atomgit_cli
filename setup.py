@@ -31,7 +31,7 @@ def read_requirements():
 
 setup(
     name='atomgit',
-    version='1.0.5+yuto.1',
+    version='1.0.6',
     author='JoyJeeo',
     author_email='JoyJeeo@163.com',
     description='AtomGit模型文件上传下载CLI工具',
