@@ -7,14 +7,14 @@ cross-conversation work. It records task facts and permissions; it does not
 authorize work by itself. When inactive, the current user request and real Git
 state determine what may happen next.
 
-The active remote Issue is GitHub #21:
+The completed remote Issue is GitHub #21:
 `https://github.com/JoyJeeo/atomgit_cli/issues/21`.
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-10 +0800`
 - Status: `completed`
-- Phase: `delivered to github/yuto; remote Issue remains open pending explicit transition authorization`
+- Phase: `delivered to github/yuto; remote Issue closed as completed after explicit human authorization`
 - Base branch: `yuto`
 - Task branch: `codex/issue-21-resumable-commit-retries`
 - Base commit: `3b86179`
@@ -26,7 +26,7 @@ The active remote Issue is GitHub #21:
 - Changed paths: `.ai/TASK.md`, `api.py`, `cli.py`, `utils.py`, `README.md`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_upload_ignore.py`, `tests/test_upload_validation.py`, `tests/test_cache_clear.py`, `tests/test_resumable_commit_policy.py`, `tests/test_upload_batching.py`
 - Required worktree: `continue in this same worktree; preserve all existing task-related changes`
 - Last completed action: `committed the task branch, merged it locally into yuto, pushed only yuto, and verified the remote branch`
-- Next exact action: `none for implementation; close or otherwise transition GitHub Issue #21 only after explicit user authorization`
+- Next exact action: `none; implementation, delivery, human acceptance, and Issue closure are complete`
 - Blockers / open questions: `no implementation blocker; live AtomGit verification is not authorized for this phase`
 - Decisions constraining the next action: `keep huggingface-hub 1.1.7, resumable directory uploads by default, outer batches of at most 20 files, default workers of 5, and the dataset-to-model compatibility write route`
 - Tests passed: `python tests/test_resumable_commit_policy.py -> 36/36; complete upload capability group passed; python tests/run_cli_baseline.py -> 65 passed in 46.29s; python -m compileall -q ., python -m pip check, and git diff --check passed`
@@ -40,7 +40,7 @@ The active remote Issue is GitHub #21:
 - Priority: `P1`
 - Base branch: `yuto`
 - Delivery mode: `standing local task-branch delivery into yuto`
-- Permissions: `local edits=yes; offline tests=yes; commit=yes; merge into yuto=yes; push yuto=yes; task-branch push=no; PR=no; Issue transition=no; live AtomGit writes=no; release=no`
+- Permissions: `local edits=yes; offline tests=yes; commit=yes; merge into yuto=yes; push yuto=yes; task-branch push=no; PR=no; Issue #21 closure=authorized and completed; live AtomGit writes=no; release=no`
 
 ## Evidence And Objective
 
@@ -82,5 +82,5 @@ The active remote Issue is GitHub #21:
 - Human acceptance: `accepted by explicit user instruction on 2026-08-10`
 - Independent review: `APPROVED after resolving partial sub-batch metadata persistence, Retry-After truncation, actionable error classification, shared deadline, HTTP 413 reduction, and non-reducible connection failure findings`
 - Delivery: `task commit ed81d18 merged by 89160ca; github/yuto verified at 89160caf7327f89147e3a93ddf9b467119718786`
-- Remote Issue: `GitHub #21 remains open because Issue transition was not authorized`
+- Remote Issue: `GitHub #21 closed as completed on 2026-08-10 after explicit human authorization`
 - Live verification: `not run; no live AtomGit write was authorized`
