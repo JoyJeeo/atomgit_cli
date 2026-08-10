@@ -5,6 +5,8 @@ import httpx
 import queue
 import sys
 import tempfile
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 import atomgit  # noqa: F401
@@ -63,7 +65,8 @@ class FatalHfApi:
 
 
 def make_controller(
-    client, sleeps, reconcile=None, max_attempts=3, mark_committed=None
+    client, sleeps, reconcile=None, max_attempts=3, mark_committed=None,
+    event_callback=None,
 ):
     return api_mod._ResumableCommitController(
         client.create_commit,
@@ -73,6 +76,7 @@ def make_controller(
         reconcile=reconcile or (lambda **kwargs: set()),
         max_attempts=max_attempts,
         mark_committed=mark_committed or (lambda operations: None),
+        event_callback=event_callback,
     )
 
 
@@ -197,7 +201,10 @@ def main():
     check("503 uses exponential backoff base", sleeps == [30.0], repr(sleeps))
 
     oversized_client = ScriptedClient([http_error(413), "first-ok", "second-ok"])
-    controller = make_controller(oversized_client, [])
+    reduction_events = []
+    controller = make_controller(
+        oversized_client, [], event_callback=reduction_events.append
+    )
     result = controller.create_commit(
         repo_id="user/repo",
         repo_type="model",
@@ -207,6 +214,33 @@ def main():
     )
     check("413 reduces immediately and completes", result == "second-ok")
     check("413 reduces twenty to two tens", [len(call) for call in oversized_client.calls] == [20, 10, 10], repr(oversized_client.calls))
+    check(
+        "413 reports reduction for the outer batch",
+        any(event.get("kind") == "reduce" and event.get("from_size") == 20
+            and event.get("to_size") == 10 for event in reduction_events),
+        repr(reduction_events),
+    )
+
+    lifecycle_events = []
+    event_client = ScriptedClient([http_error(429, retry_after=7), httpx.ReadTimeout("ambiguous"), "ok"])
+    controller = make_controller(
+        event_client,
+        [],
+        reconcile=lambda **kwargs: {operations[0].path_in_repo},
+        event_callback=lifecycle_events.append,
+    )
+    controller.create_commit(
+        repo_id="user/repo",
+        repo_type="model",
+        revision="main",
+        operations=operations,
+        commit_message="batch",
+    )
+    event_kinds = [event.get("kind") for event in lifecycle_events]
+    check("rate-limit wait is reported", "rate_limit_wait" in event_kinds, repr(lifecycle_events))
+    check("ambiguous remote state is reported", "reconcile_start" in event_kinds, repr(lifecycle_events))
+    check("remote reconciliation result is reported", "reconcile_result" in event_kinds, repr(lifecycle_events))
+    check("retry is reported", "retry" in event_kinds, repr(lifecycle_events))
 
     sleeps = []
     persistent_limit = ScriptedClient([http_error(429), http_error(429)])
@@ -230,7 +264,13 @@ def main():
     persistent_timeout = ScriptedClient(
         [httpx.ReadTimeout("response timed out") for _ in range(8)]
     )
-    controller = make_controller(persistent_timeout, sleeps, max_attempts=1)
+    timeout_events = []
+    controller = make_controller(
+        persistent_timeout,
+        sleeps,
+        max_attempts=1,
+        event_callback=timeout_events.append,
+    )
     try:
         controller.create_commit(
             repo_id="user/repo",
@@ -246,6 +286,34 @@ def main():
     sizes = [len(call) for call in persistent_timeout.calls]
     check("persistent timeout fails safely", timeout_failure)
     check("persistent timeout really reduces below twenty", sizes[:5] == [20, 10, 5, 2, 1], repr(sizes))
+    reductions = [
+        (event.get("from_size"), event.get("to_size"))
+        for event in timeout_events
+        if event.get("kind") == "reduce"
+    ]
+    check(
+        "persistent timeout reports the full reduction chain",
+        reductions[:4] == [(20, 10), (10, 5), (5, 2), (2, 1)],
+        repr(reductions),
+    )
+
+    formatted_output = StringIO()
+    with redirect_stdout(formatted_output):
+        for event in lifecycle_events + timeout_events:
+            api_mod._print_resumable_commit_event(event, (4, 35))
+    formatted_text = formatted_output.getvalue()
+    formatted_lines = formatted_text.splitlines()
+    check(
+        "retry, rate limit, reconciliation, and reduction name outer batch",
+        bool(formatted_lines)
+        and all(line.startswith("[批次 4/35]") for line in formatted_lines)
+        and "请求限流" in formatted_text
+        and "提交结果不明确" in formatted_text
+        and "远端核对完成" in formatted_text
+        and "降低提交批量: 20 -> 10" in formatted_text
+        and "降低提交批量: 2 -> 1" in formatted_text,
+        formatted_text,
+    )
 
     disconnected_client = ScriptedClient([httpx.ConnectError("offline")])
     controller = make_controller(disconnected_client, [], max_attempts=1)
