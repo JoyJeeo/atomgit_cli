@@ -1914,6 +1914,7 @@ class _ResumableCommitController:
         max_attempts: int = _RESUMABLE_COMMIT_MAX_ATTEMPTS,
         mark_committed=None,
         fatal_callback=None,
+        event_callback=None,
     ):
         self._create_commit = create_commit
         self._token = token
@@ -1925,6 +1926,16 @@ class _ResumableCommitController:
         self._max_attempts = max_attempts
         self._mark_committed = mark_committed or (lambda operations: None)
         self._fatal_callback = fatal_callback
+        self._event_callback = event_callback
+
+    def _emit(self, kind: str, **details) -> None:
+        if self._event_callback is None:
+            return
+        try:
+            self._event_callback({"kind": kind, **details})
+        except Exception:
+            # Observability must never change upload or retry semantics.
+            pass
 
     def _raise_fatal(self, error: BaseException, item_count: int):
         status_code = _commit_error_status(error)
@@ -1964,6 +1975,11 @@ class _ResumableCommitController:
             except Exception as error:
                 last_error = error
                 if _is_ambiguous_commit_error(error):
+                    self._emit(
+                        "reconcile_start",
+                        item_count=len(operations),
+                        attempt=attempts,
+                    )
                     matched = self._reconcile(
                         repo_id=call_kwargs.get("repo_id"),
                         repo_type=call_kwargs.get("repo_type") or "model",
@@ -1986,6 +2002,12 @@ class _ResumableCommitController:
                         operation for operation in operations
                         if getattr(operation, "path_in_repo", None) not in matched
                     ]
+                    self._emit(
+                        "reconcile_result",
+                        confirmed=len(matched_operations),
+                        remaining=len(operations),
+                        attempt=attempts,
+                    )
                     if not operations:
                         return None
                 if _commit_error_status(error) == 413:
@@ -1993,7 +2015,24 @@ class _ResumableCommitController:
                 if not _is_retryable_commit_error(error):
                     self._raise_fatal(error, len(operations))
                 if attempts < self._max_attempts:
-                    self._sleep(self._retry_delay(error, attempts))
+                    delay = self._retry_delay(error, attempts)
+                    status_code = _commit_error_status(error)
+                    if status_code == 429:
+                        self._emit(
+                            "rate_limit_wait",
+                            delay=delay,
+                            attempt=attempts,
+                            item_count=len(operations),
+                        )
+                    self._emit(
+                        "retry",
+                        attempt=attempts + 1,
+                        max_attempts=self._max_attempts,
+                        item_count=len(operations),
+                        status_code=status_code,
+                        error_type=type(error).__name__,
+                    )
+                    self._sleep(delay)
 
         if not operations:
             return None
@@ -2004,6 +2043,11 @@ class _ResumableCommitController:
             self._raise_fatal(last_error, len(operations))
 
         batch_size = _next_resumable_commit_batch_size(len(operations))
+        self._emit(
+            "reduce",
+            from_size=len(operations),
+            to_size=batch_size,
+        )
         result = None
         for index in range(0, len(operations), batch_size):
             result = self._commit_group(
@@ -2020,9 +2064,53 @@ class _ResumableCommitController:
         return self._commit_group(args, kwargs, operations)
 
 
+def _print_resumable_commit_event(event, batch_context) -> None:
+    """Print one credential-safe child event with its outer batch identity."""
+    if not batch_context:
+        return
+    current, total = batch_context
+    prefix = f"[批次 {current}/{total}]"
+    kind = event.get("kind")
+    if kind == "rate_limit_wait":
+        print(
+            f"{prefix} 请求限流，等待 {event['delay']:g} 秒后重试",
+            flush=True,
+        )
+    elif kind == "retry":
+        reason = (
+            f"HTTP {event['status_code']}"
+            if event.get("status_code") is not None
+            else event.get("error_type", "网络错误")
+        )
+        print(
+            f"{prefix} 重试 {event['attempt']}/{event['max_attempts']}"
+            f"（{reason}，{event['item_count']} 个文件）",
+            flush=True,
+        )
+    elif kind == "reconcile_start":
+        print(
+            f"{prefix} 提交结果不明确，正在核对远端状态"
+            f"（{event['item_count']} 个文件）",
+            flush=True,
+        )
+    elif kind == "reconcile_result":
+        print(
+            f"{prefix} 远端核对完成: 确认 {event['confirmed']}，"
+            f"仍待提交 {event['remaining']}",
+            flush=True,
+        )
+    elif kind == "reduce":
+        print(
+            f"{prefix} 降低提交批量: {event['from_size']} -> "
+            f"{event['to_size']}",
+            flush=True,
+        )
+
+
 def _run_resumable_upload(
     token, kwargs, result_queue,
     request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+    batch_context=None,
 ):
     """Run HF's resumable uploader in an isolated child process.
 
@@ -2058,6 +2146,9 @@ def _run_resumable_upload(
                     )
                 ),
                 fatal_callback=fatal_exit,
+                event_callback=lambda event: _print_resumable_commit_event(
+                    event, batch_context
+                ),
             )
             client.create_commit = controller.create_commit
         client.upload_large_folder(**kwargs)
@@ -2300,6 +2391,91 @@ def _collect_resumable_upload_files(source: Path, ignore_patterns=None):
         key=lambda item: item[0].as_posix(),
     )
     return sorted(list(source_files), key=lambda item: item[0].as_posix())
+
+
+def _resumable_committed_file_count(
+    projection: Path, selected_paths, path_in_repo: str = None
+) -> int:
+    """Count current projected files already committed by HF large-folder."""
+    prefix = f"{path_in_repo}/" if path_in_repo else ""
+    committed = 0
+    for relative_path in selected_paths:
+        try:
+            metadata = read_upload_metadata(
+                Path(projection), prefix + relative_path.as_posix()
+            )
+        except Exception:
+            # This helper is observational. HF remains authoritative and will
+            # validate or repair its own metadata in the upload process.
+            continue
+        if metadata.is_committed:
+            committed += 1
+    return committed
+
+
+def _print_upload_batch_plan(file_count: int, batch_count: int) -> None:
+    print(
+        f"上传批次计划: 共 {file_count} 个文件，{batch_count} 个批次，"
+        "每批最多 20 个文件",
+        flush=True,
+    )
+
+
+def _print_upload_batch_summary(
+    planned: int, submitted: int, skipped: int, completed: int
+) -> None:
+    print(
+        f"上传批次汇总: 计划 {planned}，新增提交 {submitted}，"
+        f"续传跳过 {skipped}，确认完成 {completed}",
+        flush=True,
+    )
+
+
+def _execute_resumable_upload_process(
+    *, token: str, upload_kwargs: dict, request_timeout: float,
+    upload_deadline, upload_timeout, batch_context,
+) -> None:
+    """Run one outer resumable batch and require an explicit child result."""
+    methods = multiprocessing.get_all_start_methods()
+    context = multiprocessing.get_context(
+        "fork" if "fork" in methods else "spawn"
+    )
+    result_queue = context.Queue()
+    process = context.Process(
+        target=_run_resumable_upload,
+        args=(
+            token,
+            upload_kwargs,
+            result_queue,
+            request_timeout,
+            batch_context,
+        ),
+    )
+    process.daemon = True
+    remaining_timeout = None
+    if upload_deadline is not None:
+        remaining_timeout = upload_deadline - time.monotonic()
+    if remaining_timeout is not None and remaining_timeout <= 0:
+        raise TimeoutError(
+            f"resumable upload timed out after {upload_timeout}s"
+        )
+    process.start()
+    process.join(remaining_timeout)
+    if process.is_alive():
+        process.terminate()
+        process.join(2)
+        raise TimeoutError(
+            f"resumable upload timed out after {upload_timeout}s"
+        )
+    try:
+        ok, error = result_queue.get(timeout=1)
+    except Exception as exc:
+        raise RuntimeError(
+            "resumable upload worker exited without a result"
+        ) from exc
+    if not ok:
+        name, error_message = error
+        raise RuntimeError(f"{name}: {error_message}")
 
 
 def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
@@ -2994,87 +3170,128 @@ class HuggingFaceAPI:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
                 close_hf_session()
 
+                selected_files = _collect_resumable_upload_files(
+                    dir_path, ignore_patterns
+                )
+                batches = [
+                    selected_files[index:index + 20]
+                    for index in range(0, len(selected_files), 20)
+                ] or [[]]
+                batch_count = len(batches)
+                total_files = len(selected_files)
+                submitted_files = 0
+                skipped_files = 0
+                completed_files = 0
+                _print_upload_batch_plan(total_files, batch_count)
+
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     normalized_repo_id = self._normalize_repo_id(repo_id)
-                    selected_files = _collect_resumable_upload_files(
-                        dir_path, ignore_patterns
-                    )
-                    batches = [
-                        selected_files[index:index + 20]
-                        for index in range(0, len(selected_files), 20)
-                    ] or [[]]
                     upload_deadline = (
                         None
                         if upload_timeout is None
                         else time.monotonic() + upload_timeout
                     )
                     for batch_index, batch in enumerate(batches):
+                        batch_number = batch_index + 1
+                        batch_size = len(batch)
+                        print(
+                            f"[批次 {batch_number}/{batch_count}] 开始: "
+                            f"{batch_size} 个文件",
+                            flush=True,
+                        )
                         selected_paths = {item[0] for item in batch}
-                        upload_root = _prepare_resumable_upload_projection(
-                            dir_path,
-                            normalized_repo_id,
-                            eff_repo_type,
-                            revision,
-                            pipr,
-                            ignore_patterns=None,
-                            selected_paths=selected_paths,
-                            batch_key=str(batch_index),
-                        )
-                        lf_kwargs = dict(
-                            repo_id=normalized_repo_id,
-                            folder_path=str(upload_root),
-                            repo_type=eff_repo_type,
-                            num_workers=num_workers or 5,
-                        )
-                        if revision is not None:
-                            lf_kwargs['revision'] = revision
-                        if ignore_patterns:
-                            lf_kwargs['ignore_patterns'] = (
-                                _prefix_resumable_ignore_patterns(pipr, ignore_patterns)
-                            )
-                        # 在隔离进程中运行，超时后可终止 HF 内部 worker，避免
-                        # upload_large_folder 阻塞 CLI 或错误返回成功。None 表示不设墙钟。
-                        methods = multiprocessing.get_all_start_methods()
-                        ctx = multiprocessing.get_context(
-                            "fork" if "fork" in methods else "spawn"
-                        )
-                        result_queue = ctx.Queue()
-                        process = ctx.Process(
-                            target=_run_resumable_upload,
-                            args=(
-                                credentials['token'],
-                                lf_kwargs,
-                                result_queue,
-                                request_timeout,
-                            ),
-                        )
-                        process.daemon = True
-                        remaining_timeout = None
-                        if upload_deadline is not None:
-                            remaining_timeout = upload_deadline - time.monotonic()
-                            if remaining_timeout <= 0:
-                                raise TimeoutError(
-                                    f"resumable upload timed out after {upload_timeout}s"
-                                )
-                        process.start()
-                        process.join(remaining_timeout)
-                        if process.is_alive():
-                            process.terminate()
-                            process.join(2)
-                            raise TimeoutError(
-                                f"resumable upload timed out after {upload_timeout}s"
-                            )
+                        upload_root = None
+                        batch_skipped = 0
                         try:
-                            ok, error = result_queue.get(timeout=1)
-                        except Exception as exc:
-                            raise RuntimeError(
-                                "resumable upload worker exited without a result"
-                            ) from exc
-                        if not ok:
-                            name, error_message = error
-                            raise RuntimeError(f"{name}: {error_message}")
+                            upload_root = _prepare_resumable_upload_projection(
+                                dir_path,
+                                normalized_repo_id,
+                                eff_repo_type,
+                                revision,
+                                pipr,
+                                ignore_patterns=None,
+                                selected_paths=selected_paths,
+                                batch_key=str(batch_index),
+                            )
+                            batch_skipped = _resumable_committed_file_count(
+                                upload_root, selected_paths, pipr
+                            )
+                            if batch_skipped:
+                                print(
+                                    f"[批次 {batch_number}/{batch_count}] "
+                                    f"续传跳过: {batch_skipped} 个已确认完成文件",
+                                    flush=True,
+                                )
+
+                            lf_kwargs = dict(
+                                repo_id=normalized_repo_id,
+                                folder_path=str(upload_root),
+                                repo_type=eff_repo_type,
+                                num_workers=num_workers or 5,
+                            )
+                            if revision is not None:
+                                lf_kwargs['revision'] = revision
+                            if ignore_patterns:
+                                lf_kwargs['ignore_patterns'] = (
+                                    _prefix_resumable_ignore_patterns(
+                                        pipr, ignore_patterns
+                                    )
+                                )
+                            # Even a fully committed projection must enter HF so
+                            # repository existence and authorization are checked.
+                            _execute_resumable_upload_process(
+                                token=credentials['token'],
+                                upload_kwargs=lf_kwargs,
+                                request_timeout=request_timeout,
+                                upload_deadline=upload_deadline,
+                                upload_timeout=upload_timeout,
+                                batch_context=(batch_number, batch_count),
+                            )
+                        except Exception:
+                            confirmed_in_batch = batch_skipped
+                            if upload_root is not None:
+                                confirmed_in_batch = max(
+                                    confirmed_in_batch,
+                                    _resumable_committed_file_count(
+                                        upload_root, selected_paths, pipr
+                                    ),
+                                )
+                            skipped_files += batch_skipped
+                            submitted_files += max(
+                                0, confirmed_in_batch - batch_skipped
+                            )
+                            completed_files += confirmed_in_batch
+                            remaining_files = total_files - completed_files
+                            print(
+                                f"[批次 {batch_number}/{batch_count}] 失败: "
+                                f"累计确认完成 {completed_files}/{total_files}，"
+                                f"剩余 {remaining_files}",
+                                flush=True,
+                            )
+                            print(
+                                "断点元数据已保留；修复问题后重新执行同一命令可继续上传",
+                                flush=True,
+                            )
+                            _print_upload_batch_summary(
+                                total_files,
+                                submitted_files,
+                                skipped_files,
+                                completed_files,
+                            )
+                            raise
+
+                        skipped_files += batch_skipped
+                        newly_submitted = batch_size - batch_skipped
+                        submitted_files += newly_submitted
+                        completed_files += batch_size
+                        print(
+                            f"[批次 {batch_number}/{batch_count}] 成功: "
+                            f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"
+                            f"累计完成 {completed_files}/{total_files}",
+                            flush=True,
+                        )
                 else:
                     # 仓库内目标前缀：空 → "./"（根目录）
                     upload_path_in_repo = pipr + "/" if pipr else "./"
@@ -3090,21 +3307,54 @@ class HuggingFaceAPI:
                         upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         upload_kwargs['revision'] = revision
-                    selected_files = _collect_resumable_upload_files(
-                        dir_path, ignore_patterns
-                    )
-                    batches = [
-                        selected_files[index:index + 20]
-                        for index in range(0, len(selected_files), 20)
-                    ] or [[]]
-                    for batch in batches:
-                        if batch:
-                            upload_kwargs['allow_patterns'] = [
-                                item[0].as_posix() for item in batch
-                            ]
-                        if ignore_patterns:
-                            upload_kwargs['ignore_patterns'] = ignore_patterns
-                        _upload_folder_with_workers(upload_kwargs, num_workers or 5)
+                    for batch_index, batch in enumerate(batches):
+                        batch_number = batch_index + 1
+                        batch_size = len(batch)
+                        print(
+                            f"[批次 {batch_number}/{batch_count}] 开始: "
+                            f"{batch_size} 个文件",
+                            flush=True,
+                        )
+                        try:
+                            if batch:
+                                upload_kwargs['allow_patterns'] = [
+                                    item[0].as_posix() for item in batch
+                                ]
+                            if ignore_patterns:
+                                upload_kwargs['ignore_patterns'] = ignore_patterns
+                            _upload_folder_with_workers(
+                                upload_kwargs, num_workers or 5
+                            )
+                        except Exception:
+                            remaining_files = total_files - completed_files
+                            print(
+                                f"[批次 {batch_number}/{batch_count}] 失败: "
+                                f"累计确认完成 {completed_files}/{total_files}，"
+                                f"剩余 {remaining_files}",
+                                flush=True,
+                            )
+                            _print_upload_batch_summary(
+                                total_files,
+                                submitted_files,
+                                skipped_files,
+                                completed_files,
+                            )
+                            raise
+                        submitted_files += batch_size
+                        completed_files += batch_size
+                        print(
+                            f"[批次 {batch_number}/{batch_count}] 成功: "
+                            f"新增提交 {batch_size}，续传跳过 0，"
+                            f"累计完成 {completed_files}/{total_files}",
+                            flush=True,
+                        )
+
+                _print_upload_batch_summary(
+                    total_files,
+                    submitted_files,
+                    skipped_files,
+                    completed_files,
+                )
 
                 return True
             finally:

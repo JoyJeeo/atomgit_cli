@@ -1,86 +1,81 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
-authorize work by itself. When inactive, the current user request and real Git
-state determine what may happen next.
+authorize work by itself. The current user request and real Git state remain
+authoritative.
 
-The completed remote Issue is GitHub #21:
-`https://github.com/JoyJeeo/atomgit_cli/issues/21`.
+The active remote Issue is GitHub #22:
+`https://github.com/JoyJeeo/atomgit_cli/issues/22`.
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-10 +0800`
-- Status: `completed`
-- Phase: `delivered to github/yuto; remote Issue closed as completed after explicit human authorization`
+- Status: `active`
+- Phase: `human accepted; authorized standing delivery to yuto in progress`
 - Base branch: `yuto`
-- Task branch: `codex/issue-21-resumable-commit-retries`
-- Base commit: `3b86179`
-- Task commit: `ed81d18 fix(upload): harden large upload workflows`
-- Merge commit: `89160ca merge: harden large upload workflows`
-- Current HEAD: `89160ca`
-- Remote delivery: `github/yuto verified at 89160caf7327f89147e3a93ddf9b467119718786`
-- Worktree state: `clean and synchronized with github/yuto`
-- Changed paths: `.ai/TASK.md`, `api.py`, `cli.py`, `utils.py`, `README.md`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_upload_ignore.py`, `tests/test_upload_validation.py`, `tests/test_cache_clear.py`, `tests/test_resumable_commit_policy.py`, `tests/test_upload_batching.py`
-- Required worktree: `continue in this same worktree; preserve all existing task-related changes`
-- Last completed action: `committed the task branch, merged it locally into yuto, pushed only yuto, and verified the remote branch`
-- Next exact action: `none; implementation, delivery, human acceptance, and Issue closure are complete`
-- Blockers / open questions: `no implementation blocker; live AtomGit verification is not authorized for this phase`
-- Decisions constraining the next action: `keep huggingface-hub 1.1.7, resumable directory uploads by default, outer batches of at most 20 files, default workers of 5, and the dataset-to-model compatibility write route`
-- Tests passed: `python tests/test_resumable_commit_policy.py -> 36/36; complete upload capability group passed; python tests/run_cli_baseline.py -> 65 passed in 46.29s; python -m compileall -q ., python -m pip check, and git diff --check passed`
-- Tests failed or not run: `no known offline failures; live AtomGit upload intentionally not run because this phase has no live-write authorization`
+- Planned task branch: `codex/issue-22-upload-batch-lifecycle-logs`
+- Base commit: `f7ba22f`
+- Current HEAD: `f7ba22f` (uncommitted implementation on task branch)
+- Worktree state: `modified by Issue #22 implementation and retained TASK.md handoff`
+- Changed paths: `.ai/TASK.md`, `api.py`, `docs/upload_command_analysis.md`, `tests/test_resumable_commit_policy.py`, `tests/test_upload_batching.py`, `tests/test_upload_progress.py`
+- Required worktree: `resume in this same worktree so the uncommitted handoff is preserved`
+- Last completed action: `human maintainer accepted the verified implementation and instructed delivery to continue`
+- Next exact action: `commit the local task branch, merge it locally into yuto, record delivery evidence, and push only yuto under the standing delivery rules`
+- Blockers / open questions: `none`
+- Tests passed: `final offline: python tests/test_upload_progress.py (28/28); python tests/test_upload_resumable.py (46/46); python tests/test_upload_batching.py (8/8); python tests/test_resumable_commit_policy.py (43/43); python tests/run_cli_baseline.py (65/65 isolated pytest cases, 55.95s); python tests/test_hf_api_contract.py (13/13); python -m compileall -q .; python -m pip check (no broken requirements); git diff --check`
+- Tests failed or not run: `pre-implementation regressions failed as expected for missing lifecycle output and event_callback; no live AtomGit write was run or authorized`
 
 ## Active Issue Identity
 
-- ID: `GH-21`
-- Title: `Fix resumable upload commit timeouts and 429 retry loops`
-- Primary type: `bug`
-- Priority: `P1`
-- Base branch: `yuto`
-- Delivery mode: `standing local task-branch delivery into yuto`
-- Permissions: `local edits=yes; offline tests=yes; commit=yes; merge into yuto=yes; push yuto=yes; task-branch push=no; PR=no; Issue #21 closure=authorized and completed; live AtomGit writes=no; release=no`
+- ID: `GH-22`
+- Title: `Add observable batch lifecycle logs for directory uploads`
+- Primary type: `cli`
+- Priority: `P2`
+- User impact: `users cannot see the planned batch count, determine whether the previous batch committed, or identify when processing advances to the next batch`
+- Affected path: `cli.upload -> HuggingFaceAPI.upload_directory -> outer 20-file batch loop -> child _run_resumable_upload -> HfApi.upload_large_folder -> _ResumableCommitController`
+- Delivery mode: `standing local task-branch delivery into yuto after implementation, review, and human acceptance`
+- Permissions: `Issue creation=yes; local task branch=yes when development starts; local edits=yes; offline tests=yes; live AtomGit writes=no; task-branch push=no; PR=no; merge into yuto=no until acceptance; push yuto=no until acceptance; Issue transition=no; release=no`
 
-## Evidence And Objective
+## Objective And Evidence
 
-- User impact: a 700-file, 622.5 GB resumable dataset upload pre-uploaded the first 20-file batch but remained at zero committed files after a commit read timeout and repeated HTTP 429 responses.
-- Pre-fix behavior: omitting the CLI timeout removed the parent wall-clock limit while the locked HF client retained its 10-second request timeout; HF 1.1.7 requeued commit failures but its minimum target chunk was 20, so an outer 20-file batch did not actually shrink.
-- Ambiguity: a commit read timeout does not prove the server rejected the commit, so blind retries can create duplicate commits and trigger rate limiting.
-- Objective: make resumable commit attempts use explicit request-timeout semantics, error-specific backoff, remote reconciliation after ambiguous outcomes, real batch reduction, and bounded failure while preserving resumable progress.
-- Affected path: `cli.upload -> HuggingFaceAPI.upload_directory -> _run_resumable_upload -> HfApi.upload_large_folder -> HfApi.create_commit`.
+- Current behavior: the CLI prints selected file count and size, but the outer 20-file loop has no batch lifecycle logs. HF progress belongs to the current child process and can reset between batches.
+- Example: 700 selected files imply 35 planned outer batches, but this plan and the boundary between successful commits are not visible.
+- Objective: add deterministic batch lifecycle reporting without changing upload, retry, reconciliation, reduction, or resumable metadata semantics.
 
 ## Scope And Acceptance
 
-- Keep the omitted overall upload deadline unlimited while applying a documented bounded HTTP request timeout in the child process.
-- Recreate the locked HF HTTP client after applying request-timeout policy so cached process-global state cannot retain the old value.
-- Honor `Retry-After` for HTTP 429; otherwise use capped exponential backoff with jitter. Do not split batches for rate limiting.
-- Retry connection failures, read timeouts, and HTTP 502/503/504 with bounded attempts; fail actionable non-retryable 400/401/403/404 responses.
-- Reconcile remote paths and object identities after an ambiguous commit timeout before retrying.
-- Reduce genuine persistent commit failures as `20 -> 10 -> 5 -> 2 -> 1` without changing the outer maximum batch size of 20.
-- Preserve stable projection and HF resumable metadata when a batch ultimately fails, return a nonzero CLI result, and avoid an infinite retry loop.
-- Detect or clearly warn about escaped glob stars that HF would interpret literally.
-- Add focused offline regression coverage at the real locked-library boundary and update affected documentation.
-- Run the complete offline CLI baseline, `python -m compileall -q .`, `python -m pip check`, and `git diff --check`.
+- Print total selected files, planned outer batches, and maximum files per batch before upload.
+- Print ordered outer-batch start, success, resumed-skip, failure, and cumulative progress events.
+- Do not announce batch `N+1` until batch `N` is confirmed complete.
+- Identify retry, rate-limit waiting, ambiguous remote reconciliation, and `20 -> 10 -> 5 -> 2 -> 1` reduction against the correct outer batch.
+- Mark an outer batch successful only after all reduced child groups succeed or remote reconciliation confirms the operations.
+- Report already completed resumable content as skipped, not as a new commit.
+- On failure, report the failed batch, confirmed cumulative completion, remaining work, and retained checkpoint guidance.
+- Print a final internally consistent summary of planned, newly submitted, skipped, and completed work.
+- Keep lifecycle logs visible with `--no-progress-bar` and exclude credentials or sensitive request data.
 
 ## Compatibility And Non-Goals
 
-- Preserve Python 3.9 compatibility and the public CLI surface unless a new option is explicitly approved.
-- Keep `huggingface-hub==1.1.7` and `datasets==4.4.1` unchanged.
-- Preserve default resumable directory routing, worker default 5, path prefixes, and the AtomGit dataset compatibility write route.
-- Do not perform live uploads, repository creation or deletion, dependency upgrades, unrelated refactoring, release work, or remote Issue transitions.
+- Preserve Python 3.9, `huggingface-hub==1.1.7`, and `datasets==4.4.1`.
+- Preserve the outer maximum of 20, retries, backoff, timeout, reconciliation, metadata, model/dataset routing, path prefix, ignore, workers, SDK results, and CLI exit codes.
+- Do not add a public CLI option, per-file verbose logging, dependency upgrade, live upload, unrelated refactor, release, or remote Issue transition.
 
-## Verification Evidence
+## Required Verification
 
-- Planning evidence: locked `huggingface-hub==1.1.7` exposes `set_client_factory`, `get_session`, and `close_session`; its default HTTP request timeout is 10 seconds and its large-folder commit scale has a minimum of 20.
-- Pre-change remote evidence: first batch data transfer completed, commit responses timed out, and subsequent commit attempts returned HTTP 429.
-- Post-change evidence: `HTTP request timeout, Retry-After, 429/413/5xx/network classification, ambiguous remote reconciliation, persistent sub-batch metadata, real 20/10/5/2/1 reduction, shared overall deadline, child termination, and escaped glob rejection are covered offline; complete CLI baseline passed`.
+- Add focused offline tests for 21-file and 700-file plans.
+- Verify `batch N success -> batch N+1 start` ordering.
+- Verify reduction, reconciliation, resumable skip, terminal failure, and final summary output.
+- Verify lifecycle output with progress enabled and `--no-progress-bar`.
+- Run existing upload batching and resumable commit-policy tests.
+- Run `python tests/run_cli_baseline.py`, `python -m compileall -q .`, `python -m pip check`, and `git diff --check`.
+- Apply `.ai/DOD.md` and perform the independent review in `.ai/REVIEW.md` before human acceptance.
 
 ## Closure
 
-- Status: `completed and delivered`
+- Status: `implementation complete; awaiting human acceptance and delivery authorization`
 - Human acceptance: `accepted by explicit user instruction on 2026-08-10`
-- Independent review: `APPROVED after resolving partial sub-batch metadata persistence, Retry-After truncation, actionable error classification, shared deadline, HTTP 413 reduction, and non-reducible connection failure findings`
-- Delivery: `task commit ed81d18 merged by 89160ca; github/yuto verified at 89160caf7327f89147e3a93ddf9b467119718786`
-- Remote Issue: `GitHub #21 closed as completed on 2026-08-10 after explicit human authorization`
-- Live verification: `not run; no live AtomGit write was authorized`
+- Independent review: `APPROVED after resolving deterministic output flushing, full outer-batch event attribution coverage, preserved remote validation for fully skipped batches, and non-fatal metadata observation findings`
+- Delivery: `not authorized yet`

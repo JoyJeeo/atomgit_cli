@@ -87,6 +87,13 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--no-resumable"])
             check("T1 目录上传默认 exit=0", r.exit_code == 0, f"exit={r.exit_code}")
+            check(
+                "T1 默认进度下批次生命周期可见",
+                "上传批次计划: 共 2 个文件，1 个批次，每批最多 20 个文件" in r.output
+                and "[批次 1/1] 成功:" in r.output
+                and "上传批次汇总:" in r.output,
+                r.output[-300:],
+            )
             check("T1 调用 HF 1次", len(captured) == 1, f"calls={len(captured)}")
             if captured:
                 check("T1 默认进度条=开启", captured[0]["pb_disabled_at_call"] is False,
@@ -97,6 +104,13 @@ def main():
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
                                     "--no-progress-bar", "--no-resumable"])
             check("T2 目录上传-noprog exit=0", r.exit_code == 0, f"exit={r.exit_code}")
+            check(
+                "T2 禁用进度条后批次生命周期仍可见",
+                "上传批次计划: 共 2 个文件，1 个批次，每批最多 20 个文件" in r.output
+                and "[批次 1/1] 成功:" in r.output
+                and "上传批次汇总:" in r.output,
+                r.output[-300:],
+            )
             if captured:
                 check("T2 --no-progress-bar 确实禁用", captured[0]["pb_disabled_at_call"] is True,
                       f"disabled={captured[0]['pb_disabled_at_call']}")
