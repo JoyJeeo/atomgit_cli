@@ -4,11 +4,24 @@ import sys
 import subprocess
 import json
 import shlex
+import shutil
 import tempfile
 import urllib.error
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional, List
 from colorama import Fore, Style, init
+
+try:
+    from huggingface_hub.utils import filter_repo_objects
+except ImportError:
+    def filter_repo_objects(items, *, ignore_patterns=None, key=None, **kwargs):
+        patterns = tuple(ignore_patterns or ())
+        for item in items:
+            candidate = key(item) if key is not None else item
+            candidate = str(candidate)
+            if not any(fnmatch(candidate, pattern) for pattern in patterns):
+                yield item
 
 # 初始化colorama
 init(autoreset=True)
@@ -357,6 +370,75 @@ def count_files_in_directory(dir_path: Path, exclude_resumable_metadata: bool = 
     except OSError:
         pass
     return count
+
+
+def get_upload_file_stats(
+    dir_path: Path, ignore_patterns: Optional[List[str]] = None
+) -> tuple:
+    """Return the file count and bytes HF will consider for a directory upload."""
+    dir_path = Path(dir_path)
+
+    def candidates():
+        for root_name, directory_names, filenames in os.walk(
+            str(dir_path), topdown=True, followlinks=False
+        ):
+            root = Path(root_name)
+            relative_root = root.relative_to(dir_path)
+            if _is_resumable_metadata(root, dir_path):
+                directory_names[:] = []
+                continue
+            directory_names[:] = [
+                name for name in directory_names
+                if not _is_resumable_metadata(root / name, dir_path)
+                and name != ".git"
+            ]
+            for name in filenames:
+                candidate = root / name
+                if candidate.is_symlink() or not candidate.is_file():
+                    continue
+                yield candidate.relative_to(dir_path), candidate
+
+    filtered = filter_repo_objects(
+        candidates(),
+        ignore_patterns=ignore_patterns,
+        key=lambda item: item[0].as_posix(),
+    )
+    count = 0
+    total_size = 0
+    for _, candidate in filtered:
+        count += 1
+        total_size += get_file_size(candidate)
+    return count, total_size
+
+
+def clear_atomgit_cache() -> int:
+    """Clear only the AtomGit-owned HF cache tree and return removed entries."""
+    cache_root = Path(
+        os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit")
+    ).expanduser()
+    resolved_root = cache_root.resolve(strict=False)
+    unsafe_roots = {
+        Path("/"),
+        Path.home().resolve(strict=False),
+        Path("/tmp"),
+        Path("/private/tmp"),
+    }
+    if resolved_root in unsafe_roots or len(resolved_root.parts) <= 2:
+        raise ValueError("AtomGit 缓存目录范围过大，已拒绝清理")
+    if cache_root.exists() and (cache_root.is_symlink() or not cache_root.is_dir()):
+        raise ValueError("AtomGit 缓存目录不是安全的普通目录")
+    cache_root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(cache_root, 0o700)
+    removed = 0
+    for child in list(cache_root.iterdir()):
+        if child.is_symlink() or child.is_file():
+            child.unlink()
+        elif child.is_dir():
+            shutil.rmtree(child)
+        else:
+            continue
+        removed += 1
+    return removed
 
 
 def confirm_action(message: str, default: bool = False) -> bool:

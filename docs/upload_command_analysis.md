@@ -14,14 +14,14 @@ atomgit upload [OPTIONS] PATH
 | `PATH` | 必填 | 本地文件或目录，Click 要求存在 |
 | `--repo-id` | 必填 | 目标仓库 ID |
 | `-m, --message` | 空 | 提交消息 |
-| `-t, --timeout` | `300` | HF 请求超时秒数 |
+| `-t, --timeout` | 请求 300 秒、总时长不限 | 单次网络请求超时；resumable 目录同时作为上传总时限 |
 | `--no-progress-bar` | 关闭 | 禁用 HF 上传进度条 |
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
 | `--revision` | 默认分支 | CLI 接受已存在的安全分支名；需先显式创建 |
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
 | `--resumable/--no-resumable` | 按路径自动 | 目录默认使用 `upload_large_folder`；可显式选择普通上传 |
-| `--num-workers` | HF 默认 | resumable worker 数，目录默认模式下可直接使用 |
+| `--num-workers` | `5` | 所有目录上传模式的 worker 数 |
 
 AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传输路由。CLI
 仍使用 `dataset` 表达仓库业务类型，但底层调用映射到 model 路由。2026-08-04
@@ -42,15 +42,15 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
-第 7 步的统计只排除 resumable 自身的 HF 元数据，不应用用户的
-`ignore_patterns`。因此 CLI 打印的是原目录统计，可能大于底层实际接收的过滤后
-文件集合。`--ignore` 由逗号分隔器解析，再交给锁定 HF 的
+第 7 步的统计使用与上传相同的 `filter_repo_objects`，先应用用户的
+`ignore_patterns` 并排除 resumable 自身的 HF 元数据，因此 CLI 展示值与实际接收的
+过滤后文件集合一致。`--ignore` 由逗号分隔器解析，再交给锁定 HF 的
 `filter_repo_objects`；shell 中整体使用双引号即可，写成 `\*\*` 会把反斜杠作为
-模式内容传入。
+模式内容传入，CLI 会在远端调用前以退出码 2 拒绝这种错误写法。
 
-CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--resumable`、
-`--num-workers` 或 `--ignore`；`--num-workers` 不接受 `--no-resumable`；显式
-`--resumable` 不接受 `--message`。`--path-in-repo` 可用于两种目录上传模式。
+CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--resumable` 或
+`--ignore`；显式 `--resumable` 不接受 `--message`。`--num-workers` 与
+`--path-in-repo` 是目录和文件上传的基础参数，普通目录与 resumable 均支持。
 这些用法错误统一以退出码 2 结束，不会进入 API 层。
 
 ## 3. 单文件上传
@@ -106,17 +106,17 @@ cli.upload
 锁定的 `huggingface-hub==1.1.7` 先过滤目录对象；过滤后超过 30 个文件时记录
 大目录提示，超过 200 个文件时提升为 warning。随后它为全部待上传对象构造
 `CommitOperationAdd` 并读取文件计算哈希，完成前可能没有逐文件上传进度。普通
-LFS 上传由 `create_commit(num_threads=5)` 的默认值控制，最多同时上传 5 个仍需
-传输的 LFS 文件；CLI 的 `--num-workers` 不适用于该路径。
+LFS 上传由 `create_commit(num_threads=...)` 控制，CLI 的 `--num-workers` 会传入
+普通目录路径，默认值为 5。
 
 LFS batch 响应没有 upload action 时，表示相同内容 OID 已存在于服务端，客户端
 跳过数据传输并在提交中引用该对象。换一个 `path_in_repo` 后近乎立即成功属于
 服务端内容去重，不是普通模式获得了本地断点续传。部分传输的单个新文件没有
 large-folder 元数据保证；重新执行时只能可靠依赖已经完整存在或提交的对象去重。
 
-普通模式会在一次调用中哈希并提交整个过滤后集合。超大目录应在调用方按自然
-目录或小批次顺序执行同一 CLI 命令，所有批次可使用相同远端前缀。这样不需要
-修改 CLI，也避免 resumable 跨文件系统投影复制，但批次状态需由操作者记录。
+普通模式会在一次调用中哈希并提交过滤后集合；客户端内部按 20 个文件顺序分批
+调用 `upload_folder`，不修改源目录，失败后只需重试当前命令即可。批次选择和
+状态都由程序内部管理，用户无需手工拆分目录。
 
 ## 5. Resumable 目录上传
 
@@ -146,32 +146,38 @@ HF large-folder 模式的其他限制：
 - CLI 和 SDK 在凭证或上传调用前拒绝上传根路径及目录树中的全部符号链接；
   `ignore_patterns` 不会绕过该安全检查；
 - CLI 在 `$HF_HOME/upload-projections/` 使用 credential-free 哈希身份为每个
-  resumable 上传建立持久投影，避免同一源目录上传到不同仓库时复用错误的 HF
+  resumable 上传和 20 文件批次建立持久投影，避免同一源目录上传到不同仓库时复用错误的 HF
   元数据。HF 方法不接收 `path_in_repo`，带前缀时投影把源文件放在对应目录下再把
   投影根传给 HF。相同源目录、规范化仓库、传输类型、revision 和前缀会复用同一
   投影与 HF 元数据；同步会反映源文件增删改并排除源目录自身的
   `.cache/huggingface`，用户 `--ignore` 排除的文件也不会物化到投影；
-- 投影优先使用硬链接，跨文件系统或平台不支持时使用 `copy2`，后者会占用与源
-  文件相当的额外磁盘；投影根权限在支持 POSIX 权限的平台设为 `0700`；
+- 投影优先使用硬链接，跨文件系统或平台不支持时仅使用符号链接，绝不复制源
+  文件字节；两种链接均不可用时安全失败。投影根权限在支持 POSIX 权限的平台设为 `0700`；
 - 不支持用户指定的单一 commit message，CLI 在远端调用前拒绝
   显式 `--resumable --message`；未显式选择模式时 `--message` 自动走普通上传，
   服务过程可产生多次提交；
 - repo type 必填，CLI 未指定时补为 `model`；
 - 续传元数据由 HF 写入按上传身份隔离的稳定投影根，不污染源目录。
 
+CLI 在隔离子进程内为 `create_commit` 增加 AtomGit 专用控制：429 遵循
+`Retry-After` 或指数退避且不拆批；网络超时后先用远端 checksum/OID 核对请求
+是否已经成功，只重试缺失对象；持续的超时或 5xx 才按 `20 → 10 → 5 → 2 → 1`
+降批。达到连续失败上限后子进程明确失败，未完成的 HF 元数据保持可恢复。
+
 真实 404 MB 文件测试已完成“中断 -> 再次执行 -> 下载回读”，文件大小和
 SHA-256 均一致。
 
 ## 6. 进度条和 timeout
 
-上传前保存完整进度条状态和 `hf_constants.DEFAULT_REQUEST_TIMEOUT`，退出上传
-分支时在 `finally` 中恢复调用前状态。由于这些仍是进程级全局值，并发调用需
-谨慎。
+上传前保存完整进度条状态和 `hf_constants.DEFAULT_REQUEST_TIMEOUT`，关闭旧 HF
+session 后以目标请求超时创建新 client，退出上传分支时在 `finally` 中恢复调用前
+状态并再次关闭 session。由于这些仍是进程级全局值，并发调用需谨慎。
 
-两种目录模式对同一个 `--timeout` 还有不同的上层语义：普通模式把它设置为 HF
-请求超时，不以整个哈希加上传过程的墙钟时间强制结束；resumable 模式除此之外
-还以该秒数等待隔离上传进程，超过后终止该进程。因此 resumable 的 timeout 是
-本次命令的硬总时限，不会因某个分块完成而重新计时。
+省略 `--timeout` 时，上传总时长不限，但单次 HF 网络请求默认超时 300 秒，以便
+网络失效后进入可控重试而不是永久阻塞。显式 `--timeout N` 时，两种模式都把
+请求超时设置为 N 秒；resumable 模式还以 N 秒等待整个隔离上传进程，超过后终止
+该进程。因此显式 resumable timeout 是本次命令的硬总时限，不会因某个分块完成
+而重新计时。
 
 ## 7. Repo ID
 

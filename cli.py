@@ -15,12 +15,13 @@ configure_hf_environment()
 
 try:
     from .config import config
-    from .api import api
+    from .api import api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
     from .utils import (
         print_success, print_error, print_warning, print_info,
         validate_repo_name, validate_repo_type, is_supported_upload_revision,
         get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
+        get_upload_file_stats, clear_atomgit_cache,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
         parse_ignore_patterns, get_atomgit_git_helper_status,
@@ -28,12 +29,13 @@ try:
     )
 except ImportError:
     from config import config
-    from api import api
+    from api import api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
     from utils import (
         print_success, print_error, print_warning, print_info,
         validate_repo_name, validate_repo_type, is_supported_upload_revision,
         get_directory_size,
         format_file_size, count_files_in_directory, confirm_action,
+        get_upload_file_stats, clear_atomgit_cache,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
         parse_ignore_patterns, get_atomgit_git_helper_status,
@@ -139,6 +141,23 @@ def whoami():
 def repo():
     """仓库管理命令"""
     pass
+
+
+@cli.group()
+def cache():
+    """AtomGit 本地缓存管理命令"""
+    pass
+
+
+@cache.command(name='clear')
+def clear_cache():
+    """清理 AtomGit 工具产生的本地缓存"""
+    try:
+        removed = clear_atomgit_cache()
+    except Exception as error:
+        print_error(f"清理 AtomGit 缓存失败: {error}")
+        sys.exit(1)
+    print_success(f"AtomGit 缓存已清理（移除 {removed} 项）")
 
 
 @repo.command()
@@ -288,8 +307,9 @@ def create_branch(repo_id, branch_name, source):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--repo-id', required=True, help='目标仓库ID (username/repo-name)')
 @click.option('--message', '-m', default='', help='上传说明')
-@click.option('--timeout', '-t', 'timeout_sec', default=300, type=float,
-              help='上传超时时间（秒），默认300秒（5分钟）。大数据集建议增大此值')
+@click.option('--timeout', '-t', 'timeout_sec', default=None, type=float,
+              help='单次网络请求超时（秒）；resumable 目录同时作为总时限。'
+                   '省略时请求默认 300 秒且总时长不限')
 @click.option('--no-progress-bar', is_flag=True, default=False,
               help='禁用上传进度条（适用于日志/CI等非交互场景）')
 @click.option('--path-in-repo', '-p', 'path_in_repo', default=None,
@@ -305,11 +325,11 @@ def create_branch(repo_id, branch_name, source):
 @click.option('--resumable/--no-resumable', default=None,
               help='目录上传默认启用断点续传/分块模式；--no-resumable 改用普通上传。'
                    '--resumable 不能与 --message 同用')
-@click.option('--num-workers', 'num_workers', default=None, type=int,
-              help='断点续传模式的并发 worker 数（目录默认模式下可直接使用）')
+@click.option('--num-workers', 'num_workers', default=5, type=int,
+              help='上传并发 worker 数，默认 5；目录普通/resumable 模式均可使用')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
     """上传文件或目录到仓库"""
-    if timeout_sec <= 0:
+    if timeout_sec is not None and timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
         sys.exit(2)
     if not is_supported_upload_revision(revision):
@@ -339,14 +359,16 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
 
     # 解析忽略模式（逗号分隔 → 列表；空 → None）
     ignore_patterns = parse_ignore_patterns(ignore)
+    if ignore_patterns and any("\\*" in pattern for pattern in ignore_patterns):
+        print_error(
+            "--ignore 的 * 在引号内无需转义，请移除反斜杠后重试"
+        )
+        sys.exit(2)
 
     if path.is_file():
         resumable = False if resumable is None else resumable
         if resumable:
             print_error("--resumable 仅支持目录上传")
-            sys.exit(2)
-        if num_workers is not None:
-            print_error("--num-workers 仅支持断点续传目录上传")
             sys.exit(2)
         if ignore_patterns:
             print_error("--ignore 仅支持目录上传")
@@ -356,9 +378,6 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             # A commit message requires HF upload_folder. Otherwise directories
             # automatically use the resilient large-folder uploader.
             resumable = not bool(message)
-        if num_workers is not None and not resumable:
-            print_error("--num-workers 仅支持断点续传目录上传")
-            sys.exit(2)
         if resumable and message:
             print_error("--resumable 不支持 --message")
             sys.exit(2)
@@ -389,20 +408,32 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
                              progress_bar=show_progress, path_in_repo=path_in_repo,
                              repo_type=repo_type, revision=revision,
-                             ignore_patterns=ignore_patterns):
+                             ignore_patterns=ignore_patterns, num_workers=num_workers):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
             sys.exit(1)
 
     elif path.is_dir():
-        file_count = count_files_in_directory(path, exclude_resumable_metadata=resumable)
-        dir_size = format_file_size(get_directory_size(path, exclude_resumable_metadata=resumable))
+        file_count, upload_size = get_upload_file_stats(path, ignore_patterns)
+        dir_size = format_file_size(upload_size)
 
         print_info(f"正在上传目录: {path}")
-        print_info(f"文件数量: {file_count}")
-        print_info(f"目录大小: {dir_size}")
-        print_info(f"超时设置: {timeout_sec}秒")
+        print_info(f"待上传文件数量（应用忽略规则后）: {file_count}")
+        print_info(f"待上传目录大小（应用忽略规则后）: {dir_size}")
+        if resumable:
+            print_info(
+                "上传总时限: 不限时"
+                if timeout_sec is None else f"上传总时限: {timeout_sec:g}秒"
+            )
+        else:
+            print_info("上传总时限: 不限制（普通模式）")
+        request_timeout = (
+            timeout_sec
+            if timeout_sec is not None
+            else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+        )
+        print_info(f"单次网络请求超时: {request_timeout:g}秒")
         if pipr:
             print_info(f"仓库内路径: {pipr}/")
         if repo_type:
@@ -411,10 +442,10 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"目标分支: {revision}")
         if ignore_patterns:
             print_info(f"忽略模式: {', '.join(ignore_patterns)}")
+        if num_workers:
+            print_info(f"并发 worker: {num_workers}")
         if resumable:
             print_info("上传模式: 断点续传/分块 (resumable)")
-            if num_workers:
-                print_info(f"并发 worker: {num_workers}")
             if not repo_type:
                 print_info("提示：未指定 --repo-type，断点续传模式下默认按 model 处理")
         if not show_progress:
