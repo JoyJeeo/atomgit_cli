@@ -7,14 +7,14 @@ cross-conversation work. It records task facts and permissions; it does not
 authorize work by itself. The current user request and real Git state remain
 authoritative.
 
-The completed implementation corresponds to the still-open GitHub Issue #22:
+The completed implementation corresponds to the closed GitHub Issue #22:
 `https://github.com/JoyJeeo/atomgit_cli/issues/22`.
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-10 +0800`
 - Status: `completed`
-- Phase: `delivered to github/yuto; remote Issue remains open pending explicit transition authorization`
+- Phase: `delivered to github/yuto; remote Issue closed as completed after explicit human authorization`
 - Base branch: `yuto`
 - Task branch: `codex/issue-22-upload-batch-lifecycle-logs`
 - Base commit: `f7ba22f`
@@ -25,8 +25,8 @@ The completed implementation corresponds to the still-open GitHub Issue #22:
 - Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
 - Changed paths: `.ai/TASK.md`, `api.py`, `docs/upload_command_analysis.md`, `tests/test_resumable_commit_policy.py`, `tests/test_upload_batching.py`, `tests/test_upload_progress.py`
 - Required worktree: `none; implementation is delivered`
-- Last completed action: `committed the local task branch, merged it into yuto, pushed only yuto, and verified the remote feature merge hash`
-- Next exact action: `none for implementation; close or otherwise transition GitHub Issue #22 only after explicit user authorization`
+- Last completed action: `closed GitHub Issue #22 as completed after explicit human authorization`
+- Next exact action: `none; implementation, delivery, human acceptance, and Issue closure are complete`
 - Blockers / open questions: `none`
 - Tests passed: `final offline: python tests/test_upload_progress.py (28/28); python tests/test_upload_resumable.py (46/46); python tests/test_upload_batching.py (8/8); python tests/test_resumable_commit_policy.py (43/43); python tests/run_cli_baseline.py (65/65 isolated pytest cases, 55.95s); python tests/test_hf_api_contract.py (13/13); python -m compileall -q .; python -m pip check (no broken requirements); git diff --check`
 - Tests failed or not run: `pre-implementation regressions failed as expected for missing lifecycle output and event_callback; no live AtomGit write was run or authorized`
@@ -40,7 +40,7 @@ The completed implementation corresponds to the still-open GitHub Issue #22:
 - User impact: `users cannot see the planned batch count, determine whether the previous batch committed, or identify when processing advances to the next batch`
 - Affected path: `cli.upload -> HuggingFaceAPI.upload_directory -> outer 20-file batch loop -> child _run_resumable_upload -> HfApi.upload_large_folder -> _ResumableCommitController`
 - Delivery mode: `standing local task-branch delivery into yuto after implementation, review, and human acceptance`
-- Permissions: `Issue creation=yes; local task branch=yes; local edits=yes; offline tests=yes; commit=yes; merge into yuto=yes; push yuto=yes; live AtomGit writes=no; task-branch push=no; PR=no; Issue transition=no; release=no`
+- Permissions: `Issue creation=yes; local task branch=yes; local edits=yes; offline tests=yes; commit=yes; merge into yuto=yes; push yuto=yes; live AtomGit writes=no; task-branch push=no; PR=no; Issue #22 closure=authorized and completed; release=no`
 
 ## Objective And Evidence
 
@@ -82,5 +82,5 @@ The completed implementation corresponds to the still-open GitHub Issue #22:
 - Human acceptance: `accepted by explicit user instruction on 2026-08-10`
 - Independent review: `APPROVED after resolving deterministic output flushing, full outer-batch event attribution coverage, preserved remote validation for fully skipped batches, and non-fatal metadata observation findings`
 - Delivery: `task commit 6af29c8 merged by 4f1ae52; github/yuto feature merge verified at 4f1ae52d4a8f59d0ed7cff7505718da9b073994d`
-- Remote Issue: `GitHub #22 remains open because Issue transition was not authorized`
+- Remote Issue: `GitHub #22 closed as completed on 2026-08-10 after explicit human authorization`
 - Live verification: `not run; no live AtomGit write was authorized`
