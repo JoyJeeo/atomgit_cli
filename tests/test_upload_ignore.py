@@ -153,9 +153,21 @@ def main():
             check("T6 文件+ignore exit=2", r.exit_code == 2, f"exit={r.exit_code}")
             check("T6 文件+ignore 不调用上传", not captured)
 
-            # --- T7: 临时目录清理 ---
+            # --- T7: 双引号中的 glob 星号不应添加反斜杠 ---
+            captured.clear()
+            r = runner.invoke(cli, ["upload", str(sub),
+                                    "--repo-id", "user/repo",
+                                    "--ignore", ".*,\\*\\*/.*",
+                                    "--no-resumable"])
+            check("T7 转义 glob 拒绝 exit=2", r.exit_code == 2,
+                  f"exit={r.exit_code}")
+            check("T7 转义 glob 提示移除反斜杠",
+                  "移除反斜杠" in r.output, repr(r.output))
+            check("T7 转义 glob 不调用上传", not captured)
+
+            # --- T8: 临时目录清理 ---
             leftover = Path.cwd() / ".tmp_upload"
-            check("T7 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
+            check("T8 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

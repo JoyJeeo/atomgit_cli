@@ -131,6 +131,8 @@ EXPECTED_PUBLIC_SCHEMA = {
     ("logout",): {"kind": "command", "params": ()},
     ("whoami",): {"kind": "command", "params": ()},
     ("repo",): {"kind": "group", "params": ()},
+    ("cache",): {"kind": "group", "params": ()},
+    ("cache", "clear"): {"kind": "command", "params": ()},
     ("repo", "create"): {
         "kind": "command",
         "params": (
@@ -202,7 +204,7 @@ EXPECTED_PUBLIC_SCHEMA = {
                 "timeout_sec",
                 "--timeout",
                 "-t",
-                default=300,
+                default=None,
                 parameter_type=("float",),
             ),
             _option(
@@ -238,7 +240,7 @@ EXPECTED_PUBLIC_SCHEMA = {
             _option(
                 "num_workers",
                 "--num-workers",
-                default=None,
+                default=5,
                 parameter_type=("int",),
             ),
         ),
@@ -350,6 +352,7 @@ LEAF_DISPATCH_PATHS = (
     ("logout",),
     ("whoami",),
     ("config-show",),
+    ("cache", "clear"),
     ("repo", "create"),
     ("repo", "list"),
     ("repo", "visibility"),
@@ -367,6 +370,9 @@ BASELINE_TEST_GROUPS = {
         "test_cli_error_redaction.py",
         "test_cli_feature_baseline.py",
         "test_cli_surface.py",
+    ),
+    "cache": (
+        "test_cache_clear.py",
     ),
     "authentication-configuration-and-git": (
         "test_anonymous_token_isolation.py",
@@ -391,6 +397,8 @@ BASELINE_TEST_GROUPS = {
         "test_revision_rejection.py",
     ),
     "upload": (
+        "test_upload_batching.py",
+        "test_resumable_commit_policy.py",
         "test_dataset_resumable_route.py",
         "test_resumable_recovery.py",
         "test_resumable_stats.py",
@@ -441,10 +449,10 @@ BASELINE_TEST_GROUPS = {
 }
 
 
-BASELINE_PUBLIC_COMMAND_COUNT = 15
+BASELINE_PUBLIC_COMMAND_COUNT = 17
 BASELINE_PUBLIC_PARAMETER_COUNT = 40
-BASELINE_LEAF_COMMAND_COUNT = 12
-BASELINE_TEST_SCRIPT_COUNT = 62
+BASELINE_LEAF_COMMAND_COUNT = 13
+BASELINE_TEST_SCRIPT_COUNT = 65
 
 
 def _normalize_default(value):

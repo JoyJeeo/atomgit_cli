@@ -178,24 +178,24 @@ atomgit upload <path> --repo-id <id> [options]
 |------|------|
 | `--repo-id <id>` | 目标仓库ID（必填，如 `username/repo-name`） |
 | `-m, --message <text>` | 上传提交说明 |
-| `-t, --timeout <sec>` | 上传超时秒数，默认 300（大文件建议调大） |
+| `-t, --timeout <sec>` | 单次网络请求超时秒数；resumable 目录同时作为总时限。省略时请求默认 300 秒且总时长不限 |
 | `--no-progress-bar` | 禁用进度条（日志/CI 场景） |
 | `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
 | `--revision <name>` | 上传到已存在分支；非 `main` 分支需先显式创建 |
 | `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
 | `--resumable / --no-resumable` | 目录默认使用断点续传；显式 `--no-resumable` 改用普通上传 |
-| `--num-workers <n>` | 断点续传模式的并发 worker 数（目录默认模式下可直接使用） |
+| `--num-workers <n>` | 上传并发 worker 数，默认 5；普通目录和 resumable 目录均可使用 |
 
 目录未显式选择模式时默认使用断点续传；单文件仍使用普通文件上传。目录指定
 `--message` 且未显式选择模式时会自动使用普通上传，以保留单一提交说明。
 冲突参数会在上传前以退出码 2 拒绝：显式 `--resumable` 仅适用于目录且不能与
-`--message` 同用；`--num-workers` 不能与 `--no-resumable` 或单文件同用；
-`--ignore` 仅适用于目录上传。
+`--message` 同用；`--ignore` 仅适用于目录上传。线程数和仓库内路径是所有适用
+上传模式的基础参数。
 
 `--ignore` 使用逗号分隔的 Unix shell 风格通配符。通配符整体使用双引号时，
-不要再给 `*` 添加反斜杠。例如，递归忽略隐藏内容、JSON 文件和以 `output`
-开头的内容：
+不要再给 `*` 添加反斜杠；CLI 会在远端调用前拒绝 `\*`。例如，递归忽略隐藏
+内容、JSON 文件和以 `output` 开头的内容：
 
 ```bash
 atomgit upload ./data --repo-id user/my-dataset \
@@ -203,9 +203,9 @@ atomgit upload ./data --repo-id user/my-dataset \
   --repo-type dataset
 ```
 
-CLI 在应用 `--ignore` 前打印原目录的文件数量和大小，因此该统计可能大于实际
-上传集合。底层的 `Upload N LFS files` 只统计过滤后仍需传输的 LFS 文件，也不
-包含随提交发送的普通小文件。
+CLI 的文件数量和大小统计会先应用与上传相同的 `--ignore` 规则，并排除 HF 断点
+续传元数据，因此展示值与实际上传集合一致。底层的 `Upload N LFS files` 仍只
+统计过滤后需要传输的 LFS 文件，不包含随提交发送的普通小文件。
 
 为避免 Hugging Face 上传实现读取选定路径之外的内容，上传文件、上传目录根路径
 以及目录树中的文件、目录或失效符号链接都会在读取登录凭证和发送远端请求前被
@@ -233,13 +233,20 @@ atomgit upload ./large-model --repo-id user/large-model \
 
 # 单文件无本地拷贝，直接上传到仓库内指定路径
 atomgit upload ./weights.bin --repo-id user/model -p checkpoints/
+
+# 清空 AtomGit 产生的本地缓存
+atomgit cache clear
 ```
 
 > ⚠️ 注意：CLI resumable 目录上传会在
 > `~/.cache/atomgit/upload-projections/` 建立按源目录、仓库、revision 和远端前缀
 > 隔离的稳定投影，避免不同仓库误用同一份 HF 元数据。HF large-folder 接口本身
 > 没有 `path_in_repo`，投影也用于表达远端前缀。文件优先使用硬链接；跨文件系统
-> 无法硬链接时会复制并占用额外磁盘。large-folder 仍不支持单一提交说明，需指定
+> 无法硬链接时仅创建符号链接，不复制源文件字节；若两种链接均不可用则安全失败。
+> 程序内部按 20 个文件顺序分批上传，不改变源目录内容。commit 限流会遵循
+> `Retry-After` 或指数退避；响应超时后先核对远端对象，确认未提交才按
+> `20 → 10 → 5 → 2 → 1` 降批。连续失败会退出并保留断点元数据，而不是无限
+> 重试。large-folder 仍不支持单一提交说明，需指定
 > `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
 > CLI 未指定时自动使用 `model`。
 

@@ -1,11 +1,14 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List, Set
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urljoin, urlsplit
 from contextlib import ExitStack, contextmanager
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 import errno
 import hashlib
 import ntpath
 import os
+import random
 import shutil
 import json
 import socket
@@ -16,6 +19,8 @@ import urllib.error
 import multiprocessing
 import tempfile
 import time
+
+import httpx
 
 
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
@@ -32,9 +37,13 @@ configure_hf_environment()
 
 from huggingface_hub import (
     get_hf_file_metadata, hf_hub_download, upload_folder, create_repo, snapshot_download,
-    constants as hf_constants, HfApi,
+    constants as hf_constants, HfApi, close_session as close_hf_session,
 )
 from huggingface_hub.file_download import http_get as hf_http_get
+from huggingface_hub._local_folder import (
+    get_local_upload_paths,
+    read_upload_metadata,
+)
 
 try:
     from .config import config
@@ -1714,17 +1723,352 @@ def _download_atomgit_file(
     raise last_error
 
 
-def _run_resumable_upload(token, kwargs, result_queue):
+_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
+_RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
+_RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
+_RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
+_RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
+
+
+class ResumableCommitError(RuntimeError):
+    """A resumable commit could not complete under the bounded retry policy."""
+
+
+def _commit_error_status(error: BaseException) -> Optional[int]:
+    response = getattr(error, "response", None)
+    status_code = getattr(response, "status_code", None)
+    return status_code if isinstance(status_code, int) else None
+
+
+def _commit_retry_after(error: BaseException) -> Optional[float]:
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", None)
+    value = headers.get("Retry-After") if headers is not None else None
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except (TypeError, ValueError):
+        try:
+            retry_at = parsedate_to_datetime(value)
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=timezone.utc)
+            return max(
+                0.0,
+                (retry_at - datetime.now(timezone.utc)).total_seconds(),
+            )
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+
+def _is_ambiguous_commit_error(error: BaseException) -> bool:
+    status_code = _commit_error_status(error)
+    if status_code in (502, 503, 504):
+        return True
+    return isinstance(
+        error,
+        (
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            TimeoutError,
+            ConnectionError,
+            socket.timeout,
+        ),
+    )
+
+
+def _is_retryable_commit_error(error: BaseException) -> bool:
+    status_code = _commit_error_status(error)
+    if status_code in (429, 502, 503, 504):
+        return True
+    return isinstance(
+        error,
+        (
+            httpx.TimeoutException,
+            httpx.NetworkError,
+            TimeoutError,
+            ConnectionError,
+            socket.timeout,
+        ),
+    )
+
+
+def _is_reducible_commit_error(error: BaseException) -> bool:
+    status_code = _commit_error_status(error)
+    if status_code in (413, 502, 503, 504):
+        return True
+    return isinstance(
+        error,
+        (httpx.ReadTimeout, httpx.WriteTimeout, TimeoutError, socket.timeout),
+    )
+
+
+def _operation_git_sha1(operation) -> Optional[str]:
+    upload_info = getattr(operation, "upload_info", None)
+    size = getattr(upload_info, "size", None)
+    source = getattr(operation, "path_or_fileobj", None)
+    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        return None
+    digest = hashlib.sha1()
+    digest.update(b"blob " + str(size).encode("ascii") + b"\0")
+    try:
+        if isinstance(source, bytes):
+            digest.update(source)
+        elif isinstance(source, (str, Path)):
+            with Path(source).open("rb") as stream:
+                while True:
+                    chunk = stream.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+        elif hasattr(source, "read"):
+            position = source.tell()
+            try:
+                source.seek(0)
+                while True:
+                    chunk = source.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+            finally:
+                source.seek(position)
+        else:
+            return None
+    except (OSError, ValueError, AttributeError):
+        return None
+    return digest.hexdigest()
+
+
+def _reconcile_resumable_commit_operations(
+    *, repo_id: str, repo_type: str, revision: str, operations, token: str
+) -> Set[str]:
+    """Return paths whose remote object identity matches the commit operation."""
+    if revision not in (None, "main"):
+        return set()
+    matched = set()
+    for operation in operations:
+        path_in_repo = getattr(operation, "path_in_repo", None)
+        upload_info = getattr(operation, "upload_info", None)
+        if not isinstance(path_in_repo, str) or upload_info is None:
+            continue
+        try:
+            algorithm, remote_digest, remote_size = _atomgit_file_checksum(
+                repo_id, repo_type, path_in_repo, token
+            )
+        except Exception:
+            continue
+        local_size = getattr(upload_info, "size", None)
+        if remote_size != local_size:
+            continue
+        if algorithm == "sha256":
+            local_sha256 = getattr(upload_info, "sha256", None)
+            if isinstance(local_sha256, bytes) and local_sha256.hex() == remote_digest:
+                matched.add(path_in_repo)
+        elif algorithm == "git-sha1":
+            if _operation_git_sha1(operation) == remote_digest:
+                matched.add(path_in_repo)
+    return matched
+
+
+def _next_resumable_commit_batch_size(item_count: int) -> int:
+    for batch_size in _RESUMABLE_COMMIT_BATCH_SIZES:
+        if batch_size < item_count:
+            return batch_size
+    return 1
+
+
+def _mark_resumable_operations_committed(
+    folder_path: Path, operations
+) -> None:
+    """Persist successful sub-commits before the outer HF batch completes."""
+    folder_path = Path(folder_path)
+    for operation in operations:
+        path_in_repo = getattr(operation, "path_in_repo", None)
+        upload_info = getattr(operation, "upload_info", None)
+        local_sha256 = getattr(upload_info, "sha256", None)
+        if not isinstance(path_in_repo, str) or not isinstance(local_sha256, bytes):
+            raise ResumableCommitError(
+                "resumable commit metadata is unavailable"
+            )
+        paths = get_local_upload_paths(folder_path, path_in_repo)
+        metadata = read_upload_metadata(folder_path, path_in_repo)
+        if metadata.sha256 != local_sha256.hex():
+            raise ResumableCommitError(
+                "resumable commit metadata changed during upload"
+            )
+        metadata.is_committed = True
+        metadata.save(paths)
+
+
+class _ResumableCommitController:
+    """Apply AtomGit-specific retry and reconciliation to HF commit calls."""
+
+    def __init__(
+        self,
+        create_commit,
+        *,
+        token: str,
+        sleep=time.sleep,
+        jitter=None,
+        reconcile=_reconcile_resumable_commit_operations,
+        max_attempts: int = _RESUMABLE_COMMIT_MAX_ATTEMPTS,
+        mark_committed=None,
+        fatal_callback=None,
+    ):
+        self._create_commit = create_commit
+        self._token = token
+        self._sleep = sleep
+        self._jitter = jitter or (
+            lambda delay: random.uniform(0.0, min(1.0, delay * 0.1))
+        )
+        self._reconcile = reconcile
+        self._max_attempts = max_attempts
+        self._mark_committed = mark_committed or (lambda operations: None)
+        self._fatal_callback = fatal_callback
+
+    def _raise_fatal(self, error: BaseException, item_count: int):
+        status_code = _commit_error_status(error)
+        if status_code is not None:
+            detail = f"HTTP {status_code}"
+        else:
+            detail = type(error).__name__
+        wrapped = ResumableCommitError(
+            f"resumable commit failed for {item_count} file(s): {detail}"
+        )
+        if self._fatal_callback is not None:
+            self._fatal_callback(wrapped)
+        raise wrapped from error
+
+    def _retry_delay(self, error: BaseException, attempt: int) -> float:
+        retry_after = _commit_retry_after(error)
+        if retry_after is not None:
+            return retry_after
+        delay = min(
+            _RESUMABLE_COMMIT_BACKOFF_BASE * (2 ** (attempt - 1)),
+            _RESUMABLE_COMMIT_BACKOFF_CAP,
+        )
+        return delay + self._jitter(delay)
+
+    def _commit_group(self, args, kwargs, operations):
+        operations = list(operations)
+        attempts = 0
+        last_error = None
+        while operations and attempts < self._max_attempts:
+            attempts += 1
+            call_kwargs = dict(kwargs)
+            call_kwargs["operations"] = operations
+            try:
+                result = self._create_commit(*args, **call_kwargs)
+                self._mark_committed(operations)
+                return result
+            except Exception as error:
+                last_error = error
+                if _is_ambiguous_commit_error(error):
+                    matched = self._reconcile(
+                        repo_id=call_kwargs.get("repo_id"),
+                        repo_type=call_kwargs.get("repo_type") or "model",
+                        revision=call_kwargs.get("revision") or "main",
+                        operations=operations,
+                        token=self._token,
+                    )
+                    matched_operations = [
+                        operation for operation in operations
+                        if getattr(operation, "path_in_repo", None) in matched
+                    ]
+                    if matched_operations:
+                        try:
+                            self._mark_committed(matched_operations)
+                        except Exception as metadata_error:
+                            self._raise_fatal(
+                                metadata_error, len(matched_operations)
+                            )
+                    operations = [
+                        operation for operation in operations
+                        if getattr(operation, "path_in_repo", None) not in matched
+                    ]
+                    if not operations:
+                        return None
+                if _commit_error_status(error) == 413:
+                    break
+                if not _is_retryable_commit_error(error):
+                    self._raise_fatal(error, len(operations))
+                if attempts < self._max_attempts:
+                    self._sleep(self._retry_delay(error, attempts))
+
+        if not operations:
+            return None
+        if (
+            len(operations) == 1
+            or not _is_reducible_commit_error(last_error)
+        ):
+            self._raise_fatal(last_error, len(operations))
+
+        batch_size = _next_resumable_commit_batch_size(len(operations))
+        result = None
+        for index in range(0, len(operations), batch_size):
+            result = self._commit_group(
+                args,
+                kwargs,
+                operations[index:index + batch_size],
+            )
+        return result
+
+    def create_commit(self, *args, **kwargs):
+        operations = list(kwargs.get("operations", ()))
+        if not operations:
+            return self._create_commit(*args, **kwargs)
+        return self._commit_group(args, kwargs, operations)
+
+
+def _run_resumable_upload(
+    token, kwargs, result_queue,
+    request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+):
     """Run HF's resumable uploader in an isolated child process.
 
     The child is deliberately short-lived so a timed-out transfer can be
     terminated without leaving worker threads running in the CLI process.
     """
+    original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    result_sent = False
+
+    def fatal_exit(error):
+        nonlocal result_sent
+        if multiprocessing.current_process().name == "MainProcess":
+            return
+        if not result_sent:
+            result_queue.put((False, (type(error).__name__, str(error))))
+            result_sent = True
+            result_queue.close()
+            result_queue.join_thread()
+        os._exit(1)
+
     try:
-        HfApi(token=token).upload_large_folder(**kwargs)
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
+        close_hf_session()
+        client = HfApi(token=token)
+        create_commit = getattr(client, "create_commit", None)
+        if callable(create_commit):
+            controller = _ResumableCommitController(
+                create_commit,
+                token=token,
+                mark_committed=lambda operations: (
+                    _mark_resumable_operations_committed(
+                        Path(kwargs["folder_path"]), operations
+                    )
+                ),
+                fatal_callback=fatal_exit,
+            )
+            client.create_commit = controller.create_commit
+        client.upload_large_folder(**kwargs)
         result_queue.put((True, None))
+        result_sent = True
     except BaseException as exc:
         result_queue.put((False, (type(exc).__name__, str(exc))))
+        result_sent = True
+    finally:
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+        close_hf_session()
 
 
 class ResumableProjectionError(ValueError):
@@ -1773,6 +2117,8 @@ def _source_projection_files(source: Path):
             candidate = root / name
             if candidate.is_symlink():
                 raise ValueError("上传路径包含符号链接，已拒绝上传")
+            if name == ".git":
+                continue
             relative = candidate.relative_to(source)
             if tuple(part.casefold() for part in relative.parts[:2]) != (
                 ".cache", "huggingface"
@@ -1795,7 +2141,12 @@ def _source_projection_files(source: Path):
 def _projection_file_is_current(
     source: Path, destination: Path, source_stat
 ) -> bool:
-    if destination.is_symlink() or not destination.is_file():
+    if destination.is_symlink():
+        try:
+            return os.path.samefile(source, destination)
+        except OSError:
+            return False
+    if not destination.is_file():
         return False
     try:
         if os.path.samefile(source, destination):
@@ -1821,6 +2172,7 @@ def _sync_resumable_projection(
     projection: Path,
     prefix: str = None,
     ignore_patterns=None,
+    selected_paths: Optional[Set[Path]] = None,
 ) -> None:
     """Mirror source files below prefix while retaining HF metadata at root."""
     payload_root = (
@@ -1835,6 +2187,8 @@ def _sync_resumable_projection(
         key=lambda item: item[0].as_posix(),
     )
     for relative, source_file, source_stat in source_files:
+        if selected_paths is not None and relative not in selected_paths:
+            continue
         desired_paths.add(relative)
         destination = payload_root / relative
         if _is_projection_hf_metadata(destination, projection):
@@ -1842,8 +2196,6 @@ def _sync_resumable_projection(
                 "上传内容与 HF 断点续传元数据路径冲突，请使用 --no-resumable"
             )
         _ensure_projection_directory(destination.parent, projection)
-        if destination.is_symlink():
-            raise ResumableProjectionError("断点续传投影缓存包含符号链接")
         if destination.is_dir():
             shutil.rmtree(destination)
         elif _projection_file_is_current(source_file, destination, source_stat):
@@ -1854,7 +2206,12 @@ def _sync_resumable_projection(
         try:
             os.link(source_file, destination)
         except OSError:
-            shutil.copy2(source_file, destination)
+            try:
+                os.symlink(source_file, destination)
+            except OSError as error:
+                raise ResumableProjectionError(
+                    "无法为断点续传创建无副本投影；请确认缓存目录与源目录支持硬链接或符号链接"
+                ) from error
 
     for root_name, directory_names, filenames in os.walk(
         str(payload_root), topdown=False, followlinks=False
@@ -1862,8 +2219,6 @@ def _sync_resumable_projection(
         root = Path(root_name)
         for name in filenames:
             candidate = root / name
-            if candidate.is_symlink():
-                raise ResumableProjectionError("断点续传投影缓存包含符号链接")
             relative = candidate.relative_to(payload_root)
             if _is_projection_hf_metadata(candidate, projection):
                 continue
@@ -1872,7 +2227,8 @@ def _sync_resumable_projection(
         for name in directory_names:
             candidate = root / name
             if candidate.is_symlink():
-                raise ResumableProjectionError("断点续传投影缓存包含符号链接")
+                candidate.unlink()
+                continue
             relative = candidate.relative_to(payload_root)
             if _is_projection_hf_metadata(candidate, projection):
                 continue
@@ -1889,6 +2245,8 @@ def _prepare_resumable_upload_projection(
     revision: str,
     path_in_repo: str = None,
     ignore_patterns=None,
+    selected_paths: Optional[Set[Path]] = None,
+    batch_key: str = "all",
 ) -> Path:
     """Build or refresh one stable large-folder projection for a remote prefix."""
     parts = path_in_repo.split("/") if path_in_repo else []
@@ -1918,15 +2276,47 @@ def _prepare_resumable_upload_projection(
             repo_type,
             revision or "main",
             path_in_repo or "",
+            batch_key,
         )
     )
     projection = cache_root / hashlib.sha256(identity.encode("utf-8")).hexdigest()
     _ensure_projection_directory(projection, cache_root)
     os.chmod(projection, 0o700)
     _sync_resumable_projection(
-        source, projection, path_in_repo, ignore_patterns=ignore_patterns
+        source,
+        projection,
+        path_in_repo,
+        ignore_patterns=ignore_patterns,
+        selected_paths=selected_paths,
     )
     return projection
+
+
+def _collect_resumable_upload_files(source: Path, ignore_patterns=None):
+    """Return deterministic source-relative files selected for upload."""
+    source_files = filter_repo_objects(
+        _source_projection_files(source),
+        ignore_patterns=ignore_patterns,
+        key=lambda item: item[0].as_posix(),
+    )
+    return sorted(list(source_files), key=lambda item: item[0].as_posix())
+
+
+def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
+    """Call HF upload_folder while honoring the requested commit thread count."""
+    if num_workers == 5:
+        return upload_folder(**upload_kwargs)
+    kwargs = dict(upload_kwargs)
+    token = kwargs.pop("token", None)
+    client = HfApi(token=token)
+    original_create_commit = client.create_commit
+
+    def create_commit_with_workers(*args, **call_kwargs):
+        call_kwargs["num_threads"] = num_workers
+        return original_create_commit(*args, **call_kwargs)
+
+    client.create_commit = create_commit_with_workers
+    return client.upload_folder(**kwargs)
 
 
 def _prefix_resumable_ignore_patterns(path_in_repo: str, ignore_patterns):
@@ -1999,6 +2389,24 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
 
     if isinstance(e, ResumableProjectionError):
         return "本地投影失败", msg
+
+    if "429" in msg or "too many requests" in msg.lower():
+        return (
+            "请求限流",
+            "服务端持续限流，上传已停止且断点状态已保留；请稍后重新执行同一命令。",
+        )
+
+    if "413" in msg:
+        return (
+            "提交过大",
+            "提交已降至单文件仍超过服务端限制；断点状态已保留，请联系平台支持。",
+        )
+
+    if any(code in msg for code in ("502", "503", "504")):
+        return (
+            "服务暂不可用",
+            "服务端暂时不可用，上传断点状态已保留；请稍后重新执行同一命令。",
+        )
 
     # 请求参数错误
     if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
@@ -2391,12 +2799,13 @@ class HuggingFaceAPI:
     
     def upload_folder(self, file_path: Path, repo_id: str,
                    remote_path: str = None, message: str = None,
-                   upload_timeout: float = 300.0,
+                   upload_timeout: Optional[float] = None,
                    progress_bar: bool = True,
                    path_in_repo: str = None,
                    repo_type: str = None,
                    revision: str = None,
-                   ignore_patterns=None) -> bool:
+                   ignore_patterns=None,
+                   num_workers: int = 5) -> bool:
         """上传单个文件 - 使用Hugging Face Hub SDK
 
         优先使用 HF ``upload_file`` 直接以文件路径上传，避免旧实现中
@@ -2447,7 +2856,13 @@ class HuggingFaceAPI:
             commit_message = message or "Upload folder using atomgit client"
             normalized_repo_id = self._normalize_repo_id(repo_id)
             # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-            hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+            request_timeout = (
+                upload_timeout
+                if upload_timeout is not None
+                else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+            )
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
+            close_hf_session()
 
             try:
                 # 路径2（推荐）：直接 upload_file，无本地拷贝
@@ -2501,6 +2916,7 @@ class HuggingFaceAPI:
                     return True
             finally:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+                close_hf_session()
                 _restore_progress_bar_state(original_progress_state)
         except Exception as e:
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
@@ -2510,14 +2926,14 @@ class HuggingFaceAPI:
 
     def upload_directory(self, dir_path: Path, repo_id: str,
                         message: str = None, progress_callback=None,
-                        upload_timeout: float = 300.0,
+                        upload_timeout: Optional[float] = None,
                         progress_bar: bool = True,
                         path_in_repo: str = None,
                         repo_type: str = None,
                         revision: str = None,
                         ignore_patterns=None,
                         resumable: bool = False,
-                        num_workers: int = None) -> bool:
+                        num_workers: int = 5) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
@@ -2537,8 +2953,7 @@ class HuggingFaceAPI:
                 保留 HF 元数据。该模式不支持单一
                 ``message`` / ``commit_message``（会产生多次提交），且 HF
                 要求 ``repo_type`` 必填，为空时默认 ``model``。
-            num_workers: 仅 ``resumable=True`` 生效，并发 worker 数；为空时
-                由 HF 默认决定。
+            num_workers: 上传 worker 数，默认为 5；适用于断点续传和普通目录上传。
         """
         if not is_supported_upload_revision(revision):
             print("上传 revision 名称不合法，已拒绝上传")
@@ -2571,62 +2986,95 @@ class HuggingFaceAPI:
 
             try:
                 commit_message = message or "Upload folder using atomgit client"
-                hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
+                request_timeout = (
+                    upload_timeout
+                    if upload_timeout is not None
+                    else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+                )
+                hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
+                close_hf_session()
 
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     normalized_repo_id = self._normalize_repo_id(repo_id)
-                    upload_root = _prepare_resumable_upload_projection(
-                        dir_path,
-                        normalized_repo_id,
-                        eff_repo_type,
-                        revision,
-                        pipr,
-                        ignore_patterns,
+                    selected_files = _collect_resumable_upload_files(
+                        dir_path, ignore_patterns
                     )
-                    lf_kwargs = dict(
-                        repo_id=normalized_repo_id,
-                        folder_path=str(upload_root),
-                        repo_type=eff_repo_type,
+                    batches = [
+                        selected_files[index:index + 20]
+                        for index in range(0, len(selected_files), 20)
+                    ] or [[]]
+                    upload_deadline = (
+                        None
+                        if upload_timeout is None
+                        else time.monotonic() + upload_timeout
                     )
-                    if revision is not None:
-                        lf_kwargs['revision'] = revision
-                    if ignore_patterns:
-                        lf_kwargs['ignore_patterns'] = (
-                            _prefix_resumable_ignore_patterns(pipr, ignore_patterns)
+                    for batch_index, batch in enumerate(batches):
+                        selected_paths = {item[0] for item in batch}
+                        upload_root = _prepare_resumable_upload_projection(
+                            dir_path,
+                            normalized_repo_id,
+                            eff_repo_type,
+                            revision,
+                            pipr,
+                            ignore_patterns=None,
+                            selected_paths=selected_paths,
+                            batch_key=str(batch_index),
                         )
-                    if num_workers is not None:
-                        lf_kwargs['num_workers'] = num_workers
-                    # 在隔离进程中运行，超时后可终止 HF 内部 worker，避免
-                    # upload_large_folder 阻塞 CLI 或错误返回成功。
-                    methods = multiprocessing.get_all_start_methods()
-                    ctx = multiprocessing.get_context(
-                        "fork" if "fork" in methods else "spawn"
-                    )
-                    result_queue = ctx.Queue()
-                    process = ctx.Process(
-                        target=_run_resumable_upload,
-                        args=(credentials['token'], lf_kwargs, result_queue),
-                    )
-                    process.daemon = True
-                    process.start()
-                    process.join(upload_timeout)
-                    if process.is_alive():
-                        process.terminate()
-                        process.join(2)
-                        raise TimeoutError(
-                            f"resumable upload timed out after {upload_timeout}s"
+                        lf_kwargs = dict(
+                            repo_id=normalized_repo_id,
+                            folder_path=str(upload_root),
+                            repo_type=eff_repo_type,
+                            num_workers=num_workers or 5,
                         )
-                    try:
-                        ok, error = result_queue.get(timeout=1)
-                    except Exception as exc:
-                        raise RuntimeError(
-                            "resumable upload worker exited without a result"
-                        ) from exc
-                    if not ok:
-                        name, message = error
-                        raise RuntimeError(f"{name}: {message}")
+                        if revision is not None:
+                            lf_kwargs['revision'] = revision
+                        if ignore_patterns:
+                            lf_kwargs['ignore_patterns'] = (
+                                _prefix_resumable_ignore_patterns(pipr, ignore_patterns)
+                            )
+                        # 在隔离进程中运行，超时后可终止 HF 内部 worker，避免
+                        # upload_large_folder 阻塞 CLI 或错误返回成功。None 表示不设墙钟。
+                        methods = multiprocessing.get_all_start_methods()
+                        ctx = multiprocessing.get_context(
+                            "fork" if "fork" in methods else "spawn"
+                        )
+                        result_queue = ctx.Queue()
+                        process = ctx.Process(
+                            target=_run_resumable_upload,
+                            args=(
+                                credentials['token'],
+                                lf_kwargs,
+                                result_queue,
+                                request_timeout,
+                            ),
+                        )
+                        process.daemon = True
+                        remaining_timeout = None
+                        if upload_deadline is not None:
+                            remaining_timeout = upload_deadline - time.monotonic()
+                            if remaining_timeout <= 0:
+                                raise TimeoutError(
+                                    f"resumable upload timed out after {upload_timeout}s"
+                                )
+                        process.start()
+                        process.join(remaining_timeout)
+                        if process.is_alive():
+                            process.terminate()
+                            process.join(2)
+                            raise TimeoutError(
+                                f"resumable upload timed out after {upload_timeout}s"
+                            )
+                        try:
+                            ok, error = result_queue.get(timeout=1)
+                        except Exception as exc:
+                            raise RuntimeError(
+                                "resumable upload worker exited without a result"
+                            ) from exc
+                        if not ok:
+                            name, error_message = error
+                            raise RuntimeError(f"{name}: {error_message}")
                 else:
                     # 仓库内目标前缀：空 → "./"（根目录）
                     upload_path_in_repo = pipr + "/" if pipr else "./"
@@ -2642,13 +3090,26 @@ class HuggingFaceAPI:
                         upload_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         upload_kwargs['revision'] = revision
-                    if ignore_patterns:
-                        upload_kwargs['ignore_patterns'] = ignore_patterns
-                    upload_folder(**upload_kwargs)
+                    selected_files = _collect_resumable_upload_files(
+                        dir_path, ignore_patterns
+                    )
+                    batches = [
+                        selected_files[index:index + 20]
+                        for index in range(0, len(selected_files), 20)
+                    ] or [[]]
+                    for batch in batches:
+                        if batch:
+                            upload_kwargs['allow_patterns'] = [
+                                item[0].as_posix() for item in batch
+                            ]
+                        if ignore_patterns:
+                            upload_kwargs['ignore_patterns'] = ignore_patterns
+                        _upload_folder_with_workers(upload_kwargs, num_workers or 5)
 
                 return True
             finally:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+                close_hf_session()
                 _restore_progress_bar_state(original_progress_state)
 
         except Exception as e:
