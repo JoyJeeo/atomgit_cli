@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -13,17 +13,20 @@ The active remote Issue is GitHub #21:
 ## Handoff Snapshot
 
 - Updated: `2026-08-10 +0800`
-- Status: `active`
-- Phase: `human accepted; authorized local commit, merge into yuto, and push yuto`
+- Status: `completed`
+- Phase: `delivered to github/yuto; remote Issue remains open pending explicit transition authorization`
 - Base branch: `yuto`
 - Task branch: `codex/issue-21-resumable-commit-retries`
 - Base commit: `3b86179`
-- Current HEAD: `3b86179`
-- Worktree state: `modified; preserves the uncommitted upload follow-up implementation on which Issue #21 depends`
+- Task commit: `ed81d18 fix(upload): harden large upload workflows`
+- Merge commit: `89160ca merge: harden large upload workflows`
+- Current HEAD: `89160ca`
+- Remote delivery: `github/yuto verified at 89160caf7327f89147e3a93ddf9b467119718786`
+- Worktree state: `clean and synchronized with github/yuto`
 - Changed paths: `.ai/TASK.md`, `api.py`, `cli.py`, `utils.py`, `README.md`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_upload_ignore.py`, `tests/test_upload_validation.py`, `tests/test_cache_clear.py`, `tests/test_resumable_commit_policy.py`, `tests/test_upload_batching.py`
 - Required worktree: `continue in this same worktree; preserve all existing task-related changes`
-- Last completed action: `completed implementation, final offline verification, and independent review with APPROVED verdict`
-- Next exact action: `commit the task branch, merge it locally into yuto, push only yuto, and record delivery evidence; do not close the remote Issue or run a live upload`
+- Last completed action: `committed the task branch, merged it locally into yuto, pushed only yuto, and verified the remote branch`
+- Next exact action: `none for implementation; close or otherwise transition GitHub Issue #21 only after explicit user authorization`
 - Blockers / open questions: `no implementation blocker; live AtomGit verification is not authorized for this phase`
 - Decisions constraining the next action: `keep huggingface-hub 1.1.7, resumable directory uploads by default, outer batches of at most 20 files, default workers of 5, and the dataset-to-model compatibility write route`
 - Tests passed: `python tests/test_resumable_commit_policy.py -> 36/36; complete upload capability group passed; python tests/run_cli_baseline.py -> 65 passed in 46.29s; python -m compileall -q ., python -m pip check, and git diff --check passed`
@@ -75,7 +78,9 @@ The active remote Issue is GitHub #21:
 
 ## Closure
 
-- Status: `accepted; delivery in progress`
+- Status: `completed and delivered`
 - Human acceptance: `accepted by explicit user instruction on 2026-08-10`
 - Independent review: `APPROVED after resolving partial sub-batch metadata persistence, Retry-After truncation, actionable error classification, shared deadline, HTTP 413 reduction, and non-reducible connection failure findings`
-- Delivery: `task-branch commit, local yuto merge, and yuto push authorized; pending execution`
+- Delivery: `task commit ed81d18 merged by 89160ca; github/yuto verified at 89160caf7327f89147e3a93ddf9b467119718786`
+- Remote Issue: `GitHub #21 remains open because Issue transition was not authorized`
+- Live verification: `not run; no live AtomGit write was authorized`
