@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -13,20 +13,20 @@ remote GitHub Issue.
 ## Handoff Snapshot
 
 - Updated: `2026-08-11 +0800`
-- Status: `active`
-- Phase: `corrective implementation verified and independently approved; ready for authorized commit, local merge, and yuto push`
+- Status: `completed`
+- Phase: `corrective implementation delivered to github/yuto after verification, independent review, authorized commit, and local merge`
 - Base branch: `yuto`
 - Task branch: `codex/resumable-v5-validation`
 - Base commit: `7a92a5f`
-- Task commit: `b5d9368 fix(upload): harden resumable existing-repo flow`
-- Merge commit: `e5e6394 merge: harden resumable existing-repo flow`
-- Current feature HEAD: `7a92a5f`
-- Remote delivery: `github/yuto currently at 7a92a5f; corrective delivery not pushed yet`
-- Worktree state: `corrective implementation, tests, docs, and handoff are uncommitted on the task branch`
+- Task commits: `b5d9368 fix(upload): harden resumable existing-repo flow; 3136870 fix(upload): validate resumable targets through v5`
+- Merge commits: `e5e6394 merge: harden resumable existing-repo flow; 711d0d9 merge: validate resumable targets through v5`
+- Current feature HEAD: `3136870`
+- Remote delivery: `github/yuto corrective merge verified at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
+- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
 - Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/upload_command_analysis.md`, `tests/test_dataset_resumable_route.py`, `tests/test_hf_api_contract.py`, `tests/test_resumable_recovery.py`, `tests/test_upload_batching.py`, `tests/test_upload_error_classify.py`, `tests/test_upload_resumable.py`
-- Required worktree: `continue in this same worktree while the correction is uncommitted`
-- Last completed action: `completed independent review with APPROVED verdict and no P0/P1/P2 findings after all corrective verification passed`
-- Next exact action: `commit the correction, merge it locally into yuto, and push only yuto`
+- Required worktree: `none; corrective implementation is delivered`
+- Last completed action: `pushed the authorized corrective local merge and verified github/yuto at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
+- Next exact action: `none; corrective implementation, verification, review, acceptance, merge, and push are complete`
 - Blockers / open questions: `none`
 - Decisions constraining the next action: `the upload target must pre-exist; resumable upload must not require namespace repository-creation permission; keep locked dependency versions and preserve existing resumable metadata`
 - Tests passed: `corrective offline verification in atomgit_cli: test_upload_resumable.py 47/47; test_upload_batching.py 9/9; test_upload_progress.py 28/28; test_resumable_commit_policy.py 51/51; test_upload_error_classify.py 42/42; test_hf_api_contract.py 13/13; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; final python tests/run_cli_baseline.py 65/65 isolated pytest cases in 51.01s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check; current-login read-only V5 validation of weixin_52273949/test_datasets succeeded`
@@ -94,5 +94,5 @@ remote GitHub Issue.
 - Definition of done: `passed; final diff is task-scoped, required offline checks pass, locked signatures were inspected, documentation agrees, and no credential or generated-artifact finding remains`
 - Independent review: `corrective review APPROVED with no P0/P1/P2 finding; checked V5 path encoding, authentication/permission/absence classification, total-timeout accounting, model/dataset compatibility, and credential handling`
 - Human acceptance: `accepted through the maintainer's explicit request to complete the full development, testing, commit, local merge, and push workflow on 2026-08-11`
-- Delivery: `original task commit b5d9368 merged by e5e6394 and recorded by 7a92a5f; corrective commit, merge, and push are pending`
+- Delivery: `original task commit b5d9368 merged by e5e6394; corrective task commit 3136870 merged by 711d0d9; github/yuto corrective merge verified at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
 - Live verification: `read-only V5 validation succeeded for weixin_52273949/test_datasets with the current login; no live upload or repository mutation was run`
