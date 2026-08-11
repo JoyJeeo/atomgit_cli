@@ -65,6 +65,7 @@ def main():
         "credentials": config.get_credentials,
         "monotonic": api_mod.time.monotonic,
         "read_metadata": api_mod.read_upload_metadata,
+        "v5_get": api_mod._atomgit_v5_get_json,
     }
     resumable_calls = []
     ordinary_calls = []
@@ -79,24 +80,6 @@ def main():
 
         def __init__(self, token=None):
             self.token = token
-
-        def list_repo_tree(self, repo_id, path_in_repo=None, *,
-                           recursive=False, expand=False, revision=None,
-                           repo_type=None, token=None):
-            resumable_events.append(("validate", repo_id))
-            target_validations.append({
-                "repo_id": repo_id,
-                "revision": revision,
-                "repo_type": repo_type,
-                "token": token,
-                "constructor_token": self.token,
-                "recursive": recursive,
-            })
-            if self.validation_consumes_timeout:
-                api_mod.time.monotonic()
-            if repo_id == self.missing_repo_id:
-                raise RuntimeError("Repository Not Found")
-            return []
 
         def upload_large_folder(self, **kwargs):
             resumable_events.append(("upload", kwargs["repo_id"]))
@@ -120,8 +103,23 @@ def main():
     def fake_upload_folder(**kwargs):
         ordinary_calls.append(kwargs)
 
+    def fake_v5_get(path, token, timeout=15):
+        repo_id = path.removeprefix("/repos/")
+        resumable_events.append(("validate", repo_id))
+        target_validations.append({
+            "path": path,
+            "token": token,
+            "timeout": timeout,
+        })
+        if FakeHfApi.validation_consumes_timeout:
+            api_mod.time.monotonic()
+        if repo_id == FakeHfApi.missing_repo_id:
+            raise RuntimeError("Repository Not Found")
+        return {"full_name": repo_id, "default_branch": "main"}
+
     api_mod.HfApi = FakeHfApi
     api_mod.upload_folder = fake_upload_folder
+    api_mod._atomgit_v5_get_json = fake_v5_get
     api_mod.multiprocessing.get_all_start_methods = lambda: ["fork"]
     api_mod.multiprocessing.get_context = lambda method: InlineContext()
     config.get_credentials = lambda: {"token": "offline-token"}
@@ -148,12 +146,9 @@ def main():
                 and len(resumable_calls) == 2
                 and len(target_validations) == 1
                 and target_validations[0] == {
-                    "repo_id": "user/repo",
-                    "revision": None,
-                    "repo_type": None,
-                    "token": None,
-                    "constructor_token": "offline-token",
-                    "recursive": False,
+                    "path": "/repos/user/repo",
+                    "token": "offline-token",
+                    "timeout": 300.0,
                 }
                 and resumable_events[:2]
                 == [("validate", "user/repo"), ("upload", "user/repo")]
@@ -358,6 +353,7 @@ def main():
         config.get_credentials = original["credentials"]
         api_mod.time.monotonic = original["monotonic"]
         api_mod.read_upload_metadata = original["read_metadata"]
+        api_mod._atomgit_v5_get_json = original["v5_get"]
 
 
 if __name__ == "__main__":

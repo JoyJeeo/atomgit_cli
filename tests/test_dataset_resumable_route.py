@@ -4,6 +4,7 @@
 import queue
 import sys
 import tempfile
+import urllib.error
 from pathlib import Path
 
 import atomgit  # noqa: F401
@@ -68,6 +69,7 @@ def main():
     original_credentials = config.get_credentials
     original_methods = api_mod.multiprocessing.get_all_start_methods
     original_context = api_mod.multiprocessing.get_context
+    original_v5_get = api_mod._atomgit_v5_get_json
     constructor_calls = []
     upload_calls = []
     validation_calls = []
@@ -75,18 +77,6 @@ def main():
     class StrictHfApi:
         def __init__(self, token=None):
             constructor_calls.append({"token": token})
-
-        def list_repo_tree(self, repo_id, path_in_repo=None, *,
-                           recursive=False, expand=False, revision=None,
-                           repo_type=None, token=None):
-            validation_calls.append({
-                "repo_id": repo_id,
-                "revision": revision,
-                "repo_type": repo_type,
-                "token": token,
-                "recursive": recursive,
-            })
-            return []
 
         def upload_large_folder(
             self,
@@ -114,6 +104,17 @@ def main():
             )
 
     api_mod.HfApi = StrictHfApi
+    def fake_v5_get(path, token, timeout=15):
+        validation_calls.append({
+            "path": path,
+            "token": token,
+            "timeout": timeout,
+        })
+        if "/branches/" in path:
+            return {"name": "dev"}
+        return {"full_name": "user/dataset", "default_branch": "main"}
+
+    api_mod._atomgit_v5_get_json = fake_v5_get
     config.get_credentials = lambda: {"token": "fake-dataset-resumable-token"}
     api_mod.multiprocessing.get_all_start_methods = lambda: ["fork"]
     api_mod.multiprocessing.get_context = lambda method: InlineContext()
@@ -137,17 +138,21 @@ def main():
             "token authenticates HfApi instance",
             constructor_calls == [
                 {"token": "fake-dataset-resumable-token"},
-                {"token": "fake-dataset-resumable-token"},
             ],
         )
-        check("dataset target validation uses the shared model route",
-              validation_calls == [{
-                  "repo_id": "user/dataset",
-                  "revision": "dev",
-                  "repo_type": None,
-                  "token": None,
-                  "recursive": False,
-              }])
+        check("dataset target and revision use V5 read-only validation",
+              validation_calls == [
+                  {
+                      "path": "/repos/user/dataset",
+                      "token": "fake-dataset-resumable-token",
+                      "timeout": 300.0,
+                  },
+                  {
+                      "path": "/repos/user/dataset/branches/dev",
+                      "token": "fake-dataset-resumable-token",
+                      "timeout": 300.0,
+                  },
+              ])
         check("exactly one large-folder call", len(upload_calls) == 1)
         if upload_calls:
             call = upload_calls[0]
@@ -156,11 +161,40 @@ def main():
             check("non-main revision forwarded", call["revision"] == "dev")
             check("ignore patterns forwarded", call["ignore_patterns"] == ["*.tmp"])
             check("worker count forwarded", call["num_workers"] == 3)
+
+        missing_revision_calls = []
+
+        def missing_revision_v5_get(path, token, timeout=15):
+            missing_revision_calls.append(path)
+            if "/branches/" in path:
+                raise urllib.error.HTTPError(path, 404, "Not Found", {}, None)
+            return {"full_name": "user/dataset", "default_branch": "main"}
+
+        api_mod._atomgit_v5_get_json = missing_revision_v5_get
+        try:
+            api_mod._validate_resumable_upload_target(
+                token="fake-dataset-resumable-token",
+                repo_id="user/dataset",
+                revision="feature/missing",
+            )
+        except api_mod.ResumableTargetRevisionError:
+            missing_revision_rejected = True
+        else:
+            missing_revision_rejected = False
+        check("missing revision is rejected", missing_revision_rejected)
+        check(
+            "revision path is URL encoded",
+            missing_revision_calls == [
+                "/repos/user/dataset",
+                "/repos/user/dataset/branches/feature%2Fmissing",
+            ],
+        )
     finally:
         api_mod.HfApi = original_api
         config.get_credentials = original_credentials
         api_mod.multiprocessing.get_all_start_methods = original_methods
         api_mod.multiprocessing.get_context = original_context
+        api_mod._atomgit_v5_get_json = original_v5_get
 
     passed = sum(1 for _, condition, _ in results if condition)
     print(f"summary: {passed}/{len(results)} passed")

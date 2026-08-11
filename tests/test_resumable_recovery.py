@@ -33,17 +33,17 @@ def main():
 
             original_hf_api = api_module.HfApi
             original_progress = api_module._set_progress_bar
+            original_v5_get = api_module._atomgit_v5_get_json
             calls = []
+
+            api_module._atomgit_v5_get_json = lambda *args, **kwargs: {
+                "full_name": "user/repo",
+                "default_branch": "main",
+            }
 
             class SlowHfApi:
                 def __init__(self, token=None):
                     calls.append(("init", token))
-
-                def list_repo_tree(self, repo_id, path_in_repo=None, *,
-                                   recursive=False, expand=False,
-                                   revision=None, repo_type=None, token=None):
-                    calls.append(("validate", repo_id))
-                    return []
 
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload", kwargs))
@@ -52,12 +52,6 @@ def main():
             class FastHfApi:
                 def __init__(self, token=None):
                     calls.append(("init-fast", token))
-
-                def list_repo_tree(self, repo_id, path_in_repo=None, *,
-                                   recursive=False, expand=False,
-                                   revision=None, repo_type=None, token=None):
-                    calls.append(("validate-fast", repo_id))
-                    return []
 
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload-fast", kwargs))
@@ -80,10 +74,15 @@ def main():
                 check("T3 timeout worker is terminated", True)
             finally:
                 api_module.HfApi = original_hf_api
+                api_module._atomgit_v5_get_json = original_v5_get
                 api_module._set_progress_bar = original_progress
 
             calls.clear()
             api_module.HfApi = FastHfApi
+            api_module._atomgit_v5_get_json = lambda *args, **kwargs: {
+                "full_name": "user/repo",
+                "default_branch": "main",
+            }
             try:
                 result = api_module.api.upload_directory(
                     source,
@@ -97,6 +96,7 @@ def main():
                 check("T5 successful worker completes within timeout", result is True)
             finally:
                 api_module.HfApi = original_hf_api
+                api_module._atomgit_v5_get_json = original_v5_get
 
     finally:
         if original_home is None:

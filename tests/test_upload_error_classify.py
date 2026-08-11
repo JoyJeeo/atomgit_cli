@@ -143,6 +143,9 @@ def main():
     case("U10 revision+404 文本 → 分支不存在",
          Exception("404 Client Error. revision 'dev' not found"),
          "分支")
+    case("U10b V5 分支校验失败 → 分支不存在",
+         api_mod.ResumableTargetRevisionError("target revision does not exist"),
+         "分支")
 
     # --- 请求参数错误 ---
     if _HF_ERR_OK:

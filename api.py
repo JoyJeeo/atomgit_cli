@@ -1738,6 +1738,10 @@ class ResumableUploadModeError(RuntimeError):
     """A server-selected resumable upload mode is unsafe for the file size."""
 
 
+class ResumableTargetRevisionError(RuntimeError):
+    """A requested resumable upload revision does not exist."""
+
+
 _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "authentication": "resumable worker authentication failed",
     "permission": "resumable worker permission check failed",
@@ -2697,18 +2701,34 @@ def _execute_resumable_upload_process(
 
 
 def _validate_resumable_upload_target(
-    *, token: str, repo_id: str, repo_type: str, revision: str = None
+    *, token: str, repo_id: str, revision: str = None,
+    request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
 ) -> None:
     """Perform one read-only repository/revision check before local hashing."""
-    client = HfApi(token=token)
-    list_repo_type = None if repo_type == "model" else repo_type
-    tree = client.list_repo_tree(
-        repo_id=repo_id,
-        recursive=False,
-        revision=revision,
-        repo_type=list_repo_type,
+    repo_path = _atomgit_v5_repo_path(repo_id)
+    repository = _atomgit_v5_get_json(
+        repo_path, token, timeout=request_timeout
     )
-    next(iter(tree), None)
+    if not isinstance(repository, dict):
+        raise ValueError("repository response is malformed")
+    if revision in (None, "main"):
+        return
+
+    branch_path = repo_path + "/branches/" + quote(revision, safe="")
+    try:
+        branch = _atomgit_v5_get_json(
+            branch_path, token, timeout=request_timeout
+        )
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            raise ResumableTargetRevisionError(
+                "target revision does not exist"
+            ) from error
+        raise
+    if not isinstance(branch, dict) or branch.get("name") != revision:
+        raise ResumableTargetRevisionError(
+            "target revision could not be verified"
+        )
 
 
 def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
@@ -2815,6 +2835,12 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "上传模式不安全",
             "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
             "中为该文件类型配置 Git LFS 后重试。断点状态已保留。",
+        )
+
+    if isinstance(e, ResumableTargetRevisionError):
+        return (
+            "分支/版本不存在",
+            "目标分支不存在且无法自动创建。请检查 revision 是否正确。",
         )
 
     msg = str(e)
@@ -3495,8 +3521,8 @@ class HuggingFaceAPI:
                     _validate_resumable_upload_target(
                         token=credentials['token'],
                         repo_id=normalized_repo_id,
-                        repo_type=eff_repo_type,
                         revision=revision,
+                        request_timeout=request_timeout,
                     )
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1

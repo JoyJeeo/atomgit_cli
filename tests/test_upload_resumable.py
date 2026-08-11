@@ -47,17 +47,6 @@ class FakeHfApi:
                  library_version=None, user_agent=None, headers=None):
         hfa_init_captured.append({"endpoint": endpoint, "token": token})
 
-    def list_repo_tree(self, repo_id, path_in_repo=None, *, recursive=False,
-                       expand=False, revision=None, repo_type=None, token=None):
-        validation_captured.append({
-            "repo_id": repo_id,
-            "revision": revision,
-            "repo_type": repo_type,
-            "token": token,
-            "recursive": recursive,
-        })
-        return []
-
     def upload_large_folder(self, repo_id, folder_path, *, repo_type,
                             revision=None, private=None, allow_patterns=None,
                             ignore_patterns=None, num_workers=None,
@@ -138,10 +127,23 @@ def main():
     original_methods = api_mod.multiprocessing.get_all_start_methods
     original_context = api_mod.multiprocessing.get_context
     original_hf_home = os.environ.get("HF_HOME")
+    original_v5_get = api_mod._atomgit_v5_get_json
+
+    def fake_v5_get(path, token, timeout=15):
+        validation_captured.append({
+            "path": path,
+            "token": token,
+            "timeout": timeout,
+        })
+        if "/branches/" in path:
+            return {"name": path.rsplit("/", 1)[-1]}
+        return {"full_name": path.removeprefix("/repos/"),
+                "default_branch": "main"}
 
     api_mod.upload_folder = fake_upload_folder
     api_mod.hf_upload_file = fake_upload_folder
     api_mod.HfApi = FakeHfApi
+    api_mod._atomgit_v5_get_json = fake_v5_get
     api_mod.multiprocessing.get_all_start_methods = lambda: ["fork"]
     api_mod.multiprocessing.get_context = lambda method: InlineContext()
     cfg_mod.config.is_logged_in = lambda: True
@@ -179,15 +181,13 @@ def main():
                 check("T1 root projection preserves relative file paths",
                       ulf_captured[0]["visible_files"] == ["a.txt", "b.txt"])
                 check("T1 HfApi constructor receives token",
-                      len(hfa_init_captured) == 2
+                      len(hfa_init_captured) == 1
                       and all(bool(call["token"]) for call in hfa_init_captured))
                 check("T1 target is validated once before large-folder upload",
                       validation_captured == [{
-                          "repo_id": "user/repo",
-                          "revision": None,
-                          "repo_type": None,
-                          "token": None,
-                          "recursive": False,
+                          "path": "/repos/user/repo",
+                          "token": "fake-token-never-print",
+                          "timeout": 300.0,
                       }])
                 first_projection = ulf_captured[0]["folder_path"]
                 root_sentinel = (
@@ -403,6 +403,7 @@ def main():
         api_mod.HfApi = original_hf_api
         api_mod.multiprocessing.get_all_start_methods = original_methods
         api_mod.multiprocessing.get_context = original_context
+        api_mod._atomgit_v5_get_json = original_v5_get
         if original_hf_home is None:
             os.environ.pop("HF_HOME", None)
         else:
