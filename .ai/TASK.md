@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -13,21 +13,24 @@ remote GitHub Issue.
 ## Handoff Snapshot
 
 - Updated: `2026-08-11 +0800`
-- Status: `active`
-- Phase: `implementation, post-fix verification, DoD audit, and final independent review approved; ready for authorized local delivery`
+- Status: `completed`
+- Phase: `automatic LFS policy repair delivered to github/yuto after verification, iterative independent review, authorized commit, and local merge`
 - Base branch: `yuto`
 - Task branch: `codex/auto-configure-lfs`
 - Base commit: `030db6c`
-- Current HEAD: `030db6c` (uncommitted authorized Issue diff)
-- Worktree state: `dirty authorized task work on codex/auto-configure-lfs`
+- Task commit: `188a16c feat(upload): auto-configure Git LFS policy`
+- Merge commit: `4b2fdd1 merge: add explicit Git LFS policy repair`
+- Current feature HEAD: `188a16c`
+- Remote delivery: `github/yuto merge verified at 4b2fdd146edf79461ce37911e70e8c039d9535fb`
+- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
 - Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `cli.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`
-- Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Last completed action: `preserved exact extension case, verified distinct case variants, passed focused 26/26 and the final 66-case gate, and received an APPROVED final independent review with no findings`
-- Next exact action: `commit the cohesive Issue diff, merge it locally into yuto, record final delivery identity, and push only yuto`
-- Blockers / open questions: `live AtomGit write verification is intentionally not authorized and must remain unperformed`
+- Required worktree: `none; the Issue is delivered`
+- Last completed action: `pushed the authorized feature merge and verified github/yuto at 4b2fdd146edf79461ce37911e70e8c039d9535fb`
+- Next exact action: `none; any real AtomGit service acceptance requires a separately named and authorized test repository`
+- Blockers / open questions: `none for offline delivery; live AtomGit write verification remains intentionally unperformed and requires separate authorization`
 - Decisions constraining the next action: `remote mutation requires explicit --auto-configure-lfs; inferred rules are validated extension patterns and the CLI warns that they affect the whole repository; use an isolated private buffer, exact revision, optimistic parent commit, bounded verification/retry, and preserve resumable metadata`
 - Tests passed: `offline in atomgit_cli: final python tests/test_auto_configure_lfs.py 26/26; earlier affected suites test_upload_resumable.py 47/47, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_upload_batching.py 9/9, test_dataset_resumable_route.py 11/11, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_cli_surface.py 50/50, test_cli_feature_baseline.py 51/51; final python tests/run_cli_baseline.py 66/66 isolated pytest cases in 53.26s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check`
-- Tests failed or not run: `the new focused regression failed at the expected pre-fix boundary before implementation; no post-fix offline failure remains; live AtomGit writes and real service acceptance were not run because they are not authorized`
+- Tests failed or not run: `the new focused regression failed at the expected pre-fix boundary before implementation; no post-fix offline failure remains; live AtomGit writes and real service acceptance were not run because they were not authorized`
 
 ## Active Issue Identity
 
@@ -93,5 +96,5 @@ remote GitHub Issue.
 - Definition of done: `passed: exactly one Issue active; diff is task-scoped; public CLI schema, focused regression, affected suites, full baseline, compile, dependency and diff checks pass; locked signatures inspected; buffer lifetime and global state are bounded; docs match; no credential or generated-artifact finding; unrun live test is explicitly disclosed`
 - Independent review: `APPROVED on the final fresh review after resolving all earlier P1/P2 findings; no open P0/P1/P2/P3 finding`
 - Human acceptance: `accepted through the maintainer's explicit authorization to implement, verify, independently review, commit, locally merge, and push yuto once the requested behavior and gates pass`
-- Delivery: `pending`
+- Delivery: `task commit 188a16c merged locally by 4b2fdd1; github/yuto verified at 4b2fdd146edf79461ce37911e70e8c039d9535fb; task branch remained local-only`
 - Live verification: `not authorized; no AtomGit repository may be written during this Issue, and openlet datasets are explicitly prohibited`
