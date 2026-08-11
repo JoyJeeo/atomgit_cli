@@ -180,9 +180,13 @@ def main():
                       ulf_captured[0]["folder_path"] != str(source))
                 check("T1 root projection preserves relative file paths",
                       ulf_captured[0]["visible_files"] == ["a.txt", "b.txt"])
-                check("T1 HfApi constructor receives token",
-                      len(hfa_init_captured) == 1
-                      and all(bool(call["token"]) for call in hfa_init_captured))
+                check(
+                    "T1 child HfApi receives AtomGit endpoint and token",
+                    hfa_init_captured == [{
+                        "endpoint": "https://hub.atomgit.com",
+                        "token": "fake-token-never-print",
+                    }],
+                )
                 check("T1 target is validated once before large-folder upload",
                       validation_captured == [{
                           "path": "/repos/user/repo",

@@ -78,7 +78,8 @@ def main():
         missing_repo_id = None
         validation_consumes_timeout = False
 
-        def __init__(self, token=None):
+        def __init__(self, endpoint=None, token=None):
+            self.endpoint = endpoint
             self.token = token
 
         def upload_large_folder(self, **kwargs):

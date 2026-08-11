@@ -129,7 +129,10 @@ large-folder 元数据保证；重新执行时只能可靠依赖已经完整存�
 resumable 分支调用：
 
 ```text
-HfApi(token=保存的_token).upload_large_folder(
+HfApi(
+    endpoint="https://hub.atomgit.com",
+    token=保存的_token,
+).upload_large_folder(
     repo_id=...,
     folder_path=...,
     repo_type=model,  # 用户选择 dataset 时也映射到共享兼容路由
@@ -139,9 +142,11 @@ HfApi(token=保存的_token).upload_large_folder(
 )
 ```
 
-当前锁定的 `huggingface-hub==1.1.7` 要求把 `token` 传给 `HfApi(token=...)`
-构造函数，`upload_large_folder()` 方法本身不接收 `token`。实现和严格签名测试
-均遵守该契约。私有 model 和 dataset 已分别用 399,300,506 字节文件完成真实
+当前锁定的 `huggingface-hub==1.1.7` 要求把 endpoint 和 `token` 传给
+`HfApi(endpoint="https://hub.atomgit.com", token=...)` 构造函数；显式 endpoint
+避免子进程回落到 `huggingface.co`。`upload_large_folder()` 方法本身不接收
+`token`。实现和严格签名测试均遵守该契约。私有 model 和 dataset 已分别用
+399,300,506 字节文件完成真实
 CLI 中断、恢复、下载与 SHA-256 验证。
 
 HF 1.1.7 在恢复元数据前固定调用 `create_repo(exist_ok=True)`。AtomGit CLI 不把
