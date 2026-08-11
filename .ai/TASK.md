@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -13,20 +13,20 @@ remote GitHub Issue.
 ## Handoff Snapshot
 
 - Updated: `2026-08-11 +0800`
-- Status: `active`
-- Phase: `endpoint correction verified and independently approved; ready for authorized commit, local merge, and yuto push`
+- Status: `completed`
+- Phase: `endpoint correction delivered to github/yuto after verification, independent review, authorized commit, and local merge`
 - Base branch: `yuto`
 - Task branch: `codex/resumable-endpoint`
 - Base commit: `925e823`
-- Task commits: `b5d9368 fix(upload): harden resumable existing-repo flow; 3136870 fix(upload): validate resumable targets through v5`
-- Merge commits: `e5e6394 merge: harden resumable existing-repo flow; 711d0d9 merge: validate resumable targets through v5`
-- Current feature HEAD: `925e823`
-- Remote delivery: `github/yuto currently at 925e823; endpoint correction not delivered yet`
-- Worktree state: `endpoint correction, regressions, documentation, and handoff are uncommitted on the task branch`
+- Task commits: `b5d9368 fix(upload): harden resumable existing-repo flow; 3136870 fix(upload): validate resumable targets through v5; b5a2154 fix(upload): pin resumable endpoint to AtomGit`
+- Merge commits: `e5e6394 merge: harden resumable existing-repo flow; 711d0d9 merge: validate resumable targets through v5; db19af1 merge: pin resumable endpoint to AtomGit`
+- Current feature HEAD: `b5a2154`
+- Remote delivery: `github/yuto endpoint merge verified at db19af1787b546fba7924c92032cf0b4e3f1c696`
+- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
 - Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/test_dataset_resumable_route.py`, `tests/test_resumable_commit_policy.py`, `tests/test_resumable_recovery.py`, `tests/test_upload_batching.py`, `tests/test_upload_resumable.py`
-- Required worktree: `continue in this same worktree while the endpoint correction is uncommitted`
-- Last completed action: `completed the second independent review with APPROVED verdict after resolving its P2 documentation-example finding`
-- Next exact action: `commit the endpoint correction, merge it locally into yuto, and push only yuto`
+- Required worktree: `none; endpoint correction is delivered`
+- Last completed action: `pushed the authorized endpoint-correction merge and verified github/yuto at db19af1787b546fba7924c92032cf0b4e3f1c696`
+- Next exact action: `none; endpoint correction, verification, review, acceptance, merge, and push are complete`
 - Blockers / open questions: `none`
 - Decisions constraining the next action: `the upload target must pre-exist; resumable upload must not require namespace repository-creation permission; keep locked dependency versions and preserve existing resumable metadata`
 - Tests passed: `endpoint correction in atomgit_cli: test_upload_resumable.py 47/47; test_resumable_commit_policy.py 51/51; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; test_upload_batching.py 9/9; test_hf_api_contract.py 13/13; final python tests/run_cli_baseline.py 65/65 isolated pytest cases in 51.72s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check; current-login AtomGit preupload policy probe for weixin_52273949/test_datasets succeeded without uploading content or creating a commit`
@@ -95,5 +95,5 @@ remote GitHub Issue.
 - Definition of done: `passed for the endpoint correction; final diff is task-scoped, required offline checks pass, locked signatures were inspected, documentation agrees, and no credential or generated-artifact finding remains`
 - Independent review: `APPROVED after resolving one P2 stale documentation example; no open P0/P1/P2 finding`
 - Human acceptance: `accepted through the maintainer's explicit request to complete the full development, testing, commit, local merge, and push workflow on 2026-08-11`
-- Delivery: `previous corrections are delivered through github/yuto at 925e823; endpoint correction is pending`
+- Delivery: `endpoint task commit b5a2154 merged by db19af1; github/yuto endpoint merge verified at db19af1787b546fba7924c92032cf0b4e3f1c696`
 - Live verification: `read-only V5 validation and a no-content/no-commit preupload policy query succeeded for weixin_52273949/test_datasets with the current login; no live content upload or repository mutation was run`
