@@ -327,7 +327,12 @@ def create_branch(repo_id, branch_name, source):
                    '--resumable 不能与 --message 同用')
 @click.option('--num-workers', 'num_workers', default=5, type=int,
               help='上传并发 worker 数，默认 5；目录普通/resumable 模式均可使用')
-def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, repo_type, revision, ignore, resumable, num_workers):
+@click.option('--auto-configure-lfs', 'auto_configure_lfs', is_flag=True,
+              default=False,
+              help='resumable 检测到超大 regular 文件时，提交仓库级 Git LFS 配置后重试')
+def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
+           repo_type, revision, ignore, resumable, num_workers,
+           auto_configure_lfs):
     """上传文件或目录到仓库"""
     if timeout_sec is not None and timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
@@ -367,6 +372,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
 
     if path.is_file():
         resumable = False if resumable is None else resumable
+        if auto_configure_lfs:
+            print_error("--auto-configure-lfs 仅支持 resumable 目录上传")
+            sys.exit(2)
         if resumable:
             print_error("--resumable 仅支持目录上传")
             sys.exit(2)
@@ -380,6 +388,9 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             resumable = not bool(message)
         if resumable and message:
             print_error("--resumable 不支持 --message")
+            sys.exit(2)
+        if auto_configure_lfs and not resumable:
+            print_error("--auto-configure-lfs 仅支持 resumable 目录上传")
             sys.exit(2)
     else:
         print_error(f"不支持的路径类型: {path}")
@@ -446,6 +457,10 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
             print_info(f"并发 worker: {num_workers}")
         if resumable:
             print_info("上传模式: 断点续传/分块 (resumable)")
+            if auto_configure_lfs:
+                print_info(
+                    "Git LFS 自动配置: 已启用；仅在检测到不安全模式时修改远端配置"
+                )
             if not repo_type:
                 print_info("提示：未指定 --repo-type，断点续传模式下默认按 model 处理")
         if not show_progress:
@@ -455,7 +470,8 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo, r
                                 progress_bar=show_progress, path_in_repo=path_in_repo,
                                 repo_type=repo_type, revision=revision,
                                 ignore_patterns=ignore_patterns,
-                                resumable=resumable, num_workers=num_workers):
+                                resumable=resumable, num_workers=num_workers,
+                                auto_configure_lfs=auto_configure_lfs):
             print_success(f"目录上传成功: {path}")
         else:
             print_error(f"目录上传失败: {path}")

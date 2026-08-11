@@ -243,6 +243,13 @@ EXPECTED_PUBLIC_SCHEMA = {
                 default=5,
                 parameter_type=("int",),
             ),
+            _option(
+                "auto_configure_lfs",
+                "--auto-configure-lfs",
+                default=False,
+                parameter_type=("bool",),
+                is_flag=True,
+            ),
         ),
     },
     ("download",): {
@@ -397,6 +404,7 @@ BASELINE_TEST_GROUPS = {
         "test_revision_rejection.py",
     ),
     "upload": (
+        "test_auto_configure_lfs.py",
         "test_upload_batching.py",
         "test_resumable_commit_policy.py",
         "test_dataset_resumable_route.py",
@@ -450,9 +458,9 @@ BASELINE_TEST_GROUPS = {
 
 
 BASELINE_PUBLIC_COMMAND_COUNT = 17
-BASELINE_PUBLIC_PARAMETER_COUNT = 40
+BASELINE_PUBLIC_PARAMETER_COUNT = 41
 BASELINE_LEAF_COMMAND_COUNT = 13
-BASELINE_TEST_SCRIPT_COUNT = 65
+BASELINE_TEST_SCRIPT_COUNT = 66
 
 
 def _normalize_default(value):

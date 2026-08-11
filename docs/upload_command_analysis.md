@@ -22,6 +22,7 @@ atomgit upload [OPTIONS] PATH
 | `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
 | `--resumable/--no-resumable` | 按路径自动 | 目录默认使用 `upload_large_folder`；可显式选择普通上传 |
 | `--num-workers` | `5` | 所有目录上传模式的 worker 数 |
+| `--auto-configure-lfs` | 关闭 | 显式允许 resumable 提交仓库级 `.gitattributes` 后重试不安全模式 |
 
 AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传输路由。CLI
 仍使用 `dataset` 表达仓库业务类型，但底层调用映射到 model 路由。2026-08-04
@@ -37,7 +38,7 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 3. 将 PATH 转为 `Path` 并区分文件或目录；
 4. 使用 `normalize_path_in_repo` 与 `parse_ignore_patterns` 规整参数；
 5. 单文件默认普通上传；目录默认 resumable，未显式选模式的 `--message` 自动
-   选择普通上传，并拒绝其余歧义组合；
+   选择普通上传；`--auto-configure-lfs` 只接受 resumable 目录；
 6. 检查 `config.is_logged_in()`；
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
@@ -49,7 +50,8 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 模式内容传入，CLI 会在远端调用前以退出码 2 拒绝这种错误写法。
 
 CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--resumable` 或
-`--ignore`；显式 `--resumable` 不接受 `--message`。`--num-workers` 与
+`--ignore`；显式 `--resumable` 不接受 `--message`；单文件和普通目录不接受
+`--auto-configure-lfs`。`--num-workers` 与
 `--path-in-repo` 是目录和文件上传的基础参数，普通目录与 resumable 均支持。
 这些用法错误统一以退出码 2 结束，不会进入 API 层。
 
@@ -179,6 +181,26 @@ HF 1.1.7 的 regular commit 载荷上限为 1 GB。服务端 `preupload` 若仍�
 前终止，不进入重试、远端核对或降批，并提示在仓库 `.gitattributes` 中配置 Git
 LFS。重新执行时仅清空这种危险且未提交元数据的 `upload_mode`、`should_ignore`
 和 `remote_oid`，使服务端重新判定策略；SHA-256 和已提交记录保持不变。
+
+未提供 `--auto-configure-lfs` 时保持上述失败关闭行为，并提示只有在允许 CLI 创建
+配置 commit 时才能使用该选项。显式启用后，子进程仅回传最多 32 个经过 ASCII
+扩展名白名单校验的 `*.ext`，不传本地完整路径、URL、响应正文或凭据。父进程显示
+规则会影响整个仓库，然后执行以下事务：
+
+1. 通过 V5 commit 详情把目标 revision 解析为不可变 SHA；
+2. 在 `$HF_HOME/lfs-config/` 下的 `0700` 唯一缓冲目录，只读取该 SHA 的根目录
+   `.gitattributes`；404 表示文件缺失，其他认证、权限或仓库错误不得当作缺失；
+3. 保留原字节和换行，仅追加缺少的
+   `*.ext filter=lfs diff=lfs merge=lfs -text`，文件和目录分别使用 `0600/0700`；
+4. 用显式 AtomGit endpoint、同一有效 repo type/revision 和 `parent_commit` 调用
+   `HfApi.upload_file`，因此 commit 只含 `.gitattributes`；
+5. 对最新不可变 SHA 回读规则。写响应不明确但回读存在规则时视为成功；409/412
+   并发冲突最多重新拉取合并三次；其他无法确认状态安全失败；
+6. 刷新危险的未提交模式并重试当前外层批次。一个规则在同次命令只尝试一次，
+   无扩展名或规则仍不生效时不会生成 `*` 或循环提交。
+
+该路径的 SDK 1.1.7 参数、合并、并发、超时回读和批次恢复已有严格离线测试；真实
+AtomGit 配置写入尚未获准执行，因此不能把离线结果表述为服务端验收完成。
 
 CLI 在隔离子进程内为 `create_commit` 增加 AtomGit 专用控制：429 遵循
 `Retry-After` 或指数退避且不拆批；网络超时后先用远端 checksum/OID 核对请求

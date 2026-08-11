@@ -30,6 +30,8 @@ every remote path is verified; known status follows the interface list.
   progress-bar control
 - Default large-folder resumable directory uploads, repository prefixes, and
   worker selection, with an explicit ordinary-upload opt-out
+- Explicit opt-in repository-level Git LFS attribute repair when resumable
+  preupload classifies an oversized file as regular
 - Repository download to a default or explicit directory
 - Single-file CLI download
 - Opt-in checksum verification for existing and newly downloaded CLI files
@@ -79,6 +81,9 @@ every remote path is verified; known status follows the interface list.
 - User-facing failures should identify authentication, permission, repository,
   revision, request, timeout, or network causes when evidence allows it.
 - Existing command names and Python imports are compatibility surfaces.
+- Remote `.gitattributes` mutation is never implicit: it requires the exact
+  `--auto-configure-lfs` option, reports repository-wide rule scope, and must
+  preserve concurrent remote edits or fail closed.
 - Repository pruning is explicit and may delete only regular files previously
   written and recorded by successful whole-repository CLI downloads; it must
   not scan or adopt unrelated local content.
