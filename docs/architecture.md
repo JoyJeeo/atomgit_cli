@@ -174,6 +174,7 @@ atomgit upload PATH
   -> 目录
        -> 默认 resumable：稳定私有投影 + HfApi.upload_large_folder
        -> path-in-repo：源内容投影到远端前缀
+       -> --auto-configure-lfs：仅在不安全 regular 模式时单文件提交属性后重试
        -> --no-resumable 或自动兼容 message：upload_folder
 ```
 
@@ -185,7 +186,8 @@ atomgit upload PATH
 
 - 上传、下载和建仓共享多层 repo ID 转换；远程写入仍需受控验收；
 - 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
-- 非 `main` revision 已根据远程证据明确拒绝，避免静默写入默认分支。
+- 非默认 revision 必须预先存在；CLI 通过 V5 分支详情验证后才转发给上传和可选
+  LFS 配置事务，避免静默写入默认分支。
 
 resumable 通过显式 AtomGit endpoint 的 `HfApi(endpoint=..., token=...)` 认证，
 避免隔离子进程回落到 `huggingface.co`。私有 model 和 dataset 均已使用真实
@@ -198,6 +200,11 @@ large-folder 方法上传入 `path_in_repo`，因此 CLI 以源目录、规范�
 HF client 前设置并验证单次请求超时，并包装 `create_commit`：429 遵循
 `Retry-After` 或退避且不拆批，超时先通过 resolve 元数据核对远端对象，确认缺失
 后才按 `20/10/5/2/1` 降批。连续失败终止隔离进程，保留未完成的 HF 元数据。
+子进程发现超过 regular 上限的文件时只向父进程返回经过白名单校验的扩展名规则。
+默认仍安全失败；显式 `--auto-configure-lfs` 才会在 `$HF_HOME/lfs-config/` 的私有
+事务目录中单独读取或创建根 `.gitattributes`，按字节保留已有内容并追加标准 LFS
+规则，通过目标 revision 的 `parent_commit` 防止覆盖并发更新，回读确认后重试同一
+批次。该规则作用于整个仓库；无安全扩展名或已尝试规则仍无效时停止自动修改。
 `atomgit cache clear` 可清理 `$HF_HOME` 下由工具产生的缓存。
 
 ## 7. 下载

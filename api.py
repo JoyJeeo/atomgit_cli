@@ -151,14 +151,20 @@ def _atomgit_hf_endpoint() -> str:
     return os.environ.get("HF_ENDPOINT", "https://hub.atomgit.com")
 
 
-def _atomgit_resolve_url(repo_id: str, repo_type: str, filename: str) -> str:
+def _atomgit_resolve_url(
+    repo_id: str, repo_type: str, filename: str, revision: str = "main"
+) -> str:
     """Build a direct resolve URL that bypasses the missing repo_info route."""
     endpoint = _atomgit_hf_endpoint()
     prefix = "datasets/" if repo_type == "dataset" else ""
     # 文件名必须百分号编码（保留 / 分隔子目录），否则 urllib 发送
     # 请求行时按 ASCII 编码，中文文件名会抛 UnicodeEncodeError。
     encoded_filename = quote(filename, safe="/")
-    return f"{endpoint}/{prefix}{repo_id}/resolve/main/{encoded_filename}"
+    encoded_revision = quote(revision or "main", safe="")
+    return (
+        f"{endpoint}/{prefix}{repo_id}/resolve/"
+        f"{encoded_revision}/{encoded_filename}"
+    )
 
 
 class DownloadChecksumMismatchError(OSError):
@@ -1252,7 +1258,9 @@ def _prune_managed_download_files(local_root: Path, filenames) -> int:
     return removed
 
 
-def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str:
+def _atomgit_resolve_url_raw(
+    repo_id: str, repo_type: str, filename: str, revision: str = "main"
+) -> str:
     """Build a resolve URL that keeps the raw UTF-8 filename bytes.
 
     AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
@@ -1262,7 +1270,8 @@ def _atomgit_resolve_url_raw(repo_id: str, repo_type: str, filename: str) -> str
     """
     endpoint = _atomgit_hf_endpoint()
     prefix = "datasets/" if repo_type == "dataset" else ""
-    return f"{endpoint}/{prefix}{repo_id}/resolve/main/{filename}"
+    encoded_revision = quote(revision or "main", safe="")
+    return f"{endpoint}/{prefix}{repo_id}/resolve/{encoded_revision}/{filename}"
 
 
 def _download_url_origin(url: str) -> tuple:
@@ -1732,10 +1741,72 @@ _RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
 # HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
 # it must be selected as LFS by the repository policy before commit encoding.
 _RESUMABLE_REGULAR_FILE_MAX_BYTES = 1_000_000_000
+_RESUMABLE_LFS_PATTERN_MAX_COUNT = 32
+_RESUMABLE_LFS_PATTERN_MAX_EXTENSION = 32
+_LFS_GITATTRIBUTES_MAX_BYTES = 1024 * 1024
+_LFS_GITATTRIBUTES_MAX_ATTEMPTS = 3
+_LFS_GITATTRIBUTES_PATH = ".gitattributes"
+
+
+def _validated_lfs_patterns(patterns) -> tuple:
+    """Return a bounded canonical list of safe extension-only LFS patterns."""
+    if patterns is None:
+        return ()
+    if not isinstance(patterns, (list, tuple, set, frozenset)):
+        return ()
+    if len(patterns) > _RESUMABLE_LFS_PATTERN_MAX_COUNT:
+        return ()
+    validated = set()
+    for pattern in patterns:
+        if not isinstance(pattern, str) or not pattern.startswith("*."):
+            continue
+        extension = pattern[2:]
+        if (
+            not extension
+            or len(extension) > _RESUMABLE_LFS_PATTERN_MAX_EXTENSION
+            or not extension.isascii()
+            or not extension[0].isalnum()
+            or any(
+                not (character.isalnum() or character in "._+-")
+                for character in extension
+            )
+        ):
+            continue
+        validated.add(f"*.{extension}")
+    return tuple(sorted(validated, key=lambda pattern: (pattern.lower(), pattern)))
+
+
+def _lfs_pattern_from_repo_path(path_in_repo) -> Optional[str]:
+    """Infer one safe repository-wide extension pattern without local paths."""
+    if not isinstance(path_in_repo, str) or not path_in_repo:
+        return None
+    suffix = PurePosixPath(path_in_repo).suffix
+    patterns = _validated_lfs_patterns((f"*{suffix}",)) if suffix else ()
+    return patterns[0] if patterns else None
+
+
+def _unsafe_resumable_lfs_patterns(items) -> tuple:
+    patterns = set()
+    for paths, metadata in items:
+        if (
+            getattr(metadata, "upload_mode", None) == "regular"
+            and getattr(metadata, "size", 0)
+            > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+        ):
+            pattern = _lfs_pattern_from_repo_path(
+                getattr(paths, "path_in_repo", None)
+            )
+            if pattern is not None:
+                patterns.add(pattern)
+    return _validated_lfs_patterns(patterns)
 
 
 class ResumableUploadModeError(RuntimeError):
     """A server-selected resumable upload mode is unsafe for the file size."""
+
+    def __init__(self, message: str, lfs_patterns=()):
+        self.lfs_patterns = _validated_lfs_patterns(lfs_patterns)
+        super().__init__(message)
 
 
 class ResumableTargetRevisionError(RuntimeError):
@@ -1762,10 +1833,15 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
 class ResumableWorkerError(RuntimeError):
     """A credential-safe failure reconstructed from the upload child."""
 
-    def __init__(self, category: str):
+    def __init__(self, category: str, lfs_patterns=()):
         if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
             category = "unknown"
         self.category = category
+        self.lfs_patterns = (
+            _validated_lfs_patterns(lfs_patterns)
+            if category == "upload_mode"
+            else ()
+        )
         super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
@@ -1858,11 +1934,22 @@ def _resumable_worker_error_category(error: BaseException) -> str:
 
 def _resumable_failure_envelope(error: BaseException) -> dict:
     """Build the only error payload allowed across the process boundary."""
-    return {"category": _resumable_worker_error_category(error)}
+    category = _resumable_worker_error_category(error)
+    envelope = {"category": category}
+    if category == "upload_mode":
+        for cause in _resumable_error_chain(error):
+            patterns = _validated_lfs_patterns(
+                getattr(cause, "lfs_patterns", ())
+            )
+            if patterns:
+                envelope["lfs_patterns"] = list(patterns)
+                break
+    return envelope
 
 
 def _validate_resumable_commit_operations(operations) -> None:
     """Reject unsafe regular blobs before commit serialization reads them."""
+    unsafe_operations = []
     for operation in operations:
         upload_info = getattr(operation, "upload_info", None)
         size = getattr(upload_info, "size", None)
@@ -1873,23 +1960,42 @@ def _validate_resumable_commit_operations(operations) -> None:
             and not isinstance(size, bool)
             and size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
         ):
-            raise ResumableUploadModeError(
-                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-                "中为该文件类型配置 Git LFS 后重试。"
+            unsafe_operations.append(operation)
+    if unsafe_operations:
+        patterns = _validated_lfs_patterns(
+            tuple(
+                filter(
+                    None,
+                    (
+                        _lfs_pattern_from_repo_path(
+                            getattr(operation, "path_in_repo", None)
+                        )
+                        for operation in unsafe_operations
+                    ),
+                )
             )
+        )
+        raise ResumableUploadModeError(
+            "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+            "中为该文件类型配置 Git LFS 后重试。",
+            patterns,
+        )
 
 
 def _validate_resumable_upload_mode_items(items) -> None:
     """Apply the regular-file size policy immediately after preupload mode."""
-    for _, metadata in items:
-        if (
-            metadata.upload_mode == "regular"
-            and metadata.size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
-        ):
-            raise ResumableUploadModeError(
-                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-                "中为该文件类型配置 Git LFS 后重试。"
-            )
+    unsafe = [
+        item
+        for item in items
+        if item[1].upload_mode == "regular"
+        and item[1].size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+    ]
+    if unsafe:
+        raise ResumableUploadModeError(
+            "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+            "中为该文件类型配置 Git LFS 后重试。",
+            _unsafe_resumable_lfs_patterns(unsafe),
+        )
 
 
 def _refresh_unsafe_resumable_upload_modes(folder_path: Path) -> int:
@@ -1919,6 +2025,232 @@ def _refresh_unsafe_resumable_upload_modes(folder_path: Path) -> int:
             metadata.save(paths)
             refreshed += 1
     return refreshed
+
+
+def _lfs_config_cache_root() -> Path:
+    """Return a private cache root for isolated `.gitattributes` transactions."""
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
+    root = hf_home / "lfs-config"
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("LFS 配置缓冲目录不安全")
+    os.chmod(root, 0o700)
+    return root
+
+
+def _lfs_gitattributes_line(pattern: str) -> bytes:
+    validated = _validated_lfs_patterns((pattern,))
+    if validated != (pattern,):
+        raise ValueError("LFS 文件类型规则不安全，无法自动配置")
+    return (
+        f"{pattern} filter=lfs diff=lfs merge=lfs -text".encode("ascii")
+    )
+
+
+def _merge_lfs_gitattributes(content: bytes, patterns) -> tuple:
+    """Append missing standard LFS lines without rewriting existing bytes."""
+    if not isinstance(content, bytes):
+        raise TypeError(".gitattributes content must be bytes")
+    if len(content) > _LFS_GITATTRIBUTES_MAX_BYTES:
+        raise ValueError("远端 .gitattributes 过大，无法安全自动修改")
+    validated = _validated_lfs_patterns(patterns)
+    if not validated:
+        raise ValueError("无法从超大文件路径推导安全的 LFS 文件类型规则")
+
+    newline = b"\r\n" if b"\r\n" in content else b"\n"
+    final_block = b"".join(
+        _lfs_gitattributes_line(pattern) + newline
+        for pattern in validated
+    )
+    if content.endswith(final_block):
+        return content, ()
+
+    appended = validated
+    updated = content
+    if updated and not updated.endswith((b"\n", b"\r")):
+        updated += newline
+    for pattern in appended:
+        updated += _lfs_gitattributes_line(pattern) + newline
+    if len(updated) > _LFS_GITATTRIBUTES_MAX_BYTES:
+        raise ValueError("更新后的 .gitattributes 过大，已拒绝提交")
+    return updated, appended
+
+
+def _gitattributes_contains_lfs_patterns(content: bytes, patterns) -> bool:
+    validated = _validated_lfs_patterns(patterns)
+    if not validated:
+        return False
+    newline = b"\r\n" if b"\r\n" in content else b"\n"
+    final_block = b"".join(
+        _lfs_gitattributes_line(pattern) + newline
+        for pattern in validated
+    )
+    return content.endswith(final_block)
+
+
+def _remote_revision_commit_sha(
+    *, token: str, repo_id: str, revision: str,
+    request_timeout: float,
+) -> str:
+    """Resolve a mutable upload revision to one immutable AtomGit commit."""
+    path = _atomgit_v5_repo_path(repo_id)
+    path += "/commits/" + quote(revision or "main", safe="")
+    payload = _atomgit_v5_get_json(path, token, timeout=request_timeout)
+    commit_sha = _atomgit_v5_commit_sha(payload)
+    if commit_sha is None:
+        raise ValueError("无法解析目标 revision 的当前提交")
+    return commit_sha
+
+
+def _download_remote_gitattributes(
+    *, token: str, repo_id: str, repo_type: str, revision: str,
+    destination: Path, request_timeout: float,
+) -> bool:
+    """Download only root `.gitattributes`, returning False only for file 404."""
+    request = urllib.request.Request(
+        _atomgit_resolve_url(
+            repo_id, repo_type, _LFS_GITATTRIBUTES_PATH, revision
+        ),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "*/*",
+            "Accept-Encoding": "identity",
+            "User-Agent": "atomgit-cli",
+        },
+        method="GET",
+    )
+    try:
+        with _atomgit_open_url(request, timeout=request_timeout) as response:
+            content_length = response.headers.get("Content-Length")
+            if content_length is not None:
+                try:
+                    declared_size = int(content_length, 10)
+                except ValueError as error:
+                    raise ValueError(
+                        "远端 .gitattributes 长度无效"
+                    ) from error
+                if declared_size < 0:
+                    raise ValueError("远端 .gitattributes 长度无效")
+                if declared_size > _LFS_GITATTRIBUTES_MAX_BYTES:
+                    raise ValueError(
+                        "远端 .gitattributes 过大，无法安全自动修改"
+                    )
+            content = response.read(_LFS_GITATTRIBUTES_MAX_BYTES + 1)
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            files = HfApi(
+                endpoint=_atomgit_hf_endpoint(), token=token
+            ).list_repo_files(
+                repo_id,
+                revision=revision,
+                repo_type=repo_type,
+            )
+            if _LFS_GITATTRIBUTES_PATH not in files:
+                return False
+        raise
+    if len(content) > _LFS_GITATTRIBUTES_MAX_BYTES:
+        raise ValueError("远端 .gitattributes 过大，无法安全自动修改")
+    destination.write_bytes(content)
+    os.chmod(destination, 0o600)
+    return True
+
+
+def _configure_remote_lfs_attributes(
+    *, token: str, repo_id: str, repo_type: str, revision: str,
+    patterns, request_timeout: float,
+) -> dict:
+    """Merge and commit only `.gitattributes` with optimistic concurrency."""
+    validated = _validated_lfs_patterns(patterns)
+    if not validated:
+        raise ValueError("无法从超大文件路径推导安全的 LFS 文件类型规则")
+    target_revision = revision or "main"
+    cache_root = _lfs_config_cache_root()
+
+    for attempt in range(_LFS_GITATTRIBUTES_MAX_ATTEMPTS):
+        parent_commit = _remote_revision_commit_sha(
+            token=token,
+            repo_id=repo_id,
+            revision=target_revision,
+            request_timeout=request_timeout,
+        )
+        with tempfile.TemporaryDirectory(
+            prefix="transaction-", dir=cache_root
+        ) as temporary_name:
+            transaction = Path(temporary_name)
+            os.chmod(transaction, 0o700)
+            attributes_path = transaction / _LFS_GITATTRIBUTES_PATH
+            existed = _download_remote_gitattributes(
+                token=token,
+                repo_id=repo_id,
+                repo_type=repo_type,
+                revision=parent_commit,
+                destination=attributes_path,
+                request_timeout=request_timeout,
+            )
+            content = attributes_path.read_bytes() if existed else b""
+            updated, appended = _merge_lfs_gitattributes(content, validated)
+            if not appended:
+                return {
+                    "changed": False,
+                    "created": False,
+                    "verified_after_error": False,
+                    "patterns": validated,
+                }
+            attributes_path.write_bytes(updated)
+            os.chmod(attributes_path, 0o600)
+
+            write_error = None
+            try:
+                HfApi(
+                    endpoint=_atomgit_hf_endpoint(), token=token
+                ).upload_file(
+                    path_or_fileobj=str(attributes_path),
+                    path_in_repo=_LFS_GITATTRIBUTES_PATH,
+                    repo_id=repo_id,
+                    repo_type=repo_type,
+                    revision=target_revision,
+                    commit_message="chore: configure Git LFS",
+                    parent_commit=parent_commit,
+                )
+            except Exception as error:
+                write_error = error
+
+            verify_commit = _remote_revision_commit_sha(
+                token=token,
+                repo_id=repo_id,
+                revision=target_revision,
+                request_timeout=request_timeout,
+            )
+            attributes_path.unlink(missing_ok=True)
+            verified_exists = _download_remote_gitattributes(
+                token=token,
+                repo_id=repo_id,
+                repo_type=repo_type,
+                revision=verify_commit,
+                destination=attributes_path,
+                request_timeout=request_timeout,
+            )
+            verified_content = (
+                attributes_path.read_bytes() if verified_exists else b""
+            )
+            if _gitattributes_contains_lfs_patterns(
+                verified_content, appended
+            ):
+                return {
+                    "changed": True,
+                    "created": not existed,
+                    "verified_after_error": write_error is not None,
+                    "patterns": appended,
+                }
+            if write_error is None:
+                raise RuntimeError(".gitattributes 提交后远端验证失败")
+            if (
+                _resumable_error_status(write_error) not in (409, 412)
+                or attempt + 1 >= _LFS_GITATTRIBUTES_MAX_ATTEMPTS
+            ):
+                raise write_error
+
+    raise RuntimeError(".gitattributes 并发更新重试次数已耗尽")
 
 
 def _commit_error_status(error: BaseException) -> Optional[int]:
@@ -2697,7 +3029,12 @@ def _execute_resumable_upload_process(
         ) from exc
     if not ok:
         category = error.get("category") if isinstance(error, dict) else None
-        raise ResumableWorkerError(category or "unknown")
+        patterns = (
+            error.get("lfs_patterns", ())
+            if isinstance(error, dict)
+            else ()
+        )
+        raise ResumableWorkerError(category or "unknown", patterns)
 
 
 def _validate_resumable_upload_target(
@@ -2817,7 +3154,8 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "upload_mode": (
                 "上传模式不安全",
                 "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-                "中为该文件类型配置 Git LFS 后重试。断点状态已保留。",
+                "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
+                "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
             ),
             "client_resource": (
                 "客户端资源不足",
@@ -2834,7 +3172,8 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
         return (
             "上传模式不安全",
             "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-            "中为该文件类型配置 Git LFS 后重试。断点状态已保留。",
+            "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
+            "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
         )
 
     if isinstance(e, ResumableTargetRevisionError):
@@ -3434,7 +3773,8 @@ class HuggingFaceAPI:
                         revision: str = None,
                         ignore_patterns=None,
                         resumable: bool = False,
-                        num_workers: int = 5) -> bool:
+                        num_workers: int = 5,
+                        auto_configure_lfs: bool = False) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
@@ -3455,9 +3795,15 @@ class HuggingFaceAPI:
                 ``message`` / ``commit_message``（会产生多次提交），且 HF
                 要求 ``repo_type`` 必填，为空时默认 ``model``。
             num_workers: 上传 worker 数，默认为 5；适用于断点续传和普通目录上传。
+            auto_configure_lfs: 仅用于 resumable。检测到超大 regular 文件时，
+                允许 CLI 提交根目录 ``.gitattributes`` 并重试当前批次；
+                推导出的扩展名规则作用于整个目标仓库。
         """
         if not is_supported_upload_revision(revision):
             print("上传 revision 名称不合法，已拒绝上传")
+            return False
+        if auto_configure_lfs and not resumable:
+            print("--auto-configure-lfs 仅支持 resumable 目录上传")
             return False
         try:
             try:
@@ -3524,6 +3870,7 @@ class HuggingFaceAPI:
                         revision=revision,
                         request_timeout=request_timeout,
                     )
+                    attempted_lfs_patterns = set()
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1
                         batch_size = len(batch)
@@ -3570,16 +3917,102 @@ class HuggingFaceAPI:
                                         pipr, ignore_patterns
                                     )
                                 )
-                            # Even a fully committed projection must enter HF so
-                            # repository existence and authorization are checked.
-                            _execute_resumable_upload_process(
-                                token=credentials['token'],
-                                upload_kwargs=lf_kwargs,
-                                request_timeout=request_timeout,
-                                upload_deadline=upload_deadline,
-                                upload_timeout=upload_timeout,
-                                batch_context=(batch_number, batch_count),
-                            )
+                            while True:
+                                try:
+                                    # Fully committed projections still enter HF
+                                    # so authorization remains checked.
+                                    _execute_resumable_upload_process(
+                                        token=credentials['token'],
+                                        upload_kwargs=lf_kwargs,
+                                        request_timeout=request_timeout,
+                                        upload_deadline=upload_deadline,
+                                        upload_timeout=upload_timeout,
+                                        batch_context=(
+                                            batch_number, batch_count
+                                        ),
+                                    )
+                                    break
+                                except ResumableWorkerError as error:
+                                    if (
+                                        error.category != "upload_mode"
+                                        or not auto_configure_lfs
+                                    ):
+                                        raise
+                                    patterns = _validated_lfs_patterns(
+                                        error.lfs_patterns
+                                    )
+                                    new_patterns = tuple(
+                                        pattern
+                                        for pattern in patterns
+                                        if pattern not in attempted_lfs_patterns
+                                    )
+                                    if not new_patterns:
+                                        if not patterns:
+                                            print(
+                                                f"[批次 {batch_number}/{batch_count}] "
+                                                "无法从文件名推导安全的扩展名规则；"
+                                                "请手动配置 .gitattributes",
+                                                flush=True,
+                                            )
+                                        else:
+                                            print(
+                                                f"[批次 {batch_number}/{batch_count}] "
+                                                "已尝试的 Git LFS 规则仍未生效；"
+                                                "已停止自动修改以避免循环提交",
+                                                flush=True,
+                                            )
+                                        raise
+                                    attempted_lfs_patterns.update(new_patterns)
+                                    print(
+                                        f"[批次 {batch_number}/{batch_count}] "
+                                        "检测到超大 regular 文件，需要配置 Git LFS",
+                                        flush=True,
+                                    )
+                                    print(
+                                        "将使用 --auto-configure-lfs 提交规则: "
+                                        + ", ".join(new_patterns)
+                                        + "（规则作用于整个仓库）",
+                                        flush=True,
+                                    )
+                                    configuration_timeout = request_timeout
+                                    if upload_deadline is not None:
+                                        remaining = (
+                                            upload_deadline - time.monotonic()
+                                        )
+                                        if remaining <= 0:
+                                            raise TimeoutError(
+                                                "resumable upload timed out "
+                                                "during Git LFS configuration"
+                                            )
+                                        configuration_timeout = min(
+                                            request_timeout, remaining
+                                        )
+                                    outcome = _configure_remote_lfs_attributes(
+                                        token=credentials['token'],
+                                        repo_id=normalized_repo_id,
+                                        repo_type=eff_repo_type,
+                                        revision=revision,
+                                        patterns=new_patterns,
+                                        request_timeout=configuration_timeout,
+                                    )
+                                    if outcome["changed"]:
+                                        action = (
+                                            "已创建" if outcome["created"]
+                                            else "已更新"
+                                        )
+                                        print(
+                                            f"[批次 {batch_number}/{batch_count}] "
+                                            f"{action}远端 .gitattributes；"
+                                            "正在刷新上传模式并重试当前批次",
+                                            flush=True,
+                                        )
+                                    else:
+                                        print(
+                                            f"[批次 {batch_number}/{batch_count}] "
+                                            "远端 .gitattributes 已包含所需规则；"
+                                            "正在刷新上传模式并重试当前批次",
+                                            flush=True,
+                                        )
                         except Exception:
                             confirmed_in_batch = batch_skipped
                             if upload_root is not None:
