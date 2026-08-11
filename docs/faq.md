@@ -55,8 +55,10 @@ CLI 允许尝试下载公开仓库。私有仓库需要有效 token。是否真�
 
 ## resumable 当前是否可用？
 
-可以。当前实现通过 `HfApi(token=...)` 完成认证，不再把不兼容的 `token` 参数
-传给 `upload_large_folder()`。2026-08-04 分别对私有 model 和 dataset 使用
+可以。当前实现通过
+`HfApi(endpoint="https://hub.atomgit.com", token=...)` 固定 AtomGit 端点并
+完成认证，不再把不兼容的 `token` 参数传给 `upload_large_folder()`。2026-08-04
+分别对私有 model 和 dataset 使用
 399,300,506 字节文件执行了 CLI 超时中断、同目录续传、下载回读；两者最终
 SHA-256 均一致。dataset 的用户类型保持不变，底层自动使用共享 model 兼容路由。
 CLI 目录上传现在默认选择 resumable；`--path-in-repo` 通过稳定的本地投影表达

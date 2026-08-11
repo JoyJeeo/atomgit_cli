@@ -2345,7 +2345,7 @@ def _run_resumable_upload(
     try:
         hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
         close_hf_session()
-        client = HfApi(token=token)
+        client = HfApi(endpoint=_atomgit_hf_endpoint(), token=token)
         _refresh_unsafe_resumable_upload_modes(Path(kwargs["folder_path"]))
 
         def existing_repo(repo_id, *, private=None, repo_type=None,

@@ -75,8 +75,8 @@ def main():
     validation_calls = []
 
     class StrictHfApi:
-        def __init__(self, token=None):
-            constructor_calls.append({"token": token})
+        def __init__(self, endpoint=None, token=None):
+            constructor_calls.append({"endpoint": endpoint, "token": token})
 
         def upload_large_folder(
             self,
@@ -137,7 +137,10 @@ def main():
         check(
             "token authenticates HfApi instance",
             constructor_calls == [
-                {"token": "fake-dataset-resumable-token"},
+                {
+                    "endpoint": "https://hub.atomgit.com",
+                    "token": "fake-dataset-resumable-token",
+                },
             ],
         )
         check("dataset target and revision use V5 read-only validation",

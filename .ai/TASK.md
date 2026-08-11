@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -13,24 +13,24 @@ remote GitHub Issue.
 ## Handoff Snapshot
 
 - Updated: `2026-08-11 +0800`
-- Status: `completed`
-- Phase: `corrective implementation delivered to github/yuto after verification, independent review, authorized commit, and local merge`
+- Status: `active`
+- Phase: `endpoint correction verified and independently approved; ready for authorized commit, local merge, and yuto push`
 - Base branch: `yuto`
-- Task branch: `codex/resumable-v5-validation`
-- Base commit: `7a92a5f`
+- Task branch: `codex/resumable-endpoint`
+- Base commit: `925e823`
 - Task commits: `b5d9368 fix(upload): harden resumable existing-repo flow; 3136870 fix(upload): validate resumable targets through v5`
 - Merge commits: `e5e6394 merge: harden resumable existing-repo flow; 711d0d9 merge: validate resumable targets through v5`
-- Current feature HEAD: `3136870`
-- Remote delivery: `github/yuto corrective merge verified at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
-- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
-- Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/upload_command_analysis.md`, `tests/test_dataset_resumable_route.py`, `tests/test_hf_api_contract.py`, `tests/test_resumable_recovery.py`, `tests/test_upload_batching.py`, `tests/test_upload_error_classify.py`, `tests/test_upload_resumable.py`
-- Required worktree: `none; corrective implementation is delivered`
-- Last completed action: `pushed the authorized corrective local merge and verified github/yuto at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
-- Next exact action: `none; corrective implementation, verification, review, acceptance, merge, and push are complete`
+- Current feature HEAD: `925e823`
+- Remote delivery: `github/yuto currently at 925e823; endpoint correction not delivered yet`
+- Worktree state: `endpoint correction, regressions, documentation, and handoff are uncommitted on the task branch`
+- Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/test_dataset_resumable_route.py`, `tests/test_resumable_commit_policy.py`, `tests/test_resumable_recovery.py`, `tests/test_upload_batching.py`, `tests/test_upload_resumable.py`
+- Required worktree: `continue in this same worktree while the endpoint correction is uncommitted`
+- Last completed action: `completed the second independent review with APPROVED verdict after resolving its P2 documentation-example finding`
+- Next exact action: `commit the endpoint correction, merge it locally into yuto, and push only yuto`
 - Blockers / open questions: `none`
 - Decisions constraining the next action: `the upload target must pre-exist; resumable upload must not require namespace repository-creation permission; keep locked dependency versions and preserve existing resumable metadata`
-- Tests passed: `corrective offline verification in atomgit_cli: test_upload_resumable.py 47/47; test_upload_batching.py 9/9; test_upload_progress.py 28/28; test_resumable_commit_policy.py 51/51; test_upload_error_classify.py 42/42; test_hf_api_contract.py 13/13; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; final python tests/run_cli_baseline.py 65/65 isolated pytest cases in 51.01s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check; current-login read-only V5 validation of weixin_52273949/test_datasets succeeded`
-- Tests failed or not run: `the original post-delivery live acceptance command failed before upload because HF tree validation returned 401 for an existing accessible private dataset repository; no corrective live upload was run, and no remote content or commit was sent by this task`
+- Tests passed: `endpoint correction in atomgit_cli: test_upload_resumable.py 47/47; test_resumable_commit_policy.py 51/51; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; test_upload_batching.py 9/9; test_hf_api_contract.py 13/13; final python tests/run_cli_baseline.py 65/65 isolated pytest cases in 51.72s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check; current-login AtomGit preupload policy probe for weixin_52273949/test_datasets succeeded without uploading content or creating a commit`
+- Tests failed or not run: `the new strict endpoint regression failed 46/47 against the pre-fix implementation as expected; the user's acceptance run failed after hashing because preupload targeted huggingface.co; no corrective live content upload or commit was run by this task`
 
 ## Active Issue Identity
 
@@ -38,7 +38,7 @@ remote GitHub Issue.
 - Title: `Harden resumable uploads for existing organization repositories`
 - Primary type: `bug`
 - Priority: `P1`
-- User impact: `directory upload is unusable for an existing writable organization repository when the token cannot create repositories in that namespace; related child failures are reported only as unknown errors`
+- User impact: `resumable directory upload reaches metadata recovery but sends preupload requests to huggingface.co, where AtomGit credentials return 401, so no file can be pre-uploaded or committed`
 - Affected path: `cli.upload -> HuggingFaceAPI.upload_directory -> _run_resumable_upload -> HfApi.upload_large_folder -> implicit HfApi.create_repo -> metadata recovery / upload-mode / commit workers`
 - Base branch: `yuto`
 - Delivery mode: `standing local task-branch delivery into yuto after implementation, review, and verification`
@@ -63,6 +63,7 @@ remote GitHub Issue.
 - Reject oversized files classified as `regular` before file reads, Base64 encoding, commit, retry, reconciliation, or batch reduction; give an actionable `.gitattributes` LFS hint.
 - Refresh only unsafe, uncommitted cached upload-mode fields after repository LFS policy changes; preserve hashes and committed state.
 - Carry bounded structured error categories across the child-process boundary for authentication, permission, repository/revision absence, payload size, rate limit, service availability, timeout, connection, upload mode, and client resource failures.
+- Construct the resumable child HfApi with the explicit AtomGit HF-compatible endpoint so preupload, LFS, and commit requests cannot fall back to huggingface.co.
 - Preserve ordered outer-batch lifecycle reporting, resumable checkpoint guidance, final summaries, CLI exit behavior, and credential redaction.
 
 ## Compatibility And Non-Goals
@@ -91,8 +92,8 @@ remote GitHub Issue.
 
 ## Delivery Status
 
-- Definition of done: `passed; final diff is task-scoped, required offline checks pass, locked signatures were inspected, documentation agrees, and no credential or generated-artifact finding remains`
-- Independent review: `corrective review APPROVED with no P0/P1/P2 finding; checked V5 path encoding, authentication/permission/absence classification, total-timeout accounting, model/dataset compatibility, and credential handling`
+- Definition of done: `passed for the endpoint correction; final diff is task-scoped, required offline checks pass, locked signatures were inspected, documentation agrees, and no credential or generated-artifact finding remains`
+- Independent review: `APPROVED after resolving one P2 stale documentation example; no open P0/P1/P2 finding`
 - Human acceptance: `accepted through the maintainer's explicit request to complete the full development, testing, commit, local merge, and push workflow on 2026-08-11`
-- Delivery: `original task commit b5d9368 merged by e5e6394; corrective task commit 3136870 merged by 711d0d9; github/yuto corrective merge verified at 711d0d9d943b4bd938dfd3dd5780422a227570d7`
-- Live verification: `read-only V5 validation succeeded for weixin_52273949/test_datasets with the current login; no live upload or repository mutation was run`
+- Delivery: `previous corrections are delivered through github/yuto at 925e823; endpoint correction is pending`
+- Live verification: `read-only V5 validation and a no-content/no-commit preupload policy query succeeded for weixin_52273949/test_datasets with the current login; no live content upload or repository mutation was run`

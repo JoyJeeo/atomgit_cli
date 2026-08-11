@@ -42,16 +42,16 @@ def main():
             }
 
             class SlowHfApi:
-                def __init__(self, token=None):
-                    calls.append(("init", token))
+                def __init__(self, endpoint=None, token=None):
+                    calls.append(("init", endpoint, token))
 
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload", kwargs))
                     time.sleep(0.25)
 
             class FastHfApi:
-                def __init__(self, token=None):
-                    calls.append(("init-fast", token))
+                def __init__(self, endpoint=None, token=None):
+                    calls.append(("init-fast", endpoint, token))
 
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload-fast", kwargs))

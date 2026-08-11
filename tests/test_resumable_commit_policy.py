@@ -53,7 +53,8 @@ class ScriptedClient:
 class FatalHfApi:
     """Exercise bounded child termination without a remote request."""
 
-    def __init__(self, token=None):
+    def __init__(self, endpoint=None, token=None):
+        self.endpoint = endpoint
         self.token = token
 
     def create_commit(self, *args, **kwargs):
@@ -540,8 +541,12 @@ def main():
     captured = []
 
     class TimeoutAwareApi:
-        def __init__(self, token=None):
-            captured.append(api_mod.hf_constants.DEFAULT_REQUEST_TIMEOUT)
+        def __init__(self, endpoint=None, token=None):
+            captured.append((
+                "client",
+                endpoint,
+                api_mod.hf_constants.DEFAULT_REQUEST_TIMEOUT,
+            ))
 
         def create_commit(self, *args, **kwargs):
             return None
@@ -573,7 +578,11 @@ def main():
               ("metadata-recovery", "user/repo") in captured
               and not any(isinstance(item, tuple) and item[0] == "remote-create"
                           for item in captured), repr(captured))
-        check("child constructs HF client with 300 second timeout", 300.0 in captured, repr(captured))
+        check(
+            "child constructs HF client with AtomGit endpoint and timeout",
+            ("client", "https://hub.atomgit.com", 300.0) in captured,
+            repr(captured),
+        )
         check("child closes cached HTTP sessions before and after", captured.count("closed") == 2, repr(captured))
         check("child restores process-global timeout", api_mod.hf_constants.DEFAULT_REQUEST_TIMEOUT == original_timeout)
     finally:

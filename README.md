@@ -264,7 +264,8 @@ atomgit cache clear
 > 上传。详见 [常见问题](docs/faq.md) 和
 > [上传实现分析](docs/upload_command_analysis.md)。
 
-> 当前实现通过 `HfApi(token=...)` 认证，并已分别对 model 和 dataset 完成约
+> 当前实现通过 `HfApi(endpoint="https://hub.atomgit.com", token=...)`
+> 固定 AtomGit 端点并认证，已分别对 model 和 dataset 完成约
 > 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认
 > 分支，因此 CLI 不依赖 HF 隐式建分支。先运行
 > `atomgit repo branch create REPO_ID BRANCH --from main`，再使用
