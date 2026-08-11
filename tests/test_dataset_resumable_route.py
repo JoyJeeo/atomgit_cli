@@ -70,10 +70,23 @@ def main():
     original_context = api_mod.multiprocessing.get_context
     constructor_calls = []
     upload_calls = []
+    validation_calls = []
 
     class StrictHfApi:
         def __init__(self, token=None):
             constructor_calls.append({"token": token})
+
+        def list_repo_tree(self, repo_id, path_in_repo=None, *,
+                           recursive=False, expand=False, revision=None,
+                           repo_type=None, token=None):
+            validation_calls.append({
+                "repo_id": repo_id,
+                "revision": revision,
+                "repo_type": repo_type,
+                "token": token,
+                "recursive": recursive,
+            })
+            return []
 
         def upload_large_folder(
             self,
@@ -122,8 +135,19 @@ def main():
         check("dataset resumable succeeds", result is True)
         check(
             "token authenticates HfApi instance",
-            constructor_calls == [{"token": "fake-dataset-resumable-token"}],
+            constructor_calls == [
+                {"token": "fake-dataset-resumable-token"},
+                {"token": "fake-dataset-resumable-token"},
+            ],
         )
+        check("dataset target validation uses the shared model route",
+              validation_calls == [{
+                  "repo_id": "user/dataset",
+                  "revision": "dev",
+                  "repo_type": None,
+                  "token": None,
+                  "recursive": False,
+              }])
         check("exactly one large-folder call", len(upload_calls) == 1)
         if upload_calls:
             call = upload_calls[0]

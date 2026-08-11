@@ -26,6 +26,7 @@ results = []
 uf_captured = []
 ulf_captured = []
 hfa_init_captured = []
+validation_captured = []
 
 
 def check(name, condition, detail=""):
@@ -45,6 +46,17 @@ class FakeHfApi:
     def __init__(self, endpoint=None, token=None, library_name=None,
                  library_version=None, user_agent=None, headers=None):
         hfa_init_captured.append({"endpoint": endpoint, "token": token})
+
+    def list_repo_tree(self, repo_id, path_in_repo=None, *, recursive=False,
+                       expand=False, revision=None, repo_type=None, token=None):
+        validation_captured.append({
+            "repo_id": repo_id,
+            "revision": revision,
+            "repo_type": repo_type,
+            "token": token,
+            "recursive": recursive,
+        })
+        return []
 
     def upload_large_folder(self, repo_id, folder_path, *, repo_type,
                             revision=None, private=None, allow_patterns=None,
@@ -150,6 +162,7 @@ def main():
 
             # Directory uploads automatically select resumable mode.
             uf_captured.clear(); ulf_captured.clear(); hfa_init_captured.clear()
+            validation_captured.clear()
             result = runner.invoke(
                 cli, ["upload", str(source), "--repo-id", "user/repo"]
             )
@@ -166,7 +179,16 @@ def main():
                 check("T1 root projection preserves relative file paths",
                       ulf_captured[0]["visible_files"] == ["a.txt", "b.txt"])
                 check("T1 HfApi constructor receives token",
-                      len(hfa_init_captured) == 1 and bool(hfa_init_captured[0]["token"]))
+                      len(hfa_init_captured) == 2
+                      and all(bool(call["token"]) for call in hfa_init_captured))
+                check("T1 target is validated once before large-folder upload",
+                      validation_captured == [{
+                          "repo_id": "user/repo",
+                          "revision": None,
+                          "repo_type": None,
+                          "token": None,
+                          "recursive": False,
+                      }])
                 first_projection = ulf_captured[0]["folder_path"]
                 root_sentinel = (
                     Path(first_projection) / ".cache" / "huggingface"
