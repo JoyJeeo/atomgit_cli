@@ -63,6 +63,12 @@ CLI 目录上传现在默认选择 resumable；`--path-in-repo` 通过稳定的�
 远端前缀并保留 HF 元数据。需要单一提交说明或普通目录上传时使用 `--message`
 （未显式选模式时自动普通上传）或 `--no-resumable`。
 
+resumable 只上传到已存在的仓库。CLI 在所有批次前执行一次只读仓库/revision
+校验，并屏蔽 HF 1.1.7 large-folder 启动阶段的隐式建仓请求；创建仓库仍需显式
+使用 `atomgit repo create`。如果仓库策略把超过 1 GB 的文件判定为普通 Git 文件，
+CLI 会在提交读取和 Base64 编码前停止，提示在 `.gitattributes` 中配置 Git LFS。
+修正策略后重试会仅刷新危险且尚未提交的模式缓存，保留文件哈希和已提交状态。
+
 ## 为什么普通大目录上传会警告并长时间没有进度？
 
 `--no-resumable` 使用锁定 `huggingface-hub==1.1.7` 的 `upload_folder`。该版本在

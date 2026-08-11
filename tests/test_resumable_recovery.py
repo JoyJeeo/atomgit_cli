@@ -39,6 +39,12 @@ def main():
                 def __init__(self, token=None):
                     calls.append(("init", token))
 
+                def list_repo_tree(self, repo_id, path_in_repo=None, *,
+                                   recursive=False, expand=False,
+                                   revision=None, repo_type=None, token=None):
+                    calls.append(("validate", repo_id))
+                    return []
+
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload", kwargs))
                     time.sleep(0.25)
@@ -46,6 +52,12 @@ def main():
             class FastHfApi:
                 def __init__(self, token=None):
                     calls.append(("init-fast", token))
+
+                def list_repo_tree(self, repo_id, path_in_repo=None, *,
+                                   recursive=False, expand=False,
+                                   revision=None, repo_type=None, token=None):
+                    calls.append(("validate-fast", repo_id))
+                    return []
 
                 def upload_large_folder(self, **kwargs):
                     calls.append(("upload-fast", kwargs))

@@ -21,6 +21,7 @@
 运行：conda run -n atomgit_cli python tests/test_upload_error_classify.py
 """
 import sys
+import errno
 import atomgit  # noqa: F401  触发包初始化
 api_mod = sys.modules["atomgit.api"]
 classify = api_mod._classify_upload_error
@@ -172,6 +173,46 @@ def main():
     case("U17 未知异常 → 未知错误",
          RuntimeError("something totally unexpected"),
          "未知错误")
+
+    structured_cases = [
+        ("authentication", "认证失败"),
+        ("permission", "权限不足"),
+        ("repository", "仓库不存在"),
+        ("revision", "分支"),
+        ("payload_size", "提交过大"),
+        ("rate_limit", "请求限流"),
+        ("service_unavailable", "服务暂不可用"),
+        ("timeout", "请求超时"),
+        ("connection", "网络连接失败"),
+        ("upload_mode", "上传模式不安全"),
+        ("client_resource", "客户端资源不足"),
+    ]
+    for category, expected in structured_cases:
+        case(
+            f"structured {category} 保留分类",
+            api_mod.ResumableWorkerError(category),
+            expected,
+        )
+    structured_type, structured_hint = classify(
+        api_mod.ResumableWorkerError("upload_mode"), repo_id="user/repo"
+    )
+    check("上传模式错误提示 .gitattributes LFS",
+          ".gitattributes" in structured_hint and "LFS" in structured_hint)
+    check("结构化子进程错误不包含原始响应或路径",
+          "http" not in str(api_mod.ResumableWorkerError("unknown")).lower()
+          and "/" not in str(api_mod.ResumableWorkerError("unknown")))
+    resource_envelope = api_mod._resumable_failure_envelope(
+        OSError(errno.ENOSPC, "disk full", "/private/source/model.bag")
+    )
+    check("本地资源错误只传递受限类别",
+          resource_envelope == {"category": "client_resource"})
+    permission_envelope = api_mod._resumable_failure_envelope(
+        PermissionError(errno.EACCES, "permission denied", "/private/source")
+    )
+    check("本地文件权限错误归为客户端资源",
+          permission_envelope == {"category": "client_resource"})
+    check("受限错误载荷不包含完整路径",
+          "/private/source/model.bag" not in repr(resource_envelope))
 
     # --- 优先级：仓库已禁用即便含 403 也不应被误判为认证失败 ---
     # DisabledRepoError 含 403 文本时，应归到"仓库已禁用"

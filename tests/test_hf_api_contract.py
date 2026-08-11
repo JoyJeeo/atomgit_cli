@@ -154,6 +154,16 @@ def main():
             },
         ),
         (
+            "read-only resumable target validation contract",
+            HfApi.list_repo_tree,
+            (None, "user/repo"),
+            {
+                "revision": "main",
+                "repo_type": None,
+                "recursive": False,
+            },
+        ),
+        (
             "upload projection filtering contract",
             filter_repo_objects,
             (["a.txt", "logs/a.txt"],),

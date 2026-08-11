@@ -21,6 +21,7 @@ import tempfile
 import time
 
 import httpx
+import huggingface_hub._upload_large_folder as hf_large_folder
 
 
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
@@ -1728,10 +1729,192 @@ _RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
 _RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
 _RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
 _RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
+# HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
+# it must be selected as LFS by the repository policy before commit encoding.
+_RESUMABLE_REGULAR_FILE_MAX_BYTES = 1_000_000_000
+
+
+class ResumableUploadModeError(RuntimeError):
+    """A server-selected resumable upload mode is unsafe for the file size."""
+
+
+_RESUMABLE_WORKER_ERROR_MESSAGES = {
+    "authentication": "resumable worker authentication failed",
+    "permission": "resumable worker permission check failed",
+    "repository": "resumable worker repository check failed",
+    "revision": "resumable worker revision check failed",
+    "request": "resumable worker request validation failed",
+    "payload_size": "resumable worker payload is too large",
+    "rate_limit": "resumable worker was rate limited",
+    "service_unavailable": "resumable worker service is unavailable",
+    "timeout": "resumable worker timed out",
+    "connection": "resumable worker connection failed",
+    "upload_mode": "resumable worker upload mode is unsafe",
+    "client_resource": "resumable worker client resources are insufficient",
+    "unknown": "resumable worker failed",
+}
+
+
+class ResumableWorkerError(RuntimeError):
+    """A credential-safe failure reconstructed from the upload child."""
+
+    def __init__(self, category: str):
+        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
+            category = "unknown"
+        self.category = category
+        super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
 class ResumableCommitError(RuntimeError):
     """A resumable commit could not complete under the bounded retry policy."""
+
+
+def _resumable_error_chain(error: BaseException):
+    """Yield a bounded exception chain without serializing exception text."""
+    current = error
+    seen = set()
+    for _ in range(8):
+        if not isinstance(current, BaseException) or id(current) in seen:
+            return
+        seen.add(id(current))
+        yield current
+        current = current.__cause__ or current.__context__
+
+
+def _resumable_error_status(error: BaseException) -> Optional[int]:
+    response = getattr(error, "response", None)
+    status_code = getattr(response, "status_code", None)
+    if isinstance(status_code, int):
+        return status_code
+    code = getattr(error, "code", None)
+    return code if isinstance(code, int) else None
+
+
+def _resumable_worker_error_category(error: BaseException) -> str:
+    """Reduce an arbitrary child failure to one bounded, non-sensitive code."""
+    for cause in _resumable_error_chain(error):
+        if isinstance(cause, ResumableWorkerError):
+            return cause.category
+        if isinstance(cause, ResumableUploadModeError):
+            return "upload_mode"
+
+        name = type(cause).__name__
+        if name == "RevisionNotFoundError":
+            return "revision"
+        if name == "RepositoryNotFoundError":
+            return "repository"
+        if name in ("GatedRepoError", "DisabledRepoError"):
+            return "permission"
+
+        credential_error = auth_error_kind(cause)
+        if credential_error in ("authentication", "permission"):
+            return credential_error
+
+        status_code = _resumable_error_status(cause)
+        if status_code == 401:
+            return "authentication"
+        if status_code == 403:
+            return "permission"
+        if status_code == 404:
+            return "repository"
+        if status_code == 413:
+            return "payload_size"
+        if status_code == 429:
+            return "rate_limit"
+        if status_code in (502, 503, 504):
+            return "service_unavailable"
+        if status_code == 400 or name == "BadRequestError":
+            return "request"
+
+        if isinstance(
+            cause,
+            (httpx.TimeoutException, TimeoutError, socket.timeout),
+        ):
+            return "timeout"
+        if isinstance(
+            cause,
+            (httpx.NetworkError, ConnectionError),
+        ):
+            return "connection"
+        if isinstance(cause, MemoryError):
+            return "client_resource"
+        if isinstance(cause, OSError) and cause.errno in (
+            errno.EACCES,
+            errno.EPERM,
+            errno.EFBIG,
+            errno.EMFILE,
+            errno.ENFILE,
+            errno.ENOMEM,
+            errno.ENOSPC,
+            errno.EROFS,
+        ):
+            return "client_resource"
+    return "unknown"
+
+
+def _resumable_failure_envelope(error: BaseException) -> dict:
+    """Build the only error payload allowed across the process boundary."""
+    return {"category": _resumable_worker_error_category(error)}
+
+
+def _validate_resumable_commit_operations(operations) -> None:
+    """Reject unsafe regular blobs before commit serialization reads them."""
+    for operation in operations:
+        upload_info = getattr(operation, "upload_info", None)
+        size = getattr(upload_info, "size", None)
+        upload_mode = getattr(operation, "_upload_mode", None)
+        if (
+            upload_mode == "regular"
+            and isinstance(size, int)
+            and not isinstance(size, bool)
+            and size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+        ):
+            raise ResumableUploadModeError(
+                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+                "中为该文件类型配置 Git LFS 后重试。"
+            )
+
+
+def _validate_resumable_upload_mode_items(items) -> None:
+    """Apply the regular-file size policy immediately after preupload mode."""
+    for _, metadata in items:
+        if (
+            metadata.upload_mode == "regular"
+            and metadata.size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+        ):
+            raise ResumableUploadModeError(
+                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+                "中为该文件类型配置 Git LFS 后重试。"
+            )
+
+
+def _refresh_unsafe_resumable_upload_modes(folder_path: Path) -> int:
+    """Refresh only unsafe uncommitted policy fields in locked HF metadata."""
+    folder_path = Path(folder_path)
+    if not (folder_path / ".cache" / "huggingface" / "upload").is_dir():
+        return 0
+    refreshed = 0
+    for file_path in folder_path.rglob("*"):
+        if not file_path.is_file():
+            continue
+        relative_path = file_path.relative_to(folder_path).as_posix()
+        if relative_path.startswith(".cache/huggingface/"):
+            continue
+        paths = get_local_upload_paths(folder_path, relative_path)
+        if not paths.metadata_path.is_file():
+            continue
+        metadata = read_upload_metadata(folder_path, relative_path)
+        if (
+            not metadata.is_committed
+            and metadata.upload_mode == "regular"
+            and metadata.size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+        ):
+            metadata.upload_mode = None
+            metadata.should_ignore = None
+            metadata.remote_oid = None
+            metadata.save(paths)
+            refreshed += 1
+    return refreshed
 
 
 def _commit_error_status(error: BaseException) -> Optional[int]:
@@ -1947,7 +2130,7 @@ class _ResumableCommitController:
             f"resumable commit failed for {item_count} file(s): {detail}"
         )
         if self._fatal_callback is not None:
-            self._fatal_callback(wrapped)
+            self._fatal_callback(error)
         raise wrapped from error
 
     def _retry_delay(self, error: BaseException, attempt: int) -> float:
@@ -2061,6 +2244,12 @@ class _ResumableCommitController:
         operations = list(kwargs.get("operations", ()))
         if not operations:
             return self._create_commit(*args, **kwargs)
+        try:
+            _validate_resumable_commit_operations(operations)
+        except ResumableUploadModeError as error:
+            if self._fatal_callback is not None:
+                self._fatal_callback(error)
+            raise
         return self._commit_group(args, kwargs, operations)
 
 
@@ -2118,23 +2307,52 @@ def _run_resumable_upload(
     terminated without leaving worker threads running in the CLI process.
     """
     original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    original_get_upload_mode = hf_large_folder._get_upload_mode
     result_sent = False
 
-    def fatal_exit(error):
+    def send_failure(error):
         nonlocal result_sent
+        if not result_sent:
+            result_queue.put((False, _resumable_failure_envelope(error)))
+            result_sent = True
+
+    def fatal_exit(error):
         if multiprocessing.current_process().name == "MainProcess":
             return
-        if not result_sent:
-            result_queue.put((False, (type(error).__name__, str(error))))
-            result_sent = True
+        send_failure(error)
+        if hasattr(result_queue, "close"):
             result_queue.close()
+        if hasattr(result_queue, "join_thread"):
             result_queue.join_thread()
         os._exit(1)
+
+    def get_upload_mode_with_policy(*args, **kwargs):
+        result = original_get_upload_mode(*args, **kwargs)
+        items = kwargs.get("items")
+        if items is None and args:
+            items = args[0]
+        try:
+            _validate_resumable_upload_mode_items(items or [])
+        except ResumableUploadModeError as error:
+            fatal_exit(error)
+            raise
+        return result
 
     try:
         hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
         close_hf_session()
         client = HfApi(token=token)
+        _refresh_unsafe_resumable_upload_modes(Path(kwargs["folder_path"]))
+
+        def existing_repo(repo_id, *, private=None, repo_type=None,
+                          exist_ok=False):
+            """Satisfy HF 1.1.7 setup after the parent validated the target."""
+            return type("_ExistingRepo", (), {"repo_id": repo_id})()
+
+        # HF 1.1.7 otherwise sends create_repo(exist_ok=True) before metadata
+        # recovery. AtomGit upload targets are required to pre-exist.
+        client.create_repo = existing_repo
+        hf_large_folder._get_upload_mode = get_upload_mode_with_policy
         create_commit = getattr(client, "create_commit", None)
         if callable(create_commit):
             controller = _ResumableCommitController(
@@ -2155,9 +2373,9 @@ def _run_resumable_upload(
         result_queue.put((True, None))
         result_sent = True
     except BaseException as exc:
-        result_queue.put((False, (type(exc).__name__, str(exc))))
-        result_sent = True
+        send_failure(exc)
     finally:
+        hf_large_folder._get_upload_mode = original_get_upload_mode
         hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         close_hf_session()
 
@@ -2474,8 +2692,23 @@ def _execute_resumable_upload_process(
             "resumable upload worker exited without a result"
         ) from exc
     if not ok:
-        name, error_message = error
-        raise RuntimeError(f"{name}: {error_message}")
+        category = error.get("category") if isinstance(error, dict) else None
+        raise ResumableWorkerError(category or "unknown")
+
+
+def _validate_resumable_upload_target(
+    *, token: str, repo_id: str, repo_type: str, revision: str = None
+) -> None:
+    """Perform one read-only repository/revision check before local hashing."""
+    client = HfApi(token=token)
+    list_repo_type = None if repo_type == "model" else repo_type
+    tree = client.list_repo_tree(
+        repo_id=repo_id,
+        recursive=False,
+        revision=revision,
+        repo_type=list_repo_type,
+    )
+    next(iter(tree), None)
 
 
 def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
@@ -2518,6 +2751,72 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
 
     返回 (error_type, hint)，其中 hint 是给用户的可执行建议。
     """
+    if isinstance(e, ResumableWorkerError):
+        structured_errors = {
+            "authentication": (
+                "认证失败",
+                "登录凭证无效或已过期。请使用 'atomgit login' 重新登录后重试。",
+            ),
+            "permission": (
+                "权限不足",
+                "当前登录凭证无权上传到目标仓库。请检查仓库权限或目标命名空间。",
+            ),
+            "repository": (
+                "仓库不存在",
+                f"目标仓库 {repo_id or ''} 不存在或不可访问。请先使用 "
+                "'atomgit repo create' 创建仓库，或检查 repo_id / repo_type。",
+            ),
+            "revision": (
+                "分支/版本不存在",
+                "目标分支不存在且无法自动创建。请检查 revision 是否正确。",
+            ),
+            "request": (
+                "请求参数错误",
+                "请求参数不合法。请检查 repo_id、repo_type、path_in_repo 等参数。",
+            ),
+            "payload_size": (
+                "提交过大",
+                "提交已降至单文件仍超过服务端限制；断点状态已保留，请联系平台支持。",
+            ),
+            "rate_limit": (
+                "请求限流",
+                "服务端持续限流，上传已停止且断点状态已保留；请稍后重新执行同一命令。",
+            ),
+            "service_unavailable": (
+                "服务暂不可用",
+                "服务端暂时不可用，上传断点状态已保留；请稍后重新执行同一命令。",
+            ),
+            "timeout": (
+                "请求超时",
+                "请求超时。可使用 -t/--timeout 增大超时时间后重试。",
+            ),
+            "connection": (
+                "网络连接失败",
+                "无法连接到服务器。请检查网络或代理设置后重试。",
+            ),
+            "upload_mode": (
+                "上传模式不安全",
+                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+                "中为该文件类型配置 Git LFS 后重试。断点状态已保留。",
+            ),
+            "client_resource": (
+                "客户端资源不足",
+                "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
+            ),
+            "unknown": (
+                "未知错误",
+                "上传子进程失败且未能安全识别原因；断点状态已保留，请稍后重试。",
+            ),
+        }
+        return structured_errors[e.category]
+
+    if isinstance(e, ResumableUploadModeError):
+        return (
+            "上传模式不安全",
+            "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
+            "中为该文件类型配置 Git LFS 后重试。断点状态已保留。",
+        )
+
     msg = str(e)
     ename = type(e).__name__
 
@@ -3192,6 +3491,12 @@ class HuggingFaceAPI:
                         None
                         if upload_timeout is None
                         else time.monotonic() + upload_timeout
+                    )
+                    _validate_resumable_upload_target(
+                        token=credentials['token'],
+                        repo_id=normalized_repo_id,
+                        repo_type=eff_repo_type,
+                        revision=revision,
                     )
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1

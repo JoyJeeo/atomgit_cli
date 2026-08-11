@@ -69,14 +69,37 @@ def main():
     resumable_calls = []
     ordinary_calls = []
     thread_counts = []
+    target_validations = []
+    resumable_events = []
 
     class FakeHfApi:
         fail_repo_id = None
+        missing_repo_id = None
+        validation_consumes_timeout = False
 
         def __init__(self, token=None):
             self.token = token
 
+        def list_repo_tree(self, repo_id, path_in_repo=None, *,
+                           recursive=False, expand=False, revision=None,
+                           repo_type=None, token=None):
+            resumable_events.append(("validate", repo_id))
+            target_validations.append({
+                "repo_id": repo_id,
+                "revision": revision,
+                "repo_type": repo_type,
+                "token": token,
+                "constructor_token": self.token,
+                "recursive": recursive,
+            })
+            if self.validation_consumes_timeout:
+                api_mod.time.monotonic()
+            if repo_id == self.missing_repo_id:
+                raise RuntimeError("Repository Not Found")
+            return []
+
         def upload_large_folder(self, **kwargs):
+            resumable_events.append(("upload", kwargs["repo_id"]))
             if kwargs["repo_id"] == self.fail_repo_id:
                 raise RuntimeError("offline terminal failure")
             root = Path(kwargs["folder_path"])
@@ -123,6 +146,17 @@ def main():
             resumable_ok = (
                 result is True
                 and len(resumable_calls) == 2
+                and len(target_validations) == 1
+                and target_validations[0] == {
+                    "repo_id": "user/repo",
+                    "revision": None,
+                    "repo_type": None,
+                    "token": None,
+                    "constructor_token": "offline-token",
+                    "recursive": False,
+                }
+                and resumable_events[:2]
+                == [("validate", "user/repo"), ("upload", "user/repo")]
                 and [len(files) for _, files in resumable_calls] == [20, 1]
                 and all(kwargs["num_workers"] == 5 for kwargs, _ in resumable_calls)
                 and all(join is None for join in InlineProcess.joins)
@@ -131,9 +165,12 @@ def main():
             )
 
             resumable_calls.clear()
+            target_validations.clear()
+            resumable_events.clear()
             InlineProcess.joins.clear()
-            ticks = iter([100.0, 101.0, 103.0])
+            ticks = iter([100.0, 104.0, 105.0, 107.0])
             api_mod.time.monotonic = lambda: next(ticks)
+            FakeHfApi.validation_consumes_timeout = True
             deadline_result = api_mod.api.upload_directory(
                 source,
                 "user/repo",
@@ -143,8 +180,9 @@ def main():
             )
             deadline_ok = (
                 deadline_result is True
-                and InlineProcess.joins == [9.0, 7.0]
+                and InlineProcess.joins == [5.0, 3.0]
             )
+            FakeHfApi.validation_consumes_timeout = False
             api_mod.time.monotonic = original["monotonic"]
 
             result = api_mod.api.upload_directory(
@@ -163,6 +201,7 @@ def main():
 
             lifecycle_output = StringIO()
             resumable_calls.clear()
+            target_validations.clear()
             with redirect_stdout(lifecycle_output):
                 lifecycle_result = api_mod.api.upload_directory(
                     source,
@@ -192,6 +231,7 @@ def main():
                     metadata.is_committed = True
                     metadata.save(paths)
             resumable_calls.clear()
+            target_validations.clear()
             skip_output = StringIO()
             with redirect_stdout(skip_output):
                 skip_result = api_mod.api.upload_directory(
@@ -204,6 +244,7 @@ def main():
             skip_ok = (
                 skip_result is True
                 and len(resumable_calls) == 2
+                and len(target_validations) == 1
                 and "[批次 1/2] 续传跳过: 20 个已确认完成文件" in skip_text
                 and "[批次 2/2] 续传跳过: 1 个已确认完成文件" in skip_text
                 and "上传批次汇总: 计划 21，新增提交 0，续传跳过 21，确认完成 21" in skip_text
@@ -227,6 +268,28 @@ def main():
                 metadata_failure_result is True
                 and "上传批次汇总: 计划 21，新增提交 21，续传跳过 0，确认完成 21"
                 in metadata_failure_text
+            )
+
+            resumable_calls.clear()
+            target_validations.clear()
+            resumable_events.clear()
+            FakeHfApi.missing_repo_id = "user/repo-missing"
+            missing_output = StringIO()
+            with redirect_stdout(missing_output):
+                missing_result = api_mod.api.upload_directory(
+                    source,
+                    FakeHfApi.missing_repo_id,
+                    ignore_patterns=["*.tmp"],
+                    resumable=True,
+                )
+            FakeHfApi.missing_repo_id = None
+            missing_text = missing_output.getvalue()
+            missing_ok = (
+                missing_result is False
+                and len(target_validations) == 1
+                and not resumable_calls
+                and resumable_events == [("validate", "user/repo-missing")]
+                and "仓库不存在" in missing_text
             )
 
             FakeHfApi.fail_repo_id = "user/repo-terminal-failure"
@@ -268,11 +331,12 @@ def main():
                 and "上传批次汇总: 计划 700，新增提交 700，续传跳过 0，确认完成 700" in large_text
             )
             print(f"[{'PASS' if resumable_ok else 'FAIL'}] resumable 20-file batches/no-copy/unlimited")
-            print(f"[{'PASS' if deadline_ok else 'FAIL'}] resumable batches share one total deadline")
+            print(f"[{'PASS' if deadline_ok else 'FAIL'}] validation and resumable batches share one total deadline")
             print(f"[{'PASS' if ordinary_ok else 'FAIL'}] ordinary 20-file batches")
             print(f"[{'PASS' if lifecycle_ok else 'FAIL'}] 21-file lifecycle without progress bar")
             print(f"[{'PASS' if skip_ok else 'FAIL'}] completed resumable batches are skipped after remote validation")
             print(f"[{'PASS' if metadata_failure_ok else 'FAIL'}] metadata observation cannot fail upload")
+            print(f"[{'PASS' if missing_ok else 'FAIL'}] missing target fails before hashing or upload")
             print(f"[{'PASS' if failure_ok else 'FAIL'}] terminal failure summary and ordering")
             print(f"[{'PASS' if large_plan_ok else 'FAIL'}] 700-file lifecycle plan with progress bar")
             return 0 if all((
@@ -282,6 +346,7 @@ def main():
                 lifecycle_ok,
                 skip_ok,
                 metadata_failure_ok,
+                missing_ok,
                 failure_ok,
                 large_plan_ok,
             )) else 1

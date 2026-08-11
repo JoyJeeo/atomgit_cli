@@ -15,6 +15,8 @@
 - revision；
 - ignore patterns；
 - 目录默认 resumable、显式普通模式、worker 和 path-in-repo 稳定投影；
+- resumable 既有仓库只读校验、隐式建仓屏蔽、超大 regular 文件保护和结构化
+  子进程错误；
 - 单文件直接上传；
 - 上传错误分类。
 

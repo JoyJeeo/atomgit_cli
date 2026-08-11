@@ -5,6 +5,7 @@ import httpx
 import queue
 import sys
 import tempfile
+from types import SimpleNamespace
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
@@ -27,8 +28,12 @@ def http_error(status, retry_after=None):
 
 
 class FakeOperation:
-    def __init__(self, path):
+    def __init__(self, path, *, size=None, upload_mode=None):
         self.path_in_repo = path
+        if size is not None:
+            self.upload_info = SimpleNamespace(size=size)
+        if upload_mode is not None:
+            self._upload_mode = upload_mode
 
 
 class ScriptedClient:
@@ -88,6 +93,59 @@ def main():
         print(f"[{'PASS' if condition else 'FAIL'}] {name}" + (f" -> {detail}" if detail else ""))
 
     operations = [FakeOperation(f"file-{index:02d}.bin") for index in range(20)]
+
+    policy_events = []
+    oversized_regular = FakeOperation(
+        "captures/run.bag",
+        size=api_mod._RESUMABLE_REGULAR_FILE_MAX_BYTES + 1,
+        upload_mode="regular",
+    )
+    policy_client = ScriptedClient(["must-not-run"])
+    controller = make_controller(
+        policy_client,
+        [],
+        reconcile=lambda **kwargs: policy_events.append("reconcile") or set(),
+        event_callback=policy_events.append,
+    )
+    try:
+        controller.create_commit(
+            repo_id="user/repo",
+            repo_type="model",
+            revision="main",
+            operations=[oversized_regular],
+            commit_message="batch",
+        )
+    except api_mod.ResumableUploadModeError as error:
+        oversized_blocked = ".gitattributes" in str(error)
+    else:
+        oversized_blocked = False
+    check("oversized regular file is rejected before commit", oversized_blocked)
+    check("upload-mode rejection does not retry, reconcile, or reduce",
+          not policy_client.calls and not policy_events, repr(policy_events))
+
+    large_lfs = FakeOperation(
+        "captures/run.bag",
+        size=api_mod._RESUMABLE_REGULAR_FILE_MAX_BYTES + 1,
+        upload_mode="lfs",
+    )
+    lfs_client = ScriptedClient(["lfs-ok"])
+    lfs_result = make_controller(lfs_client, []).create_commit(
+        repo_id="user/repo", repo_type="model", revision="main",
+        operations=[large_lfs], commit_message="batch",
+    )
+    check("large LFS operation remains supported", lfs_result == "lfs-ok")
+
+    small_regular = FakeOperation(
+        "notes.txt",
+        size=api_mod._RESUMABLE_REGULAR_FILE_MAX_BYTES,
+        upload_mode="regular",
+    )
+    regular_client = ScriptedClient(["regular-ok"])
+    regular_result = make_controller(regular_client, []).create_commit(
+        repo_id="user/repo", repo_type="model", revision="main",
+        operations=[small_regular], commit_message="batch",
+    )
+    check("safe regular operation remains supported", regular_result == "regular-ok")
 
     sleeps = []
     timeout_client = ScriptedClient([httpx.ReadTimeout("response timed out")])
@@ -421,6 +479,58 @@ def main():
                 projection, "prefix/payload.bin"
             )
             check("successful sub-commit persists locked HF metadata", persisted.is_committed)
+
+            unsafe_file = projection / "unsafe.bag"
+            with unsafe_file.open("wb") as stream:
+                stream.truncate(
+                    api_mod._RESUMABLE_REGULAR_FILE_MAX_BYTES + 1
+                )
+            unsafe_paths = api_mod.get_local_upload_paths(projection, "unsafe.bag")
+            unsafe_metadata = api_mod.read_upload_metadata(projection, "unsafe.bag")
+            unsafe_metadata.sha256 = "12" * 32
+            unsafe_metadata.upload_mode = "regular"
+            unsafe_metadata.should_ignore = False
+            unsafe_metadata.remote_oid = "cached-oid"
+            unsafe_metadata.save(unsafe_paths)
+
+            committed_file = projection / "committed.bag"
+            with committed_file.open("wb") as stream:
+                stream.truncate(
+                    api_mod._RESUMABLE_REGULAR_FILE_MAX_BYTES + 1
+                )
+            committed_paths = api_mod.get_local_upload_paths(
+                projection, "committed.bag"
+            )
+            committed_metadata = api_mod.read_upload_metadata(
+                projection, "committed.bag"
+            )
+            committed_metadata.sha256 = "34" * 32
+            committed_metadata.upload_mode = "regular"
+            committed_metadata.is_committed = True
+            committed_metadata.save(committed_paths)
+
+            refreshed = api_mod._refresh_unsafe_resumable_upload_modes(projection)
+            refreshed_unsafe = api_mod.read_upload_metadata(
+                projection, "unsafe.bag"
+            )
+            preserved_committed = api_mod.read_upload_metadata(
+                projection, "committed.bag"
+            )
+            check("unsafe uncommitted upload mode is refreshed", refreshed == 1)
+            check(
+                "upload-mode refresh preserves sha256 and clears only policy fields",
+                refreshed_unsafe.sha256 == "12" * 32
+                and refreshed_unsafe.upload_mode is None
+                and refreshed_unsafe.should_ignore is None
+                and refreshed_unsafe.remote_oid is None
+                and not refreshed_unsafe.is_committed,
+            )
+            check(
+                "committed upload metadata remains untouched",
+                preserved_committed.sha256 == "34" * 32
+                and preserved_committed.upload_mode == "regular"
+                and preserved_committed.is_committed,
+            )
     finally:
         api_mod._atomgit_file_checksum = original_checksum
 
@@ -437,7 +547,16 @@ def main():
             return None
 
         def upload_large_folder(self, **kwargs):
+            existing = self.create_repo(
+                repo_id=kwargs["repo_id"], repo_type=kwargs["repo_type"],
+                private=None, exist_ok=True,
+            )
+            captured.append(("metadata-recovery", existing.repo_id))
             return None
+
+        def create_repo(self, **kwargs):
+            captured.append(("remote-create", kwargs["repo_id"]))
+            raise AssertionError("remote create must be suppressed")
 
     api_mod.HfApi = TimeoutAwareApi
     api_mod.close_hf_session = lambda: captured.append("closed")
@@ -450,6 +569,10 @@ def main():
             300.0,
         )
         check("child reports successful upload", result_queue.get_nowait() == (True, None))
+        check("existing repository reaches metadata recovery without create",
+              ("metadata-recovery", "user/repo") in captured
+              and not any(isinstance(item, tuple) and item[0] == "remote-create"
+                          for item in captured), repr(captured))
         check("child constructs HF client with 300 second timeout", 300.0 in captured, repr(captured))
         check("child closes cached HTTP sessions before and after", captured.count("closed") == 2, repr(captured))
         check("child restores process-global timeout", api_mod.hf_constants.DEFAULT_REQUEST_TIMEOUT == original_timeout)
@@ -483,7 +606,9 @@ def main():
             process.join(5)
             child_result = result_queue.get(timeout=1)
             check("persistent child failure terminates promptly", not process.is_alive())
-            check("persistent child failure returns resumable error", child_result[0] is False and child_result[1][0] == "ResumableCommitError", repr(child_result))
+            check("persistent child failure returns bounded structured error",
+                  child_result == (False, {"category": "rate_limit"}),
+                  repr(child_result))
         finally:
             if process is not None and process.is_alive():
                 process.terminate()
