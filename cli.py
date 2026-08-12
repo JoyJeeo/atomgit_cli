@@ -342,7 +342,7 @@ def create_branch(repo_id, branch_name, source):
 )
 @click.option('--auto-configure-lfs', 'auto_configure_lfs', is_flag=True,
               default=False,
-              help='resumable 检测到超大 regular 文件时，提交仓库级 Git LFS 配置后重试')
+              help='resumable 为服务端判定的 LFS 扩展名检查并补齐仓库级 Git LFS 配置')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
            repo_type, revision, ignore, resumable, num_workers,
            batch_size, auto_configure_lfs):
@@ -487,7 +487,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
             print_info("上传模式: 断点续传/分块 (resumable)")
             if auto_configure_lfs:
                 print_info(
-                    "Git LFS 自动配置: 已启用；仅在检测到不安全模式时修改远端配置"
+                    "Git LFS 自动配置: 已启用；将检查服务端判定的 LFS 扩展名并按需修改远端配置"
                 )
             if not repo_type:
                 print_info("提示：未指定 --repo-type，断点续传模式下默认按 model 处理")
