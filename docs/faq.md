@@ -77,6 +77,19 @@ LFS 行，携带目标 revision 当前 commit 做并发保护，只提交该文�
 停止。修正策略后重试仅刷新危险且尚未提交的模式缓存，保留文件哈希和已提交状态。
 自动配置路径已有离线回归覆盖，但尚未完成真实 AtomGit 写入验收。
 
+## 为什么 CLI 上传的 LFS 文件会让新克隆立即显示 modified？
+
+旧的 AtomGit HF commit 服务会把 `lfsFile` 元数据生成成缺少最终 LF 的 Git LFS
+pointer。文件的 LFS OID、大小和实际对象没有变化，但 `git-lfs clean` 会把 pointer
+规范化并补上 LF，于是 Git 把刚克隆的文件判定为已修改。
+
+当前 CLI 和 SDK 上传会在客户端生成固定 ASCII/LF 的标准 pointer，同时保留原有
+LFS 对象上传；提交完成后再按精确 commit SHA 读取 V5 原始 blob 做逐字节验证。
+单文件、普通目录和 resumable 目录统一使用这项契约，不针对某个仓库名称。若服务
+返回的 pointer 不规范或无法验证，上传返回失败而不是误报成功。此修复阻止未来
+CLI 上传继续引入问题，但不会自动改写既有提交；已有非规范 pointer 需要单独授权
+的规范化提交或服务端修复。
+
 ## 为什么普通大目录上传会警告并长时间没有进度？
 
 `--no-resumable` 使用锁定 `huggingface-hub==1.1.7` 的 `upload_folder`。该版本在

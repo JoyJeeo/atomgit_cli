@@ -32,6 +32,8 @@ every remote path is verified; known status follows the interface list.
   worker selection, with an explicit ordinary-upload opt-out
 - Explicit opt-in repository-level Git LFS attribute repair when resumable
   preupload classifies an oversized file as regular
+- Canonical Git LFS pointer commits with exact raw-blob verification for every
+  CLI upload mode
 - Repository download to a default or explicit directory
 - Single-file CLI download
 - Opt-in checksum verification for existing and newly downloaded CLI files
@@ -69,6 +71,11 @@ every remote path is verified; known status follows the interface list.
 - The previously known SDK upload lifetime, parameter-forwarding, and timeout
   state defects are covered by offline regressions on the yuto development
   line.
+- A controlled upload to `weixin_52273949/test_datasets` proved that replacing
+  AtomGit's noncanonical `lfsFile` materialization with the exact canonical
+  pointer payload preserves LFS OID and size, ends in one LF, and passes
+  `git lfs pointer --check --strict`. Existing noncanonical history was not
+  repaired by that acceptance fixture.
 
 ## Product Contracts
 
@@ -84,6 +91,9 @@ every remote path is verified; known status follows the interface list.
 - Remote `.gitattributes` mutation is never implicit: it requires the exact
   `--auto-configure-lfs` option, reports repository-wide rule scope, and must
   preserve concurrent remote edits or fail closed.
+- CLI and SDK uploads must serialize every new LFS pointer as exact ASCII v1
+  bytes ending in one LF, verify the raw Git blob at the returned commit, and
+  never report unconditional success when that contract is not confirmed.
 - Repository pruning is explicit and may delete only regular files previously
   written and recorded by successful whole-repository CLI downloads; it must
   not scan or adopt unrelated local content.

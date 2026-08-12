@@ -123,6 +123,22 @@ large-folder 元数据保证；重新执行时只能可靠依赖已经完整存�
 确认进度，上一批确认成功后才会显示下一批开始。结束时汇总计划、新增提交、
 续传跳过和确认完成的文件数。
 
+单文件、普通目录和 resumable 三条路径共享同一个上下文隔离的 LFS commit
+契约。HF 仍先按原流程上传实际 LFS 对象；提交生成阶段把每个 `lfsFile(path,
+algo, oid, size)` 转换为 Base64 `file` 记录，其内容严格为：
+
+```text
+version https://git-lfs.github.com/spec/v1\n
+oid sha256:<64-lowercase-hex>\n
+size <non-negative-decimal>\n
+```
+
+OID 或 size 元数据不合法会在提交前失败。提交成功后按返回 commit SHA 调用官方
+V5 contents API，读取未解析的原始 Git blob 并与预期字节完全比较，不下载 LFS
+对象。非规范、响应畸形或无法确认都会使上传失败。该包装使用上下文变量隔离，
+同一进程中不属于 AtomGit 上传的 HF commit 仍保持锁定依赖的原始 `lfsFile`
+行为。历史提交中的旧 pointer 不在上传流程中自动修复。
+
 ## 5. Resumable 目录上传
 
 目录在没有显式选择且没有 `--message` 时默认进入该分支。`--resumable` 可继续
@@ -270,7 +286,10 @@ API 方法打印类型和建议后返回 `False`，CLI 再以非零状态退出�
 - 错误分类。
 
 离线契约与远程测试还验证了 resumable 的真实 HF 签名、dataset 上传路由、
-CLI 全局状态恢复以及大文件中断恢复。这些测试仍没有证明：
+CLI 全局状态恢复以及大文件中断恢复。2026-08-11 的受控小型 `.bin` 上传还证明：
+实际 LFS OID/size 保持不变，提交树中的新 pointer 与客户端预期字节完全相等，
+以单个 LF 结尾，并通过 `git lfs pointer --check --strict`。测试仓库的既有旧
+pointer 没有在该验收中修复。这些测试仍没有证明：
 
 - CLI 先通过 `repo branch create` 的 V5 POST/GET 创建并验证分支，随后
   revision 才会写入目标远端分支；SDK 仍只支持 main；
