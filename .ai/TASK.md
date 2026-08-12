@@ -12,9 +12,9 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 12:46:47 +0800`
+- Updated: `2026-08-12 12:56:00 +0800`
 - Status: `completed`
-- Phase: `configurable upload batch size delivered and live-accepted against the authorized cli_demo_dataset repository; no queued local Issue remains`
+- Phase: `configurable batch size and default macOS metadata exclusion delivered and live-accepted against the authorized cli_demo_dataset repository; no queued local Issue remains`
 - Base branch: `yuto`
 - Task branch: `codex/configurable-upload-batch-size`
 - Base commit: `9410f328caafac015e89c9d735dff2e3f600da68`
@@ -25,11 +25,11 @@ remote GitHub Issue.
 - Worktree state: `clean at the recorded delivery commit`
 - Changed paths: `none after this handoff record is committed`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Last completed action: `completed authorized live batch-size acceptance under a unique cli_demo_dataset prefix with resumable reuse and checksum readback evidence`
+- Last completed action: `completed authorized live default-ignore acceptance for resumable and ordinary directory uploads, with exact remote absence and retained-file readback evidence`
 - Next exact action: `none; no queued local Issue remains`
 - Blockers: `none`
 - Tests run this turn: `pre-fix test_cli_feature_baseline.py failed on missing schema/dispatch, test_upload_validation.py failed on valid/direct API batch_size, test_upload_progress.py failed 25/27 because the option was absent, and test_upload_batching.py failed at the first batch_size API call; post-fix test_upload_batching.py passed exact 1/2/10/20 ordinary and resumable grouping, deterministic content, remainder, projection reuse/isolation, default/large plans, and configured mid-plan failure; test_upload_progress.py passed 28/28; test_upload_validation.py passed 15/15; test_upload_resumable.py passed 49/49; test_cli_feature_baseline.py passed 52/52; test_cli_baseline_guard.py passed 14/14; test_hf_api_contract.py passed 13/13; test_upload_ignore.py passed 33/33; test_dataset_resumable_route.py passed 11/11; test_auto_configure_lfs.py passed 28/28; mandatory python tests/run_cli_baseline.py passed 68/68 in 58.18s, after fixing projection-key variable shadowing passed 68/68 in 60.97s, after the reviewer documentation fix passed 68/68 in 59.83s, and the final delivery gate passed 68/68 in 61.05s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
-- Live tests: `authorized by the maintainer on 2026-08-12 only for read/write operations against weixin_52273949/cli_demo_dataset, with every OpenLET repository excluded; clean resumable upload of three 95-byte text files under codex-live/batch-size-clean-20260812-124427 used --batch-size 2 and produced exact 2+1 outer groups, a same-command rerun reported newly submitted 0 / resumed 3, exact remote prefix enumeration returned three files, each CLI --verify-checksum readback passed, and source/readback SHA-256 values matched; target main was 6fd2c6bdf549098e0bea9ded6a9f4adadf6ad40c after acceptance`
+- Live tests: `authorized by the maintainer on 2026-08-12 only for read/write operations against weixin_52273949/cli_demo_dataset, with every OpenLET repository excluded; configurable batch-size acceptance passed as previously recorded; default macOS metadata exclusion acceptance then passed for both resumable and ordinary directory upload under codex-live/macos-ignore-{resumable,ordinary}-20260812-125020, with each 10-file source filtered to the exact six intended files and all root/nested .DS_Store plus ._* paths absent remotely; target main was 33aee7031a83ff6b0283b96791db796c9105e0cb after acceptance`
 
 ## Previous Delivered Issue Identity
 
@@ -542,9 +542,26 @@ git diff --check
 - Human acceptance: `accepted through the maintainer's explicit instruction to
   continue development, testing, committing, and pushing until every queued
   Issue is complete`.
-- Remaining risk: `no live upload was performed; behavior is covered at the
-  real locked filter contract and offline CLI/API boundaries, and existing
-  remote metadata remains intentionally unrepaired`.
+- Live acceptance: `explicitly authorized by the maintainer on 2026-08-12 and
+  passed against only weixin_52273949/cli_demo_dataset. The resumable prefix
+  codex-live/macos-ignore-resumable-20260812-125020 and ordinary prefix
+  codex-live/macos-ignore-ordinary-20260812-125020 each began from ten local
+  files and reported exactly six selected files. Exact remote enumeration found
+  only .gitattributes, .gitignore, .intentional, nested/payload.txt, normal.bag,
+  and visible.txt. Root .DS_Store, root ._root.bag, nested .DS_Store, and nested
+  ._payload.bag were absent from both prefixes. Normal .bag and intentional
+  hidden-file readbacks matched source SHA-256 bytes; target main was
+  33aee7031a83ff6b0283b96791db796c9105e0cb`.
+- Live follow-up risk: `ordinary-upload .intentional was present in exact remote
+  enumeration and downloaded byte-for-byte without checksum verification, but
+  two --verify-checksum attempts failed in the checksum metadata/download path;
+  the equivalent resumable hidden file passed --verify-checksum. This does not
+  affect default-ignore acceptance and remains a separate download compatibility
+  candidate rather than an unreviewed fix in this completed Issue`.
+- Remote retention: `the two bounded macOS-ignore acceptance prefixes remain in
+  cli_demo_dataset because deletion was not explicitly authorized. Existing
+  historical macOS metadata outside these prefixes was not inspected, deleted,
+  or repaired`.
 
 ## Active Issue Contract — Configurable Upload Batch Size
 
