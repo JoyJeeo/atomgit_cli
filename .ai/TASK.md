@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,19 +12,21 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 11:34:38 +0800`
-- Status: `active`
-- Phase: `implementation, mandatory offline gates, and independent review are complete and APPROVED; awaiting authorized Git commit, local merge into yuto, and push of yuto`
+- Updated: `2026-08-12 11:38:35 +0800`
+- Status: `completed`
+- Phase: `bounded LFS preupload failure policy delivered to github/yuto after complete offline gates, independent review, authorized task commit, and local merge`
 - Base branch: `yuto`
 - Task branch: `codex/bound-lfs-preupload-failures`
-- Base commit / current HEAD: `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
-- Remote base: `github/yuto` at `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
+- Base commit: `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
+- Task commit: `71f8fdb fix(upload): bound LFS preupload failures`
+- Merge commit: `163ef5b merge: bound LFS preupload failures`
+- Remote delivery: `github/yuto verified at 163ef5bab01563f0c4864495a26c468ce640699e before this final delivery-record commit`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty with the active Issue implementation, focused regressions, baseline registration, human documentation, architecture documentation, and this handoff; no commit, merge, push, or remote AtomGit mutation has occurred yet`
+- Worktree state: `clean and synchronized with github/yuto after this final delivery record is committed and pushed`
 - Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`, and new `tests/test_lfs_preupload_policy.py`
-- Required worktree: `resume this exact worktree because the active Issue contract is uncommitted; do not create a checkpoint commit merely to move conversations`
-- Last completed action: `completed the independent review, fixed the missing retry-exhaustion attempt message and local-resource fallback classification, reran all gates, and obtained a fresh APPROVED verdict with no remaining P0-P3 findings`
-- Next exact action: `create the authorized conventional task commit, merge it locally into yuto, push only yuto, verify github/yuto at the delivered commit, and update this record to completed delivery state`
+- Required worktree: `none; the Issue is delivered`
+- Last completed action: `pushed the authorized local merge and verified github/yuto at 163ef5bab01563f0c4864495a26c468ce640699e`
+- Next exact action: `none; the two queued follow-up Issues remain inactive and require separate explicit activation`
 - Blockers: `none; live AtomGit reads/writes remain outside this delivery and were not performed`
 - Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
 - Tests not run: `no live AtomGit upload or repository write; remote capacity root cause was already separately confirmed and this client behavior is covered offline`
@@ -333,11 +335,11 @@ The complete baseline must run after every review fix. Inspect locked
 ## Human Acceptance And Delivery Status
 
 - Issue selection and detailed plan: `accepted through the maintainer's explicit request to record the follow-up local Issue`.
-- Implementation: `complete on codex/bound-lfs-preupload-failures; not yet committed`.
-- Definition of done: `implementation, focused regression evidence, affected documentation, locked signatures, complete baseline 68/68, compileall, pip check, and diff check passed; independent review and Git delivery remain`.
+- Implementation: `delivered by task commit 71f8fdb and local merge 163ef5b`.
+- Definition of done: `passed: task-scoped implementation and documentation, failing-before-fix regression, focused suites, complete 68-script baseline after every review fix, locked signatures, compileall, pip check, diff check, credential-safety audit, no open review finding, and authorized Git delivery`.
 - Independent review: `APPROVED after two review fixes: retry exhaustion now prints its bounded three-attempt limit, and unclassified local resource failures fall back to the existing credential-safe client_resource category; fresh post-fix review found no remaining P0-P3 findings`.
 - Human implementation acceptance: `the maintainer explicitly requested end-to-end development, tests, commit, and push; final observable result will be reported after delivery`.
-- Delivery: `authorized but not yet started; task branch must remain local and only yuto may be pushed`.
+- Delivery: `task commit 71f8fdb merged locally by 163ef5b; github/yuto verified at 163ef5bab01563f0c4864495a26c468ce640699e; task branch remained local-only`.
 - Remote root cause: `confirmed as the 100 GB LFS limit and operationally resolved by the maintainer using a repository with available capacity`.
 
 ## Queued Follow-Up Issue — Inactive
