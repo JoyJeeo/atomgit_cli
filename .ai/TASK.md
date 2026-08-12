@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,19 +12,22 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 09:46:51 +0800`
-- Status: `active`
-- Phase: `maintainer accepted the implementation and authorized local commit, local merge into yuto, and push of yuto; delivery in progress`
+- Updated: `2026-08-12 09:48:21 +0800`
+- Status: `completed`
+- Phase: `generic canonical Git LFS pointer handling delivered to github/yuto after live verification, complete offline gates, independent review, human acceptance, authorized commit, and local merge`
 - Base branch: `yuto`
 - Task branch: `codex/fix-lfs-pointer-newline` based on `yuto`
-- Base commit / current HEAD: `cebb453623988a0b5df449df6e035cec3fb31c5a`
-- Remote base: `github/yuto` at `cebb453623988a0b5df449df6e035cec3fb31c5a`
+- Base commit: `cebb453623988a0b5df449df6e035cec3fb31c5a`
+- Task commit: `9919e1c fix(upload): canonicalize Git LFS pointers`
+- Merge commit: `a19baf5 merge: canonicalize Git LFS pointers`
+- Current feature HEAD: `9919e1c78e51840c32c5ed0171f6bce902994a6e`
+- Remote delivery: `github/yuto merge verified at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty with the task-scoped implementation, tests, documentation, and this handoff; no commit is authorized`
+- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
 - Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `atomgit_hub.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `lfs_pointer.py`, `tests/cli_baseline_contract.py`, `tests/test_canonical_lfs_pointer.py`, `tests/test_runtime_policy.py`
-- Last completed action: `maintainer accepted the implementation and explicitly authorized commit, merge, and push on 2026-08-12`
-- Next exact action: `commit the cohesive Issue diff on the local task branch, merge it locally into yuto, push only yuto, then record exact delivery references and close this task`
-- Required worktree: `this worktree while .ai/TASK.md is uncommitted; no checkpoint commit was authorized merely for handoff`
+- Last completed action: `pushed the authorized feature merge and verified github/yuto at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58`
+- Next exact action: `none; service-source repair for non-CLI clients requires a separately provided repository and authorization`
+- Required worktree: `none; the Issue is delivered`
 - Remaining boundary: `the latest user request is scoped to all repositories using this CLI; this repository implements and verifies that repository-independent boundary. The unavailable AtomGit service serializer itself remains unfixed, so non-CLI clients remain an explicit external-service risk rather than an advertised client fix`
 - Regression evidence: `python tests/test_canonical_lfs_pointer.py failed before implementation with ModuleNotFoundError; the added V5 transport regression then failed by leaking HTTPError out of verification; both now pass in a 24/24 suite. Real git-lfs 3.7.1 returns 0 for the canonical pointer and 2 for the missing-final-LF form. python tests/test_runtime_policy.py failed before the import-order fix because a fresh process bound https://huggingface.co and now passes 9/9 with https://hub.atomgit.com`
 - Focused offline tests: `test_upload_file_no_copy.py 16/16; test_upload_batching.py 9/9; test_upload_resumable.py 47/47; test_resumable_commit_policy.py 51/51; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; test_sdk_upload_parameters.py 14/14; test_sdk_upload_lifetime.py 11/11; test_sdk_upload_timeout.py 7/7; test_hf_api_contract.py 13/13`
@@ -274,19 +277,15 @@ remain unauthorized. The acceptance sequence is:
    `.ai/TESTING.md`, `.ai/STYLE_GUIDE.md`, `.ai/ARCHITECTURE.md`, and the
    relevant service repository instructions once that repository is known.
 4. Confirm `atomgit_cli` conda activation and locked dependency versions.
-5. Continue on `codex/fix-lfs-pointer-newline` in this exact worktree; preserve
-   all uncommitted task changes and do not make an unauthorized checkpoint.
-6. Reconcile the generic CLI/SDK implementation and its tests against the
-   current handoff; do not reopen unavailable service-source work without new
-   source and explicit scope.
-7. Run focused and required offline tests, update this handoff, perform the DoD
-   audit and independent review, then request human acceptance and any further
-   Git or live-test authorization.
+5. Do not reactivate this completed task from roadmap context alone. A new user
+   request must activate the next single Issue.
+6. Do not reopen unavailable service-source work without the relevant source
+   repository and explicit scope and permissions.
 
 ## Human Acceptance And Delivery Status
 
 - Human acceptance: `accepted by the maintainer on 2026-08-12; commit, local merge into yuto, and push of yuto explicitly authorized`.
-- Definition of done: `all implementation, automated, live-client, documentation, security, compatibility-signature, review, and human-acceptance gates passed; authorized Git delivery is in progress`.
+- Definition of done: `passed: task-scoped implementation and documentation, focused regressions, complete 67-script baseline, compile/dependency/diff checks, locked-signature inspection, credential-safety audit, controlled live client verification, no open review finding, and human acceptance`.
 - Independent review: `the first final review returned REQUEST CHANGES for missing git-lfs strict integration, V5 transport misclassification, and stale service/live-clone scope. The executable findings were reproduced and fixed, the contract was reconciled to the latest user request, and the fresh post-fix review found no P0-P3 issues and returned APPROVED`.
-- Delivery: `authorized and in progress; task branch remains local-only`.
+- Delivery: `task commit 9919e1c merged locally by a19baf5; github/yuto verified at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58; task branch remained local-only`.
 - Live verification: `passed for two uniquely named small LFS fixtures in the authorized dataset test repository; existing history was not repaired`.
