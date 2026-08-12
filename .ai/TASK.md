@@ -1,20 +1,22 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 19:43:00 +0800`
-- Phase: `implementation, review fixes, final offline verification, and independent review complete; preparing authorized local delivery`
+- Updated: `2026-08-12 19:51:00 +0800`
+- Phase: `implementation completed, independently approved, committed on the local task branch, and merged locally into yuto; preparing the authorized yuto-only push`
 - Base branch: `yuto`
 - Task branch: `codex/recover-slow-lfs-flows`
 - Base commit: `3fbe795437b8f18574ca2299e084c140b9edaa82`
-- Current HEAD: `3fbe795437b8f18574ca2299e084c140b9edaa82`
+- Task commit: `2f1ad01 fix(upload): recover slow LFS flows`
+- Merge commit: `dbf6a74 merge: recover slow LFS flows`
+- Current HEAD before this delivery record: `dbf6a74b6ff7a9b114d677942cb1ecaa77352216`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty only for this Issue implementation, focused tests, documentation, baseline registration, and TASK.md evidence`
-- Changed paths: `.ai/TASK.md`, `api.py`, `README.md`, `docs/architecture.md`, `docs/faq.md`, `tests/cli_baseline_contract.py`, `tests/test_lfs_slow_flow_recovery.py`
-- Last completed action: `second independent review approved after the rolling-baseline, sampling-granularity, and peer-improvement fixes`
-- Next exact action: `run final diff and credential audit, commit the task branch, merge locally into yuto, record completion, and push only yuto`
+- Worktree state: `dirty only for this delivery record on yuto`
+- Changed paths: `.ai/TASK.md`
+- Last completed action: `merged local-only task commit 2f1ad01 into yuto as dbf6a74 without pushing the task branch`
+- Next exact action: `commit this delivery record, push only yuto, verify the remote branch, then add the final completion checkpoint`
 - Blockers: `none`
 - Tests run: `pre-implementation test_lfs_slow_flow_recovery.py failed at the absent policy entry point; final focused test passed 28/28; affected LFS preupload 89/89, resumable recovery 5/5, commit policy 51/51, canonical pointer 24/24, dataset route 11/11, auto-configure 41/41, upload progress 28/28, validation 15/15, resumable 49/49, CLI feature baseline 52/52, and baseline guard 14/14 passed; mandatory python tests/run_cli_baseline.py passed 69/69 in 50.36s, after the stable-window correction in 49.36s, and after review fixes in 50.32s; python -m compileall -q ., python -m pip check, and git diff --check passed`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
