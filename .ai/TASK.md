@@ -1,22 +1,24 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 16:14:00 +0800`
-- Phase: `human accepted; task commit and local yuto merge complete; yuto-only push pending`
+- Updated: `2026-08-12 16:16:00 +0800`
+- Phase: `proactive LFS attribute synchronization delivered, live-accepted, merged locally into yuto, and pushed to github/yuto`
 - Base branch: `yuto`
 - Task branch: `codex/proactive-lfs-attributes`
 - Base commit: `45925471cac34777932eb6234d9b00e6dee43431`
 - Task commit: `19df988 feat(upload): synchronize LFS attributes`
 - Merge commit: `681d5df merge: synchronize LFS attributes`
-- Current HEAD: `681d5df`
+- Delivery checkpoint: `1b74384 docs(ai): record LFS attribute merge`
+- Current HEAD before this completion record: `1b74384492eb0c698282c67036ff42732ec14e69`
+- Remote delivery verified: `github/yuto at 1b74384492eb0c698282c67036ff42732ec14e69`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty only for this post-merge handoff update on yuto`
+- Worktree state: `dirty only for this final completion handoff update on yuto`
 - Changed paths: `.ai/TASK.md`
-- Last completed action: `created task commit 19df988 and merged it locally into yuto as 681d5df`
-- Next exact action: `commit this delivery checkpoint, push only yuto, verify github/yuto, then finalize this handoff as completed`
+- Last completed action: `pushed only yuto through 1b74384 and verified local HEAD exactly matches github/yuto; task branch remained local-only`
+- Next exact action: `commit and push this completion record; no queued local Issue remains`
 - Blockers: `none`
 - Tests: `pre-implementation test_auto_configure_lfs.py failed at the absent child policy arguments; final test_auto_configure_lfs.py passed 41/41; affected test_upload_resumable.py passed 49/49, test_lfs_preupload_policy.py 89/89, test_resumable_commit_policy.py 51/51, test_upload_progress.py 28/28, test_upload_validation.py 15/15, test_dataset_resumable_route.py 11/11, test_canonical_lfs_pointer.py 24/24, test_cli_feature_baseline.py 52/52, and test_cli_baseline_guard.py 14/14; mandatory python tests/run_cli_baseline.py passed 68/68 in 51.27s, 54.23s, after the P1 review fix in 57.66s, and after live evidence documentation in 50.90s; final python -m compileall -q ., python -m pip check, git diff --check, credential/generated-artifact audit, and locked callable signature inspection passed`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
@@ -89,6 +91,9 @@ Out of scope:
   upload showed *.bag configuration before preupload, 20/20 LFS completion,
   fast content-addressed reuse for the first batch, and actual transfer for
   missing objects in the next batch`.
+- Delivery: `task commit 19df988; local merge 681d5df; yuto-only push
+  verified through 1b74384492eb0c698282c67036ff42732ec14e69; no task-branch
+  push, PR, tag, release, or publication`.
 
 ## Review Record
 
