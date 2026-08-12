@@ -88,11 +88,14 @@ and must not report creation or upload success.
   uses `upload_folder` with the normalized repository prefix. Logical
   dataset resumable uploads use the same verified AtomGit model compatibility
   route as dataset creation and ordinary transfer.
-- Opt-in resumable LFS repair keeps repository policy outside the upload
-  projection: the child returns only validated extension patterns, while the
-  parent uses a private one-file buffer, an immutable revision SHA, and
-  `parent_commit` to append and verify root `.gitattributes` before retrying the
-  same batch. The wildcard is repository-wide and is printed before mutation.
+- Opt-in resumable LFS configuration keeps repository policy outside the upload
+  projection. After server mode selection, and again at preupload/commit for
+  cached metadata, the child gates LFS work and returns only unconfirmed,
+  validated extension patterns. The parent uses a private one-file buffer, an
+  immutable revision SHA, and `parent_commit` to check, append, and verify root
+  `.gitattributes` before retrying the same batch. Confirmed patterns are reused
+  across outer batches. The wildcard is repository-wide and is printed before
+  mutation. The same transaction retains the oversized-regular repair path.
 - Temporary directories must remain alive until the dependent HF call returns
   and must be cleaned in `finally` or a context manager.
 - All AtomGit upload paths enter a context-gated wrapper around the locked HF

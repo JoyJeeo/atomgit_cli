@@ -4,6 +4,7 @@
 import io
 import inspect
 import os
+import queue
 import stat
 import sys
 import tempfile
@@ -98,6 +99,47 @@ class FakeRemote:
         return FakeHfApi
 
 
+class ProactivePolicyApi:
+    items = []
+    events = []
+    route = "upload_mode"
+
+    def __init__(self, endpoint=None, token=None):
+        self.endpoint = endpoint
+        self.token = token
+
+    def create_commit(self, *args, **kwargs):
+        self.events.append("commit")
+
+    def upload_large_folder(self, **kwargs):
+        if self.route == "upload_mode":
+            api_mod.hf_large_folder._get_upload_mode(
+                self.items,
+                api=self,
+                repo_id=kwargs["repo_id"],
+                repo_type=kwargs["repo_type"],
+                revision="main",
+            )
+            self.events.append("upload-mode-returned")
+            return
+        api_mod.hf_large_folder._preupload_lfs(
+            self.items,
+            api=self,
+            repo_id=kwargs["repo_id"],
+            repo_type=kwargs["repo_type"],
+            revision="main",
+        )
+
+
+def server_select_lfs(items, *args, **kwargs):
+    for _, metadata in items:
+        metadata.upload_mode = "lfs"
+
+
+def record_preupload(items, *args, **kwargs):
+    ProactivePolicyApi.events.append("preupload")
+
+
 def main():
     original_home = os.environ.get("HF_HOME")
     original_hf_api = api_mod.HfApi
@@ -116,6 +158,9 @@ def main():
     original_credentials = cfg_mod.config.get_credentials
     original_logged_in = cfg_mod.config.is_logged_in
     original_upload_directory = api_mod.api.upload_directory
+    original_get_upload_mode = api_mod.hf_large_folder._get_upload_mode
+    original_preupload_lfs = api_mod.hf_large_folder._preupload_lfs
+    original_close_session = api_mod.close_hf_session
 
     try:
         try:
@@ -140,6 +185,155 @@ def main():
             signature_supported,
             signature_detail,
         )
+
+        proactive_item = FakeUploadModeItem(
+            "prefix/capture.bag", 10, mode=None
+        ).pair()
+        ProactivePolicyApi.items = [proactive_item]
+        ProactivePolicyApi.events = []
+        ProactivePolicyApi.route = "upload_mode"
+        api_mod.HfApi = ProactivePolicyApi
+        api_mod.hf_large_folder._get_upload_mode = server_select_lfs
+        api_mod.close_hf_session = lambda: None
+        result_queue = queue.Queue()
+        api_mod._run_resumable_upload(
+            "fake-token-never-print",
+            {"repo_id": "user/repo", "folder_path": ".", "repo_type": "model"},
+            result_queue,
+            300.0,
+            (1, 1),
+            None,
+            True,
+            (),
+        )
+        check(
+            "new server-selected LFS extension stops before upload-mode return",
+            result_queue.get_nowait()
+            == (
+                False,
+                {"category": "lfs_attributes", "lfs_patterns": ["*.bag"]},
+            )
+            and ProactivePolicyApi.events == [],
+            repr(ProactivePolicyApi.events),
+        )
+
+        proactive_item[1].upload_mode = "lfs"
+        ProactivePolicyApi.events = []
+        ProactivePolicyApi.route = "preupload"
+        api_mod.hf_large_folder._preupload_lfs = record_preupload
+        result_queue = queue.Queue()
+        api_mod._run_resumable_upload(
+            "fake-token-never-print",
+            {"repo_id": "user/repo", "folder_path": ".", "repo_type": "model"},
+            result_queue,
+            300.0,
+            (1, 1),
+            None,
+            True,
+            (),
+        )
+        check(
+            "cached LFS extension stops before object preupload",
+            result_queue.get_nowait()
+            == (
+                False,
+                {"category": "lfs_attributes", "lfs_patterns": ["*.bag"]},
+            )
+            and ProactivePolicyApi.events == [],
+            repr(ProactivePolicyApi.events),
+        )
+
+        ProactivePolicyApi.events = []
+        result_queue = queue.Queue()
+        api_mod._run_resumable_upload(
+            "fake-token-never-print",
+            {"repo_id": "user/repo", "folder_path": ".", "repo_type": "model"},
+            result_queue,
+            300.0,
+            (1, 1),
+            None,
+            True,
+            ("*.bag",),
+        )
+        check(
+            "confirmed LFS extension proceeds without another policy stop",
+            result_queue.get_nowait() == (True, None)
+            and ProactivePolicyApi.events == ["preupload"],
+            repr(ProactivePolicyApi.events),
+        )
+        proactive_item[1].upload_mode = None
+        ProactivePolicyApi.items = [proactive_item]
+        ProactivePolicyApi.events = []
+        ProactivePolicyApi.route = "upload_mode"
+        api_mod.hf_large_folder._get_upload_mode = server_select_lfs
+        result_queue = queue.Queue()
+        api_mod._run_resumable_upload(
+            "fake-token-never-print",
+            {"repo_id": "user/repo", "folder_path": ".", "repo_type": "model"},
+            result_queue,
+            300.0,
+            (1, 1),
+            None,
+            False,
+            (),
+        )
+        check(
+            "disabled option leaves server-selected LFS flow unchanged",
+            result_queue.get_nowait() == (True, None)
+            and ProactivePolicyApi.events == ["upload-mode-returned"],
+        )
+        with tempfile.TemporaryDirectory(
+            prefix="atomgit-lfs-completed-projection-"
+        ) as completed_name:
+            completed_projection = Path(completed_name)
+            completed_file = completed_projection / "completed.bag"
+            completed_file.write_bytes(b"completed offline fixture")
+            completed_paths = api_mod.get_local_upload_paths(
+                completed_projection, "completed.bag"
+            )
+            completed_metadata = api_mod.read_upload_metadata(
+                completed_projection, "completed.bag"
+            )
+            completed_metadata.sha256 = "12" * 32
+            completed_metadata.upload_mode = "lfs"
+            completed_metadata.should_ignore = False
+            completed_metadata.is_uploaded = True
+            completed_metadata.is_committed = True
+            completed_metadata.save(completed_paths)
+            ProactivePolicyApi.items = []
+            ProactivePolicyApi.events = []
+            ProactivePolicyApi.route = "upload_mode"
+            result_queue = queue.Queue()
+            api_mod._run_resumable_upload(
+                "fake-token-never-print",
+                {
+                    "repo_id": "user/repo",
+                    "folder_path": str(completed_projection),
+                    "repo_type": "model",
+                },
+                result_queue,
+                300.0,
+                (1, 1),
+                None,
+                True,
+                (),
+            )
+            check(
+                "fully committed cached LFS extension still requests verification",
+                result_queue.get_nowait()
+                == (
+                    False,
+                    {
+                        "category": "lfs_attributes",
+                        "lfs_patterns": ["*.bag"],
+                    },
+                )
+                and ProactivePolicyApi.events == [],
+            )
+        api_mod.HfApi = original_hf_api
+        api_mod.hf_large_folder._get_upload_mode = original_get_upload_mode
+        api_mod.hf_large_folder._preupload_lfs = original_preupload_lfs
+        api_mod.close_hf_session = original_close_session
 
         unsafe_items = [
             FakeUploadModeItem(
@@ -182,6 +376,57 @@ def main():
             and "/private/" not in repr(envelope),
             repr(envelope),
         )
+        lfs_items = [
+            FakeUploadModeItem("prefix/a.bag", 10, mode="lfs").pair(),
+            FakeUploadModeItem("prefix/b.MCAP", 10, mode="lfs").pair(),
+            FakeUploadModeItem("prefix/no-extension", 10, mode="lfs").pair(),
+            FakeUploadModeItem("prefix/regular.zip", 10).pair(),
+        ]
+        lfs_items.append(
+            (
+                SimpleNamespace(path_in_repo="prefix/ignored.tar"),
+                SimpleNamespace(
+                    size=10, upload_mode="lfs", should_ignore=True
+                ),
+            )
+        )
+        check(
+            "server-selected LFS patterns are safe and deterministic",
+            api_mod._resumable_lfs_patterns(lfs_items)
+            == ("*.bag", "*.MCAP"),
+        )
+        too_many_lfs_items = [
+            FakeUploadModeItem(
+                f"prefix/file.ext{index}", 10, mode="lfs"
+            ).pair()
+            for index in range(api_mod._RESUMABLE_LFS_PATTERN_MAX_COUNT + 1)
+        ]
+        try:
+            api_mod._resumable_lfs_patterns(too_many_lfs_items)
+        except api_mod.ResumableLfsAttributesError as error:
+            overflow_envelope = api_mod._resumable_failure_envelope(error)
+        else:
+            overflow_envelope = None
+        check(
+            "too many LFS extensions stop safely without an oversized envelope",
+            overflow_envelope == {"category": "lfs_attributes"},
+            repr(overflow_envelope),
+        )
+        proactive_envelope = api_mod._resumable_failure_envelope(
+            api_mod.ResumableLfsAttributesError(
+                ("*.bag", "*.MCAP", "*", "/private/source.secret")
+            )
+        )
+        check(
+            "proactive worker envelope carries only validated patterns",
+            proactive_envelope
+            == {
+                "category": "lfs_attributes",
+                "lfs_patterns": ["*.bag", "*.MCAP"],
+            }
+            and "/private/" not in repr(proactive_envelope),
+            repr(proactive_envelope),
+        )
 
         merged, appended = api_mod._merge_lfs_gitattributes(
             b"# keep this byte-for-byte\n*.zip filter=lfs\ntrailing-without-newline",
@@ -210,6 +455,18 @@ def main():
             "a final generated rule is idempotent",
             unchanged == merged and duplicate == (),
         )
+        partially_merged, partial_appended = api_mod._merge_lfs_gitattributes(
+            b"*.bag filter=lfs diff=lfs merge=lfs -text\n",
+            ("*.bag", "*.mcap"),
+        )
+        check(
+            "a multi-pattern merge appends only the missing effective rule",
+            partial_appended == ("*.mcap",)
+            and partially_merged.count(b"*.bag ") == 1
+            and partially_merged.endswith(
+                b"*.mcap filter=lfs diff=lfs merge=lfs -text\n"
+            ),
+        )
         overridden, override_appended = api_mod._merge_lfs_gitattributes(
             b"*.bag filter=lfs diff=lfs merge=lfs -text\n"
             b"*.bag -filter -diff -merge text\n",
@@ -233,6 +490,38 @@ def main():
             and api_mod._gitattributes_contains_lfs_patterns(
                 overridden, ("*.bag",)
             ),
+        )
+        broad_override = (
+            b"*.bag filter=lfs diff=lfs merge=lfs -text\n"
+            b"* -filter -diff -merge text\n"
+        )
+        broad_repaired, broad_appended = api_mod._merge_lfs_gitattributes(
+            broad_override, ("*.bag",)
+        )
+        check(
+            "a later broad attribute override is repaired at the file end",
+            broad_appended == ("*.bag",)
+            and not api_mod._gitattributes_contains_lfs_patterns(
+                broad_override, ("*.bag",)
+            )
+            and api_mod._gitattributes_contains_lfs_patterns(
+                broad_repaired, ("*.bag",)
+            ),
+        )
+        suffix_block = (
+            b"* -filter -diff -merge text\n"
+            b"*.bag filter=lfs diff=lfs merge=lfs -text\n"
+            b"*.mcap filter=lfs diff=lfs merge=lfs -text\n"
+            b"# trailing comment\n\n"
+        )
+        check(
+            "a trailing standard LFS block remains idempotent",
+            api_mod._gitattributes_contains_lfs_patterns(
+                suffix_block, ("*.bag", "*.mcap")
+            )
+            and api_mod._merge_lfs_gitattributes(
+                suffix_block, ("*.bag", "*.mcap")
+            ) == (suffix_block, ()),
         )
         try:
             api_mod._merge_lfs_gitattributes(
@@ -432,7 +721,7 @@ def main():
                 attempts.append(kwargs)
                 if len(attempts) == 1:
                     raise api_mod.ResumableWorkerError(
-                        "upload_mode", ("*.bag",)
+                        "lfs_attributes", ("*.bag",)
                     )
 
             def configure_once(**kwargs):
@@ -458,8 +747,14 @@ def main():
                 )
             text = output.getvalue()
             check(
-                "opt-in repair retries the same batch",
+                "opt-in proactive configuration retries the same batch",
                 resumed and len(attempts) == 2 and len(repairs) == 1,
+            )
+            check(
+                "retry carries confirmed extensions into the next child",
+                attempts[0]["auto_configure_lfs"] is True
+                and attempts[0]["configured_lfs_patterns"] == ()
+                and attempts[1]["configured_lfs_patterns"] == ("*.bag",),
             )
             check(
                 "dataset repair uses the verified model compatibility route",
@@ -468,10 +763,45 @@ def main():
                 repr(repairs),
             )
             check(
-                "detected repair prints the rule and repository-wide warning",
-                "*.bag" in text and "整个仓库" in text,
+                "proactive synchronization prints the repository-wide rule",
+                "*.bag" in text and "服务端判定为 LFS" in text
+                and "整个仓库" in text,
                 text,
             )
+
+            (source / "second.bag").write_bytes(b"second offline fixture")
+            attempts.clear()
+            repairs.clear()
+
+            def execute_once_per_new_pattern(**kwargs):
+                attempts.append(kwargs)
+                if "*.bag" not in kwargs["configured_lfs_patterns"]:
+                    raise api_mod.ResumableWorkerError(
+                        "lfs_attributes", ("*.bag",)
+                    )
+
+            api_mod._execute_resumable_upload_process = (
+                execute_once_per_new_pattern
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                cross_batch = api_mod.api.upload_directory(
+                    source,
+                    "user/repo",
+                    resumable=True,
+                    auto_configure_lfs=True,
+                    batch_size=1,
+                )
+            check(
+                "one LFS extension is configured once across outer batches",
+                cross_batch and len(attempts) == 3 and len(repairs) == 1
+                and attempts[0]["configured_lfs_patterns"] == ()
+                and all(
+                    call["configured_lfs_patterns"] == ("*.bag",)
+                    for call in attempts[1:]
+                ),
+            )
+            (source / "second.bag").unlink()
 
             attempts.clear()
             repairs.clear()
@@ -627,6 +957,9 @@ def main():
         cfg_mod.config.get_credentials = original_credentials
         cfg_mod.config.is_logged_in = original_logged_in
         api_mod.api.upload_directory = original_upload_directory
+        api_mod.hf_large_folder._get_upload_mode = original_get_upload_mode
+        api_mod.hf_large_folder._preupload_lfs = original_preupload_lfs
+        api_mod.close_hf_session = original_close_session
         if original_home is None:
             os.environ.pop("HF_HOME", None)
         else:

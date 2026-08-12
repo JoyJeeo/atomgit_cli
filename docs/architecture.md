@@ -174,7 +174,7 @@ atomgit upload PATH
   -> 目录
        -> 默认 resumable：稳定私有投影 + HfApi.upload_large_folder
        -> path-in-repo：源内容投影到远端前缀
-       -> --auto-configure-lfs：仅在不安全 regular 模式时单文件提交属性后重试
+       -> --auto-configure-lfs：服务端 LFS 判定后、对象上传或引用提交前检查并按需单文件提交属性；同时修复不安全 regular 模式
        -> --no-resumable 或自动兼容 message：upload_folder
   -> 所有 LFS commit：规范 pointer payload + 返回 commit 的原始 V5 blob 精确验证
 ```

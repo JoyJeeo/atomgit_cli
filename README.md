@@ -187,7 +187,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `--resumable / --no-resumable` | 目录默认使用断点续传；显式 `--no-resumable` 改用普通上传 |
 | `--num-workers <n>` | 上传并发 worker 数，默认 5；普通目录和 resumable 目录均可使用 |
 | `--batch-size <1-20>` | 每个目录上传外层批次的最大文件数，默认 20；单文件上传不受影响 |
-| `--auto-configure-lfs` | 显式允许 resumable 在检测到超大 regular 文件时提交仓库级 `.gitattributes` 后重试 |
+| `--auto-configure-lfs` | 显式允许 resumable 为服务端判定的 LFS 扩展名检查并按需补齐仓库级 `.gitattributes` |
 
 目录未显式选择模式时默认使用断点续传；单文件仍使用普通文件上传。目录指定
 `--message` 且未显式选择模式时会自动使用普通上传，以保留单一提交说明。
@@ -289,15 +289,16 @@ atomgit cache clear
 > 重试。large-folder 仍不支持单一提交说明，需指定
 > `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
 > CLI 未指定时自动使用 `model`。
-> 如果服务端把超过 1 GB 的文件判定为普通 Git 文件，CLI 会在提交读取和 Base64
-> 编码前停止，并提示先在仓库 `.gitattributes` 中配置 Git LFS，或在明确允许一次
-> 远端配置提交时加 `--auto-configure-lfs`。该选项从危险文件扩展名生成
-> `*.ext filter=lfs diff=lfs merge=lfs -text`，显示规则作用于整个仓库，单独读取、
-> 保留并追加根目录 `.gitattributes`，使用目标 revision 当前提交做并发保护，只
-> 提交该文件，再刷新模式并重试当前批次。无安全扩展名、规则仍不生效、权限失败或
-> 并发状态无法确认时停止，不生成宽泛规则或无限提交。未提交的旧模式缓存会定向
-> 刷新，已有哈希和已提交状态不会被清除。该自动配置事务已有严格离线覆盖，尚未在
-> AtomGit 真实仓库执行写入验收。
+> `--auto-configure-lfs` 启用后，CLI 会在服务端把文件判定为 LFS 后、对象预上传或
+> 引用提交前，从安全扩展名生成 `*.ext filter=lfs diff=lfs merge=lfs -text`，检查
+> 目标 revision 根目录 `.gitattributes` 并仅追加缺失或被后续规则覆盖的规则。CLI
+> 会显示规则作用于整个仓库，保留已有属性字节，使用当前提交做并发保护，并只提交
+> `.gitattributes`。同一命令内已确认的扩展名不会跨批重复检查。对于服务端把超过
+> 1 GB 的文件错误判定为普通 Git 文件的情况，该选项仍会先补齐规则、刷新上传模式
+> 并重试当前批次。无安全扩展名、规则仍不生效、权限失败或并发状态无法确认时停止，
+> 不生成宽泛规则或无限提交；已有哈希和已提交状态不会被清除。
+> 该主动配置路径已在授权测试仓库完成真实验收：缺失规则会先追加再上传；同一命令
+> 重跑时已提交文件被断点跳过，已有规则只检查不重复提交。
 
 > 显式 `--no-resumable` 会直接读取源目录，不建立上述完整投影；普通 LFS 上传
 > 默认最多并行传输 5 个文件，并会跳过服务端已有的相同内容。它不提供单个文件
