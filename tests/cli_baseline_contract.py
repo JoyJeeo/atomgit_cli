@@ -406,6 +406,7 @@ BASELINE_TEST_GROUPS = {
     "upload": (
         "test_auto_configure_lfs.py",
         "test_canonical_lfs_pointer.py",
+        "test_lfs_preupload_policy.py",
         "test_upload_batching.py",
         "test_resumable_commit_policy.py",
         "test_dataset_resumable_route.py",
@@ -461,7 +462,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 17
 BASELINE_PUBLIC_PARAMETER_COUNT = 41
 BASELINE_LEAF_COMMAND_COUNT = 13
-BASELINE_TEST_SCRIPT_COUNT = 67
+BASELINE_TEST_SCRIPT_COUNT = 68
 
 
 def _normalize_default(value):

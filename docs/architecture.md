@@ -208,6 +208,9 @@ large-folder 方法上传入 `path_in_repo`，因此 CLI 以源目录、规范�
 HF client 前设置并验证单次请求超时，并包装 `create_commit`：429 遵循
 `Retry-After` 或退避且不拆批，超时先通过 resolve 元数据核对远端对象，确认缺失
 后才按 `20/10/5/2/1` 降批。连续失败终止隔离进程，保留未完成的 HF 元数据。
+同一子进程在 HF `_preupload_lfs` 原子边界分类 Git LFS Batch 失败：终止性配额、
+权限和请求错误立即退出，只有限流、500/502/503/504、超时和连接错误最多尝试三次，
+退避等待受 60 秒上限和显式上传总 deadline 约束。作用域补丁在成功和失败后均恢复。
 子进程发现超过 regular 上限的文件时只向父进程返回经过白名单校验的扩展名规则。
 默认仍安全失败；显式 `--auto-configure-lfs` 才会在 `$HF_HOME/lfs-config/` 的私有
 事务目录中单独读取或创建根 `.gitattributes`，按字节保留已有内容并追加标准 LFS
