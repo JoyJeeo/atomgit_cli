@@ -2,6 +2,8 @@
 """CLI, API, and SDK share one idempotent Hugging Face runtime policy."""
 
 import os
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -23,6 +25,33 @@ def check(name, condition, detail=""):
 
 
 def main():
+    clean_environment = os.environ.copy()
+    clean_environment.pop("HF_ENDPOINT", None)
+    clean_environment.pop("HF_HUB_DISABLE_XET", None)
+    clean_environment.pop("HF_HOME", None)
+    fresh_import = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import atomgit; "
+                "from huggingface_hub import constants; "
+                "print(constants.ENDPOINT)"
+            ),
+        ],
+        cwd=str(Path(__file__).resolve().parents[1]),
+        env=clean_environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    check(
+        "fresh package import initializes the locked HF endpoint first",
+        fresh_import.returncode == 0
+        and fresh_import.stdout.strip() == ATOMGIT_HF_ENDPOINT,
+        fresh_import.stdout.strip() or fresh_import.stderr.strip(),
+    )
+
     original = {
         name: os.environ.get(name)
         for name in ("HF_ENDPOINT", "HF_HUB_DISABLE_XET", "HF_HOME")

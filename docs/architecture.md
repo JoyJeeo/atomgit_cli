@@ -176,6 +176,7 @@ atomgit upload PATH
        -> path-in-repo：源内容投影到远端前缀
        -> --auto-configure-lfs：仅在不安全 regular 模式时单文件提交属性后重试
        -> --no-resumable 或自动兼容 message：upload_folder
+  -> 所有 LFS commit：规范 pointer payload + 返回 commit 的原始 V5 blob 精确验证
 ```
 
 符号链接检查先于凭证读取、HF 上传调用和 resumable worker 创建。普通、失效、
@@ -188,6 +189,13 @@ atomgit upload PATH
 - 单文件 fallback 使用唯一系统临时目录，并在成功或失败后自动清理；
 - 非默认 revision 必须预先存在；CLI 通过 V5 分支详情验证后才转发给上传和可选
   LFS 配置事务，避免静默写入默认分支。
+
+锁定 HF 客户端完成 LFS 对象上传后，AtomGit 上传上下文会把 `lfsFile` 元数据转换
+为固定 ASCII/LF 的标准三行 pointer，并作为普通 Git blob 内容提交，绕过服务端
+缺少末尾 LF 的 pointer 物化逻辑。单文件、普通目录和 SDK 使用返回的 commit SHA
+回读 V5 contents 原始 blob；resumable 在每个子提交成功后验证，响应不明确时先做
+既有 OID/size 对账，再验证目标 revision，最后才标记断点元数据为已提交。验证不
+解析到大型 LFS 对象，且该 HF 序列化包装在非 AtomGit 上下文中保持关闭。
 
 resumable 通过显式 AtomGit endpoint 的 `HfApi(endpoint=..., token=...)` 认证，
 避免隔离子进程回落到 `huggingface.co`。私有 model 和 dataset 均已使用真实

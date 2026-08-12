@@ -92,6 +92,13 @@ and must not report creation or upload success.
   same batch. The wildcard is repository-wide and is printed before mutation.
 - Temporary directories must remain alive until the dependent HF call returns
   and must be cleaned in `finally` or a context manager.
+- All AtomGit upload paths enter a context-gated wrapper around the locked HF
+  commit serializer. LFS object transfer remains unchanged, but each `lfsFile`
+  metadata record is committed as an exact canonical pointer `file` payload to
+  bypass the service's missing-final-LF materialization. The client then reads
+  the raw V5 contents blob at the returned commit and compares exact bytes;
+  resumable ambiguous commits verify reconciled paths before marking their HF
+  metadata committed. The wrapper is inactive outside AtomGit upload contexts.
 
 ## Architectural Risks To Preserve In Task Context
 

@@ -21,7 +21,6 @@ import tempfile
 import time
 
 import httpx
-import huggingface_hub._upload_large_folder as hf_large_folder
 
 
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
@@ -36,6 +35,7 @@ except ImportError:
 configure_hf_environment()
 
 
+import huggingface_hub._upload_large_folder as hf_large_folder
 from huggingface_hub import (
     get_hf_file_metadata, hf_hub_download, upload_folder, create_repo, snapshot_download,
     constants as hf_constants, HfApi, close_session as close_hf_session,
@@ -48,6 +48,12 @@ from huggingface_hub._local_folder import (
 
 try:
     from .config import config
+    from .lfs_pointer import (
+        CanonicalLfsPointerError,
+        canonical_lfs_payloads,
+        run_canonical_lfs_upload,
+        verify_canonical_lfs_pointers,
+    )
     from .utils import (
         auth_error_kind,
         is_auth_error,
@@ -61,6 +67,12 @@ try:
     )
 except ImportError:
     from config import config
+    from lfs_pointer import (
+        CanonicalLfsPointerError,
+        canonical_lfs_payloads,
+        run_canonical_lfs_upload,
+        verify_canonical_lfs_pointers,
+    )
     from utils import (
         auth_error_kind,
         is_auth_error,
@@ -1825,6 +1837,7 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "timeout": "resumable worker timed out",
     "connection": "resumable worker connection failed",
     "upload_mode": "resumable worker upload mode is unsafe",
+    "lfs_pointer": "resumable worker LFS pointer verification failed",
     "client_resource": "resumable worker client resources are insufficient",
     "unknown": "resumable worker failed",
 }
@@ -1877,6 +1890,8 @@ def _resumable_worker_error_category(error: BaseException) -> str:
             return cause.category
         if isinstance(cause, ResumableUploadModeError):
             return "upload_mode"
+        if isinstance(cause, CanonicalLfsPointerError):
+            return "lfs_pointer"
 
         name = type(cause).__name__
         if name == "RevisionNotFoundError":
@@ -2432,6 +2447,8 @@ class _ResumableCommitController:
         reconcile=_reconcile_resumable_commit_operations,
         max_attempts: int = _RESUMABLE_COMMIT_MAX_ATTEMPTS,
         mark_committed=None,
+        canonical_payloads=canonical_lfs_payloads,
+        verify_committed=None,
         fatal_callback=None,
         event_callback=None,
     ):
@@ -2444,6 +2461,10 @@ class _ResumableCommitController:
         self._reconcile = reconcile
         self._max_attempts = max_attempts
         self._mark_committed = mark_committed or (lambda operations: None)
+        self._canonical_payloads = canonical_payloads
+        self._verify_committed = verify_committed or (
+            lambda expectations, repo_id, revision: None
+        )
         self._fatal_callback = fatal_callback
         self._event_callback = event_callback
 
@@ -2487,8 +2508,21 @@ class _ResumableCommitController:
             attempts += 1
             call_kwargs = dict(kwargs)
             call_kwargs["operations"] = operations
+            expectations = []
             try:
-                result = self._create_commit(*args, **call_kwargs)
+                with self._canonical_payloads() as expectations:
+                    result = self._create_commit(*args, **call_kwargs)
+                if expectations:
+                    commit_revision = getattr(result, "oid", None)
+                    if not isinstance(commit_revision, str) or not commit_revision:
+                        raise RuntimeError(
+                            "resumable commit revision is unavailable"
+                        )
+                    self._verify_committed(
+                        expectations,
+                        call_kwargs.get("repo_id"),
+                        commit_revision,
+                    )
                 self._mark_committed(operations)
                 return result
             except Exception as error:
@@ -2511,7 +2545,17 @@ class _ResumableCommitController:
                         if getattr(operation, "path_in_repo", None) in matched
                     ]
                     if matched_operations:
+                        matched_expectations = [
+                            expectation for expectation in expectations
+                            if expectation.path_in_repo in matched
+                        ]
                         try:
+                            if matched_expectations:
+                                self._verify_committed(
+                                    matched_expectations,
+                                    call_kwargs.get("repo_id"),
+                                    call_kwargs.get("revision") or "main",
+                                )
                             self._mark_committed(matched_operations)
                         except Exception as metadata_error:
                             self._raise_fatal(
@@ -2697,6 +2741,15 @@ def _run_resumable_upload(
                 mark_committed=lambda operations: (
                     _mark_resumable_operations_committed(
                         Path(kwargs["folder_path"]), operations
+                    )
+                ),
+                verify_committed=lambda expectations, repo_id, revision: (
+                    verify_canonical_lfs_pointers(
+                        token=token,
+                        repo_id=repo_id,
+                        revision=revision,
+                        expectations=expectations,
+                        timeout=min(request_timeout, 15),
                     )
                 ),
                 fatal_callback=fatal_exit,
@@ -3157,6 +3210,11 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
                 "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
             ),
+            "lfs_pointer": (
+                "LFS 指针验证失败",
+                "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
+                "Git blob 确认；本次上传未确认成功，请保留断点并联系平台支持。",
+            ),
             "client_resource": (
                 "客户端资源不足",
                 "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
@@ -3174,6 +3232,13 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
             "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
             "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
+        )
+
+    if isinstance(e, CanonicalLfsPointerError):
+        return (
+            "LFS 指针验证失败",
+            "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
+            "Git blob 确认；本次上传未确认成功，请联系平台支持。",
         )
 
     if isinstance(e, ResumableTargetRevisionError):
@@ -3721,7 +3786,12 @@ class HuggingFaceAPI:
                         file_kwargs['repo_type'] = upload_repo_type
                     if revision is not None:
                         file_kwargs['revision'] = revision
-                    hf_upload_file(**file_kwargs)
+                    run_canonical_lfs_upload(
+                        lambda: hf_upload_file(**file_kwargs),
+                        token=credentials['token'],
+                        repo_id=normalized_repo_id,
+                        timeout=min(request_timeout, 15),
+                    )
                     return True
 
                 # 路径1（回退）：upload_folder + 临时目录拷贝（旧实现）
@@ -3752,7 +3822,12 @@ class HuggingFaceAPI:
                         upload_kwargs['revision'] = revision
                     if ignore_patterns:
                         upload_kwargs['ignore_patterns'] = ignore_patterns
-                    upload_folder(**upload_kwargs)
+                    run_canonical_lfs_upload(
+                        lambda: upload_folder(**upload_kwargs),
+                        token=credentials['token'],
+                        repo_id=normalized_repo_id,
+                        timeout=min(request_timeout, 15),
+                    )
                     return True
             finally:
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
@@ -4086,8 +4161,13 @@ class HuggingFaceAPI:
                                 ]
                             if ignore_patterns:
                                 upload_kwargs['ignore_patterns'] = ignore_patterns
-                            _upload_folder_with_workers(
-                                upload_kwargs, num_workers or 5
+                            run_canonical_lfs_upload(
+                                lambda: _upload_folder_with_workers(
+                                    upload_kwargs, num_workers or 5
+                                ),
+                                token=credentials['token'],
+                                repo_id=upload_kwargs['repo_id'],
+                                timeout=min(request_timeout, 15),
                             )
                         except Exception:
                             remaining_files = total_files - completed_files

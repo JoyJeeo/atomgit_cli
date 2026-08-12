@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,89 +12,281 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-11 +0800`
-- Status: `completed`
-- Phase: `automatic LFS policy repair delivered to github/yuto after verification, iterative independent review, authorized commit, and local merge`
+- Updated: `2026-08-12 09:46:51 +0800`
+- Status: `active`
+- Phase: `maintainer accepted the implementation and authorized local commit, local merge into yuto, and push of yuto; delivery in progress`
 - Base branch: `yuto`
-- Task branch: `codex/auto-configure-lfs`
-- Base commit: `030db6c`
-- Task commit: `188a16c feat(upload): auto-configure Git LFS policy`
-- Merge commit: `4b2fdd1 merge: add explicit Git LFS policy repair`
-- Current feature HEAD: `188a16c`
-- Remote delivery: `github/yuto merge verified at 4b2fdd146edf79461ce37911e70e8c039d9535fb`
-- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
-- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `cli.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`
-- Required worktree: `none; the Issue is delivered`
-- Last completed action: `pushed the authorized feature merge and verified github/yuto at 4b2fdd146edf79461ce37911e70e8c039d9535fb`
-- Next exact action: `none; any real AtomGit service acceptance requires a separately named and authorized test repository`
-- Blockers / open questions: `none for offline delivery; live AtomGit write verification remains intentionally unperformed and requires separate authorization`
-- Decisions constraining the next action: `remote mutation requires explicit --auto-configure-lfs; inferred rules are validated extension patterns and the CLI warns that they affect the whole repository; use an isolated private buffer, exact revision, optimistic parent commit, bounded verification/retry, and preserve resumable metadata`
-- Tests passed: `offline in atomgit_cli: final python tests/test_auto_configure_lfs.py 26/26; earlier affected suites test_upload_resumable.py 47/47, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_upload_batching.py 9/9, test_dataset_resumable_route.py 11/11, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_cli_surface.py 50/50, test_cli_feature_baseline.py 51/51; final python tests/run_cli_baseline.py 66/66 isolated pytest cases in 53.26s; python -m compileall -q .; python -m pip check (no broken requirements); git diff --check`
-- Tests failed or not run: `the new focused regression failed at the expected pre-fix boundary before implementation; no post-fix offline failure remains; live AtomGit writes and real service acceptance were not run because they were not authorized`
+- Task branch: `codex/fix-lfs-pointer-newline` based on `yuto`
+- Base commit / current HEAD: `cebb453623988a0b5df449df6e035cec3fb31c5a`
+- Remote base: `github/yuto` at `cebb453623988a0b5df449df6e035cec3fb31c5a`
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
+- Worktree state: `dirty with the task-scoped implementation, tests, documentation, and this handoff; no commit is authorized`
+- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `atomgit_hub.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `lfs_pointer.py`, `tests/cli_baseline_contract.py`, `tests/test_canonical_lfs_pointer.py`, `tests/test_runtime_policy.py`
+- Last completed action: `maintainer accepted the implementation and explicitly authorized commit, merge, and push on 2026-08-12`
+- Next exact action: `commit the cohesive Issue diff on the local task branch, merge it locally into yuto, push only yuto, then record exact delivery references and close this task`
+- Required worktree: `this worktree while .ai/TASK.md is uncommitted; no checkpoint commit was authorized merely for handoff`
+- Remaining boundary: `the latest user request is scoped to all repositories using this CLI; this repository implements and verifies that repository-independent boundary. The unavailable AtomGit service serializer itself remains unfixed, so non-CLI clients remain an explicit external-service risk rather than an advertised client fix`
+- Regression evidence: `python tests/test_canonical_lfs_pointer.py failed before implementation with ModuleNotFoundError; the added V5 transport regression then failed by leaking HTTPError out of verification; both now pass in a 24/24 suite. Real git-lfs 3.7.1 returns 0 for the canonical pointer and 2 for the missing-final-LF form. python tests/test_runtime_policy.py failed before the import-order fix because a fresh process bound https://huggingface.co and now passes 9/9 with https://hub.atomgit.com`
+- Focused offline tests: `test_upload_file_no_copy.py 16/16; test_upload_batching.py 9/9; test_upload_resumable.py 47/47; test_resumable_commit_policy.py 51/51; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; test_sdk_upload_parameters.py 14/14; test_sdk_upload_lifetime.py 11/11; test_sdk_upload_timeout.py 7/7; test_hf_api_contract.py 13/13`
+- Complete offline gate: `post-fix python tests/run_cli_baseline.py passed 67/67 in 48.73s; python -m compileall -q . passed; python -m pip check reported no broken requirements; git diff --check passed. Additional post-fix checks passed: test_runtime_policy.py 9/9, test_upload_error_classify.py 42/42, test_sdk_exceptions.py 34/34`
+- Live acceptance: `authorized test repository weixin_52273949/test_datasets; initial exact-payload probe committed a53ea672a1c6a4ad089db542e82916a0e011a6aa after an ambiguous timeout and was reconciled byte-exact; real atomgit CLI dataset upload committed f3401611dda69d631be460778b194d3d6cbfe7f8; its 127-byte pointer ended in one LF, strict check returned 0, the 61-byte smudged object SHA-256 was ae7b084c55701dda9b87462c595896daae3b1aa7b3e968e75523e40d344b2144, and clean round-trip matched the committed pointer`
+- Tests not run: `no service test because service source is unavailable; no full normal clone because the only authorized repository contains large historical LFS objects; no claim that its whole worktree is clean because 111 pre-existing noncanonical pointers remain; no existing-pointer repair, deletion, separate model-repository live acceptance, or history rewrite was authorized or performed. Model and dataset CLI behavior share the tested transfer boundary and are covered offline; only the authorized dataset repository was used live. Python 3.9 syntax compatibility was reviewed, but the complete baseline ran in the locked Python 3.10 environment rather than a separate Python 3.9 runtime`
 
 ## Active Issue Identity
 
-- ID: `LOCAL-AUTO-CONFIGURE-LFS`
-- Title: `Add explicit resumable LFS policy repair`
-- Primary type: `cli`
+- ID: `LOCAL-CANONICAL-LFS-POINTER`
+- Title: `Ensure CLI-uploaded Git LFS pointers are canonical`
+- Primary type: `bug`
 - Priority: `P1`
-- User impact: `large resumable uploads stop after hashing when AtomGit classifies a file above the regular-commit limit as regular; users without a local checkout must manually edit the remote .gitattributes before resuming`
-- Affected path: `cli.upload -> HuggingFaceAPI.upload_directory -> resumable child upload-mode validation -> bounded worker failure -> parent-side .gitattributes transaction -> retry current outer batch`
-- Base branch: `yuto`
-- Delivery mode: `standing local task-branch delivery into yuto after implementation, verification, independent review, and acceptance`
-- Permissions: `local Issue registration=yes; source/test/human-doc edits=yes; task branch=yes; offline tests=yes; independent review=yes; commit=yes; local merge into yuto=yes; push yuto=yes; task-branch push=no; PR=no; live AtomGit writes=no; remote Issue transition=no; release=no`
-- Explicit remote prohibition: `do not write to any openlet dataset; do not perform any live repository write during this Issue unless the maintainer separately names and authorizes an exact test repository and operation`
+- Observable objective: `every future LFS file uploaded through this AtomGit CLI/SDK path, independent of repository identity and model/dataset logical type, must be committed as a canonical Git LFS pointer ending in exactly one LF and must fail closed if the returned commit cannot be verified byte-exact`
+- User impact: `CLI-uploaded LFS files can make a fresh clone immediately dirty even when the user did not modify data; automation and users see false modified entries across many large files`
+- Current behavior: `Git upload produces a canonical pointer and a clean clone; atomgit upload can produce a pointer whose size line has no terminating LF, after which git-lfs clean canonicalizes it and git status reports modified`
+- Expected behavior: `Git and CLI uploads produce byte-equivalent canonical pointers; downloaded real files and skip-smudge pointer checkouts both round-trip through git-lfs clean without a diff`
+- Affected end-to-end path: `atomgit upload -> huggingface_hub upload_file/upload_folder/upload_large_folder -> HfApi.create_commit -> NDJSON lfsFile(path, algo, oid, size) -> AtomGit service commit handler -> Git pointer blob -> clone/checkout -> git-lfs clean/status`
 
-## Evidence And Objective
+## Reproducible Evidence
 
-- The accepted resumable flow already rejects files above 1,000,000,000 bytes when the server selects `regular`, before content reads or Base64 commit serialization.
-- The worker currently returns only the `upload_mode` category, so the parent cannot identify a bounded safe LFS rule or repair the policy.
-- The CLI currently offers no explicit remote-policy repair option and tells the user only to modify `.gitattributes` manually.
-- Locked `huggingface-hub==1.1.7` exposes `HfApi.upload_file(..., revision=..., parent_commit=...)` and `HfApi.create_commit(..., parent_commit=...)`.
-- AtomGit's normal HF download path cannot use `repo_info`; the existing direct resolve transport is the relevant read boundary and must address the exact target revision.
-- Objective: add an explicit `--auto-configure-lfs` directory-resumable option that safely creates or appends remote `.gitattributes`, visibly reports the repository-wide rule, and retries the failed batch without losing resumable state.
+- The affected repository diff showed only the missing terminal newline:
 
-## Scope And Acceptance
+  ```diff
+   version https://git-lfs.github.com/spec/v1
+   oid sha256:97c6e33a80d71b6494c722cfa6d1c38039581fbbca14fb306266aa9140b51b63
+  -size 711256710
+  \ No newline at end of file
+  +size 711256710
+  ```
 
-- Add the exact public CLI flag `--auto-configure-lfs`, default off.
-- Reject the flag for single-file or ordinary directory uploads instead of silently ignoring it.
-- Without the flag, preserve safe failure and add an actionable hint to retry with `--auto-configure-lfs` when the user authorizes a remote configuration commit.
-- On unsafe regular mode, carry only bounded validated extension patterns such as `*.bag` across the child boundary; do not carry a token, URL, response body, or local full path.
-- With the flag, print the detected rules and explicitly warn that each rule applies to the whole target repository.
-- Read only the target revision's root `.gitattributes`; if absent, create it in an isolated private cache transaction; if present, preserve its bytes and append only the required lines.
-- Commit only `.gitattributes` with a concise fixed message, explicit AtomGit endpoint, normalized repo ID, effective transfer repo type, exact revision, and optimistic `parent_commit`.
-- Bound configuration attempts and reconcile ambiguous results by re-reading remote state; do not overwrite concurrent changes or loop indefinitely.
-- Retry the same outer batch after confirmed configuration; retain hashes, committed metadata, batch ordering, timeouts, summaries, and error classification.
-- Preserve all existing CLI and SDK behavior when the option is absent.
-- Update exact CLI schema, focused regressions, README, FAQ, architecture, and upload analysis.
+- The affected commit was identified as `9bbbe4d Upload folder using atomgit client`.
+- A fresh clone was already dirty before user edits, excluding ordinary local
+  data modification as the cause.
+- A Git/Git-LFS upload of equivalent files does not reproduce the dirty clone.
+- The working tree can contain the real 711,256,710-byte object after smudge;
+  the object data, SHA-256, and size are not the defect. The Git pointer blob is.
+- `git lfs pointer --check` accepts the missing-LF pointer, but
+  `git lfs pointer --check --strict` returns `2`; the canonical pointer returns
+  `0` for both checks.
 
-## Compatibility And Non-Goals
+## Confirmed Technical Boundary
 
-- Preserve Python 3.9+, `huggingface-hub==1.1.7`, and `datasets==4.4.1`.
-- Do not change locked dependencies, package version, SDK public signatures, normal upload routing, repository creation, or Git credential configuration.
-- Do not clone repositories or require local Git/Git LFS for the automatic transaction.
-- Do not infer wildcard rules for files without one safe extension; retain the manual failure path instead.
-- Do not delete, reorder, normalize, or broadly rewrite existing `.gitattributes` content.
-- Do not add a hard-coded product restriction for a user namespace; the `openlet` prohibition constrains development and live verification only.
-- Do not perform live uploads, configuration commits, repository/branch creation, deletion, or other AtomGit writes without a separate exact authorization.
+- Current `atomgit_cli` source contains no Git LFS pointer template and does
+  not serialize the three pointer lines.
+- Single-file upload uses `huggingface_hub.upload_file`; ordinary directory
+  upload uses `upload_folder`; resumable directory upload uses
+  `upload_large_folder`. All LFS paths converge on `HfApi.create_commit`.
+- Locked `huggingface-hub==1.1.7` sends an LFS commit operation as:
 
-## Required Verification
+  ```json
+  {
+    "key": "lfsFile",
+    "value": {
+      "path": "sample.bag",
+      "algo": "sha256",
+      "oid": "<sha256>",
+      "size": 711256710
+    }
+  }
+  ```
 
-- Prove the previous implementation rejects the new public option or cannot repair an upload-mode failure.
-- Verify exact CLI schema, help, invalid file/ordinary-mode use, and downstream forwarding.
-- Verify missing and existing `.gitattributes`, missing final newline, existing final rule, multiple safe patterns, unsafe/no-extension paths, size bounds, private cache permissions, and one-file-only upload arguments.
-- Verify exact revision reads/writes, dataset compatibility routing, `parent_commit`, concurrent conflict re-read, ambiguous write verification, bounded retry, and no duplicate/empty commits.
-- Verify detection output shows the rule and repository-wide impact; verify the no-flag error recommends `--auto-configure-lfs`.
-- Verify the failed outer batch resumes, already attempted rules do not loop, hashes remain reusable, and ordinary error summaries remain intact.
-- Verify child envelopes and CLI output cannot contain fake tokens, signed URLs, raw response bodies, or local full paths.
-- Inspect the locked dependency signatures used by implementation.
-- Run focused upload/configuration tests, affected existing upload suites, `python tests/run_cli_baseline.py`, `python -m compileall -q .`, `python -m pip check`, and `git diff --check` in the `atomgit_cli` conda environment.
-- Apply `.ai/DOD.md` and perform the distinct no-edit independent review in `.ai/REVIEW.md`.
+- The dependency's NDJSON record ends in LF, but the request contains no LFS
+  pointer text. The NDJSON delimiter is unrelated to the final LF inside the
+  Git pointer blob.
+- Therefore the demonstrated missing LF is introduced after the client
+  request, at the AtomGit service boundary that converts `lfsFile` metadata
+  into a Git blob, unless that service has since received an unobserved hotfix.
+- The canonical pointer must be exact ASCII bytes:
 
-## Delivery Status
+  ```text
+  version https://git-lfs.github.com/spec/v1\n
+  oid sha256:<64-lowercase-hex>\n
+  size <non-negative-decimal>\n
+  ```
 
-- Definition of done: `passed: exactly one Issue active; diff is task-scoped; public CLI schema, focused regression, affected suites, full baseline, compile, dependency and diff checks pass; locked signatures inspected; buffer lifetime and global state are bounded; docs match; no credential or generated-artifact finding; unrun live test is explicitly disclosed`
-- Independent review: `APPROVED on the final fresh review after resolving all earlier P1/P2 findings; no open P0/P1/P2/P3 finding`
-- Human acceptance: `accepted through the maintainer's explicit authorization to implement, verify, independently review, commit, locally merge, and push yuto once the requested behavior and gates pass`
-- Delivery: `task commit 188a16c merged locally by 4b2fdd1; github/yuto verified at 4b2fdd146edf79461ce37911e70e8c039d9535fb; task branch remained local-only`
-- Live verification: `not authorized; no AtomGit repository may be written during this Issue, and openlet datasets are explicitly prohibited`
+## Scope And Work Packages
+
+The Issue has one end-to-end outcome, but the root fix and defenses cross an
+external service boundary. Keep each work package explicit and do not pretend
+the current repository contains the service implementation.
+
+### A. Root Service Fix — External Boundary, Not Available In This Repository
+
+The latest user request requires a root, repository-independent fix for future
+users of this CLI, and explicitly authorizes live testing only against the
+provided dataset repository. The client delivery below satisfies that CLI
+boundary without repository-specific cases. The following service work remains
+the preferred platform-wide follow-up for non-CLI clients, but cannot be part of
+this repository's acceptance because the service source was not provided or
+found:
+
+- Locate the AtomGit service handler for commit API `lfsFile` operations,
+  including the dataset route and any separate model route.
+- Add a failing exact-byte regression before the fix.
+- Serialize a canonical pointer ending in exactly one ASCII LF (`0x0A`).
+- Use fixed LF, never platform-dependent line endings.
+- Validate SHA-256 as 64 hexadecimal characters and size as a non-negative
+  decimal integer before materializing the blob.
+- Prefer one shared canonical pointer serializer for every repository type and
+  commit route.
+- Preserve LFS object OID, size, path, file mode, and existing commit semantics.
+
+### B. Generic CLI/SDK Commit Contract — Current Delivery Scope
+
+- Determine whether AtomGit exposes a raw Git blob/tree API that returns the
+  pointer blob rather than resolving it to the large LFS object.
+- If such a stable API exists, add a bounded post-commit check for newly
+  committed LFS paths: version, OID, size, and terminal LF must match.
+- If the service returns a noncanonical pointer, do not report an unconditional
+  upload success; emit a credential-safe actionable error that identifies the
+  service-generated pointer contract violation.
+- Do not download the large LFS object merely to validate its pointer.
+- Preserve the locked client's LFS object preupload and server-selected upload
+  mode, then replace only the final `lfsFile` commit record with exact canonical
+  pointer bytes for every LFS path.
+- Verify the raw blob through the confirmed, authenticated V5 contents contract
+  at the exact returned commit. Treat noncanonical bytes, malformed responses,
+  transport failures, and unverifiable no-op/reconciled commits as failures,
+  without exposing token, URL, response body, or path details.
+- Apply this shared mechanism to single-file, ordinary-folder, resumable-folder,
+  CLI, SDK, model-route, dataset-route, revision, and normalized multi-level-ID
+  paths without any repository-name, object-ID, or fixture-specific branch.
+
+### C. Existing Repository Repair — Planned, Remote Authorization Required
+
+- Deploy and verify the root service fix before repairing old branches, so new
+  CLI uploads cannot reintroduce the defect.
+- Repair active branch tips with a dedicated normalization commit; do not
+  rewrite published history by default.
+- For large repositories, use a dedicated `GIT_LFS_SKIP_SMUDGE=1` clone or a
+  server-side tree repair so hundreds of GB of LFS objects are not downloaded.
+- Before committing, prove for every staged path that the new blob equals the
+  old pointer plus exactly one LF and that path, OID, size, and mode are
+  unchanged.
+- Do not stage unrelated AppleDouble `._*` deletions or user worktree changes.
+- Existing historical commits and tags remain noncanonical unless history is
+  explicitly and separately authorized for rewriting.
+
+## Out Of Scope
+
+- Treating cache clear, `.gitattributes`, worker count, batching, timeout, OS,
+  filesystem, or `GIT_LFS_SKIP_SMUDGE` as the root fix.
+- Re-uploading unchanged LFS binary objects merely to normalize pointer blobs.
+- Changing locked dependencies without a separate dependency-policy decision.
+- Rewriting public Git history, force-pushing, deploying a service, or repairing
+  a live repository without exact authorization.
+- Any write to an `openlet` dataset.
+- Broad upload refactoring unrelated to pointer canonicalization.
+
+## Acceptance Criteria
+
+- The CLI/SDK commit serializer ends the size line in exactly one LF for every
+  LFS operation after the normal LFS object upload completes.
+- Canonical output passes `git lfs pointer --check --strict` with exit code `0`.
+- Missing-final-LF input or output is covered by a regression that fails before
+  the fix.
+- CLI single-file, ordinary-folder, and resumable LFS uploads all reach the
+  corrected commit contract without changing their public options.
+- Dataset and model logical types are covered by offline routing tests and the
+  documented shared AtomGit transfer route; the separately authorized live
+  fixture covers that shared route in the provided dataset repository.
+- The committed pointer OID and size equal the original file SHA-256 and byte
+  count; the LFS object is unchanged.
+- A newly uploaded pointer passes strict Git LFS validation, and smudge/clean
+  round-trip reproduces the exact committed bytes and original object digest.
+  Whole-worktree cleanliness is not asserted for the provided repository
+  because its pre-existing history contains 111 unrelated malformed pointers.
+- Git-native LFS upload behavior remains unchanged and clean.
+- Any client-side verification uses raw pointer bytes, never the resolved large
+  object, and produces no token, signed URL, response body, or local path leak.
+- Existing-repository normalization is separately authorized and stages only
+  the intended pointer-byte changes.
+
+## Required Offline Verification
+
+- Exact-byte unit test for canonical pointer serialization.
+- Negative regression for a pointer lacking the final LF.
+- `git lfs pointer --check --strict` integration check when git-lfs is present.
+- Contract test proving the locked HF client sends only `lfsFile` metadata and
+  does not own pointer formatting.
+- Routing tests for upload_file, upload_folder, and upload_large_folder.
+- Dataset/model route coverage at the shared client transfer boundary.
+- Client raw-blob verification tests if that defense is implementable.
+- Existing affected upload suites and `python tests/run_cli_baseline.py` in the
+  `atomgit_cli` conda environment for any client change.
+- `python -m compileall -q .`, `python -m pip check`, and `git diff --check`.
+- Independent no-edit review under `.ai/REVIEW.md` before acceptance.
+
+## Separately Authorized Live Acceptance
+
+The maintainer authorized `weixin_52273949/test_datasets` on 2026-08-11 as the
+exact test repository for this Issue. Authorization covers read-only Git/API
+inspection plus upload of uniquely named small LFS fixtures needed to reproduce
+and verify the future CLI behavior. Test fixtures may be retained; deletion,
+history rewriting, repair of existing pointers, or unrelated repository changes
+remain unauthorized. The acceptance sequence is:
+
+1. Upload one small LFS-classified fixture through the corrected CLI/service
+   path; no production-scale object is required.
+2. Read the committed raw Git blob and verify its final byte is `0x0A`.
+3. Run strict pointer validation.
+4. Prove the newly committed pointer is stable under Git LFS clean and that
+   smudge returns the original fixture bytes. Do not use unrelated historical
+   malformed pointers as evidence about the new upload.
+5. Verify downloaded object SHA-256 and size.
+6. Delete or retain the disposable repository only according to the explicit
+   cleanup authorization.
+
+## Compatibility
+
+- Preserve Python 3.9+, `huggingface-hub==1.1.7`, and `datasets==4.4.1` in this
+  client repository unless dependency policy is separately changed.
+- Preserve current CLI flags, SDK signatures, repo type handling, revision
+  handling, resumable metadata, and LFS object transfer behavior.
+- A final LF is the canonical Git LFS representation and must be identical on
+  all operating systems.
+
+## Permissions And Delivery
+
+- Local Issue activation and `.ai/TASK.md` handoff update: `authorized`.
+- Local source, focused tests, and affected documentation necessary for this
+  Issue: `authorized for the next implementation conversation`.
+- Focused task branch based on `yuto`: `authorized`; use
+  `codex/fix-lfs-pointer-newline` unless a repository-specific service branch
+  convention requires another name.
+- Offline validation and independent review: `authorized`.
+- Local commit: `authorized by the maintainer on 2026-08-12`.
+- Merge into `yuto`: `authorized by the maintainer on 2026-08-12`.
+- Push: `authorized for yuto only on 2026-08-12`; the local task branch must not
+  be pushed under the standing delivery rules.
+- PR, remote Issue transition, release, and service deployment: `not authorized`.
+- Live AtomGit reads and uniquely named small LFS fixture uploads to
+  `weixin_52273949/test_datasets`: `authorized for this Issue`.
+- Live repository creation, existing-pointer repair, Git push, history rewrite,
+  or deletion: `not authorized`.
+- Writes to any `openlet` dataset: `explicitly prohibited`.
+- Service-source edits: `not possible until the correct service repository is
+  provided or found and its repository instructions and permissions are read`.
+
+## Next-Conversation Recovery Checklist
+
+1. Read `AGENTS.md`, `.ai/README.md`, and this complete file.
+2. Inspect repository root, branch, HEAD, worktrees, status, recent log, and
+   diff; reconcile against the snapshot above.
+3. Read `.ai/MASTER_PROMPT.md`, `.ai/DEVELOPMENT_RULES.md`, `.ai/DOD.md`,
+   `.ai/TESTING.md`, `.ai/STYLE_GUIDE.md`, `.ai/ARCHITECTURE.md`, and the
+   relevant service repository instructions once that repository is known.
+4. Confirm `atomgit_cli` conda activation and locked dependency versions.
+5. Continue on `codex/fix-lfs-pointer-newline` in this exact worktree; preserve
+   all uncommitted task changes and do not make an unauthorized checkpoint.
+6. Reconcile the generic CLI/SDK implementation and its tests against the
+   current handoff; do not reopen unavailable service-source work without new
+   source and explicit scope.
+7. Run focused and required offline tests, update this handoff, perform the DoD
+   audit and independent review, then request human acceptance and any further
+   Git or live-test authorization.
+
+## Human Acceptance And Delivery Status
+
+- Human acceptance: `accepted by the maintainer on 2026-08-12; commit, local merge into yuto, and push of yuto explicitly authorized`.
+- Definition of done: `all implementation, automated, live-client, documentation, security, compatibility-signature, review, and human-acceptance gates passed; authorized Git delivery is in progress`.
+- Independent review: `the first final review returned REQUEST CHANGES for missing git-lfs strict integration, V5 transport misclassification, and stale service/live-clone scope. The executable findings were reproduced and fixed, the contract was reconciled to the latest user request, and the fresh post-fix review found no P0-P3 issues and returned APPROVED`.
+- Delivery: `authorized and in progress; task branch remains local-only`.
+- Live verification: `passed for two uniquely named small LFS fixtures in the authorized dataset test repository; existing history was not repaired`.

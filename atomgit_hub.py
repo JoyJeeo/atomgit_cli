@@ -38,6 +38,7 @@ except ImportError:
 
 try:
     from .config import config
+    from .lfs_pointer import CanonicalLfsPointerError, run_canonical_lfs_upload
     from .exceptions import (
         AtomGitAuthenticationError,
         AtomGitError,
@@ -58,6 +59,7 @@ try:
 except ImportError:
     try:
         from config import config
+        from lfs_pointer import CanonicalLfsPointerError, run_canonical_lfs_upload
         from exceptions import (
             AtomGitAuthenticationError,
             AtomGitError,
@@ -77,6 +79,10 @@ except ImportError:
         )
     except ImportError:
         from atomgit.config import config
+        from atomgit.lfs_pointer import (
+            CanonicalLfsPointerError,
+            run_canonical_lfs_upload,
+        )
         from atomgit.exceptions import (
             AtomGitAuthenticationError,
             AtomGitError,
@@ -108,6 +114,11 @@ def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGit
     ):
         error.args = (f"{name} details redacted",)
     target = f"：{repo_id}" if repo_id else ""
+    if isinstance(error, CanonicalLfsPointerError):
+        return AtomGitError(
+            f"{operation}的 Git LFS pointer 验证失败{target}；"
+            "AtomGit 服务未返回可确认的规范原始 blob，请联系平台支持"
+        )
     if credential_error == "authentication":
         return AtomGitAuthenticationError(
             f"{operation}认证失败{target}；请重新登录后重试"
@@ -481,7 +492,12 @@ def upload_folder(
                 upload_kwargs["commit_description"] = commit_description
             if ignore_patterns:
                 upload_kwargs["ignore_patterns"] = ignore_patterns
-            result = hf_upload_folder(**upload_kwargs)
+            result = run_canonical_lfs_upload(
+                lambda: hf_upload_folder(**upload_kwargs),
+                token=token,
+                repo_id=normalized_repo_id,
+                timeout=min(upload_timeout, 15),
+            )
 
             return result
 
