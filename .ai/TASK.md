@@ -12,9 +12,9 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 12:36:25 +0800`
+- Updated: `2026-08-12 12:46:47 +0800`
 - Status: `completed`
-- Phase: `configurable upload batch size delivered to github/yuto; no queued local Issue remains`
+- Phase: `configurable upload batch size delivered and live-accepted against the authorized cli_demo_dataset repository; no queued local Issue remains`
 - Base branch: `yuto`
 - Task branch: `codex/configurable-upload-batch-size`
 - Base commit: `9410f328caafac015e89c9d735dff2e3f600da68`
@@ -25,11 +25,11 @@ remote GitHub Issue.
 - Worktree state: `clean at the recorded delivery commit`
 - Changed paths: `none after this handoff record is committed`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Last completed action: `committed task 165e9d0, merged it locally as 6219a52, pushed only yuto, verified the remote branch SHA, and committed the delivery record`
+- Last completed action: `completed authorized live batch-size acceptance under a unique cli_demo_dataset prefix with resumable reuse and checksum readback evidence`
 - Next exact action: `none; no queued local Issue remains`
 - Blockers: `none`
 - Tests run this turn: `pre-fix test_cli_feature_baseline.py failed on missing schema/dispatch, test_upload_validation.py failed on valid/direct API batch_size, test_upload_progress.py failed 25/27 because the option was absent, and test_upload_batching.py failed at the first batch_size API call; post-fix test_upload_batching.py passed exact 1/2/10/20 ordinary and resumable grouping, deterministic content, remainder, projection reuse/isolation, default/large plans, and configured mid-plan failure; test_upload_progress.py passed 28/28; test_upload_validation.py passed 15/15; test_upload_resumable.py passed 49/49; test_cli_feature_baseline.py passed 52/52; test_cli_baseline_guard.py passed 14/14; test_hf_api_contract.py passed 13/13; test_upload_ignore.py passed 33/33; test_dataset_resumable_route.py passed 11/11; test_auto_configure_lfs.py passed 28/28; mandatory python tests/run_cli_baseline.py passed 68/68 in 58.18s, after fixing projection-key variable shadowing passed 68/68 in 60.97s, after the reviewer documentation fix passed 68/68 in 59.83s, and the final delivery gate passed 68/68 in 61.05s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
-- Tests not run: `no live AtomGit upload was run because this orchestration behavior is fully observable offline and live writes are not authorized for this Issue`
+- Live tests: `authorized by the maintainer on 2026-08-12 only for read/write operations against weixin_52273949/cli_demo_dataset, with every OpenLET repository excluded; clean resumable upload of three 95-byte text files under codex-live/batch-size-clean-20260812-124427 used --batch-size 2 and produced exact 2+1 outer groups, a same-command rerun reported newly submitted 0 / resumed 3, exact remote prefix enumeration returned three files, each CLI --verify-checksum readback passed, and source/readback SHA-256 values matched; target main was 6fd2c6bdf549098e0bea9ded6a9f4adadf6ad40c after acceptance`
 
 ## Previous Delivered Issue Identity
 
@@ -780,10 +780,26 @@ git diff --check
   Issue is complete`.
 - Delivery: `task commit 165e9d0 merged locally by 6219a52; github/yuto verified
   at 6219a522a16fb39a9295780dfd9cb2c447e12db2; task branch remained local-only`.
-- Remaining risk: `no live AtomGit upload was run because outer orchestration,
-  dependency argument boundaries, and resumable projection identity are fully
-  observable offline; live repository writes are not authorized for this
-  Issue`.
+- Live acceptance: `passed against the exact authorized repository
+  weixin_52273949/cli_demo_dataset. The clean prefix
+  codex-live/batch-size-clean-20260812-124427 contains exactly item-01.txt,
+  item-02.txt, and item-03.txt. The initial run used two outer groups of 2 and
+  1 files; an unchanged rerun reused all three confirmed files with zero new
+  submissions; CLI checksum verification and byte-for-byte SHA-256 readback
+  passed for 412ddee47b0e0226cbe2b5176372ea857b56390ef295d92863ae123a899adb16,
+  81de3ab4de7d447dbc659ee58bfefb7ccf3b924d9168541ceddc83dd27f530cf,
+  and 5f4245f801306fb0c59fc59c046b3a2a4178f86e98da017e6460ca0529c7e334`.
+- Live orchestration deviation: `the first acceptance prefix
+  codex-live/batch-size-20260812-124114 initially uploaded three correct files,
+  but its local readback directory was mistakenly created below the upload
+  source before a resumable rerun. That rerun therefore uploaded three extra
+  readback/... copies, leaving six bounded test files under that prefix. No
+  existing file was overwritten and no repository outside the exact authorized
+  cli_demo_dataset target was written. The files remain because deletion was
+  not explicitly authorized`.
+- Remote authorization boundary: `read/write applies only to
+  weixin_52273949/cli_demo_dataset. Every OpenLET repository, deletion,
+  visibility/settings changes, release, and publication remain unauthorized`.
 - Remaining queued Issues: `none; the additional local Issues registered in
   this task have all been completed, and ROADMAP #001-#026 remain recorded as
   completed or covered by controlled remote evidence rather than active work`.
