@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,21 +12,21 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 12:09:00 +0800`
-- Status: `active`
-- Phase: `implementation accepted and independently approved; authorized local delivery is next`
+- Updated: `2026-08-12 12:12:00 +0800`
+- Status: `completed`
+- Phase: `default macOS upload metadata exclusion delivered to github/yuto`
 - Base branch: `yuto`
 - Task branch: `codex/ignore-macos-upload-metadata`
 - Base commit: `2ddaf9ffce9672a4ff48f5b0a52a5b563e7204fa`
-- Task commit: `none`
-- Merge commit: `none`
-- Remote delivery: `not yet delivered`
+- Task commit: `854d7d1 fix(upload): ignore macOS metadata by default`
+- Merge commit: `210cbca merge: ignore macOS upload metadata`
+- Remote delivery: `github/yuto verified at 210cbca63b6106ae193fc9b9a2eb0e586432cb00`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty only for this active Issue after TASK.md activation`
-- Changed paths: `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `cli.py`, `docs/cli_feature_baseline.md`, `docs/upload_command_analysis.md`, `tests/test_cli_feature_baseline.py`, `tests/test_upload_batching.py`, `tests/test_upload_ignore.py`, `tests/test_upload_resumable.py`, and `utils.py`
+- Worktree state: `dirty only for this final delivery record`
+- Changed paths: `.ai/TASK.md`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Last completed action: `resolved the P2 review finding by asserting filtered byte-size output, reran all required checks, and completed a fresh independent review with APPROVED`
-- Next exact action: `commit the task branch, merge it locally into yuto, record final delivery evidence, and push only yuto`
+- Last completed action: `committed task 854d7d1, merged it locally as 210cbca, pushed only yuto, and verified the remote branch SHA`
+- Next exact action: `commit and push this delivery record, then activate the remaining queued configurable upload batch-size Issue`
 - Blockers: `none`
 - Tests run this turn: `pre-fix python tests/test_upload_ignore.py failed 22/33, python tests/test_upload_resumable.py failed 43/49, and python tests/test_upload_batching.py failed its lifecycle assertions; post-fix test_upload_ignore.py passed 33/33, test_upload_resumable.py passed 49/49, test_upload_batching.py passed, test_cli_feature_baseline.py passed 51/51, test_sdk_upload_parameters.py passed 14/14, test_hf_api_contract.py passed 13/13, test_upload_path_in_repo.py passed 18/18, test_upload_repo_type.py passed 17/17, and test_resumable_stats.py passed; locked huggingface-hub 1.1.7 filter_repo_objects signature and exact four-pattern selection were inspected; mandatory python tests/run_cli_baseline.py passed 68/68 in 57.94s; after the review fix all three focused scripts passed again and the mandatory baseline passed 68/68 in 57.89s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
 - Tests not run: `no live AtomGit upload was run because this behavior is fully observable offline and live writes are not authorized for this Issue`
@@ -357,7 +357,7 @@ pushing until all queued Issues are complete. It is the single active Issue.
 
 - ID: `LOCAL-DEFAULT-IGNORE-MACOS-UPLOAD-METADATA`
 - Title: `Ignore AppleDouble and .DS_Store files by default during CLI uploads`
-- Status: `active`
+- Status: `completed`
 - Primary type: `bug`
 - Priority: `P2`
 - Proposed task branch: `codex/ignore-macos-upload-metadata`
