@@ -2,6 +2,7 @@ from typing import Optional, Dict, Any, List, Set
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from urllib.parse import quote, urljoin, urlsplit
 from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass, field
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 import errno
@@ -21,6 +22,7 @@ import multiprocessing
 import tempfile
 import threading
 import time
+from statistics import median
 
 import httpx
 
@@ -38,6 +40,7 @@ configure_hf_environment()
 
 
 import huggingface_hub._upload_large_folder as hf_large_folder
+import huggingface_hub.lfs as hf_lfs
 from huggingface_hub import (
     get_hf_file_metadata, hf_hub_download, upload_folder, create_repo, snapshot_download,
     constants as hf_constants, HfApi, close_session as close_hf_session,
@@ -1757,6 +1760,12 @@ _RESUMABLE_LFS_PREUPLOAD_MAX_ATTEMPTS = 3
 _RESUMABLE_LFS_PREUPLOAD_BACKOFF_BASE = 2.0
 _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP = 60.0
 _RESUMABLE_LFS_ERROR_BODY_MAX_BYTES = 16 * 1024
+_SLOW_FLOW_SAMPLE_SECONDS = 5.0
+_SLOW_FLOW_WINDOW_SECONDS = 30.0
+_SLOW_FLOW_REQUIRED_WINDOWS = 3
+_SLOW_FLOW_MAX_REPLACEMENTS = 3
+_SLOW_FLOW_REPLACEMENT_COOLDOWNS = (0.0, 60.0, 180.0)
+_SLOW_FLOW_STREAM_CHUNK_BYTES = 512 * 1024
 # HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
 # it must be selected as LFS by the repository policy before commit encoding.
 _RESUMABLE_REGULAR_FILE_MAX_BYTES = 1_000_000_000
@@ -1765,6 +1774,586 @@ _RESUMABLE_LFS_PATTERN_MAX_EXTENSION = 32
 _LFS_GITATTRIBUTES_MAX_BYTES = 1024 * 1024
 _LFS_GITATTRIBUTES_MAX_ATTEMPTS = 3
 _LFS_GITATTRIBUTES_PATH = ".gitattributes"
+
+
+def _slow_flow_stable_baseline(speeds) -> Optional[float]:
+    """Return a median when three speeds stay within the accepted 20% band."""
+    values = tuple(float(speed) for speed in speeds)
+    if len(values) != _SLOW_FLOW_REQUIRED_WINDOWS or any(
+        not math.isfinite(speed) or speed <= 0 for speed in values
+    ):
+        return None
+    if all(
+        abs(current - previous) <= previous * 0.2
+        for previous, current in zip(values, values[1:])
+    ):
+        return float(median(values))
+    return None
+
+
+def _slow_flow_peer_baseline(windows) -> Optional[float]:
+    """Return a stable three-window peer median with at least two peers in-band."""
+    peer_windows = tuple(tuple(float(speed) for speed in row) for row in windows)
+    if len(peer_windows) != _SLOW_FLOW_REQUIRED_WINDOWS:
+        return None
+    medians = []
+    for speeds in peer_windows:
+        if len(speeds) < 2 or any(
+            not math.isfinite(speed) or speed <= 0 for speed in speeds
+        ):
+            return None
+        window_median = float(median(speeds))
+        lower = window_median * 0.7
+        upper = window_median * 1.3
+        if sum(lower <= speed <= upper for speed in speeds) < 2:
+            return None
+        medians.append(window_median)
+    return _slow_flow_stable_baseline(medians)
+
+
+@dataclass(frozen=True)
+class _SlowFlowDecision:
+    object_key: object
+    replacement_number: int
+    delay: float
+    probe: bool
+
+
+@dataclass
+class _SlowFlowState:
+    total_bytes: int
+    speeds: list = field(default_factory=list)
+    stable_baseline: Optional[float] = None
+    current_speed: Optional[float] = None
+    slow_windows: int = 0
+    degraded_windows: int = 0
+    replacements: int = 0
+    last_replacement_at: Optional[float] = None
+    awaiting_improvement: bool = False
+    replaced_speed: Optional[float] = None
+    fresh_speeds: list = field(default_factory=list)
+    disabled: bool = False
+    active: bool = True
+    probe: bool = False
+
+
+class _SlowFlowCoordinator:
+    """Coordinate conservative, object-scoped slow-flow replacement decisions."""
+
+    def __init__(
+        self,
+        *,
+        monotonic=time.monotonic,
+        reconnect_jitter=None,
+        deadline=None,
+        event_callback=None,
+    ):
+        self._monotonic = monotonic
+        self._reconnect_jitter = reconnect_jitter or (
+            lambda: random.uniform(2.0, 8.0)
+        )
+        self._deadline = deadline
+        self._event_callback = event_callback
+        self._states = {}
+        self._probe_key = None
+        self._lock = threading.Lock()
+
+    def _emit(self, kind: str, **details) -> None:
+        if self._event_callback is None:
+            return
+        try:
+            self._event_callback({"kind": kind, **details})
+        except Exception:
+            pass
+
+    def register(self, object_key, *, total_bytes: int) -> None:
+        if not isinstance(total_bytes, int) or isinstance(total_bytes, bool) or total_bytes < 0:
+            raise ValueError("LFS object size is invalid")
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is None:
+                self._states[object_key] = _SlowFlowState(total_bytes=total_bytes)
+            else:
+                state.active = True
+                if state.total_bytes != total_bytes:
+                    raise RuntimeError("LFS object size changed during upload")
+
+    def complete(self, object_key, *, reset_windows: bool = False) -> None:
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is not None:
+                state.active = False
+                if reset_windows:
+                    state.speeds.clear()
+                    state.stable_baseline = None
+                    state.current_speed = None
+                    state.slow_windows = 0
+                    state.degraded_windows = 0
+                    state.awaiting_improvement = False
+                    state.replaced_speed = None
+                    state.fresh_speeds.clear()
+                    state.probe = False
+                if self._probe_key == object_key:
+                    self._probe_key = None
+
+    def replacement_count(self, object_key) -> int:
+        with self._lock:
+            state = self._states.get(object_key)
+            return state.replacements if state is not None else 0
+
+    def is_disabled(self, object_key) -> bool:
+        with self._lock:
+            state = self._states.get(object_key)
+            return state.disabled if state is not None else False
+
+    def replacement_finished(self, object_key) -> None:
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is None:
+                return
+            state.awaiting_improvement = True
+            state.fresh_speeds.clear()
+            state.slow_windows = 0
+            state.degraded_windows = 0
+
+    def _peer_baseline(self, object_key) -> Optional[float]:
+        peers = [
+            state for key, state in self._states.items()
+            if key != object_key and state.active and len(state.speeds) >= 3
+        ]
+        if len(peers) < 2:
+            return None
+        windows = tuple(
+            tuple(state.speeds[-offset] for state in peers)
+            for offset in (3, 2, 1)
+        )
+        return _slow_flow_peer_baseline(windows)
+
+    def _collective_slowdown(self) -> bool:
+        active = [state for state in self._states.values() if state.active]
+        return (
+            len(active) >= 2
+            and all(
+                state.stable_baseline is not None
+                and state.current_speed is not None
+                and state.current_speed <= state.stable_baseline * 0.3
+                and state.degraded_windows >= _SLOW_FLOW_REQUIRED_WINDOWS
+                for state in active
+            )
+        )
+
+    def _collective_candidate(self) -> bool:
+        active = [state for state in self._states.values() if state.active]
+        return (
+            len(active) >= 2
+            and all(
+                state.stable_baseline is not None
+                and state.current_speed is not None
+                and state.current_speed <= state.stable_baseline * 0.3
+                and state.degraded_windows >= _SLOW_FLOW_REQUIRED_WINDOWS - 1
+                for state in active
+            )
+        )
+
+    def _replacement_delay(self, state: _SlowFlowState, now: float) -> float:
+        if state.replacements == 0:
+            return min(8.0, max(2.0, float(self._reconnect_jitter())))
+        cooldown = _SLOW_FLOW_REPLACEMENT_COOLDOWNS[state.replacements]
+        available_at = (state.last_replacement_at or now) + cooldown
+        return max(0.0, available_at - now)
+
+    def _decide(
+        self,
+        object_key,
+        state: _SlowFlowState,
+        *,
+        speed: float,
+        remaining_bytes: int,
+        retransmit_bytes: int,
+        expected_speed: float,
+        probe: bool,
+    ) -> Optional[_SlowFlowDecision]:
+        if state.disabled or state.replacements >= _SLOW_FLOW_MAX_REPLACEMENTS:
+            state.disabled = True
+            return None
+        now = self._monotonic()
+        delay = self._replacement_delay(state, now)
+        continue_time = remaining_bytes / speed
+        replace_time = delay + (retransmit_bytes / expected_speed)
+        if continue_time < 2.0 * replace_time:
+            return None
+        if self._deadline is not None and now + replace_time >= self._deadline:
+            return None
+        if probe and self._probe_key is not None:
+            return None
+        state.replacements += 1
+        state.last_replacement_at = now + delay
+        state.replaced_speed = speed
+        state.slow_windows = 0
+        state.degraded_windows = 0
+        state.probe = probe
+        if probe:
+            self._probe_key = object_key
+        decision = _SlowFlowDecision(
+            object_key=object_key,
+            replacement_number=state.replacements,
+            delay=delay,
+            probe=probe,
+        )
+        self._emit(
+            "lfs_slow_flow_replace",
+            replacement=state.replacements,
+            delay=delay,
+            probe=probe,
+        )
+        return decision
+
+    def observe_window(
+        self,
+        object_key,
+        speed: float,
+        remaining_bytes: int,
+        retransmit_bytes: Optional[int] = None,
+    ) -> Optional[_SlowFlowDecision]:
+        if (
+            not math.isfinite(speed)
+            or speed <= 0
+            or not isinstance(remaining_bytes, int)
+            or isinstance(remaining_bytes, bool)
+            or remaining_bytes < 0
+        ):
+            return None
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is None:
+                raise RuntimeError("LFS object is not registered")
+            if state.disabled or not state.active:
+                return None
+
+            prior_baseline = state.stable_baseline
+            state.current_speed = speed
+            state.speeds.append(speed)
+            if len(state.speeds) > 12:
+                del state.speeds[:-12]
+
+            if state.awaiting_improvement:
+                state.fresh_speeds.append(speed)
+                if len(state.fresh_speeds) < _SLOW_FLOW_REQUIRED_WINDOWS:
+                    return None
+                improved = float(median(state.fresh_speeds[-3:]))
+                replaced_speed = state.replaced_speed or 0.0
+                peer_baseline = self._peer_baseline(object_key)
+                state.awaiting_improvement = False
+                state.fresh_speeds.clear()
+                if (
+                    improved < replaced_speed * 2.0
+                    or (
+                        peer_baseline is not None
+                        and improved < peer_baseline * 0.7
+                    )
+                ):
+                    state.disabled = True
+                    if self._probe_key == object_key:
+                        self._probe_key = None
+                    self._emit("lfs_slow_flow_disabled", reason="no_improvement")
+                    return None
+                state.stable_baseline = improved
+                state.speeds = [improved] * 3
+                if self._probe_key == object_key:
+                    self._probe_key = None
+                state.probe = False
+                return None
+
+            if prior_baseline is None and len(state.speeds) >= 3:
+                state.stable_baseline = _slow_flow_stable_baseline(state.speeds[-3:])
+                prior_baseline = state.stable_baseline
+
+            if prior_baseline is None:
+                return None
+            if speed <= prior_baseline * 0.3:
+                state.degraded_windows += 1
+            else:
+                state.degraded_windows = 0
+
+            peer_baseline = self._peer_baseline(object_key)
+            if peer_baseline is not None:
+                slow = speed <= peer_baseline * 0.3 and speed <= prior_baseline * 0.5
+                expected_speed = peer_baseline
+            else:
+                slow = speed <= prior_baseline * 0.3
+                expected_speed = prior_baseline
+            state.slow_windows = state.slow_windows + 1 if slow else 0
+
+            retransmit = state.total_bytes if retransmit_bytes is None else retransmit_bytes
+            if self._collective_slowdown():
+                return self._decide(
+                    object_key,
+                    state,
+                    speed=speed,
+                    remaining_bytes=remaining_bytes,
+                    retransmit_bytes=retransmit,
+                    expected_speed=prior_baseline,
+                    probe=True,
+                )
+            if self._collective_candidate():
+                return None
+            if self._probe_key is not None:
+                return None
+            if state.slow_windows < _SLOW_FLOW_REQUIRED_WINDOWS:
+                if not slow:
+                    recent_baseline = _slow_flow_stable_baseline(
+                        state.speeds[-3:]
+                    )
+                    if recent_baseline is not None:
+                        state.stable_baseline = recent_baseline
+                return None
+            return self._decide(
+                object_key,
+                state,
+                speed=speed,
+                remaining_bytes=remaining_bytes,
+                retransmit_bytes=retransmit,
+                expected_speed=expected_speed,
+                probe=False,
+            )
+
+
+class _SlowFlowReconnect(RuntimeError):
+    """Internal control signal that closes only the current LFS PUT."""
+
+    def __init__(self, decision: _SlowFlowDecision):
+        self.decision = decision
+        super().__init__("replace slow LFS flow")
+
+
+class _SlowFlowPayload:
+    """Measure network-paced payload consumption without exposing object identity."""
+
+    def __init__(
+        self,
+        fileobj,
+        *,
+        coordinator: _SlowFlowCoordinator,
+        object_key,
+        total_bytes: int,
+        confirmed_bytes: int = 0,
+        retransmit_bytes: Optional[int] = None,
+        monotonic=time.monotonic,
+    ):
+        self._fileobj = fileobj
+        self._coordinator = coordinator
+        self._object_key = object_key
+        self._total_bytes = total_bytes
+        self._confirmed_bytes = confirmed_bytes
+        self._retransmit_bytes = retransmit_bytes
+        self._monotonic = monotonic
+        self._last_read_end = monotonic()
+        self._sample_elapsed = 0.0
+        self._sample_bytes = 0
+        self._window_elapsed = 0.0
+        self._window_bytes = 0
+        self._delivered_bytes = 0
+
+    def __getattr__(self, name):
+        return getattr(self._fileobj, name)
+
+    def __iter__(self):
+        while True:
+            data = self.read(_SLOW_FLOW_STREAM_CHUNK_BYTES)
+            if not data:
+                return
+            yield data
+
+    def read(self, size=-1):
+        read_start = self._monotonic()
+        paced_elapsed = max(0.0, read_start - self._last_read_end)
+        self._sample_elapsed += paced_elapsed
+        if self._sample_elapsed >= _SLOW_FLOW_SAMPLE_SECONDS:
+            self._window_elapsed += self._sample_elapsed
+            self._window_bytes += self._sample_bytes
+            self._sample_elapsed = 0.0
+            self._sample_bytes = 0
+            if self._window_elapsed >= _SLOW_FLOW_WINDOW_SECONDS:
+                speed = self._window_bytes / self._window_elapsed
+                remaining = max(
+                    0,
+                    self._total_bytes
+                    - self._confirmed_bytes
+                    - self._delivered_bytes,
+                )
+                decision = self._coordinator.observe_window(
+                    self._object_key,
+                    speed,
+                    remaining,
+                    self._retransmit_bytes,
+                )
+                self._window_elapsed = 0.0
+                self._window_bytes = 0
+                if decision is not None:
+                    raise _SlowFlowReconnect(decision)
+        data = self._fileobj.read(size)
+        self._last_read_end = self._monotonic()
+        if data:
+            length = len(data)
+            self._sample_bytes += length
+            self._delivered_bytes += length
+        return data
+
+
+def _lfs_source_identity(operation):
+    source = getattr(operation, "path_or_fileobj", None)
+    if isinstance(source, (str, Path)):
+        info = Path(source).stat()
+        return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+    upload_info = getattr(operation, "upload_info", None)
+    return (
+        getattr(upload_info, "size", None),
+        getattr(upload_info, "sha256", None),
+        id(source),
+    )
+
+
+def _lfs_object_key(operation) -> bytes:
+    digest = getattr(getattr(operation, "upload_info", None), "sha256", None)
+    if not isinstance(digest, bytes) or len(digest) != 32:
+        raise RuntimeError("LFS object identity is invalid")
+    return digest
+
+
+class _ResumableLfsTransferController:
+    """Replace only internally classified slow basic or multipart PUTs."""
+
+    def __init__(
+        self,
+        *,
+        coordinator: _SlowFlowCoordinator,
+        http_backoff=hf_lfs.http_backoff,
+        raise_for_status=hf_lfs.hf_raise_for_status,
+        get_session=hf_lfs.get_session,
+        sleep=time.sleep,
+    ):
+        self._coordinator = coordinator
+        self._http_backoff = http_backoff
+        self._raise_for_status = raise_for_status
+        self._get_session = get_session
+        self._sleep = sleep
+
+    def _wait_for_replacement(self, operation, identity, reconnect) -> None:
+        if _lfs_source_identity(operation) != identity:
+            raise RuntimeError("LFS source changed during upload")
+        self._sleep(reconnect.decision.delay)
+        self._coordinator.replacement_finished(reconnect.decision.object_key)
+
+    def upload_single_part(self, operation, upload_url: str) -> None:
+        object_key = _lfs_object_key(operation)
+        total_bytes = operation.upload_info.size
+        identity = _lfs_source_identity(operation)
+        self._coordinator.register(object_key, total_bytes=total_bytes)
+        succeeded = False
+        try:
+            while True:
+                try:
+                    with operation.as_file(with_tqdm=True) as fileobj:
+                        payload = _SlowFlowPayload(
+                            fileobj,
+                            coordinator=self._coordinator,
+                            object_key=object_key,
+                            total_bytes=total_bytes,
+                            retransmit_bytes=total_bytes,
+                        )
+                        response = self._http_backoff(
+                            "PUT", upload_url, data=payload, max_retries=0
+                        )
+                        self._raise_for_status(response)
+                    if _lfs_source_identity(operation) != identity:
+                        raise RuntimeError("LFS source changed during upload")
+                    succeeded = True
+                    return
+                except _SlowFlowReconnect as reconnect:
+                    self._wait_for_replacement(operation, identity, reconnect)
+        finally:
+            self._coordinator.complete(
+                object_key, reset_windows=not succeeded
+            )
+
+    def upload_multi_part(
+        self, operation, header: dict, chunk_size: int, upload_url: str
+    ) -> None:
+        sorted_urls = hf_lfs._get_sorted_parts_urls(
+            header=header,
+            upload_info=operation.upload_info,
+            chunk_size=chunk_size,
+        )
+        object_key = _lfs_object_key(operation)
+        total_bytes = operation.upload_info.size
+        identity = _lfs_source_identity(operation)
+        response_headers = []
+        self._coordinator.register(object_key, total_bytes=total_bytes)
+        succeeded = False
+        try:
+            for part_index, part_url in enumerate(sorted_urls):
+                confirmed_bytes = min(part_index * chunk_size, total_bytes)
+                retransmit_bytes = total_bytes - confirmed_bytes
+                while True:
+                    try:
+                        with operation.as_file(with_tqdm=True) as fileobj:
+                            with hf_lfs.SliceFileObj(
+                                fileobj,
+                                seek_from=confirmed_bytes,
+                                read_limit=chunk_size,
+                            ) as part:
+                                payload = _SlowFlowPayload(
+                                    part,
+                                    coordinator=self._coordinator,
+                                    object_key=object_key,
+                                    total_bytes=total_bytes,
+                                    confirmed_bytes=confirmed_bytes,
+                                    retransmit_bytes=retransmit_bytes,
+                                )
+                                response = self._http_backoff(
+                                    "PUT", part_url, data=payload,
+                                    max_retries=0,
+                                )
+                                self._raise_for_status(response)
+                        if _lfs_source_identity(operation) != identity:
+                            raise RuntimeError("LFS source changed during upload")
+                        etag = response.headers.get("etag")
+                        if not isinstance(etag, str) or not etag:
+                            raise ValueError("Invalid ETag returned for LFS part")
+                        response_headers.append({"etag": etag})
+                        break
+                    except _SlowFlowReconnect as reconnect:
+                        self._wait_for_replacement(
+                            operation, identity, reconnect
+                        )
+            completion = self._get_session().post(
+                upload_url,
+                json=hf_lfs._get_completion_payload(
+                    response_headers, operation.upload_info.sha256.hex()
+                ),
+                headers=hf_lfs.LFS_HEADERS,
+            )
+            self._raise_for_status(completion)
+            succeeded = True
+        finally:
+            self._coordinator.complete(
+                object_key, reset_windows=not succeeded
+            )
+
+
+@contextmanager
+def _scoped_resumable_lfs_recovery(coordinator: _SlowFlowCoordinator):
+    """Install locked HF 1.1.7 LFS hooks only for one isolated child."""
+    original_single = hf_lfs._upload_single_part
+    original_multi = hf_lfs._upload_multi_part
+    controller = _ResumableLfsTransferController(coordinator=coordinator)
+    hf_lfs._upload_single_part = controller.upload_single_part
+    hf_lfs._upload_multi_part = controller.upload_multi_part
+    try:
+        yield controller
+    finally:
+        hf_lfs._upload_single_part = original_single
+        hf_lfs._upload_multi_part = original_multi
 
 
 def _validated_lfs_patterns(patterns) -> tuple:
@@ -3014,6 +3603,29 @@ def _print_resumable_lfs_preupload_event(event, batch_context) -> None:
         )
 
 
+def _print_resumable_slow_flow_event(event, batch_context) -> None:
+    """Print an object-anonymous LFS flow recovery decision."""
+    if not batch_context:
+        return
+    current, total = batch_context
+    kind = event.get("kind")
+    if kind == "lfs_slow_flow_replace":
+        mode = "整体降速探针" if event.get("probe") else "单对象低速"
+        print(
+            f"[批次 {current}/{total}] 检测到{mode}，仅替换当前 LFS "
+            f"连接（第 {event['replacement']}/"
+            f"{_SLOW_FLOW_MAX_REPLACEMENTS} 次，等待 "
+            f"{event['delay']:g} 秒）",
+            flush=True,
+        )
+    elif kind == "lfs_slow_flow_disabled":
+        print(
+            f"[批次 {current}/{total}] 新 LFS 连接未达到 2 倍改善，"
+            "停止该对象的自动连接替换",
+            flush=True,
+        )
+
+
 def _run_resumable_upload(
     token, kwargs, result_queue,
     request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
@@ -3034,6 +3646,12 @@ def _run_resumable_upload(
         _ResumableLfsAttributesPolicy(configured_lfs_patterns)
         if auto_configure_lfs
         else None
+    )
+    slow_flow_coordinator = _SlowFlowCoordinator(
+        deadline=upload_deadline,
+        event_callback=lambda event: _print_resumable_slow_flow_event(
+            event, batch_context
+        ),
     )
     result_sent = False
 
@@ -3128,7 +3746,8 @@ def _run_resumable_upload(
                 lfs_attributes_policy=lfs_attributes_policy,
             )
             client.create_commit = controller.create_commit
-        client.upload_large_folder(**kwargs)
+        with _scoped_resumable_lfs_recovery(slow_flow_coordinator):
+            client.upload_large_folder(**kwargs)
         result_queue.put((True, None))
         result_sent = True
     except BaseException as exc:
