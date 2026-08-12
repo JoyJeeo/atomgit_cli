@@ -12,24 +12,24 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 11:38:35 +0800`
+- Updated: `2026-08-12 11:47:14 +0800`
 - Status: `completed`
-- Phase: `bounded LFS preupload failure policy delivered to github/yuto after complete offline gates, independent review, authorized task commit, and local merge`
+- Phase: `bounded LFS preupload failure policy delivered to github/yuto and subsequently verified by an authorized live resumable LFS upload, download, pointer inspection, and no-op resume against cli_demo_dataset`
 - Base branch: `yuto`
 - Task branch: `codex/bound-lfs-preupload-failures`
 - Base commit: `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
 - Task commit: `71f8fdb fix(upload): bound LFS preupload failures`
 - Merge commit: `163ef5b merge: bound LFS preupload failures`
-- Remote delivery: `github/yuto verified at 163ef5bab01563f0c4864495a26c468ce640699e before this final delivery-record commit`
+- Remote delivery: `github/yuto verified at 6b871fb4c73b09c45f40b4d51ba2d425693cd740 before this live-acceptance record`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
 - Worktree state: `clean and synchronized with github/yuto after this final delivery record is committed and pushed`
 - Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`, and new `tests/test_lfs_preupload_policy.py`
 - Required worktree: `none; the Issue is delivered`
-- Last completed action: `pushed the authorized local merge and verified github/yuto at 163ef5bab01563f0c4864495a26c468ce640699e`
+- Last completed action: `performed the newly authorized live validation against weixin_52273949/cli_demo_dataset and proved upload, exact download, canonical pointer, and no-op resume behavior without touching existing repository paths`
 - Next exact action: `none; the two queued follow-up Issues remain inactive and require separate explicit activation`
 - Blockers: `none; live AtomGit reads/writes remain outside this delivery and were not performed`
-- Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
-- Tests not run: `no live AtomGit upload or repository write; remote capacity root cause was already separately confirmed and this client behavior is covered offline`
+- Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed; authorized live validation uploaded one 201-byte *.bin through dataset resumable mode to codex-live/lfs-preupload-20260812-1142/probe.bin, advancing remote main from 4b2874c46554f027fc6b14b2a5bf490cd544e249 to 9f06c68be31cc3fa9e0df62cc5eac2d9101fc27c; CLI download-file --verify-checksum and cmp matched SHA-256 d2cc9e5d0f9e091d3d4ae0de946da80300e6ace91227e0fcfa75ce9f2ee6e21f; skip-smudge Git inspection found a canonical 128-byte three-line pointer with the same OID and size 201; repeating the exact upload reported one resume skip, zero new commits, and left remote main unchanged at 9f06c68`
+- Tests not run: `the live validation exercised the successful LFS Batch path rather than manufacturing quota, bandwidth, rate-limit, service-failure, or timeout responses against the real service; those failure policies remain covered by offline regressions`
 
 ## Active Issue Identity
 
@@ -341,6 +341,7 @@ The complete baseline must run after every review fix. Inspect locked
 - Human implementation acceptance: `the maintainer explicitly requested end-to-end development, tests, commit, and push; final observable result will be reported after delivery`.
 - Delivery: `task commit 71f8fdb merged locally by 163ef5b; github/yuto verified at 163ef5bab01563f0c4864495a26c468ce640699e; task branch remained local-only`.
 - Remote root cause: `confirmed as the 100 GB LFS limit and operationally resolved by the maintainer using a repository with available capacity`.
+- Live acceptance: `explicitly authorized by the maintainer on 2026-08-12 for read/write operations against weixin_52273949/cli_demo_dataset (git@atomgit.com:weixin_52273949/cli_demo_dataset.git); passed at commit 9f06c68be31cc3fa9e0df62cc5eac2d9101fc27c using only the unique codex-live/lfs-preupload-20260812-1142 path; the test object remains in the repository because no deletion was requested or performed`.
 
 ## Queued Follow-Up Issue — Inactive
 
