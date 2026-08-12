@@ -28,6 +28,8 @@ every remote path is verified; known status follows the interface list.
 - Single-file and directory upload
 - Upload target path, repository type, revision, ignore patterns, timeout, and
   progress-bar control
+- Default exclusion of root and nested AppleDouble and `.DS_Store` metadata
+  from CLI directory uploads, with user ignore patterns applied additively
 - Default large-folder resumable directory uploads, repository prefixes, and
   worker selection, with an explicit ordinary-upload opt-out
 - Explicit opt-in repository-level Git LFS attribute repair when resumable
@@ -88,6 +90,10 @@ every remote path is verified; known status follows the interface list.
 - User-facing failures should identify authentication, permission, repository,
   revision, request, timeout, or network causes when evidence allows it.
 - Existing command names and Python imports are compatibility surfaces.
+- CLI directory uploads exclude AppleDouble and `.DS_Store` metadata without
+  broadly excluding intentional hidden files. Explicit CLI single-file upload
+  of that metadata fails before authentication; SDK ignore defaults remain
+  caller-controlled.
 - Remote `.gitattributes` mutation is never implicit: it requires the exact
   `--auto-configure-lfs` option, reports repository-wide rule scope, and must
   preserve concurrent remote edits or fail closed.

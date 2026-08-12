@@ -183,7 +183,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
 | `--revision <name>` | 上传到已存在分支；非 `main` 分支需先显式创建 |
-| `-i, --ignore <patterns>` | 忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
+| `-i, --ignore <patterns>` | 额外忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
 | `--resumable / --no-resumable` | 目录默认使用断点续传；显式 `--no-resumable` 改用普通上传 |
 | `--num-workers <n>` | 上传并发 worker 数，默认 5；普通目录和 resumable 目录均可使用 |
 | `--auto-configure-lfs` | 显式允许 resumable 在检测到超大 regular 文件时提交仓库级 `.gitattributes` 后重试 |
@@ -194,7 +194,14 @@ atomgit upload <path> --repo-id <id> [options]
 `--message` 同用；`--ignore` 仅适用于目录上传；`--auto-configure-lfs` 仅适用于
 resumable 目录。线程数和仓库内路径是所有适用上传模式的基础参数。
 
-`--ignore` 使用逗号分隔的 Unix shell 风格通配符。通配符整体使用双引号时，
+CLI 目录上传默认忽略上传根目录和任意嵌套目录中的 AppleDouble
+`._*` 与 `.DS_Store`；普通点文件、`.gitattributes` 和 `.gitignore` 不会被宽泛
+排除。显式把这些 macOS 元数据作为单文件上传会在认证前失败，避免将
+与 Git LFS 后缀规则重合的 sidecar 误提交为普通 blob。该默认仅属于 CLI；
+Python SDK 的 `ignore_patterns` 仍完全由调用方控制。
+
+`--ignore` 使用逗号分隔的 Unix shell 风格通配符，作为上述默认规则的追加项。
+通配符整体使用双引号时，
 不要再给 `*` 添加反斜杠；CLI 会在远端调用前拒绝 `\*`。例如，递归忽略隐藏
 内容、JSON 文件和以 `output` 开头的内容：
 
@@ -204,7 +211,8 @@ atomgit upload ./data --repo-id user/my-dataset \
   --repo-type dataset
 ```
 
-CLI 的文件数量和大小统计会先应用与上传相同的 `--ignore` 规则，并排除 HF 断点
+CLI 的文件数量和大小统计会先应用与上传相同的默认及用户追加
+忽略规则，并排除 HF 断点
 续传元数据，因此展示值与实际上传集合一致。底层的 `Upload N LFS files` 仍只
 统计过滤后需要传输的 LFS 文件，不包含随提交发送的普通小文件。
 
