@@ -517,6 +517,35 @@ def main():
                 output.getvalue(),
             )
 
+            attempts.clear()
+            repairs.clear()
+
+            def execute_quota_failure(**kwargs):
+                attempts.append(kwargs)
+                raise api_mod.ResumableWorkerError("lfs_quota")
+
+            api_mod._execute_resumable_upload_process = execute_quota_failure
+            output = io.StringIO()
+            with redirect_stdout(output):
+                quota_failure = api_mod.api.upload_directory(
+                    source,
+                    "user/repo",
+                    resumable=True,
+                    auto_configure_lfs=True,
+                )
+            quota_text = output.getvalue()
+            check(
+                "LFS Batch quota failure never invokes policy repair",
+                not quota_failure and len(attempts) == 1 and not repairs,
+            )
+            check(
+                "LFS quota output is not commit-size guidance",
+                "LFS 存储空间不足" in quota_text
+                and "提交已降至单文件" not in quota_text
+                and "--auto-configure-lfs" not in quota_text,
+                quota_text,
+            )
+
             cli_calls = []
 
             def fake_upload_directory(*args, **kwargs):

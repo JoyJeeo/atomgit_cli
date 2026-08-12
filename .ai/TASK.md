@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,280 +12,743 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 09:48:21 +0800`
-- Status: `completed`
-- Phase: `generic canonical Git LFS pointer handling delivered to github/yuto after live verification, complete offline gates, independent review, human acceptance, authorized commit, and local merge`
+- Updated: `2026-08-12 11:34:38 +0800`
+- Status: `active`
+- Phase: `implementation, mandatory offline gates, and independent review are complete and APPROVED; awaiting authorized Git commit, local merge into yuto, and push of yuto`
 - Base branch: `yuto`
-- Task branch: `codex/fix-lfs-pointer-newline` based on `yuto`
-- Base commit: `cebb453623988a0b5df449df6e035cec3fb31c5a`
-- Task commit: `9919e1c fix(upload): canonicalize Git LFS pointers`
-- Merge commit: `a19baf5 merge: canonicalize Git LFS pointers`
-- Current feature HEAD: `9919e1c78e51840c32c5ed0171f6bce902994a6e`
-- Remote delivery: `github/yuto merge verified at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58`
+- Task branch: `codex/bound-lfs-preupload-failures`
+- Base commit / current HEAD: `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
+- Remote base: `github/yuto` at `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `clean and synchronized with github/yuto after this delivery record is committed and pushed`
-- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `atomgit_hub.py`, `docs/architecture.md`, `docs/faq.md`, `docs/upload_command_analysis.md`, `lfs_pointer.py`, `tests/cli_baseline_contract.py`, `tests/test_canonical_lfs_pointer.py`, `tests/test_runtime_policy.py`
-- Last completed action: `pushed the authorized feature merge and verified github/yuto at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58`
-- Next exact action: `none; service-source repair for non-CLI clients requires a separately provided repository and authorization`
-- Required worktree: `none; the Issue is delivered`
-- Remaining boundary: `the latest user request is scoped to all repositories using this CLI; this repository implements and verifies that repository-independent boundary. The unavailable AtomGit service serializer itself remains unfixed, so non-CLI clients remain an explicit external-service risk rather than an advertised client fix`
-- Regression evidence: `python tests/test_canonical_lfs_pointer.py failed before implementation with ModuleNotFoundError; the added V5 transport regression then failed by leaking HTTPError out of verification; both now pass in a 24/24 suite. Real git-lfs 3.7.1 returns 0 for the canonical pointer and 2 for the missing-final-LF form. python tests/test_runtime_policy.py failed before the import-order fix because a fresh process bound https://huggingface.co and now passes 9/9 with https://hub.atomgit.com`
-- Focused offline tests: `test_upload_file_no_copy.py 16/16; test_upload_batching.py 9/9; test_upload_resumable.py 47/47; test_resumable_commit_policy.py 51/51; test_resumable_recovery.py 5/5; test_dataset_resumable_route.py 11/11; test_sdk_upload_parameters.py 14/14; test_sdk_upload_lifetime.py 11/11; test_sdk_upload_timeout.py 7/7; test_hf_api_contract.py 13/13`
-- Complete offline gate: `post-fix python tests/run_cli_baseline.py passed 67/67 in 48.73s; python -m compileall -q . passed; python -m pip check reported no broken requirements; git diff --check passed. Additional post-fix checks passed: test_runtime_policy.py 9/9, test_upload_error_classify.py 42/42, test_sdk_exceptions.py 34/34`
-- Live acceptance: `authorized test repository weixin_52273949/test_datasets; initial exact-payload probe committed a53ea672a1c6a4ad089db542e82916a0e011a6aa after an ambiguous timeout and was reconciled byte-exact; real atomgit CLI dataset upload committed f3401611dda69d631be460778b194d3d6cbfe7f8; its 127-byte pointer ended in one LF, strict check returned 0, the 61-byte smudged object SHA-256 was ae7b084c55701dda9b87462c595896daae3b1aa7b3e968e75523e40d344b2144, and clean round-trip matched the committed pointer`
-- Tests not run: `no service test because service source is unavailable; no full normal clone because the only authorized repository contains large historical LFS objects; no claim that its whole worktree is clean because 111 pre-existing noncanonical pointers remain; no existing-pointer repair, deletion, separate model-repository live acceptance, or history rewrite was authorized or performed. Model and dataset CLI behavior share the tested transfer boundary and are covered offline; only the authorized dataset repository was used live. Python 3.9 syntax compatibility was reviewed, but the complete baseline ran in the locked Python 3.10 environment rather than a separate Python 3.9 runtime`
+- Worktree state: `dirty with the active Issue implementation, focused regressions, baseline registration, human documentation, architecture documentation, and this handoff; no commit, merge, push, or remote AtomGit mutation has occurred yet`
+- Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`, and new `tests/test_lfs_preupload_policy.py`
+- Required worktree: `resume this exact worktree because the active Issue contract is uncommitted; do not create a checkpoint commit merely to move conversations`
+- Last completed action: `completed the independent review, fixed the missing retry-exhaustion attempt message and local-resource fallback classification, reran all gates, and obtained a fresh APPROVED verdict with no remaining P0-P3 findings`
+- Next exact action: `create the authorized conventional task commit, merge it locally into yuto, push only yuto, verify github/yuto at the delivered commit, and update this record to completed delivery state`
+- Blockers: `none; live AtomGit reads/writes remain outside this delivery and were not performed`
+- Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
+- Tests not run: `no live AtomGit upload or repository write; remote capacity root cause was already separately confirmed and this client behavior is covered offline`
 
 ## Active Issue Identity
 
-- ID: `LOCAL-CANONICAL-LFS-POINTER`
-- Title: `Ensure CLI-uploaded Git LFS pointers are canonical`
+- ID: `LOCAL-BOUNDED-LFS-PREUPLOAD-FAILURES`
+- Title: `Bound and classify resumable LFS preupload failures`
 - Primary type: `bug`
 - Priority: `P1`
-- Observable objective: `every future LFS file uploaded through this AtomGit CLI/SDK path, independent of repository identity and model/dataset logical type, must be committed as a canonical Git LFS pointer ending in exactly one LF and must fail closed if the returned commit cannot be verified byte-exact`
-- User impact: `CLI-uploaded LFS files can make a fresh clone immediately dirty even when the user did not modify data; automation and users see false modified entries across many large files`
-- Current behavior: `Git upload produces a canonical pointer and a clean clone; atomgit upload can produce a pointer whose size line has no terminating LF, after which git-lfs clean canonicalizes it and git status reports modified`
-- Expected behavior: `Git and CLI uploads produce byte-equivalent canonical pointers; downloaded real files and skip-smudge pointer checkouts both round-trip through git-lfs clean without a diff`
-- Affected end-to-end path: `atomgit upload -> huggingface_hub upload_file/upload_folder/upload_large_folder -> HfApi.create_commit -> NDJSON lfsFile(path, algo, oid, size) -> AtomGit service commit handler -> Git pointer blob -> clone/checkout -> git-lfs clean/status`
+- Delivery mode: `local task branch based on yuto; implementation, tests, review, human acceptance, and Git delivery remain separate phases`
+- Observable objective: `a resumable AtomGit upload must never spin indefinitely when the Git LFS Batch API rejects or cannot process an object; terminal failures must stop promptly with an accurate credential-safe category, transient failures must use bounded retries and backoff, and resumable metadata must remain valid for a later retry`
+- User impact: `one terminal LFS capacity response was retried 548 times without delay, flooded logs, never returned a semantic CLI failure, and required Ctrl-C even though no retry could succeed`
 
-## Reproducible Evidence
+## Confirmed Root-Cause Evidence
 
-- The affected repository diff showed only the missing terminal newline:
+### Remote Capacity Root Cause — Confirmed And Operationally Resolved
 
-  ```diff
-   version https://git-lfs.github.com/spec/v1
-   oid sha256:97c6e33a80d71b6494c722cfa6d1c38039581fbbca14fb306266aa9140b51b63
-  -size 711256710
-  \ No newline at end of file
-  +size 711256710
-  ```
+- The failing repository was `weixin_52273949/test_datasets`.
+- A controlled, single-object, read-only LFS Batch negotiation returned HTTP
+  `413` with AtomGit's structured message that current LFS usage was
+  `115705728911 B` and the LFS limit was `107374182400 B`.
+- This equals `107.76 GiB` used against a `100 GiB` limit, already `7.76 GiB`
+  over quota. The original selected upload was `622.50 GiB`; the remaining 600
+  files were approximately `522.43 GiB`, so retrying or reducing client batches
+  could not make that upload fit.
+- The maintainer confirmed on 2026-08-12 that the remote problem was the 100 GB
+  LFS capacity ceiling and that upload works normally after switching to
+  `weixin_52273949/cli_demo_dataset`.
+- Therefore remote capacity is no longer an open root-cause question for this
+  incident. It is also not permission for the AI to write to the new repository.
 
-- The affected commit was identified as `9bbbe4d Upload folder using atomgit client`.
-- A fresh clone was already dirty before user edits, excluding ordinary local
-  data modification as the cause.
-- A Git/Git-LFS upload of equivalent files does not reproduce the dirty clone.
-- The working tree can contain the real 711,256,710-byte object after smudge;
-  the object data, SHA-256, and size are not the defect. The Git pointer blob is.
-- `git lfs pointer --check` accepts the missing-LF pointer, but
-  `git lfs pointer --check --strict` returns `2`; the canonical pointer returns
-  `0` for both checks.
+### Client Retry Amplification — Confirmed And Fixed On The Task Branch
 
-## Confirmed Technical Boundary
+- The failure occurs at `HfApi.preupload_lfs_files -> post_lfs_batch_info`,
+  before object transfer and before `create_commit`.
+- The affected batch's 20 metadata records all had SHA-256 and `upload_mode=lfs`
+  but `is_uploaded=0` and `is_committed=0`; `.gitattributes`, regular-blob commit
+  size, canonical pointer generation, and commit reconciliation are not the
+  failing boundaries.
+- AtomGit runtime disables XET, so locked `huggingface-hub==1.1.7` negotiates one
+  LFS object per Batch request. A representative request body is approximately
+  204 bytes; the 413 was not caused by the CLI's outer 20-file batch.
+- In locked HF 1.1.7, `_upload_large_folder._worker_job` catches every exception
+  from `_preupload_lfs`, logs it, immediately requeues the same item, and has no
+  attempt limit or delay. The parent loop cannot observe a terminal failure.
+- The captured run emitted the same 413 548 times before Ctrl-C. This is the
+  client defect owned by the current Issue.
+- Git LFS Batch protocol assigns 413 to a Batch request that is too large, 507
+  to insufficient storage, and 509 to bandwidth quota. AtomGit returned the
+  wrong HTTP semantic for this quota case, so the client must recognize both a
+  structured AtomGit quota response and protocol-standard capacity responses
+  without treating every generic 413 as storage quota.
 
-- Current `atomgit_cli` source contains no Git LFS pointer template and does
-  not serialize the three pointer lines.
-- Single-file upload uses `huggingface_hub.upload_file`; ordinary directory
-  upload uses `upload_folder`; resumable directory upload uses
-  `upload_large_folder`. All LFS paths converge on `HfApi.create_commit`.
-- Locked `huggingface-hub==1.1.7` sends an LFS commit operation as:
+## Current And Expected Behavior
 
-  ```json
-  {
-    "key": "lfsFile",
-    "value": {
-      "path": "sample.bag",
-      "algo": "sha256",
-      "oid": "<sha256>",
-      "size": 711256710
-    }
-  }
-  ```
+### Current Behavior
 
-- The dependency's NDJSON record ends in LF, but the request contains no LFS
-  pointer text. The NDJSON delimiter is unrelated to the final LF inside the
-  Git pointer blob.
-- Therefore the demonstrated missing LF is introduced after the client
-  request, at the AtomGit service boundary that converts `lfsFile` metadata
-  into a Git blob, unless that service has since received an unobserved hotfix.
-- The canonical pointer must be exact ASCII bytes:
+1. HF large-folder selects an LFS item and calls the Batch endpoint.
+2. Any exception, including terminal 4xx/quota failures, is swallowed inside
+   the worker thread.
+3. The same item is immediately requeued with no backoff or maximum attempts.
+4. The child process remains alive indefinitely when no overall `--timeout` was
+   supplied, so the parent receives neither success nor a structured error.
+5. A raw dependency error containing the remote URL is printed once per loop.
 
-  ```text
-  version https://git-lfs.github.com/spec/v1\n
-  oid sha256:<64-lowercase-hex>\n
-  size <non-negative-decimal>\n
-  ```
+### Expected Behavior
 
-## Scope And Work Packages
+1. Each LFS preupload attempt is classified at the preupload atomic boundary.
+2. Terminal responses fail once and exit the child promptly through the existing
+   bounded, credential-safe worker envelope.
+3. Transient responses retry only under an explicit attempt and time budget,
+   with backoff and `Retry-After` support.
+4. The CLI reports an accurate action: resolve storage quota, wait for rate
+   limiting/service recovery, reauthenticate, check permissions/repository, or
+   contact support for a generic Batch rejection.
+5. SHA-256, upload mode, and previously committed metadata remain reusable;
+   unconfirmed objects are never marked uploaded or committed.
+6. No token, signed URL, response body, object OID, or local path crosses the
+   child-process boundary or appears in ordinary CLI output.
 
-The Issue has one end-to-end outcome, but the root fix and defenses cross an
-external service boundary. Keep each work package explicit and do not pretend
-the current repository contains the service implementation.
+## Detailed Implementation Plan
 
-### A. Root Service Fix — External Boundary, Not Available In This Repository
+### 1. Intercept The Correct Atomic Boundary
 
-The latest user request requires a root, repository-independent fix for future
-users of this CLI, and explicitly authorizes live testing only against the
-provided dataset repository. The client delivery below satisfies that CLI
-boundary without repository-specific cases. The following service work remains
-the preferred platform-wide follow-up for non-CLI clients, but cannot be part of
-this repository's acceptance because the service source was not provided or
-found:
+- Inspect the real locked signatures and implementation of
+  `huggingface_hub._upload_large_folder._preupload_lfs`,
+  `_upload_large_folder._worker_job`, and `HfApi.preupload_lfs_files` before
+  editing.
+- Add an AtomGit-only, child-process-scoped preupload controller at the smallest
+  seam that can classify the exception before HF's generic worker catches and
+  requeues it.
+- Prefer wrapping `_preupload_lfs` inside `_run_resumable_upload`, analogous to
+  the existing scoped upload-mode and commit controllers. Restore every patched
+  dependency global in `finally`.
+- Do not modify the installed HF package, change the dependency pin, enable XET,
+  replace resumable uploads with ordinary folder uploads, or patch behavior
+  outside AtomGit's isolated child process.
 
-- Locate the AtomGit service handler for commit API `lfsFile` operations,
-  including the dataset route and any separate model route.
-- Add a failing exact-byte regression before the fix.
-- Serialize a canonical pointer ending in exactly one ASCII LF (`0x0A`).
-- Use fixed LF, never platform-dependent line endings.
-- Validate SHA-256 as 64 hexadecimal characters and size as a non-negative
-  decimal integer before materializing the blob.
-- Prefer one shared canonical pointer serializer for every repository type and
-  commit route.
-- Preserve LFS object OID, size, path, file mode, and existing commit semantics.
+### 2. Use Explicit Error Semantics
 
-### B. Generic CLI/SDK Commit Contract — Current Delivery Scope
+Add bounded internal categories without carrying raw exception text:
 
-- Determine whether AtomGit exposes a raw Git blob/tree API that returns the
-  pointer blob rather than resolving it to the large LFS object.
-- If such a stable API exists, add a bounded post-commit check for newly
-  committed LFS paths: version, OID, size, and terminal LF must match.
-- If the service returns a noncanonical pointer, do not report an unconditional
-  upload success; emit a credential-safe actionable error that identifies the
-  service-generated pointer contract violation.
-- Do not download the large LFS object merely to validate its pointer.
-- Preserve the locked client's LFS object preupload and server-selected upload
-  mode, then replace only the final `lfsFile` commit record with exact canonical
-  pointer bytes for every LFS path.
-- Verify the raw blob through the confirmed, authenticated V5 contents contract
-  at the exact returned commit. Treat noncanonical bytes, malformed responses,
-  transport failures, and unverifiable no-op/reconciled commits as failures,
-  without exposing token, URL, response body, or path details.
-- Apply this shared mechanism to single-file, ordinary-folder, resumable-folder,
-  CLI, SDK, model-route, dataset-route, revision, and normalized multi-level-ID
-  paths without any repository-name, object-ID, or fixture-specific branch.
+- `lfs_quota`: AtomGit's validated structured capacity response or protocol
+  `507`. Terminal, no retry. The hint must state that LFS storage capacity must
+  be increased or actually reclaimed by server-side LFS garbage collection.
+- `lfs_bandwidth`: protocol `509`. Terminal, no immediate retry; instruct the
+  user to wait for/reset the quota or contact platform support.
+- `lfs_batch_rejected`: generic `413` or `422` that is not a validated storage
+  quota response. Terminal, no retry; do not mislabel it as Git commit size.
+- Existing safe categories for `401`, `403`, and `404`: terminal and mapped to
+  authentication, permission, and repository failures.
+- `rate_limit`: `429`; transient and eligible for bounded retry, honoring a
+  valid bounded `Retry-After` value.
+- `service_unavailable`: `500`, `502`, `503`, and `504`; transient and eligible
+  for bounded retry.
+- `timeout` / `connection`: transient and eligible for bounded retry.
+- Unknown 4xx and malformed Batch responses: terminal safe failure rather than
+  speculative retry.
 
-### C. Existing Repository Repair — Planned, Remote Authorization Required
+AtomGit currently reports the storage response as `413`, `error_code_name` of
+`UN_KNOW`, and an English `error_message`. Parsing must be narrow:
 
-- Deploy and verify the root service fix before repairing old branches, so new
-  CLI uploads cannot reintroduce the defect.
-- Repair active branch tips with a dedicated normalization commit; do not
-  rewrite published history by default.
-- For large repositories, use a dedicated `GIT_LFS_SKIP_SMUDGE=1` clone or a
-  server-side tree repair so hundreds of GB of LFS objects are not downloaded.
-- Before committing, prove for every staged path that the new blob equals the
-  old pointer plus exactly one LF and that path, OID, size, and mode are
-  unchanged.
-- Do not stage unrelated AppleDouble `._*` deletions or user worktree changes.
-- Existing historical commits and tags remain noncanonical unless history is
-  explicitly and separately authorized for rewriting.
+- accept only a bounded JSON object from an AtomGit LFS response;
+- match a stable structured code when the service provides one in the future;
+- retain a narrowly tested compatibility match for the current exact semantic
+  marker `Insufficient LFS space`;
+- never place `error_message`, trace ID, URL, headers, OID, or body in the worker
+  envelope;
+- treat any nonmatching 413 as `lfs_batch_rejected`, not `lfs_quota`.
 
-## Out Of Scope
+### 3. Bound Retry And Waiting
 
-- Treating cache clear, `.gitattributes`, worker count, batching, timeout, OS,
-  filesystem, or `GIT_LFS_SKIP_SMUDGE` as the root fix.
-- Re-uploading unchanged LFS binary objects merely to normalize pointer blobs.
-- Changing locked dependencies without a separate dependency-policy decision.
-- Rewriting public Git history, force-pushing, deploying a service, or repairing
-  a live repository without exact authorization.
-- Any write to an `openlet` dataset.
-- Broad upload refactoring unrelated to pointer canonicalization.
+- Use a fixed maximum of three total attempts per preupload atomic call unless
+  repository policy selects another value during implementation review.
+- For retryable failures, use deterministic exponential backoff before jitter,
+  for example 2 seconds then 4 seconds. Inject sleep/jitter in tests.
+- Honor only syntactically valid, nonnegative, bounded `Retry-After`; it must not
+  exceed the remaining explicit upload deadline or a documented per-wait cap.
+- An explicit resumable `--timeout` remains the overall deadline. Retry sleep and
+  request time must both respect the remaining deadline.
+- Omitting `--timeout` may leave total successful upload duration unlimited, but
+  it must never make the attempt count unlimited.
+- Emit at most one sanitized status line per retry decision. A terminal failure
+  must not be requeued and must not produce a dependency URL flood.
+
+### 4. Fail Through The Existing Child Envelope
+
+- On terminal failure or retry exhaustion, invoke the existing child fatal path
+  so the parent receives one validated category and the short-lived process
+  exits even though HF's worker loop would otherwise continue.
+- Extend the allowlist used by `ResumableWorkerError` and CLI classification for
+  the new categories. Unknown categories must continue to collapse to `unknown`.
+- Keep payloads bounded and credential-safe. Do not serialize exceptions.
+- Ensure queue close/join and process termination remain prompt and do not leave
+  worker threads, cached HF sessions, patched functions, timeout globals, or
+  progress state alive in the parent.
+
+### 5. Preserve Correct Resume State
+
+- A failed Batch negotiation must leave `is_uploaded=False` and
+  `is_committed=False`.
+- Preserve SHA-256, file size, safe `upload_mode=lfs`, target identity, and every
+  previously committed batch.
+- Do not clear LFS upload mode as if this were the existing unsafe-regular-file
+  case, and do not invoke `--auto-configure-lfs`.
+- When capacity or a transient service problem is resolved, rerunning the same
+  command must skip confirmed batches and resume at the first unconfirmed item.
+- Ambiguous failures after actual object transfer are a separate state and must
+  not be marked uploaded without authoritative HF metadata or remote evidence.
+
+### 6. User-Facing Messages
+
+Required examples, subject to repository style review:
+
+- Quota: `LFS 存储空间不足` with a hint to increase the repository/account LFS
+  quota or remove unused objects and complete server-side LFS GC before retrying.
+- Generic 413: `LFS 协商请求被拒绝` with a hint that the Batch request was
+  rejected and the retained breakpoint can be retried after platform support
+  resolves it.
+- Retry exhaustion: state the bounded attempt count and that breakpoint metadata
+  is preserved.
+- Do not reuse `提交过大` / `提交已降至单文件`, because no Git commit was
+  attempted in this failure path.
+
+## Required Regression Tests
+
+Add the smallest new focused executable test file and register it in
+`tests/cli_baseline_contract.py`. It must fail against current `yuto` before the
+implementation and cover at least:
+
+1. Current structured AtomGit 413 capacity response becomes `lfs_quota` after
+   one request, with no requeue or sleep.
+2. Generic 413 becomes `lfs_batch_rejected`, not quota and not commit size.
+3. Protocol 507 becomes `lfs_quota`; 509 becomes `lfs_bandwidth`.
+4. 401/403/404 terminate once with existing safe semantic categories.
+5. 422 and unknown 4xx terminate once.
+6. 429 honors a bounded `Retry-After`, succeeds within the attempt limit, and
+   fails safely when exhausted.
+7. 500/502/503/504, timeout, and connection failures retry with the exact
+   bounded backoff sequence and never exceed three total attempts.
+8. An explicit upload deadline truncates waiting and terminates promptly.
+9. Terminal child failure reaches the parent as a bounded envelope and exits
+   without requiring Ctrl-C.
+10. Logs and envelopes contain no fake token, authorization header, signed URL,
+    response body, OID, trace ID, or local full path.
+11. Failed objects retain SHA-256 and LFS mode but remain unuploaded and
+    uncommitted; prior committed items stay committed.
+12. A later successful rerun reuses metadata and resumes without hashing or
+    submitting confirmed batches again.
+13. `--auto-configure-lfs` is not invoked for LFS Batch failures.
+14. Model and dataset logical types, revision forwarding, normalized multi-level
+    repository IDs, and custom repository prefixes retain existing behavior.
+15. Every dependency monkeypatch and process-global setting is restored after
+    success and failure.
+
+Run affected existing suites including resumable upload, recovery, commit
+policy, error classification, dataset routing, runtime policy, canonical LFS
+pointer, CLI surface, and SDK exception tests. Then run:
+
+```text
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+The complete baseline must run after every review fix. Inspect locked
+`huggingface-hub==1.1.7` and `datasets==4.4.1` callable signatures in the real
+`atomgit_cli` conda environment.
 
 ## Acceptance Criteria
 
-- The CLI/SDK commit serializer ends the size line in exactly one LF for every
-  LFS operation after the normal LFS object upload completes.
-- Canonical output passes `git lfs pointer --check --strict` with exit code `0`.
-- Missing-final-LF input or output is covered by a regression that fails before
-  the fix.
-- CLI single-file, ordinary-folder, and resumable LFS uploads all reach the
-  corrected commit contract without changing their public options.
-- Dataset and model logical types are covered by offline routing tests and the
-  documented shared AtomGit transfer route; the separately authorized live
-  fixture covers that shared route in the provided dataset repository.
-- The committed pointer OID and size equal the original file SHA-256 and byte
-  count; the LFS object is unchanged.
-- A newly uploaded pointer passes strict Git LFS validation, and smudge/clean
-  round-trip reproduces the exact committed bytes and original object digest.
-  Whole-worktree cleanliness is not asserted for the provided repository
-  because its pre-existing history contains 111 unrelated malformed pointers.
-- Git-native LFS upload behavior remains unchanged and clean.
-- Any client-side verification uses raw pointer bytes, never the resolved large
-  object, and produces no token, signed URL, response body, or local path leak.
-- Existing-repository normalization is separately authorized and stages only
-  the intended pointer-byte changes.
+- The reproduction that currently emits repeated 413 errors exits after one
+  terminal quota response without requeueing the item.
+- No preupload failure can retry indefinitely, regardless of whether overall
+  upload duration is unlimited.
+- Only documented transient classes retry, at most three total attempts with
+  bounded backoff and deadline enforcement.
+- CLI output distinguishes LFS storage quota, bandwidth quota, Batch rejection,
+  rate limiting, service unavailability, timeout, connection, authentication,
+  permission, and repository failures.
+- A quota 413 is not mislabeled as Git commit size, and generic 413 is not
+  guessed to be quota.
+- Parent and child exit codes are nonzero for terminal failure; no success line
+  or completed-batch count is emitted for an unconfirmed item.
+- Previously committed work and reusable metadata survive, and the same command
+  resumes correctly after the external condition is fixed.
+- No credential, URL, response body, OID, trace ID, or local path leaks through
+  logs, exceptions, queues, fixtures, or commits.
+- Locked dependency behavior outside the AtomGit child context is unchanged.
+- Focused tests, affected suites, the complete mandatory baseline, compile,
+  dependency, and diff checks all pass in the conda environment.
+- A fresh independent no-edit review returns `APPROVED`, then the maintainer
+  provides human acceptance before any delivery.
 
-## Required Offline Verification
+## Out Of Scope
 
-- Exact-byte unit test for canonical pointer serialization.
-- Negative regression for a pointer lacking the final LF.
-- `git lfs pointer --check --strict` integration check when git-lfs is present.
-- Contract test proving the locked HF client sends only `lfsFile` metadata and
-  does not own pointer formatting.
-- Routing tests for upload_file, upload_folder, and upload_large_folder.
-- Dataset/model route coverage at the shared client transfer boundary.
-- Client raw-blob verification tests if that defense is implementable.
-- Existing affected upload suites and `python tests/run_cli_baseline.py` in the
-  `atomgit_cli` conda environment for any client change.
-- `python -m compileall -q .`, `python -m pip check`, and `git diff --check`.
-- Independent no-edit review under `.ai/REVIEW.md` before acceptance.
-
-## Separately Authorized Live Acceptance
-
-The maintainer authorized `weixin_52273949/test_datasets` on 2026-08-11 as the
-exact test repository for this Issue. Authorization covers read-only Git/API
-inspection plus upload of uniquely named small LFS fixtures needed to reproduce
-and verify the future CLI behavior. Test fixtures may be retained; deletion,
-history rewriting, repair of existing pointers, or unrelated repository changes
-remain unauthorized. The acceptance sequence is:
-
-1. Upload one small LFS-classified fixture through the corrected CLI/service
-   path; no production-scale object is required.
-2. Read the committed raw Git blob and verify its final byte is `0x0A`.
-3. Run strict pointer validation.
-4. Prove the newly committed pointer is stable under Git LFS clean and that
-   smudge returns the original fixture bytes. Do not use unrelated historical
-   malformed pointers as evidence about the new upload.
-5. Verify downloaded object SHA-256 and size.
-6. Delete or retain the disposable repository only according to the explicit
-   cleanup authorization.
-
-## Compatibility
-
-- Preserve Python 3.9+, `huggingface-hub==1.1.7`, and `datasets==4.4.1` in this
-  client repository unless dependency policy is separately changed.
-- Preserve current CLI flags, SDK signatures, repo type handling, revision
-  handling, resumable metadata, and LFS object transfer behavior.
-- A final LF is the canonical Git LFS representation and must be identical on
-  all operating systems.
+- Increasing, deleting, reclaiming, or automatically managing remote LFS quota.
+- Writing to either `weixin_52273949/test_datasets` or
+  `weixin_52273949/cli_demo_dataset` without separate exact authorization.
+- Treating a repository switch as a client fix.
+- Adding a speculative quota preflight against a nonexistent/undocumented API.
+- Changing AtomGit's incorrect server-side 413/`UN_KNOW` response; that belongs
+  to the service implementation. The client only provides narrow compatibility.
+- Changing HF/datasets pins, enabling XET, replacing resumable upload, changing
+  outer 20-file batching, lowering workers, or extending timeouts as a workaround.
+- Modifying canonical LFS pointer serialization, automatic `.gitattributes`,
+  ordinary upload, download, authentication storage, or Git credential helpers.
+- Remote Issue creation, release, publication, or unrelated roadmap work.
 
 ## Permissions And Delivery
 
-- Local Issue activation and `.ai/TASK.md` handoff update: `authorized`.
-- Local source, focused tests, and affected documentation necessary for this
-  Issue: `authorized for the next implementation conversation`.
-- Focused task branch based on `yuto`: `authorized`; use
-  `codex/fix-lfs-pointer-newline` unless a repository-specific service branch
-  convention requires another name.
-- Offline validation and independent review: `authorized`.
-- Local commit: `authorized by the maintainer on 2026-08-12`.
-- Merge into `yuto`: `authorized by the maintainer on 2026-08-12`.
-- Push: `authorized for yuto only on 2026-08-12`; the local task branch must not
-  be pushed under the standing delivery rules.
-- PR, remote Issue transition, release, and service deployment: `not authorized`.
-- Live AtomGit reads and uniquely named small LFS fixture uploads to
-  `weixin_52273949/test_datasets`: `authorized for this Issue`.
-- Live repository creation, existing-pointer repair, Git push, history rewrite,
-  or deletion: `not authorized`.
-- Writes to any `openlet` dataset: `explicitly prohibited`.
-- Service-source edits: `not possible until the correct service repository is
-  provided or found and its repository instructions and permissions are read`.
+- Local Issue registration and this `.ai/TASK.md` handoff: `authorized by the maintainer on 2026-08-12`.
+- Runtime source, focused tests, and affected human documentation: `authorized for the next implementation conversation by the maintainer's explicit request for subsequent client development`.
+- Task branch based on `yuto`: `authorized`; use
+  `codex/bound-lfs-preupload-failures`.
+- Offline diagnostics, regression tests, full baseline, and independent review:
+  `authorized`.
+- Live AtomGit reads or writes, including either named repository: `not authorized
+  by this Issue registration; require a separate exact operation and repository`.
+- Local commit, local merge into `yuto`, and push of only `yuto`: `authorized by
+  the maintainer's 2026-08-12 request to complete tests, commit, and push`.
+- Push of the task branch, PR, remote Issue transition, release, publication,
+  service deployment, and live AtomGit operations: `not authorized`.
+- Task branches remain local-only under standing delivery rules.
 
 ## Next-Conversation Recovery Checklist
 
-1. Read `AGENTS.md`, `.ai/README.md`, and this complete file.
-2. Inspect repository root, branch, HEAD, worktrees, status, recent log, and
-   diff; reconcile against the snapshot above.
+1. Read `AGENTS.md`, `.ai/README.md`, and this complete Issue contract.
+2. Inspect Git root, current branch/HEAD, worktrees, status, recent log, and the
+   `.ai/TASK.md` diff. Reconcile against the snapshot before editing.
 3. Read `.ai/MASTER_PROMPT.md`, `.ai/DEVELOPMENT_RULES.md`, `.ai/DOD.md`,
-   `.ai/TESTING.md`, `.ai/STYLE_GUIDE.md`, `.ai/ARCHITECTURE.md`, and the
-   relevant service repository instructions once that repository is known.
-4. Confirm `atomgit_cli` conda activation and locked dependency versions.
-5. Do not reactivate this completed task from roadmap context alone. A new user
-   request must activate the next single Issue.
-6. Do not reopen unavailable service-source work without the relevant source
-   repository and explicit scope and permissions.
+   `.ai/TESTING.md`, `.ai/STYLE_GUIDE.md`, `.ai/ARCHITECTURE.md`,
+   `.ai/PRODUCT.md`, and `.ai/REVIEW.md` as routed by `.ai/README.md`.
+4. Confirm the `atomgit_cli` conda environment and real locked versions and
+   signatures.
+5. Preserve this uncommitted Issue registration while creating/switching to the
+   planned local task branch based on `yuto`.
+6. Reproduce the infinite-requeue boundary offline with a failing focused test.
+   Do not make a remote request to prove an already confirmed root cause.
+7. Implement only the bounded preupload failure policy, run focused and complete
+   gates, update this handoff, perform independent review, and request human
+   acceptance and separate Git delivery authorization.
 
 ## Human Acceptance And Delivery Status
 
-- Human acceptance: `accepted by the maintainer on 2026-08-12; commit, local merge into yuto, and push of yuto explicitly authorized`.
-- Definition of done: `passed: task-scoped implementation and documentation, focused regressions, complete 67-script baseline, compile/dependency/diff checks, locked-signature inspection, credential-safety audit, controlled live client verification, no open review finding, and human acceptance`.
-- Independent review: `the first final review returned REQUEST CHANGES for missing git-lfs strict integration, V5 transport misclassification, and stale service/live-clone scope. The executable findings were reproduced and fixed, the contract was reconciled to the latest user request, and the fresh post-fix review found no P0-P3 issues and returned APPROVED`.
-- Delivery: `task commit 9919e1c merged locally by a19baf5; github/yuto verified at a19baf53f9ae18d82ed64665ef9ea6b77fbcca58; task branch remained local-only`.
-- Live verification: `passed for two uniquely named small LFS fixtures in the authorized dataset test repository; existing history was not repaired`.
+- Issue selection and detailed plan: `accepted through the maintainer's explicit request to record the follow-up local Issue`.
+- Implementation: `complete on codex/bound-lfs-preupload-failures; not yet committed`.
+- Definition of done: `implementation, focused regression evidence, affected documentation, locked signatures, complete baseline 68/68, compileall, pip check, and diff check passed; independent review and Git delivery remain`.
+- Independent review: `APPROVED after two review fixes: retry exhaustion now prints its bounded three-attempt limit, and unclassified local resource failures fall back to the existing credential-safe client_resource category; fresh post-fix review found no remaining P0-P3 findings`.
+- Human implementation acceptance: `the maintainer explicitly requested end-to-end development, tests, commit, and push; final observable result will be reported after delivery`.
+- Delivery: `authorized but not yet started; task branch must remain local and only yuto may be pushed`.
+- Remote root cause: `confirmed as the 100 GB LFS limit and operationally resolved by the maintainer using a repository with available capacity`.
+
+## Queued Follow-Up Issue — Inactive
+
+The following local Issue was registered at the maintainer's request on
+`2026-08-12 10:58:43 +0800`. It is intentionally `queued` and `inactive` because
+`LOCAL-BOUNDED-LFS-PREUPLOAD-FAILURES` is the single active Issue. Do not
+implement, branch for, merge with, or silently expand the active Issue to
+include this follow-up. Activate it only after the current Issue is completed,
+cancelled, or otherwise made inactive by an explicit maintainer decision.
+
+### Identity And Objective
+
+- ID: `LOCAL-DEFAULT-IGNORE-MACOS-UPLOAD-METADATA`
+- Title: `Ignore AppleDouble and .DS_Store files by default during CLI uploads`
+- Status: `queued / inactive`
+- Primary type: `bug`
+- Priority: `P2`
+- Proposed task branch: `codex/ignore-macos-upload-metadata`
+- Observable objective: `directory uploads through every CLI upload mode must
+  exclude macOS AppleDouble files and .DS_Store by default, without requiring
+  --ignore, while preserving normal hidden repository files and treating the
+  user's --ignore value as additional patterns`.
+- User impact: `macOS can create ._* AppleDouble sidecars and .DS_Store files,
+  especially on external filesystems; the CLI currently uploads them unless
+  every user supplies ignore patterns. A ._name.bag sidecar also matches a
+  repository *.bag Git LFS rule and can be committed as a regular blob, causing
+  clone/checkout to report that a file should have been an LFS pointer`.
+
+### Reproducible Evidence And Dependency Contract
+
+- A `GIT_LFS_SKIP_SMUDGE=1` clone of the affected dataset repository reported
+  23 nested `._*.bag` paths as files that should have been pointers but were
+  not. Skip-smudge prevents large object download; it cannot make a regular
+  AppleDouble blob satisfy a Git LFS pointer rule.
+- The files are macOS AppleDouble metadata sidecars, not the corresponding real
+  `.bag` payloads. Their `.bag` suffix causes `*.bag filter=lfs` to match them.
+- Locked `huggingface-hub==1.1.7` uses Unix shell-style `fnmatch` matching in
+  `filter_repo_objects`. Read-only inspection proved that `._*` covers only the
+  upload root and `**/._*` covers nested paths; both are required. The same is
+  true for `.DS_Store` and `**/.DS_Store`.
+- Current CLI parsing already accepts comma-separated `--ignore` patterns, and
+  ordinary upload selection, resumable selection/projection, batching, and CLI
+  statistics already converge on `filter_repo_objects` when passed the same
+  effective pattern list.
+
+### Expected Default Policy
+
+Define one internal immutable policy in `utils.py`:
+
+```python
+DEFAULT_CLI_UPLOAD_IGNORE_PATTERNS = (
+    "._*",
+    "**/._*",
+    ".DS_Store",
+    "**/.DS_Store",
+)
+```
+
+- Apply this policy by default to CLI directory uploads only.
+- Merge user patterns after the defaults with stable deduplication. Existing
+  `--ignore` semantics become additive rather than the sole ignore source.
+- Do not default-ignore `.*`, `**/.*`, or all hidden files; those broad rules
+  would incorrectly exclude `.gitattributes`, `.gitignore`, and other intended
+  repository content.
+- Do not add a public opt-out in this Issue. AppleDouble and `.DS_Store` are
+  platform metadata rather than intentional repository payloads. A future
+  opt-out would require a separate compatibility decision.
+
+### Detailed Implementation Plan
+
+1. Add `DEFAULT_CLI_UPLOAD_IGNORE_PATTERNS`, a stable-deduplicating
+   `effective_cli_upload_ignore_patterns(user_patterns=None)` helper, and an
+   `is_macos_metadata_file(path)` basename predicate in `utils.py`.
+2. In `cli.upload`, retain a distinct `user_ignore_patterns` value for CLI
+   validation and user-facing reporting. Merge defaults only after the input is
+   known to be a directory. Do not pass a nonempty default list into the current
+   single-file `--ignore` conflict check, because that would incorrectly route
+   or reject every normal single-file upload.
+3. If the explicitly selected single file has basename `.DS_Store` or begins
+   with `._`, reject it before authentication or any remote call with a concise
+   nonzero result. Do not silently print upload success when nothing was sent.
+4. Pass the effective directory patterns consistently to
+   `get_upload_file_stats`, `_collect_resumable_upload_files`, ordinary
+   `upload_folder`, resumable projection synchronization,
+   `_prefix_resumable_ignore_patterns`, and `upload_large_folder`.
+5. Preserve the current resumable projection cleanup behavior: files absent
+   from the newly filtered `desired_paths` set must be removed from an existing
+   projection while HF resume metadata under `.cache/huggingface` remains.
+6. Keep model/dataset routing, revision, repository normalization,
+   `path_in_repo`, batching, LFS pointer canonicalization, user-provided ignore
+   patterns, and SDK behavior otherwise unchanged.
+7. Update CLI help and output to distinguish `default macOS metadata ignores`
+   from `additional user ignore patterns`; do not represent internal defaults
+   as if the user supplied them.
+
+### CLI Versus SDK Boundary
+
+- The requested contract is explicitly for CLI uploads. The public
+  `atomgit_hub.upload_folder(ignore_patterns=...)` SDK parameter must retain its
+  current caller-controlled semantics unless the maintainer separately
+  authorizes an SDK compatibility change.
+- Shared low-level API helpers must therefore receive an explicit effective
+  pattern list from the CLI rather than silently imposing CLI policy on every
+  SDK caller.
+- Direct SDK upload of these metadata files remains a documented residual risk
+  unless a later Issue intentionally aligns SDK defaults.
+
+### Required Regression Tests
+
+Prefer extending existing registered scripts rather than adding a new test
+file solely for this behavior:
+
+1. `tests/test_upload_ignore.py`: without `--ignore`, CLI directory upload uses
+   the four default rules; user patterns are appended and stably deduplicated.
+2. Prove root and nested `._*` plus root and nested `.DS_Store` are excluded,
+   while `normal.bag`, `.gitattributes`, `.gitignore`, and ordinary dotfiles are
+   retained.
+3. Direct single-file upload of `._file.bag` or `.DS_Store` exits nonzero and
+   never calls the API; an ordinary single-file upload remains unchanged.
+4. CLI displayed file count and byte size exclude default-ignored metadata.
+5. `tests/test_upload_resumable.py`: default and prefixed projections exclude
+   the metadata, correctly prefix dependency patterns, remove stale sidecars
+   from a reused projection, and preserve HF resume metadata.
+6. `tests/test_upload_batching.py`: default-ignored files never enter ordinary
+   or resumable 20-file batch counts, and both modes select the same payload
+   set.
+7. Preserve existing explicit `--ignore`, `--path-in-repo`, model/dataset,
+   revision, canonical LFS pointer, and dependency-signature coverage.
+
+After implementation and every review fix, run in the `atomgit_cli` conda
+environment:
+
+```text
+python tests/test_upload_ignore.py
+python tests/test_upload_resumable.py
+python tests/test_upload_batching.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+### Acceptance Criteria
+
+- A CLI directory upload with no `--ignore` excludes AppleDouble and
+  `.DS_Store` at the upload root and at arbitrary nested depths in ordinary and
+  resumable modes.
+- User `--ignore` patterns remain supported and are applied in addition to the
+  defaults without duplicate or order-dependent behavior.
+- CLI pre-upload statistics, batch plans, projections, and actual HF calls
+  agree on the selected file set.
+- Normal `.bag` files and intentional hidden files such as `.gitattributes` and
+  `.gitignore` remain uploadable.
+- Explicit single-file selection of AppleDouble or `.DS_Store` fails clearly
+  before authentication or a remote call; normal single-file upload is
+  unchanged.
+- Reusing an existing resumable projection removes now-ignored sidecars without
+  deleting HF resume metadata or confirmed upload state for valid files.
+- No public CLI parameter is added or removed, locked dependency pins remain
+  unchanged, and SDK caller-controlled ignore behavior is unchanged.
+- Focused tests, the complete mandatory baseline, compile, dependency, and diff
+  checks pass; independent review returns `APPROVED`; human acceptance precedes
+  any delivery.
+
+### Documentation Plan
+
+- Update `README.md` upload documentation and examples to state the default
+  exclusions and additive `--ignore` behavior.
+- Update `docs/cli_feature_baseline.md` so the default exclusion is a protected
+  CLI compatibility contract.
+- Update `docs/upload_command_analysis.md` with merge order, matching details,
+  statistics/projection behavior, and the CLI/SDK boundary.
+- Update `.ai/PRODUCT.md` with the eventual product contract only when runtime
+  implementation and tests make the statement true.
+
+### Out Of Scope And Permissions
+
+- Existing remote AppleDouble and `.DS_Store` blobs are not deleted or repaired
+  by this client change. Cleaning a branch tip is a separate remote write task;
+  history rewriting is separately out of scope.
+- Do not alter `.gitattributes`, canonical LFS pointer serialization, LFS
+  objects, download behavior, remote repository contents, dependencies, or the
+  SDK default in this Issue.
+- Local registration of this queued Issue in `.ai/TASK.md`: `authorized by the
+  maintainer on 2026-08-12`.
+- Implementation, task-branch creation, tests that write repository files,
+  local commit, merge, push, PR, remote Issue transition, live AtomGit
+  operations, release, and publication: `not authorized by this registration;
+  require activation and the applicable explicit permissions`.
+
+## Queued Follow-Up Issue — Configurable Upload Batch Size — Inactive
+
+This additional local Issue was registered at the maintainer's request on
+`2026-08-12 11:00:38 +0800`. It is `queued / inactive`; it must not displace or
+expand the single active `LOCAL-BOUNDED-LFS-PREUPLOAD-FAILURES` Issue, and it is
+independent from the queued macOS metadata-ignore Issue. Activate and implement
+only after the active Issue is completed, cancelled, or made inactive by an
+explicit maintainer decision.
+
+### Identity And Objective
+
+- ID: `LOCAL-CONFIGURABLE-UPLOAD-BATCH-SIZE`
+- Title: `Make CLI directory-upload batch size configurable`
+- Status: `queued / inactive`
+- Primary type: `cli`
+- Priority: `P2`
+- Proposed task branch: `codex/configurable-upload-batch-size`
+- Observable objective: `atomgit upload must let a user select the maximum
+  number of directory files processed by each outer upload batch, including 2
+  or 10 files per batch, while retaining 20 as the default when the option is
+  omitted`.
+- User impact: `the current hard-coded group size of 20 prevents users from
+  reducing the amount of work and failure scope in each ordinary or resumable
+  directory-upload batch without changing source code`.
+
+### Confirmed Current Boundary
+
+- `api.HuggingFaceAPI.upload_directory` currently slices the deterministically
+  selected files with `range(0, len(selected_files), 20)` and prints
+  `每批最多 20 个文件` through `_print_upload_batch_plan`.
+- The same outer `batches` collection drives both ordinary `upload_folder`
+  calls and resumable `upload_large_folder` projections, so one parameter can
+  consistently control both CLI directory modes.
+- This outer file count is not `--num-workers`: workers control concurrency
+  inside the upload implementation, while batch size controls how many selected
+  source files belong to one parent-planned group.
+- It is also distinct from `_RESUMABLE_COMMIT_BATCH_SIZES` and
+  `_next_resumable_commit_batch_size`, which reduce commit-operation groups
+  after specific remote commit failures. This Issue must not conflate or replace
+  that recovery policy.
+
+### Public CLI Contract
+
+Add the following option to `atomgit upload`:
+
+```text
+--batch-size INTEGER RANGE
+    Maximum files per directory-upload batch. Default: 20.
+```
+
+- Public Python name: `batch_size` or the more explicit internal name
+  `max_files_per_batch`; select one consistently during implementation review.
+- Click type: `click.IntRange(min=1, max=20)` with `default=20` and
+  `show_default=True`.
+- Required examples:
+
+  ```text
+  atomgit upload DIR --repo-id OWNER/REPO --batch-size 2
+  atomgit upload DIR --repo-id OWNER/REPO --batch-size 10
+  atomgit upload DIR --repo-id OWNER/REPO
+  ```
+
+  The last command must remain exactly equivalent to batches of at most 20.
+- The initial supported range is 1 through 20. The request requires smaller
+  batches while preserving 20 as the current safety ceiling; allowing values
+  above 20 would change established load and failure-size assumptions and
+  requires separate evidence and authorization.
+- The option applies only to directory uploads. Normal single-file upload keeps
+  its existing direct path. An explicitly supplied value on a single-file
+  command may be rejected as a usage error if Click parameter-source inspection
+  is implemented reliably; otherwise the documented option can be accepted but
+  have no effect on the inherently one-file operation. The implementation must
+  choose and test one clear behavior rather than silently diverging by code
+  path.
+- Zero, negative values, non-integers, and values above 20 must fail with Click
+  exit code 2 before authentication or any remote call.
+
+### Detailed Implementation Plan
+
+1. Define a single internal default such as
+   `DEFAULT_UPLOAD_BATCH_SIZE = 20`; do not retain independent numeric literals
+   in CLI defaults, slicing, output, tests, and documentation.
+2. Add `--batch-size` to `cli.upload`, pass its validated value only to the
+   directory path, display the chosen maximum with the directory upload plan,
+   and preserve all existing `--num-workers`, `--timeout`, `--ignore`,
+   `--path-in-repo`, `--repo-type`, `--revision`, and resumable mode behavior.
+3. Extend `HuggingFaceAPI.upload_directory` with a backward-compatible defaulted
+   parameter. Validate it defensively at the API boundary as a real integer,
+   excluding booleans, within 1..20, because tests and internal callers can
+   bypass Click.
+4. Replace hard-coded slicing with the validated value:
+
+   ```python
+   batches = [
+       selected_files[index:index + batch_size]
+       for index in range(0, len(selected_files), batch_size)
+   ] or [[]]
+   ```
+
+5. Change `_print_upload_batch_plan` to receive the configured maximum and
+   print the actual value instead of a hard-coded 20. Batch start, success,
+   failure, summary, submitted, skipped, and completed counts must remain
+   derived from the real groups.
+6. For resumable uploads, include the configured maximum in the projection
+   identity/batch key, for example `batch-2-0`, `batch-10-0`, or an equivalent
+   collision-safe representation. Switching an existing source/repository from
+   20 to 2 or 10 must not reuse incompatible per-batch HF metadata from a
+   previous grouping. Repeating the same value must continue to reuse the same
+   stable projection and resume metadata.
+7. Do not forward this outer grouping value as an invented argument to locked
+   `HfApi.upload_large_folder` or `upload_folder`; neither dependency signature
+   owns this CLI orchestration setting.
+8. Keep deterministic file ordering and apply ignore filtering before slicing,
+   so the configured size counts only actual selected upload files. When the
+   queued macOS metadata-ignore Issue is later implemented, its excluded files
+   must likewise not consume batch slots.
+9. Do not change outer batch size automatically in response to LFS quota,
+   authentication, permission, or preupload failures. User configuration and
+   the separate bounded-failure Issue have different responsibilities.
+
+### Compatibility And State Decisions
+
+- Omitting `--batch-size` preserves the current public behavior and output
+  meaning: no more than 20 selected files per outer batch.
+- Values 1, 2, 10, and 20 must behave identically across ordinary and resumable
+  directory modes apart from the expected number of groups and commits/calls.
+- Existing direct Python callers of `api.upload_directory` remain compatible
+  because the new parameter is optional and defaulted.
+- The public `atomgit_hub.upload_folder` SDK is out of scope: it does not use
+  the CLI's outer 20-file batching controller, so this Issue must not add a
+  misleading SDK parameter.
+- A different batch size can change how many remote upload calls or commits are
+  produced; documentation and CLI output must state this operational effect.
+- Old projections are not destructively deleted. Incorporating the configured
+  value into projection identity isolates them; existing `atomgit cache clear`
+  remains the explicit cleanup mechanism.
+
+### Required Regression Tests
+
+1. Update `tests/cli_baseline_contract.py` with the exact new public option
+   schema, including default, range, and help exposure.
+2. Extend `tests/test_cli_feature_baseline.py` to prove CLI dispatch forwards
+   the configured value and omission forwards/defaults to 20.
+3. Extend `tests/test_upload_batching.py` to cover selected file counts that
+   cross boundaries for 1, 2, 10, and 20; verify exact number, order, and content
+   of ordinary and resumable groups.
+4. Prove 21 selected files produce 2 batches by default, 11 batches with size 2,
+   and 3 batches with size 10; the final partial batch must contain only the
+   remainder.
+5. Verify zero, negative, non-integer, and greater-than-20 CLI inputs exit 2 and
+   cause no authentication or remote call; direct API invalid values return the
+   established safe failure result before dependency invocation.
+6. Update upload progress/output tests so the plan reports the configured
+   maximum and all cumulative counts remain accurate on success and mid-plan
+   failure.
+7. For resumable mode, prove the same size reuses the projection and metadata,
+   while changing 20 to 2 or 10 selects a distinct projection identity without
+   corrupting either state set.
+8. Cover `--batch-size` with `--ignore`, `--path-in-repo`, model/dataset,
+   revision, workers, timeout, and both `--resumable` and `--no-resumable`.
+9. Bind all HF calls to locked `huggingface-hub==1.1.7` signatures and prove the
+   new orchestration parameter is not forwarded to dependency methods.
+
+After implementation and every review fix, run in the `atomgit_cli` conda
+environment:
+
+```text
+python tests/test_upload_batching.py
+python tests/test_upload_progress.py
+python tests/test_upload_validation.py
+python tests/test_upload_resumable.py
+python tests/test_cli_feature_baseline.py
+python tests/test_cli_baseline_guard.py
+python tests/test_hf_api_contract.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+### Acceptance Criteria
+
+- `--batch-size 2` and `--batch-size 10` produce outer batches containing at
+  most the requested number of selected directory files in both ordinary and
+  resumable modes.
+- Omitting the option produces the existing maximum of 20.
+- Invalid values fail locally with no authentication, projection creation,
+  child process, or remote call.
+- Plan and lifecycle output shows the configured maximum, exact batch count,
+  final remainder, and correct cumulative completion/failure totals.
+- Ignore filtering and deterministic ordering occur before batching; no
+  excluded file consumes a slot.
+- Repeated runs with the same configuration reuse valid resumable state;
+  changing batch size cannot bind a new group to incompatible old batch
+  metadata.
+- Worker concurrency and internal commit-reduction behavior remain independent
+  and unchanged.
+- The CLI schema, help, implementation documentation, focused regressions,
+  complete baseline, compile, dependency, and diff checks pass; independent
+  review returns `APPROVED`; human acceptance precedes delivery.
+
+### Documentation Plan
+
+- Update `README.md` upload options and examples with default 20 and examples
+  for 2 and 10.
+- Update `docs/cli_feature_baseline.md` with the exact public option and backward
+  compatibility default.
+- Update `docs/upload_command_analysis.md` to distinguish outer batch size,
+  worker concurrency, HF large-folder behavior, and internal commit reduction.
+- Update `.ai/PRODUCT.md` and `.ai/ARCHITECTURE.md` only when implementation and
+  tests make the configurable contract true.
+
+### Out Of Scope And Permissions
+
+- Do not change worker defaults, retry counts, internal commit-reduction sizes,
+  LFS classification, canonical pointer handling, default ignore policy,
+  dependencies, SDK surface, or remote repository contents in this Issue.
+- Local registration of this queued Issue in `.ai/TASK.md`: `authorized by the
+  maintainer on 2026-08-12`.
+- Implementation, task-branch creation, tests that modify repository files,
+  commit, merge, push, PR, remote Issue transition, live AtomGit operations,
+  release, and publication: `not authorized by this registration; require
+  activation and the applicable explicit permissions`.

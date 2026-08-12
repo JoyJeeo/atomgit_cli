@@ -6,6 +6,7 @@ from email.utils import parsedate_to_datetime
 from datetime import datetime, timezone
 import errno
 import hashlib
+import math
 import ntpath
 import os
 import random
@@ -1750,6 +1751,10 @@ _RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
 _RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
 _RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
 _RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
+_RESUMABLE_LFS_PREUPLOAD_MAX_ATTEMPTS = 3
+_RESUMABLE_LFS_PREUPLOAD_BACKOFF_BASE = 2.0
+_RESUMABLE_LFS_PREUPLOAD_WAIT_CAP = 60.0
+_RESUMABLE_LFS_ERROR_BODY_MAX_BYTES = 16 * 1024
 # HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
 # it must be selected as LFS by the repository policy before commit encoding.
 _RESUMABLE_REGULAR_FILE_MAX_BYTES = 1_000_000_000
@@ -1832,6 +1837,9 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "revision": "resumable worker revision check failed",
     "request": "resumable worker request validation failed",
     "payload_size": "resumable worker payload is too large",
+    "lfs_quota": "resumable worker LFS storage is insufficient",
+    "lfs_bandwidth": "resumable worker LFS bandwidth is insufficient",
+    "lfs_batch_rejected": "resumable worker LFS batch was rejected",
     "rate_limit": "resumable worker was rate limited",
     "service_unavailable": "resumable worker service is unavailable",
     "timeout": "resumable worker timed out",
@@ -1862,6 +1870,16 @@ class ResumableCommitError(RuntimeError):
     """A resumable commit could not complete under the bounded retry policy."""
 
 
+class ResumableLfsPreuploadError(RuntimeError):
+    """A resumable LFS preupload failed under the bounded retry policy."""
+
+    def __init__(self, category: str):
+        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
+            category = "unknown"
+        self.category = category
+        super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
+
+
 def _resumable_error_chain(error: BaseException):
     """Yield a bounded exception chain without serializing exception text."""
     current = error
@@ -1890,6 +1908,8 @@ def _resumable_worker_error_category(error: BaseException) -> str:
             return cause.category
         if isinstance(cause, ResumableUploadModeError):
             return "upload_mode"
+        if isinstance(cause, ResumableLfsPreuploadError):
+            return cause.category
         if isinstance(cause, CanonicalLfsPointerError):
             return "lfs_pointer"
 
@@ -1916,7 +1936,7 @@ def _resumable_worker_error_category(error: BaseException) -> str:
             return "payload_size"
         if status_code == 429:
             return "rate_limit"
-        if status_code in (502, 503, 504):
+        if status_code in (500, 502, 503, 504):
             return "service_unavailable"
         if status_code == 400 or name == "BadRequestError":
             return "request"
@@ -2293,6 +2313,181 @@ def _commit_retry_after(error: BaseException) -> Optional[float]:
             )
         except (TypeError, ValueError, OverflowError):
             return None
+
+
+def _bounded_lfs_retry_after(error: BaseException) -> Optional[float]:
+    response = getattr(error, "response", None)
+    headers = getattr(response, "headers", None)
+    value = headers.get("Retry-After") if headers is not None else None
+    if not value:
+        return None
+    try:
+        numeric_delay = float(value)
+    except (TypeError, ValueError):
+        numeric_delay = None
+    if numeric_delay is not None:
+        if not math.isfinite(numeric_delay) or numeric_delay < 0:
+            return None
+        return min(numeric_delay, _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP)
+    try:
+        retry_at = parsedate_to_datetime(value)
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=timezone.utc)
+        delay = (retry_at - datetime.now(timezone.utc)).total_seconds()
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if not math.isfinite(delay) or delay < 0:
+        return None
+    return min(delay, _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP)
+
+
+def _bounded_lfs_error_payload(error: BaseException) -> Optional[dict]:
+    """Read only a small JSON object for narrow AtomGit quota detection."""
+    response = getattr(error, "response", None)
+    try:
+        content = getattr(response, "content", None)
+    except Exception:
+        return None
+    if not isinstance(content, bytes) or len(content) > _RESUMABLE_LFS_ERROR_BODY_MAX_BYTES:
+        return None
+    try:
+        payload = json.loads(content)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _is_atomgit_lfs_quota_error(error: BaseException) -> bool:
+    if _resumable_error_status(error) != 413:
+        return False
+    payload = _bounded_lfs_error_payload(error)
+    if payload is None:
+        return False
+    code = payload.get("error_code_name")
+    if code in ("INSUFFICIENT_LFS_SPACE", "LFS_QUOTA_EXCEEDED"):
+        return True
+    message = payload.get("error_message")
+    marker = "Insufficient LFS space"
+    if not isinstance(message, str) or not message.startswith(marker):
+        return False
+    return len(message) == len(marker) or message[len(marker)] in " :,.(-"
+
+
+def _lfs_preupload_error_category(error: BaseException) -> tuple:
+    """Return the safe category and whether one LFS failure is retryable."""
+    for cause in _resumable_error_chain(error):
+        if isinstance(cause, ResumableLfsPreuploadError):
+            return cause.category, False
+        status_code = _resumable_error_status(cause)
+        if status_code == 401:
+            return "authentication", False
+        if status_code == 403:
+            return "permission", False
+        if status_code == 404:
+            return "repository", False
+        if status_code == 507 or _is_atomgit_lfs_quota_error(cause):
+            return "lfs_quota", False
+        if status_code == 509:
+            return "lfs_bandwidth", False
+        if status_code == 429:
+            return "rate_limit", True
+        if status_code in (413, 422) or (
+            isinstance(status_code, int) and 400 <= status_code < 500
+        ):
+            return "lfs_batch_rejected", False
+        if status_code in (500, 502, 503, 504):
+            return "service_unavailable", True
+        if isinstance(
+            cause,
+            (httpx.TimeoutException, TimeoutError, socket.timeout),
+        ):
+            return "timeout", True
+        if isinstance(cause, (httpx.NetworkError, ConnectionError)):
+            return "connection", True
+        if isinstance(cause, ValueError):
+            return "lfs_batch_rejected", False
+    category = _resumable_worker_error_category(error)
+    return category, False
+
+
+class _ResumableLfsPreuploadController:
+    """Bound retries before HF's worker can requeue an LFS preupload job."""
+
+    def __init__(
+        self,
+        preupload_lfs,
+        *,
+        sleep=time.sleep,
+        jitter=None,
+        monotonic=time.monotonic,
+        deadline=None,
+        max_attempts: int = _RESUMABLE_LFS_PREUPLOAD_MAX_ATTEMPTS,
+        fatal_callback=None,
+        event_callback=None,
+    ):
+        self._preupload_lfs = preupload_lfs
+        self._sleep = sleep
+        self._jitter = jitter or (
+            lambda delay: random.uniform(0.0, min(0.5, delay * 0.1))
+        )
+        self._monotonic = monotonic
+        self._deadline = deadline
+        self._max_attempts = max_attempts
+        self._fatal_callback = fatal_callback
+        self._event_callback = event_callback
+
+    def _emit(self, event) -> None:
+        if self._event_callback is None:
+            return
+        try:
+            self._event_callback(event)
+        except Exception:
+            pass
+
+    def _fail(self, category: str, *, attempts: int = 1):
+        error = ResumableLfsPreuploadError(category)
+        if attempts >= self._max_attempts and self._event_callback is not None:
+            self._emit({
+                "kind": "lfs_preupload_exhausted",
+                "category": category,
+                "attempts": attempts,
+            })
+        if self._fatal_callback is not None:
+            self._fatal_callback(error)
+        raise error
+
+    def _retry_delay(self, error: BaseException, attempt: int) -> float:
+        retry_after = _bounded_lfs_retry_after(error)
+        if retry_after is not None:
+            return retry_after
+        base = min(
+            _RESUMABLE_LFS_PREUPLOAD_BACKOFF_BASE * (2 ** (attempt - 1)),
+            _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP,
+        )
+        return min(base + self._jitter(base), _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP)
+
+    def preupload_lfs(self, *args, **kwargs):
+        for attempt in range(1, self._max_attempts + 1):
+            try:
+                return self._preupload_lfs(*args, **kwargs)
+            except Exception as error:
+                category, retryable = _lfs_preupload_error_category(error)
+                if not retryable or attempt >= self._max_attempts:
+                    self._fail(category, attempts=attempt)
+                delay = self._retry_delay(error, attempt)
+                if (
+                    self._deadline is not None
+                    and self._monotonic() + delay >= self._deadline
+                ):
+                    self._fail("timeout")
+                self._emit({
+                    "kind": "lfs_preupload_retry",
+                    "category": category,
+                    "attempt": attempt + 1,
+                    "max_attempts": self._max_attempts,
+                    "delay": delay,
+                })
+                self._sleep(delay)
 
 
 def _is_ambiguous_commit_error(error: BaseException) -> bool:
@@ -2676,10 +2871,31 @@ def _print_resumable_commit_event(event, batch_context) -> None:
         )
 
 
+def _print_resumable_lfs_preupload_event(event, batch_context) -> None:
+    """Print one bounded retry decision without dependency error details."""
+    if not batch_context:
+        return
+    current, total = batch_context
+    if event.get("kind") == "lfs_preupload_retry":
+        print(
+            f"[批次 {current}/{total}] LFS 预上传重试 "
+            f"{event['attempt']}/{event['max_attempts']}，"
+            f"等待 {event['delay']:g} 秒（{event['category']}）",
+            flush=True,
+        )
+    elif event.get("kind") == "lfs_preupload_exhausted":
+        print(
+            f"[批次 {current}/{total}] LFS 预上传已达到最多 "
+            f"{event['attempts']} 次尝试，正在安全停止",
+            flush=True,
+        )
+
+
 def _run_resumable_upload(
     token, kwargs, result_queue,
     request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
     batch_context=None,
+    upload_deadline=None,
 ):
     """Run HF's resumable uploader in an isolated child process.
 
@@ -2688,6 +2904,7 @@ def _run_resumable_upload(
     """
     original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
     original_get_upload_mode = hf_large_folder._get_upload_mode
+    original_preupload_lfs = hf_large_folder._preupload_lfs
     result_sent = False
 
     def send_failure(error):
@@ -2733,6 +2950,15 @@ def _run_resumable_upload(
         # recovery. AtomGit upload targets are required to pre-exist.
         client.create_repo = existing_repo
         hf_large_folder._get_upload_mode = get_upload_mode_with_policy
+        preupload_controller = _ResumableLfsPreuploadController(
+            original_preupload_lfs,
+            deadline=upload_deadline,
+            fatal_callback=fatal_exit,
+            event_callback=lambda event: _print_resumable_lfs_preupload_event(
+                event, batch_context
+            ),
+        )
+        hf_large_folder._preupload_lfs = preupload_controller.preupload_lfs
         create_commit = getattr(client, "create_commit", None)
         if callable(create_commit):
             controller = _ResumableCommitController(
@@ -2765,6 +2991,7 @@ def _run_resumable_upload(
         send_failure(exc)
     finally:
         hf_large_folder._get_upload_mode = original_get_upload_mode
+        hf_large_folder._preupload_lfs = original_preupload_lfs
         hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         close_hf_session()
 
@@ -3056,6 +3283,7 @@ def _execute_resumable_upload_process(
             result_queue,
             request_timeout,
             batch_context,
+            upload_deadline,
         ),
     )
     process.daemon = True
@@ -3187,6 +3415,21 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "payload_size": (
                 "提交过大",
                 "提交已降至单文件仍超过服务端限制；断点状态已保留，请联系平台支持。",
+            ),
+            "lfs_quota": (
+                "LFS 存储空间不足",
+                "请增加仓库或账号的 LFS 配额，或删除无用对象并完成服务端 LFS GC；"
+                "断点状态已保留，释放空间后可重新执行同一命令。",
+            ),
+            "lfs_bandwidth": (
+                "LFS 带宽额度不足",
+                "请等待带宽额度重置或联系平台支持；断点状态已保留，"
+                "条件恢复后可重新执行同一命令。",
+            ),
+            "lfs_batch_rejected": (
+                "LFS 协商请求被拒绝",
+                "Git LFS Batch 请求被服务端拒绝；断点状态已保留，"
+                "请在平台支持解决后重新执行同一命令。",
             ),
             "rate_limit": (
                 "请求限流",
