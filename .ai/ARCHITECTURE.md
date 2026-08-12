@@ -78,8 +78,11 @@ and must not report creation or upload success.
 - Single file: prefer HF `upload_file` with a full remote filename.
 - Directory: the CLI defaults to `HfApi.upload_large_folder`; authenticate
   through the `HfApi` instance according to the locked library signature.
+  Selected files are deterministically grouped into configurable 1..20-file
+  outer batches after ignore filtering, with 20 retained as the default.
   Every resumable upload uses a stable private projection keyed by source/
-  repository/revision/prefix so HF metadata cannot drift across destinations.
+  repository/revision/prefix/batch size and index so HF metadata cannot drift
+  across destinations or incompatible outer groupings.
   Because HF 1.1.7 has no large-folder `path_in_repo` argument, requested source
   content is placed below that prefix in the projection. Explicit ordinary mode
   uses `upload_folder` with the normalized repository prefix. Logical

@@ -186,6 +186,7 @@ atomgit upload <path> --repo-id <id> [options]
 | `-i, --ignore <patterns>` | 额外忽略的文件模式（逗号分隔，如 `*.tmp,logs/`），仅对目录上传有意义 |
 | `--resumable / --no-resumable` | 目录默认使用断点续传；显式 `--no-resumable` 改用普通上传 |
 | `--num-workers <n>` | 上传并发 worker 数，默认 5；普通目录和 resumable 目录均可使用 |
+| `--batch-size <1-20>` | 每个目录上传外层批次的最大文件数，默认 20；单文件上传不受影响 |
 | `--auto-configure-lfs` | 显式允许 resumable 在检测到超大 regular 文件时提交仓库级 `.gitattributes` 后重试 |
 
 目录未显式选择模式时默认使用断点续传；单文件仍使用普通文件上传。目录指定
@@ -193,6 +194,16 @@ atomgit upload <path> --repo-id <id> [options]
 冲突参数会在上传前以退出码 2 拒绝：显式 `--resumable` 仅适用于目录且不能与
 `--message` 同用；`--ignore` 仅适用于目录上传；`--auto-configure-lfs` 仅适用于
 resumable 目录。线程数和仓库内路径是所有适用上传模式的基础参数。
+
+`--batch-size` 在忽略过滤和确定性排序之后对目录文件分组，普通上传和
+resumable 上传使用同一上限。较小值可减少每批工作量和失败范围，但会增加
+外层上传调用及可能的提交数。它不是 `--num-workers`，也不改变远程失败后的
+内部 commit 降批策略。
+
+```bash
+atomgit upload ./data --repo-id user/my-dataset --batch-size 2
+atomgit upload ./data --repo-id user/my-dataset --batch-size 10
+```
 
 CLI 目录上传默认忽略上传根目录和任意嵌套目录中的 AppleDouble
 `._*` 与 `.DS_Store`；普通点文件、`.gitattributes` 和 `.gitignore` 不会被宽泛

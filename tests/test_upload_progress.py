@@ -102,12 +102,13 @@ def main():
             # --- Test 2: 目录上传，--no-progress-bar（应禁用进度条）---
             captured.clear()
             r = runner.invoke(cli, ["upload", str(sub), "--repo-id", "user/repo",
-                                    "--no-progress-bar", "--no-resumable"])
+                                    "--no-progress-bar", "--no-resumable",
+                                    "--batch-size", "1"])
             check("T2 目录上传-noprog exit=0", r.exit_code == 0, f"exit={r.exit_code}")
             check(
                 "T2 禁用进度条后批次生命周期仍可见",
-                "上传批次计划: 共 2 个文件，1 个批次，每批最多 20 个文件" in r.output
-                and "[批次 1/1] 成功:" in r.output
+                "上传批次计划: 共 2 个文件，2 个批次，每批最多 1 个文件" in r.output
+                and "[批次 2/2] 成功:" in r.output
                 and "上传批次汇总:" in r.output,
                 r.output[-300:],
             )

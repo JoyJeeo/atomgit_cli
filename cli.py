@@ -15,7 +15,9 @@ configure_hf_environment()
 
 try:
     from .config import config
-    from .api import api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+    from .api import (
+        api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_SIZE,
+    )
     from .utils import (
         print_success, print_error, print_warning, print_info,
         validate_repo_name, validate_repo_type, is_supported_upload_revision,
@@ -30,7 +32,9 @@ try:
     )
 except ImportError:
     from config import config
-    from api import api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+    from api import (
+        api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_SIZE,
+    )
     from utils import (
         print_success, print_error, print_warning, print_info,
         validate_repo_name, validate_repo_type, is_supported_upload_revision,
@@ -329,12 +333,19 @@ def create_branch(repo_id, branch_name, source):
                    '--resumable 不能与 --message 同用')
 @click.option('--num-workers', 'num_workers', default=5, type=int,
               help='上传并发 worker 数，默认 5；目录普通/resumable 模式均可使用')
+@click.option(
+    '--batch-size', 'batch_size',
+    default=DEFAULT_UPLOAD_BATCH_SIZE,
+    type=click.IntRange(min=1, max=DEFAULT_UPLOAD_BATCH_SIZE),
+    show_default=True,
+    help='每个目录上传外层批次的最大文件数（仅目录有效）',
+)
 @click.option('--auto-configure-lfs', 'auto_configure_lfs', is_flag=True,
               default=False,
               help='resumable 检测到超大 regular 文件时，提交仓库级 Git LFS 配置后重试')
 def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
            repo_type, revision, ignore, resumable, num_workers,
-           auto_configure_lfs):
+           batch_size, auto_configure_lfs):
     """上传文件或目录到仓库"""
     if timeout_sec is not None and timeout_sec <= 0:
         print_error("上传超时时间必须大于 0 秒")
@@ -471,6 +482,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
             )
         if num_workers:
             print_info(f"并发 worker: {num_workers}")
+        print_info(f"外层批次上限: {batch_size} 个文件")
         if resumable:
             print_info("上传模式: 断点续传/分块 (resumable)")
             if auto_configure_lfs:
@@ -487,6 +499,7 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
                                 repo_type=repo_type, revision=revision,
                                 ignore_patterns=ignore_patterns,
                                 resumable=resumable, num_workers=num_workers,
+                                batch_size=batch_size,
                                 auto_configure_lfs=auto_configure_lfs):
             print_success(f"目录上传成功: {path}")
         else:
