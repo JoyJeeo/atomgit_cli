@@ -31,6 +31,13 @@ _GIT_CREDENTIAL_HOSTS = ("atomgit.com", "hub.atomgit.com")
 _GIT_HELPER_STATE_VERSION = 1
 _GIT_HELPER_STATE_FILENAME = "git-helper-state.json"
 
+DEFAULT_CLI_UPLOAD_IGNORE_PATTERNS = (
+    "._*",
+    "**/._*",
+    ".DS_Store",
+    "**/.DS_Store",
+)
+
 
 _AUTH_STATUS_PATTERNS = (
     re.compile(
@@ -278,6 +285,25 @@ def parse_ignore_patterns(raw: Optional[str]) -> Optional[List[str]]:
             seen.add(p)
             patterns.append(p)
     return patterns or None
+
+
+def effective_cli_upload_ignore_patterns(
+    user_patterns=None,
+) -> List[str]:
+    """Return CLI directory-upload defaults plus user patterns, in order."""
+    seen = set()
+    patterns = []
+    for pattern in (*DEFAULT_CLI_UPLOAD_IGNORE_PATTERNS, *(user_patterns or ())):
+        if pattern not in seen:
+            seen.add(pattern)
+            patterns.append(pattern)
+    return patterns
+
+
+def is_macos_metadata_file(path) -> bool:
+    """Return whether one selected file is AppleDouble or Finder metadata."""
+    name = Path(path).name
+    return name == ".DS_Store" or name.startswith("._")
 
 
 def validate_upload_path_no_symlinks(upload_path: Path) -> None:

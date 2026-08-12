@@ -22,6 +22,9 @@ cfg_mod = sys.modules["atomgit.config"]
 from atomgit.cli import cli
 
 
+DEFAULT_IGNORES = ["._*", "**/._*", ".DS_Store", "**/.DS_Store"]
+
+
 results = []
 uf_captured = []
 ulf_captured = []
@@ -159,6 +162,12 @@ def main():
             source.mkdir()
             (source / "a.txt").write_text("a", encoding="utf-8")
             (source / "b.txt").write_text("b", encoding="utf-8")
+            (source / "._root.bag").write_bytes(b"appledouble")
+            (source / ".DS_Store").write_bytes(b"finder")
+            nested_metadata = source / "nested"
+            nested_metadata.mkdir()
+            (nested_metadata / "._nested.bag").write_bytes(b"appledouble")
+            (nested_metadata / ".DS_Store").write_bytes(b"finder")
 
             runner = CliRunner()
 
@@ -180,6 +189,9 @@ def main():
                       ulf_captured[0]["folder_path"] != str(source))
                 check("T1 root projection preserves relative file paths",
                       ulf_captured[0]["visible_files"] == ["a.txt", "b.txt"])
+                check("T1 default ignores forwarded to large-folder",
+                      ulf_captured[0]["ignore_patterns"] == DEFAULT_IGNORES,
+                      repr(ulf_captured[0]["ignore_patterns"]))
                 check(
                     "T1 child HfApi receives AtomGit endpoint and token",
                     hfa_init_captured == [{
@@ -249,7 +261,8 @@ def main():
             if ulf_captured:
                 call = ulf_captured[0]
                 check("T4 revision forwarded", call["revision"] == "dev")
-                check("T4 ignore patterns forwarded", call["ignore_patterns"] == ["*.tmp"])
+                check("T4 ignore patterns forwarded",
+                      call["ignore_patterns"] == DEFAULT_IGNORES + ["*.tmp"])
                 check("T4 worker count forwarded", call["num_workers"] == 4)
 
             # path-in-repo uses one stable projection and preserves HF metadata.
@@ -278,12 +291,23 @@ def main():
                 check(
                     "T5 ignore patterns are relative to projected prefix",
                     first_call["ignore_patterns"]
-                    == ["weights/checkpoints/*.tmp", "weights/checkpoints/logs/"],
+                    == [
+                        "weights/checkpoints/._*",
+                        "weights/checkpoints/**/._*",
+                        "weights/checkpoints/.DS_Store",
+                        "weights/checkpoints/**/.DS_Store",
+                        "weights/checkpoints/*.tmp",
+                        "weights/checkpoints/logs/",
+                    ],
                     repr(first_call["ignore_patterns"]),
                 )
                 sentinel = projection / ".cache" / "huggingface" / "upload" / "sentinel"
                 sentinel.parent.mkdir(parents=True, exist_ok=True)
                 sentinel.write_text("resume-state", encoding="utf-8")
+                stale_sidecar = (
+                    projection / "weights" / "checkpoints" / "._stale.bag"
+                )
+                stale_sidecar.write_bytes(b"stale")
                 (source / "a.txt").write_text("changed", encoding="utf-8")
                 (source / "b.txt").unlink()
                 (source / "c.txt").write_text("c", encoding="utf-8")
@@ -295,6 +319,8 @@ def main():
                       second_call["folder_path"] == first_call["folder_path"])
                 check("T5 HF resume metadata survives synchronization",
                       second_call["metadata_present"])
+                check("T5 stale AppleDouble removed from reused projection",
+                      not stale_sidecar.exists())
                 check(
                     "T5 projection reflects changed and removed files",
                     second_call["visible_files"]

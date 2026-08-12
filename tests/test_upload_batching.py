@@ -14,6 +14,9 @@ api_mod = sys.modules["atomgit.api"]
 config = sys.modules["atomgit.config"].config
 
 
+DEFAULT_IGNORES = ["._*", "**/._*", ".DS_Store", "**/.DS_Store"]
+
+
 class InlineQueue:
     def __init__(self):
         self._queue = queue.Queue()
@@ -132,12 +135,18 @@ def main():
             for index in range(21):
                 (source / f"file-{index:02d}.bin").write_bytes(bytes([index]))
             (source / "ignored.tmp").write_bytes(b"ignored")
+            (source / "._root.bin").write_bytes(b"appledouble")
+            (source / ".DS_Store").write_bytes(b"finder")
+            nested = source / "nested"
+            nested.mkdir()
+            (nested / "._nested.bin").write_bytes(b"appledouble")
+            (nested / ".DS_Store").write_bytes(b"finder")
             os.environ["HF_HOME"] = str(root / "hf-home")
 
             result = api_mod.api.upload_directory(
                 source,
                 "user/repo",
-                ignore_patterns=["*.tmp"],
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                 resumable=True,
             )
             projection_files = [item for _, files in resumable_calls for item in files]
@@ -170,7 +179,7 @@ def main():
             deadline_result = api_mod.api.upload_directory(
                 source,
                 "user/repo",
-                ignore_patterns=["*.tmp"],
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                 resumable=True,
                 upload_timeout=10,
             )
@@ -184,7 +193,7 @@ def main():
             result = api_mod.api.upload_directory(
                 source,
                 "user/repo",
-                ignore_patterns=["*.tmp"],
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                 resumable=False,
                 num_workers=3,
             )
@@ -202,7 +211,7 @@ def main():
                 lifecycle_result = api_mod.api.upload_directory(
                     source,
                     "user/repo-lifecycle",
-                    ignore_patterns=["*.tmp"],
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                     progress_bar=False,
                 )
@@ -233,7 +242,7 @@ def main():
                 skip_result = api_mod.api.upload_directory(
                     source,
                     "user/repo-lifecycle",
-                    ignore_patterns=["*.tmp"],
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                 )
             skip_text = skip_output.getvalue()
@@ -255,7 +264,7 @@ def main():
                 metadata_failure_result = api_mod.api.upload_directory(
                     source,
                     "user/repo-metadata-failure",
-                    ignore_patterns=["*.tmp"],
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                 )
             api_mod.read_upload_metadata = original["read_metadata"]
@@ -275,7 +284,7 @@ def main():
                 missing_result = api_mod.api.upload_directory(
                     source,
                     FakeHfApi.missing_repo_id,
-                    ignore_patterns=["*.tmp"],
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                 )
             FakeHfApi.missing_repo_id = None
@@ -294,7 +303,7 @@ def main():
                 failure_result = api_mod.api.upload_directory(
                     source,
                     FakeHfApi.fail_repo_id,
-                    ignore_patterns=["*.tmp"],
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                 )
             FakeHfApi.fail_repo_id = None

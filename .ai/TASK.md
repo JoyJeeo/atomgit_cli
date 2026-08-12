@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `completed`
+Status: `active`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,26 +12,26 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 11:47:14 +0800`
-- Status: `completed`
-- Phase: `bounded LFS preupload failure policy delivered to github/yuto and subsequently verified by an authorized live resumable LFS upload, download, pointer inspection, and no-op resume against cli_demo_dataset`
+- Updated: `2026-08-12 12:09:00 +0800`
+- Status: `active`
+- Phase: `implementation accepted and independently approved; authorized local delivery is next`
 - Base branch: `yuto`
-- Task branch: `codex/bound-lfs-preupload-failures`
-- Base commit: `86a26b6084decbde5e0ba38c09bb25b2cd0c921e`
-- Task commit: `71f8fdb fix(upload): bound LFS preupload failures`
-- Merge commit: `163ef5b merge: bound LFS preupload failures`
-- Remote delivery: `github/yuto verified at 6b871fb4c73b09c45f40b4d51ba2d425693cd740 before this live-acceptance record`
+- Task branch: `codex/ignore-macos-upload-metadata`
+- Base commit: `2ddaf9ffce9672a4ff48f5b0a52a5b563e7204fa`
+- Task commit: `none`
+- Merge commit: `none`
+- Remote delivery: `not yet delivered`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `clean and synchronized with github/yuto after this final delivery record is committed and pushed`
-- Changed paths: `.ai/TASK.md`, `README.md`, `api.py`, `docs/architecture.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_auto_configure_lfs.py`, and new `tests/test_lfs_preupload_policy.py`
-- Required worktree: `none; the Issue is delivered`
-- Last completed action: `performed the newly authorized live validation against weixin_52273949/cli_demo_dataset and proved upload, exact download, canonical pointer, and no-op resume behavior without touching existing repository paths`
-- Next exact action: `none; the two queued follow-up Issues remain inactive and require separate explicit activation`
-- Blockers: `none; the explicitly authorized cli_demo_dataset live validation is complete; deletion, other repositories, and unrelated remote paths remain outside this delivery`
-- Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed; authorized live validation uploaded one 201-byte *.bin through dataset resumable mode to codex-live/lfs-preupload-20260812-1142/probe.bin, advancing remote main from 4b2874c46554f027fc6b14b2a5bf490cd544e249 to 9f06c68be31cc3fa9e0df62cc5eac2d9101fc27c; CLI download-file --verify-checksum and cmp matched SHA-256 d2cc9e5d0f9e091d3d4ae0de946da80300e6ace91227e0fcfa75ce9f2ee6e21f; skip-smudge Git inspection found a canonical 128-byte three-line pointer with the same OID and size 201; repeating the exact upload reported one resume skip, zero new commits, and left remote main unchanged at 9f06c68`
-- Tests not run: `the live validation exercised the successful LFS Batch path rather than manufacturing quota, bandwidth, rate-limit, service-failure, or timeout responses against the real service; those failure policies remain covered by offline regressions`
+- Worktree state: `dirty only for this active Issue after TASK.md activation`
+- Changed paths: `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `cli.py`, `docs/cli_feature_baseline.md`, `docs/upload_command_analysis.md`, `tests/test_cli_feature_baseline.py`, `tests/test_upload_batching.py`, `tests/test_upload_ignore.py`, `tests/test_upload_resumable.py`, and `utils.py`
+- Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
+- Last completed action: `resolved the P2 review finding by asserting filtered byte-size output, reran all required checks, and completed a fresh independent review with APPROVED`
+- Next exact action: `commit the task branch, merge it locally into yuto, record final delivery evidence, and push only yuto`
+- Blockers: `none`
+- Tests run this turn: `pre-fix python tests/test_upload_ignore.py failed 22/33, python tests/test_upload_resumable.py failed 43/49, and python tests/test_upload_batching.py failed its lifecycle assertions; post-fix test_upload_ignore.py passed 33/33, test_upload_resumable.py passed 49/49, test_upload_batching.py passed, test_cli_feature_baseline.py passed 51/51, test_sdk_upload_parameters.py passed 14/14, test_hf_api_contract.py passed 13/13, test_upload_path_in_repo.py passed 18/18, test_upload_repo_type.py passed 17/17, and test_resumable_stats.py passed; locked huggingface-hub 1.1.7 filter_repo_objects signature and exact four-pattern selection were inspected; mandatory python tests/run_cli_baseline.py passed 68/68 in 57.94s; after the review fix all three focused scripts passed again and the mandatory baseline passed 68/68 in 57.89s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
+- Tests not run: `no live AtomGit upload was run because this behavior is fully observable offline and live writes are not authorized for this Issue`
 
-## Active Issue Identity
+## Previous Delivered Issue Identity
 
 - ID: `LOCAL-BOUNDED-LFS-PREUPLOAD-FAILURES`
 - Title: `Bound and classify resumable LFS preupload failures`
@@ -346,20 +346,18 @@ The complete baseline must run after every review fix. Inspect locked
 - Remote root cause: `confirmed as the 100 GB LFS limit and operationally resolved by the maintainer using a repository with available capacity`.
 - Live acceptance: `explicitly authorized by the maintainer on 2026-08-12 for read/write operations against weixin_52273949/cli_demo_dataset (git@atomgit.com:weixin_52273949/cli_demo_dataset.git); passed at commit 9f06c68be31cc3fa9e0df62cc5eac2d9101fc27c using only the unique codex-live/lfs-preupload-20260812-1142 path; the test object remains in the repository because no deletion was requested or performed`.
 
-## Queued Follow-Up Issue — Inactive
+## Active Issue Contract
 
-The following local Issue was registered at the maintainer's request on
-`2026-08-12 10:58:43 +0800`. It is intentionally `queued` and `inactive` because
-`LOCAL-BOUNDED-LFS-PREUPLOAD-FAILURES` is the single active Issue. Do not
-implement, branch for, merge with, or silently expand the active Issue to
-include this follow-up. Activate it only after the current Issue is completed,
-cancelled, or otherwise made inactive by an explicit maintainer decision.
+This local Issue was registered at the maintainer's request on
+`2026-08-12 10:58:43 +0800` and activated by the maintainer's explicit
+`2026-08-12` instruction to continue development, testing, committing, and
+pushing until all queued Issues are complete. It is the single active Issue.
 
 ### Identity And Objective
 
 - ID: `LOCAL-DEFAULT-IGNORE-MACOS-UPLOAD-METADATA`
 - Title: `Ignore AppleDouble and .DS_Store files by default during CLI uploads`
-- Status: `queued / inactive`
+- Status: `active`
 - Primary type: `bug`
 - Priority: `P2`
 - Proposed task branch: `codex/ignore-macos-upload-metadata`
@@ -530,10 +528,23 @@ git diff --check
   SDK default in this Issue.
 - Local registration of this queued Issue in `.ai/TASK.md`: `authorized by the
   maintainer on 2026-08-12`.
-- Implementation, task-branch creation, tests that write repository files,
-  local commit, merge, push, PR, remote Issue transition, live AtomGit
-  operations, release, and publication: `not authorized by this registration;
-  require activation and the applicable explicit permissions`.
+- Implementation, task-branch creation, offline tests, local commit, local merge
+  into `yuto`, and push of `yuto`: `authorized by the maintainer on 2026-08-12`.
+- Task-branch push: `prohibited by standing delivery rules`.
+- PR, remote Issue transition, live AtomGit operations, release, and
+  publication: `not authorized`.
+
+### Review And Acceptance Status
+
+- Independent review: `APPROVED after one P2 test fix; the filtered byte-size
+  output now has an explicit regression assertion, and the fresh review found
+  no remaining P0-P3 findings`.
+- Human acceptance: `accepted through the maintainer's explicit instruction to
+  continue development, testing, committing, and pushing until every queued
+  Issue is complete`.
+- Remaining risk: `no live upload was performed; behavior is covered at the
+  real locked filter contract and offline CLI/API boundaries, and existing
+  remote metadata remains intentionally unrepaired`.
 
 ## Queued Follow-Up Issue — Configurable Upload Batch Size — Inactive
 

@@ -19,7 +19,7 @@ atomgit upload [OPTIONS] PATH
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
 | `--revision` | 默认分支 | CLI 接受已存在的安全分支名；需先显式创建 |
-| `-i, --ignore` | 无 | 逗号分隔的 ignore patterns |
+| `-i, --ignore` | 无 | 逗号分隔的额外 ignore patterns |
 | `--resumable/--no-resumable` | 按路径自动 | 目录默认使用 `upload_large_folder`；可显式选择普通上传 |
 | `--num-workers` | `5` | 所有目录上传模式的 worker 数 |
 | `--auto-configure-lfs` | 关闭 | 显式允许 resumable 提交仓库级 `.gitattributes` 后重试不安全模式 |
@@ -37,14 +37,17 @@ AtomGit 当前的 HF 兼容服务对 model 和 dataset 共用创建与上传传�
 2. 使用 `validate_repo_name` 校验 repo ID；
 3. 将 PATH 转为 `Path` 并区分文件或目录；
 4. 使用 `normalize_path_in_repo` 与 `parse_ignore_patterns` 规整参数；
+   目录上传再将用户模式稳定去重地追加到 CLI 默认 macOS 元数据
+   规则之后；
 5. 单文件默认普通上传；目录默认 resumable，未显式选模式的 `--message` 自动
    选择普通上传；`--auto-configure-lfs` 只接受 resumable 目录；
 6. 检查 `config.is_logged_in()`；
 7. 打印大小、文件数量和选择的参数；
 8. 将参数传给 `api.upload_folder` 或 `api.upload_directory`。
 
-第 7 步的统计使用与上传相同的 `filter_repo_objects`，先应用用户的
-`ignore_patterns` 并排除 resumable 自身的 HF 元数据，因此 CLI 展示值与实际接收的
+第 7 步的统计使用与上传相同的 `filter_repo_objects`，先应用 CLI 默认
+`._*`、`**/._*`、`.DS_Store`、`**/.DS_Store` 及用户追加模式，并排除
+resumable 自身的 HF 元数据，因此 CLI 展示值与实际接收的
 过滤后文件集合一致。`--ignore` 由逗号分隔器解析，再交给锁定 HF 的
 `filter_repo_objects`；shell 中整体使用双引号即可，写成 `\*\*` 会把反斜杠作为
 模式内容传入，CLI 会在远端调用前以退出码 2 拒绝这种错误写法。
@@ -53,6 +56,8 @@ CLI 在认证和远端调用前拒绝歧义组合：单文件不接受显式 `--
 `--ignore`；显式 `--resumable` 不接受 `--message`；单文件和普通目录不接受
 `--auto-configure-lfs`。`--num-workers` 与
 `--path-in-repo` 是目录和文件上传的基础参数，普通目录与 resumable 均支持。
+显式选择 basename 为 `.DS_Store` 或以 `._` 开头的单文件也以退出码 2
+拒绝，避免 AppleDouble sidecar 因后缀命中 Git LFS 规则而误入库。
 这些用法错误统一以退出码 2 结束，不会进入 API 层。
 
 ## 3. 单文件上传
@@ -102,8 +107,9 @@ cli.upload
        ignore_patterns=可选)
 ```
 
-目录不会复制到临时目录。`path_in_repo`、repo type、revision 和 ignore patterns
-都会按条件传给 HF `upload_folder`。
+目录不会复制到临时目录。`path_in_repo`、repo type、revision 和完整有效
+ignore patterns 都会按条件传给 HF `upload_folder`。同一有效集合同时驱动预上传
+统计、20 文件批次选择和底层 HF 调用。
 
 锁定的 `huggingface-hub==1.1.7` 先过滤目录对象；过滤后超过 30 个文件时记录
 大目录提示，超过 200 个文件时提升为 warning。随后它为全部待上传对象构造
@@ -183,7 +189,9 @@ HF large-folder 模式的其他限制：
   元数据。HF 方法不接收 `path_in_repo`，带前缀时投影把源文件放在对应目录下再把
   投影根传给 HF。相同源目录、规范化仓库、传输类型、revision 和前缀会复用同一
   投影与 HF 元数据；同步会反映源文件增删改并排除源目录自身的
-  `.cache/huggingface`，用户 `--ignore` 排除的文件也不会物化到投影；
+  `.cache/huggingface`，CLI 默认 macOS 规则及用户 `--ignore` 排除的文件
+  也不会物化到投影；复用投影时会移除新规则已排除的旧 sidecar，但保留
+  投影根的 HF 断点元数据；
 - 投影优先使用硬链接，跨文件系统或平台不支持时仅使用符号链接，绝不复制源
   文件字节；两种链接均不可用时安全失败。投影根权限在支持 POSIX 权限的平台设为 `0700`；
 - 不支持用户指定的单一 commit message，CLI 在远端调用前拒绝
@@ -242,6 +250,10 @@ worker 捕获异常后立即、无限地把同一对象放回队列。AtomGit �
 
 真实 404 MB 文件测试已完成“中断 -> 再次执行 -> 下载回读”，文件大小和
 SHA-256 均一致。
+
+默认 macOS 排除是 CLI 边界策略。`api.upload_directory` 仍只应用调用方显式
+传入的模式，公开 Python SDK `atomgit_hub.upload_folder(ignore_patterns=...)`
+也保持调用方完全控制，不隐式追加 CLI 默认。
 
 ## 6. 进度条和 timeout
 

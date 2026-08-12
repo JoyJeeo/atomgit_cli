@@ -24,7 +24,8 @@ try:
         get_upload_file_stats, clear_atomgit_cache,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, get_atomgit_git_helper_status,
+        parse_ignore_patterns, effective_cli_upload_ignore_patterns,
+        is_macos_metadata_file, get_atomgit_git_helper_status,
         validate_upload_path_no_symlinks,
     )
 except ImportError:
@@ -38,7 +39,8 @@ except ImportError:
         get_upload_file_stats, clear_atomgit_cache,
         is_valid_path, ensure_directory, setup_git_credentials,
         clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, get_atomgit_git_helper_status,
+        parse_ignore_patterns, effective_cli_upload_ignore_patterns,
+        is_macos_metadata_file, get_atomgit_git_helper_status,
         validate_upload_path_no_symlinks,
     )
 
@@ -320,7 +322,7 @@ def create_branch(repo_id, branch_name, source):
 @click.option('--revision', 'revision', default=None,
               help='上传到已存在的 revision；非 main 分支需先用 repo branch create 创建')
 @click.option('--ignore', '-i', 'ignore', default=None,
-              help='忽略的文件模式（逗号分隔，如 "*.tmp,logs/,**/.DS_Store"），'
+              help='额外忽略的文件模式（逗号分隔，如 "*.tmp,logs/"），'
                    '仅对目录上传有意义')
 @click.option('--resumable/--no-resumable', default=None,
               help='目录上传默认启用断点续传/分块模式；--no-resumable 改用普通上传。'
@@ -363,8 +365,10 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
         sys.exit(1)
 
     # 解析忽略模式（逗号分隔 → 列表；空 → None）
-    ignore_patterns = parse_ignore_patterns(ignore)
-    if ignore_patterns and any("\\*" in pattern for pattern in ignore_patterns):
+    user_ignore_patterns = parse_ignore_patterns(ignore)
+    if user_ignore_patterns and any(
+        "\\*" in pattern for pattern in user_ignore_patterns
+    ):
         print_error(
             "--ignore 的 * 在引号内无需转义，请移除反斜杠后重试"
         )
@@ -372,16 +376,24 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
 
     if path.is_file():
         resumable = False if resumable is None else resumable
+        if is_macos_metadata_file(path):
+            print_error(
+                "显式选择的文件是 macOS 元数据，已拒绝上传"
+            )
+            sys.exit(2)
         if auto_configure_lfs:
             print_error("--auto-configure-lfs 仅支持 resumable 目录上传")
             sys.exit(2)
         if resumable:
             print_error("--resumable 仅支持目录上传")
             sys.exit(2)
-        if ignore_patterns:
+        if user_ignore_patterns:
             print_error("--ignore 仅支持目录上传")
             sys.exit(2)
     elif path.is_dir():
+        ignore_patterns = effective_cli_upload_ignore_patterns(
+            user_ignore_patterns
+        )
         if resumable is None:
             # A commit message requires HF upload_folder. Otherwise directories
             # automatically use the resilient large-folder uploader.
@@ -419,7 +431,8 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
         if api.upload_folder(path, repo_id, message=message, upload_timeout=timeout_sec,
                              progress_bar=show_progress, path_in_repo=path_in_repo,
                              repo_type=repo_type, revision=revision,
-                             ignore_patterns=ignore_patterns, num_workers=num_workers):
+                             ignore_patterns=user_ignore_patterns,
+                             num_workers=num_workers):
             print_success(f"文件上传成功: {path.name}")
         else:
             print_error(f"文件上传失败: {path.name}")
@@ -451,8 +464,11 @@ def upload(path, repo_id, message, timeout_sec, no_progress_bar, path_in_repo,
             print_info(f"仓库类型: {repo_type}")
         if revision:
             print_info(f"目标分支: {revision}")
-        if ignore_patterns:
-            print_info(f"忽略模式: {', '.join(ignore_patterns)}")
+        print_info("macOS 元数据默认忽略: AppleDouble, .DS_Store")
+        if user_ignore_patterns:
+            print_info(
+                f"额外用户忽略模式: {', '.join(user_ignore_patterns)}"
+            )
         if num_workers:
             print_info(f"并发 worker: {num_workers}")
         if resumable:

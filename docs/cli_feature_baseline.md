@@ -46,7 +46,11 @@ atomgit upload PATH --repo-id REPO [OPTIONS]
 - `--path-in-repo/-p` 指定仓库内目录；
 - `--repo-type/-r model|dataset` 指定业务类型；
 - `--revision` 上传到已存在的 revision；
-- `--ignore/-i` 为目录上传传递忽略模式；
+- CLI 目录上传在根目录及嵌套目录默认排除 AppleDouble `._*`
+  和 `.DS_Store`，但保留 `.gitattributes`、`.gitignore` 及其他普通点文件；
+- `--ignore/-i` 为目录上传追加忽略模式，稳定去重后与默认规则
+  同时应用；
+- 显式单文件上传 AppleDouble 或 `.DS_Store` 在认证和远程调用前失败；
 - 目录默认使用 large-folder 断点续传，`--resumable/--no-resumable` 可显式选择，
   `--num-workers` 控制 worker 数；
 - 参数冲突、无效路径、符号链接和缺少登录凭证会在上传前失败；
