@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 This is the repository's single persistent handoff for active, multi-turn, or
 cross-conversation work. It records task facts and permissions; it does not
@@ -12,21 +12,21 @@ remote GitHub Issue.
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-12 12:32:00 +0800`
-- Status: `active`
-- Phase: `fresh independent review APPROVED; human acceptance recorded; authorized delivery in progress`
+- Updated: `2026-08-12 12:34:32 +0800`
+- Status: `completed`
+- Phase: `configurable upload batch size delivered to github/yuto; no queued local Issue remains`
 - Base branch: `yuto`
 - Task branch: `codex/configurable-upload-batch-size`
 - Base commit: `9410f328caafac015e89c9d735dff2e3f600da68`
-- Task commit: `none`
-- Merge commit: `none`
-- Remote delivery: `not yet delivered`
+- Task commit: `165e9d0 feat(upload): configure directory batch size`
+- Merge commit: `6219a52 merge: configure upload batch size`
+- Remote delivery: `github/yuto verified at 6219a522a16fb39a9295780dfd9cb2c447e12db2`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Worktree state: `dirty only for the active configurable batch-size Issue`
-- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `README.md`, `api.py`, `cli.py`, `docs/cli_feature_baseline.md`, `docs/upload_command_analysis.md`, `tests/cli_baseline_contract.py`, `tests/test_cli_feature_baseline.py`, `tests/test_upload_batching.py`, `tests/test_upload_progress.py`, and `tests/test_upload_validation.py`
+- Worktree state: `dirty only for this final delivery record`
+- Changed paths: `.ai/TASK.md`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit/atomgit_cli`
-- Last completed action: `corrected the ordinary-upload documentation, reran the mandatory baseline and final checks, and completed a fresh independent review with exact verdict APPROVED`
-- Next exact action: `rerun the mandatory baseline and final checks as the delivery gate, then commit the task branch, merge locally into yuto, and push only yuto`
+- Last completed action: `committed task 165e9d0, merged it locally as 6219a52, pushed only yuto, and verified the remote branch SHA`
+- Next exact action: `commit and push this delivery record; no queued local Issue remains`
 - Blockers: `none`
 - Tests run this turn: `pre-fix test_cli_feature_baseline.py failed on missing schema/dispatch, test_upload_validation.py failed on valid/direct API batch_size, test_upload_progress.py failed 25/27 because the option was absent, and test_upload_batching.py failed at the first batch_size API call; post-fix test_upload_batching.py passed exact 1/2/10/20 ordinary and resumable grouping, deterministic content, remainder, projection reuse/isolation, default/large plans, and configured mid-plan failure; test_upload_progress.py passed 28/28; test_upload_validation.py passed 15/15; test_upload_resumable.py passed 49/49; test_cli_feature_baseline.py passed 52/52; test_cli_baseline_guard.py passed 14/14; test_hf_api_contract.py passed 13/13; test_upload_ignore.py passed 33/33; test_dataset_resumable_route.py passed 11/11; test_auto_configure_lfs.py passed 28/28; mandatory python tests/run_cli_baseline.py passed 68/68 in 58.18s, after fixing projection-key variable shadowing passed 68/68 in 60.97s, after the reviewer documentation fix passed 68/68 in 59.83s, and the final delivery gate passed 68/68 in 61.05s; final python -m compileall -q ., python -m pip check, and git diff --check passed`
 - Tests not run: `no live AtomGit upload was run because this orchestration behavior is fully observable offline and live writes are not authorized for this Issue`
@@ -551,13 +551,13 @@ git diff --check
 This additional local Issue was registered at the maintainer's request on
 `2026-08-12 11:00:38 +0800` and activated after the prior Issue was delivered,
 under the maintainer's explicit instruction to finish, test, commit, merge, and
-push every queued Issue. It is the single active Issue.
+push every queued Issue. It was the single active Issue during implementation.
 
 ### Identity And Objective
 
 - ID: `LOCAL-CONFIGURABLE-UPLOAD-BATCH-SIZE`
 - Title: `Make CLI directory-upload batch size configurable`
-- Status: `active`
+- Status: `completed`
 - Primary type: `cli`
 - Priority: `P2`
 - Proposed task branch: `codex/configurable-upload-batch-size`
@@ -778,9 +778,12 @@ git diff --check
 - Human acceptance: `accepted through the maintainer's explicit instruction to
   continue development, testing, committing, and pushing until every queued
   Issue is complete`.
-- Delivery phase: `authorized; task branch remains local-only, and only yuto
-  may be pushed`.
+- Delivery: `task commit 165e9d0 merged locally by 6219a52; github/yuto verified
+  at 6219a522a16fb39a9295780dfd9cb2c447e12db2; task branch remained local-only`.
 - Remaining risk: `no live AtomGit upload was run because outer orchestration,
   dependency argument boundaries, and resumable projection identity are fully
   observable offline; live repository writes are not authorized for this
   Issue`.
+- Remaining queued Issues: `none; the additional local Issues registered in
+  this task have all been completed, and ROADMAP #001-#026 remain recorded as
+  completed or covered by controlled remote evidence rather than active work`.
