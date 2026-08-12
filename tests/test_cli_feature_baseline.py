@@ -374,6 +374,9 @@ def main():
                 [
                     "upload", str(upload_directory), "--repo-id", "user/repo",
                     "--ignore", "*.tmp", "--repo-type", "dataset",
+                    "--batch-size", "10", "--path-in-repo", "weights",
+                    "--revision", "dev", "--num-workers", "3",
+                    "--timeout", "9", "--resumable",
                 ],
             )
             directory_call = next(
@@ -388,8 +391,30 @@ def main():
                     "._*", "**/._*", ".DS_Store", "**/.DS_Store", "*.tmp",
                 ]
                 and directory_call[3]["repo_type"] == "dataset"
-                and directory_call[3]["resumable"] is True,
+                and directory_call[3]["resumable"] is True
+                and directory_call[3]["batch_size"] == 10
+                and directory_call[3]["path_in_repo"] == "weights"
+                and directory_call[3]["revision"] == "dev"
+                and directory_call[3]["num_workers"] == 3
+                and directory_call[3]["upload_timeout"] == 9.0,
                 f"exit={upload_directory_result.exit_code}",
+            )
+
+            default_batch_result = runner.invoke(
+                cli_mod.cli,
+                [
+                    "upload", str(upload_directory), "--repo-id", "user/repo",
+                    "--no-resumable",
+                ],
+            )
+            default_batch_call = [
+                call for call in calls if call[0] == "upload-directory"
+            ][-1]
+            check(
+                "directory upload defaults outer batch size to 20",
+                default_batch_result.exit_code == 0
+                and default_batch_call[3]["batch_size"] == 20,
+                f"exit={default_batch_result.exit_code}",
             )
 
             logged_in["value"] = False

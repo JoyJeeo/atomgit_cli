@@ -53,6 +53,8 @@ atomgit upload PATH --repo-id REPO [OPTIONS]
 - 显式单文件上传 AppleDouble 或 `.DS_Store` 在认证和远程调用前失败；
 - 目录默认使用 large-folder 断点续传，`--resumable/--no-resumable` 可显式选择，
   `--num-workers` 控制 worker 数；
+- `--batch-size 1..20` 控制普通与 resumable 目录上传的外层最大文件数，
+  省略时保持 20；单文件上传接受该合法选项但因无外层分组而不受影响；
 - 参数冲突、无效路径、符号链接和缺少登录凭证会在上传前失败；
 - 上传超时和进度条的进程级状态在成功与失败后恢复。
 

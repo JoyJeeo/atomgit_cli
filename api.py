@@ -1747,6 +1747,7 @@ def _download_atomgit_file(
 
 
 _RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
+DEFAULT_UPLOAD_BATCH_SIZE = 20
 _RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
 _RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
 _RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
@@ -3247,10 +3248,12 @@ def _resumable_committed_file_count(
     return committed
 
 
-def _print_upload_batch_plan(file_count: int, batch_count: int) -> None:
+def _print_upload_batch_plan(
+    file_count: int, batch_count: int, batch_size: int
+) -> None:
     print(
         f"上传批次计划: 共 {file_count} 个文件，{batch_count} 个批次，"
-        "每批最多 20 个文件",
+        f"每批最多 {batch_size} 个文件",
         flush=True,
     )
 
@@ -4092,7 +4095,8 @@ class HuggingFaceAPI:
                         ignore_patterns=None,
                         resumable: bool = False,
                         num_workers: int = 5,
-                        auto_configure_lfs: bool = False) -> bool:
+                        auto_configure_lfs: bool = False,
+                        batch_size: int = DEFAULT_UPLOAD_BATCH_SIZE) -> bool:
         """上传目录 - 使用Hugging Face Hub SDK
 
         Args:
@@ -4113,6 +4117,7 @@ class HuggingFaceAPI:
                 ``message`` / ``commit_message``（会产生多次提交），且 HF
                 要求 ``repo_type`` 必填，为空时默认 ``model``。
             num_workers: 上传 worker 数，默认为 5；适用于断点续传和普通目录上传。
+            batch_size: 外层目录批次的最大文件数，必须为 1..20 的整数。
             auto_configure_lfs: 仅用于 resumable。检测到超大 regular 文件时，
                 允许 CLI 提交根目录 ``.gitattributes`` 并重试当前批次；
                 推导出的扩展名规则作用于整个目标仓库。
@@ -4122,6 +4127,13 @@ class HuggingFaceAPI:
             return False
         if auto_configure_lfs and not resumable:
             print("--auto-configure-lfs 仅支持 resumable 目录上传")
+            return False
+        if (
+            not isinstance(batch_size, int)
+            or isinstance(batch_size, bool)
+            or not 1 <= batch_size <= DEFAULT_UPLOAD_BATCH_SIZE
+        ):
+            print("上传批次大小必须是 1 到 20 之间的整数")
             return False
         try:
             try:
@@ -4163,15 +4175,17 @@ class HuggingFaceAPI:
                     dir_path, ignore_patterns
                 )
                 batches = [
-                    selected_files[index:index + 20]
-                    for index in range(0, len(selected_files), 20)
+                    selected_files[index:index + batch_size]
+                    for index in range(0, len(selected_files), batch_size)
                 ] or [[]]
                 batch_count = len(batches)
                 total_files = len(selected_files)
                 submitted_files = 0
                 skipped_files = 0
                 completed_files = 0
-                _print_upload_batch_plan(total_files, batch_count)
+                _print_upload_batch_plan(
+                    total_files, batch_count, batch_size
+                )
 
                 if resumable:
                     # 断点续传/分块上传：走 upload_large_folder
@@ -4191,10 +4205,10 @@ class HuggingFaceAPI:
                     attempted_lfs_patterns = set()
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1
-                        batch_size = len(batch)
+                        batch_file_count = len(batch)
                         print(
                             f"[批次 {batch_number}/{batch_count}] 开始: "
-                            f"{batch_size} 个文件",
+                            f"{batch_file_count} 个文件",
                             flush=True,
                         )
                         selected_paths = {item[0] for item in batch}
@@ -4209,7 +4223,7 @@ class HuggingFaceAPI:
                                 pipr,
                                 ignore_patterns=None,
                                 selected_paths=selected_paths,
-                                batch_key=str(batch_index),
+                                batch_key=f"batch-{batch_size}-{batch_index}",
                             )
                             batch_skipped = _resumable_committed_file_count(
                                 upload_root, selected_paths, pipr
@@ -4365,9 +4379,9 @@ class HuggingFaceAPI:
                             raise
 
                         skipped_files += batch_skipped
-                        newly_submitted = batch_size - batch_skipped
+                        newly_submitted = batch_file_count - batch_skipped
                         submitted_files += newly_submitted
-                        completed_files += batch_size
+                        completed_files += batch_file_count
                         print(
                             f"[批次 {batch_number}/{batch_count}] 成功: "
                             f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"
@@ -4391,10 +4405,10 @@ class HuggingFaceAPI:
                         upload_kwargs['revision'] = revision
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1
-                        batch_size = len(batch)
+                        batch_file_count = len(batch)
                         print(
                             f"[批次 {batch_number}/{batch_count}] 开始: "
-                            f"{batch_size} 个文件",
+                            f"{batch_file_count} 个文件",
                             flush=True,
                         )
                         try:
@@ -4427,11 +4441,11 @@ class HuggingFaceAPI:
                                 completed_files,
                             )
                             raise
-                        submitted_files += batch_size
-                        completed_files += batch_size
+                        submitted_files += batch_file_count
+                        completed_files += batch_file_count
                         print(
                             f"[批次 {batch_number}/{batch_count}] 成功: "
-                            f"新增提交 {batch_size}，续传跳过 0，"
+                            f"新增提交 {batch_file_count}，续传跳过 0，"
                             f"累计完成 {completed_files}/{total_files}",
                             flush=True,
                         )

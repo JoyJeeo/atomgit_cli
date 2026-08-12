@@ -100,6 +100,7 @@ EXISTING_PATH = (
 PATH = (
     "path", False, True, True, True, False, False, False, False, None,
 )
+UPLOAD_BATCH_RANGE = ("int_range", 1, 20)
 
 
 EXPECTED_PUBLIC_SCHEMA = {
@@ -242,6 +243,13 @@ EXPECTED_PUBLIC_SCHEMA = {
                 "--num-workers",
                 default=5,
                 parameter_type=("int",),
+            ),
+            _option(
+                "batch_size",
+                "--batch-size",
+                default=20,
+                parameter_type=UPLOAD_BATCH_RANGE,
+                show_default=True,
             ),
             _option(
                 "auto_configure_lfs",
@@ -460,7 +468,7 @@ BASELINE_TEST_GROUPS = {
 
 
 BASELINE_PUBLIC_COMMAND_COUNT = 17
-BASELINE_PUBLIC_PARAMETER_COUNT = 41
+BASELINE_PUBLIC_PARAMETER_COUNT = 42
 BASELINE_LEAF_COMMAND_COUNT = 13
 BASELINE_TEST_SCRIPT_COUNT = 68
 
@@ -472,6 +480,8 @@ def _normalize_default(value):
 
 
 def _normalize_type(parameter_type):
+    if isinstance(parameter_type, click.IntRange):
+        return ("int_range", parameter_type.min, parameter_type.max)
     if isinstance(parameter_type, click.Choice):
         return (
             "choice",

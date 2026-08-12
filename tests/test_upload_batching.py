@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify filtered statistics, no-copy projections, and 20-file batching."""
+"""Verify filtered statistics, configurable batching, and projections."""
 import os
 import queue
 import sys
@@ -78,6 +78,8 @@ def main():
 
     class FakeHfApi:
         fail_repo_id = None
+        fail_repo_on_call = None
+        repo_upload_counts = {}
         missing_repo_id = None
         validation_consumes_timeout = False
 
@@ -86,8 +88,14 @@ def main():
             self.token = token
 
         def upload_large_folder(self, **kwargs):
-            resumable_events.append(("upload", kwargs["repo_id"]))
-            if kwargs["repo_id"] == self.fail_repo_id:
+            repo_id = kwargs["repo_id"]
+            resumable_events.append(("upload", repo_id))
+            call_number = self.repo_upload_counts.get(repo_id, 0) + 1
+            self.repo_upload_counts[repo_id] = call_number
+            if (
+                repo_id == self.fail_repo_id
+                or (repo_id, call_number) == self.fail_repo_on_call
+            ):
                 raise RuntimeError("offline terminal failure")
             root = Path(kwargs["folder_path"])
             files = sorted(
@@ -202,6 +210,135 @@ def main():
                 and len(ordinary_calls) == 2
                 and [len(call["allow_patterns"]) for call in ordinary_calls] == [20, 1]
                 and thread_counts == [3, 3]
+                and all("batch_size" not in call for call in ordinary_calls)
+            )
+
+            expected_paths = [f"file-{index:02d}.bin" for index in range(21)]
+            configurable_results = []
+            for batch_size, expected_lengths in (
+                (1, [1] * 21),
+                (2, [2] * 10 + [1]),
+                (10, [10, 10, 1]),
+                (20, [20, 1]),
+            ):
+                ordinary_calls.clear()
+                thread_counts.clear()
+                configurable_result = api_mod.api.upload_directory(
+                    source,
+                    f"user/repo-ordinary-{batch_size}",
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=False,
+                    batch_size=batch_size,
+                )
+                ordinary_groups = [
+                    call["allow_patterns"] for call in ordinary_calls
+                ]
+                flattened_ordinary = [
+                    path for group in ordinary_groups for path in group
+                ]
+
+                resumable_calls.clear()
+                target_validations.clear()
+                configurable_resumable = api_mod.api.upload_directory(
+                    source,
+                    f"user/repo-resumable-{batch_size}",
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                    batch_size=batch_size,
+                )
+                resumable_groups = []
+                for kwargs, files in resumable_calls:
+                    projection = Path(kwargs["folder_path"])
+                    resumable_groups.append([
+                        path.relative_to(projection).as_posix()
+                        for path in files
+                    ])
+                flattened_resumable = [
+                    path for group in resumable_groups for path in group
+                ]
+                configurable_results.append(
+                    configurable_result is True
+                    and configurable_resumable is True
+                    and [len(group) for group in ordinary_groups]
+                    == expected_lengths
+                    and [len(group) for group in resumable_groups]
+                    == expected_lengths
+                    and flattened_ordinary == expected_paths
+                    and flattened_resumable == expected_paths
+                    and all(
+                        "batch_size" not in kwargs
+                        for kwargs, _ in resumable_calls
+                    )
+                )
+
+            resumable_calls.clear()
+            state_repo = "user/repo-batch-state"
+            first_state = api_mod.api.upload_directory(
+                source,
+                state_repo,
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                resumable=True,
+                batch_size=2,
+            )
+            size_two_projections = [
+                Path(kwargs["folder_path"])
+                for kwargs, _ in resumable_calls
+            ]
+            state_sentinel = (
+                size_two_projections[0] / ".cache" / "huggingface"
+                / "upload" / "batch-size-sentinel"
+            )
+            state_sentinel.parent.mkdir(parents=True, exist_ok=True)
+            state_sentinel.write_text("size-two-state", encoding="utf-8")
+
+            resumable_calls.clear()
+            repeated_state = api_mod.api.upload_directory(
+                source,
+                state_repo,
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                resumable=True,
+                batch_size=2,
+            )
+            repeated_projections = [
+                Path(kwargs["folder_path"])
+                for kwargs, _ in resumable_calls
+            ]
+
+            resumable_calls.clear()
+            changed_state = api_mod.api.upload_directory(
+                source,
+                state_repo,
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                resumable=True,
+                batch_size=10,
+            )
+            size_ten_projections = [
+                Path(kwargs["folder_path"])
+                for kwargs, _ in resumable_calls
+            ]
+
+            resumable_calls.clear()
+            size_one_state = api_mod.api.upload_directory(
+                source,
+                state_repo,
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                resumable=True,
+                batch_size=1,
+            )
+            size_one_projections = [
+                Path(kwargs["folder_path"])
+                for kwargs, _ in resumable_calls
+            ]
+            projection_state_ok = (
+                first_state is True
+                and repeated_state is True
+                and changed_state is True
+                and size_one_state is True
+                and repeated_projections == size_two_projections
+                and state_sentinel.read_text(encoding="utf-8")
+                == "size-two-state"
+                and set(size_ten_projections).isdisjoint(size_two_projections)
+                and set(size_one_projections).isdisjoint(size_two_projections)
             )
 
             lifecycle_output = StringIO()
@@ -316,6 +453,32 @@ def main():
                 and "上传批次汇总: 计划 21，新增提交 0，续传跳过 0，确认完成 0" in failure_text
             )
 
+            configured_failure_repo = "user/repo-configured-failure"
+            FakeHfApi.fail_repo_on_call = (configured_failure_repo, 2)
+            FakeHfApi.repo_upload_counts.pop(configured_failure_repo, None)
+            configured_failure_output = StringIO()
+            with redirect_stdout(configured_failure_output):
+                configured_failure_result = api_mod.api.upload_directory(
+                    source,
+                    configured_failure_repo,
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                    batch_size=10,
+                )
+            FakeHfApi.fail_repo_on_call = None
+            configured_failure_text = configured_failure_output.getvalue()
+            configured_failure_ok = (
+                configured_failure_result is False
+                and "上传批次计划: 共 21 个文件，3 个批次，每批最多 10 个文件"
+                in configured_failure_text
+                and "[批次 1/3] 成功:" in configured_failure_text
+                and "[批次 2/3] 失败: 累计确认完成 10/21，剩余 11"
+                in configured_failure_text
+                and "[批次 3/3] 开始" not in configured_failure_text
+                and "上传批次汇总: 计划 21，新增提交 10，续传跳过 0，确认完成 10"
+                in configured_failure_text
+            )
+
             large_source = root / "large-source"
             large_source.mkdir()
             for index in range(700):
@@ -338,21 +501,27 @@ def main():
             print(f"[{'PASS' if resumable_ok else 'FAIL'}] resumable 20-file batches/no-copy/unlimited")
             print(f"[{'PASS' if deadline_ok else 'FAIL'}] validation and resumable batches share one total deadline")
             print(f"[{'PASS' if ordinary_ok else 'FAIL'}] ordinary 20-file batches")
+            print(f"[{'PASS' if all(configurable_results) else 'FAIL'}] exact 1/2/10/20 ordinary and resumable groups")
+            print(f"[{'PASS' if projection_state_ok else 'FAIL'}] batch size isolates resumable projection state")
             print(f"[{'PASS' if lifecycle_ok else 'FAIL'}] 21-file lifecycle without progress bar")
             print(f"[{'PASS' if skip_ok else 'FAIL'}] completed resumable batches are skipped after remote validation")
             print(f"[{'PASS' if metadata_failure_ok else 'FAIL'}] metadata observation cannot fail upload")
             print(f"[{'PASS' if missing_ok else 'FAIL'}] missing target fails before hashing or upload")
             print(f"[{'PASS' if failure_ok else 'FAIL'}] terminal failure summary and ordering")
+            print(f"[{'PASS' if configured_failure_ok else 'FAIL'}] configured mid-plan failure counts")
             print(f"[{'PASS' if large_plan_ok else 'FAIL'}] 700-file lifecycle plan with progress bar")
             return 0 if all((
                 resumable_ok,
                 deadline_ok,
                 ordinary_ok,
+                all(configurable_results),
+                projection_state_ok,
                 lifecycle_ok,
                 skip_ok,
                 metadata_failure_ok,
                 missing_ok,
                 failure_ok,
+                configured_failure_ok,
                 large_plan_ok,
             )) else 1
     finally:

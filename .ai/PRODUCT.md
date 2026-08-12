@@ -32,6 +32,8 @@ every remote path is verified; known status follows the interface list.
   from CLI directory uploads, with user ignore patterns applied additively
 - Default large-folder resumable directory uploads, repository prefixes, and
   worker selection, with an explicit ordinary-upload opt-out
+- Configurable CLI directory-upload outer batches from 1 through 20 files,
+  retaining 20 as the default independently of worker concurrency
 - Explicit opt-in repository-level Git LFS attribute repair when resumable
   preupload classifies an oversized file as regular
 - Canonical Git LFS pointer commits with exact raw-blob verification for every
