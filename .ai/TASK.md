@@ -27,7 +27,7 @@ remote GitHub Issue.
 - Required worktree: `none; the Issue is delivered`
 - Last completed action: `performed the newly authorized live validation against weixin_52273949/cli_demo_dataset and proved upload, exact download, canonical pointer, and no-op resume behavior without touching existing repository paths`
 - Next exact action: `none; the two queued follow-up Issues remain inactive and require separate explicit activation`
-- Blockers: `none; live AtomGit reads/writes remain outside this delivery and were not performed`
+- Blockers: `none; the explicitly authorized cli_demo_dataset live validation is complete; deletion, other repositories, and unrelated remote paths remain outside this delivery`
 - Tests run this turn: `pre-fix python tests/test_lfs_preupload_policy.py failed with missing _ResumableLfsPreuploadController; final focused scripts passed: test_lfs_preupload_policy.py 89/89, test_auto_configure_lfs.py 28/28, test_resumable_commit_policy.py 51/51, test_resumable_recovery.py 5/5, test_dataset_resumable_route.py 11/11, test_upload_resumable.py 47/47, test_upload_error_classify.py 42/42, test_hf_api_contract.py 13/13, test_canonical_lfs_pointer.py 24/24, and test_resumable_stats.py; the mandatory python tests/run_cli_baseline.py passed 68/68 after implementation and again after each review fix, with the final run passing in 57.86s; final python -m compileall -q ., python -m pip check, and git diff --check passed; authorized live validation uploaded one 201-byte *.bin through dataset resumable mode to codex-live/lfs-preupload-20260812-1142/probe.bin, advancing remote main from 4b2874c46554f027fc6b14b2a5bf490cd544e249 to 9f06c68be31cc3fa9e0df62cc5eac2d9101fc27c; CLI download-file --verify-checksum and cmp matched SHA-256 d2cc9e5d0f9e091d3d4ae0de946da80300e6ace91227e0fcfa75ce9f2ee6e21f; skip-smudge Git inspection found a canonical 128-byte three-line pointer with the same OID and size 201; repeating the exact upload reported one resume skip, zero new commits, and left remote main unchanged at 9f06c68`
 - Tests not run: `the live validation exercised the successful LFS Batch path rather than manufacturing quota, bandwidth, rate-limit, service-failure, or timeout responses against the real service; those failure policies remain covered by offline regressions`
 
@@ -286,7 +286,8 @@ The complete baseline must run after every review fix. Inspect locked
 ## Out Of Scope
 
 - Increasing, deleting, reclaiming, or automatically managing remote LFS quota.
-- Writing to either `weixin_52273949/test_datasets` or
+- Writing to `weixin_52273949/test_datasets`, deleting the retained live fixture,
+  or writing outside the authorized unique path in
   `weixin_52273949/cli_demo_dataset` without separate exact authorization.
 - Treating a repository switch as a client fix.
 - Adding a speculative quota preflight against a nonexistent/undocumented API.
@@ -306,12 +307,14 @@ The complete baseline must run after every review fix. Inspect locked
   `codex/bound-lfs-preupload-failures`.
 - Offline diagnostics, regression tests, full baseline, and independent review:
   `authorized`.
-- Live AtomGit reads or writes, including either named repository: `not authorized
-  by this Issue registration; require a separate exact operation and repository`.
+- Live AtomGit read/write validation against
+  `weixin_52273949/cli_demo_dataset`: `explicitly authorized by the maintainer on
+  2026-08-12 and completed only under codex-live/lfs-preupload-20260812-1142`.
 - Local commit, local merge into `yuto`, and push of only `yuto`: `authorized by
   the maintainer's 2026-08-12 request to complete tests, commit, and push`.
 - Push of the task branch, PR, remote Issue transition, release, publication,
-  service deployment, and live AtomGit operations: `not authorized`.
+  service deployment, fixture deletion, other remote paths, and other live
+  AtomGit repositories: `not authorized`.
 - Task branches remain local-only under standing delivery rules.
 
 ## Next-Conversation Recovery Checklist
