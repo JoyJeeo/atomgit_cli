@@ -46,6 +46,10 @@ or covered by shared contract tests.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
+- `version.py`: the single authoritative stable distribution version source.
+- `release.py`: standard-library Release resolver, asset/checksum/wheel metadata
+  validator, target-interpreter installer, post-install verification, and
+  `atomgit update` policy shared with the POSIX bootstrap contract.
 - `exceptions.py`: stable public SDK failure hierarchy.
 - `config.py`: in-memory configuration plus persistence to
   `~/.atomgit/config.json`.
@@ -59,7 +63,9 @@ or covered by shared contract tests.
 - AtomGit HF-compatible endpoint: repository upload, download, and creation.
 - User filesystem: configuration, cache, downloads, temporary upload data.
 - Global Git configuration: host-specific credential helper registration.
-- PyPI and GitHub: distribution channels, only when explicitly invoked.
+- GitHub Releases API/assets: the only official AtomGit CLI distribution channel;
+  the local build helper contains no PyPI/twine publication path. Third-party
+  dependencies may still resolve from the user's configured pip index.
 
 ## Important State
 

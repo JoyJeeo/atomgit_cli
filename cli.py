@@ -26,6 +26,8 @@ try:
         uninstall_completion,
     )
     from .config import config
+    from .release import ReleaseError, is_stable_version, run_update
+    from .version import __version__
 except ImportError:
     from cli_contracts import (
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
@@ -38,6 +40,8 @@ except ImportError:
         uninstall_completion,
     )
     from config import config
+    from release import ReleaseError, is_stable_version, run_update
+    from version import __version__
 
 
 def _import_runtime_module(name):
@@ -104,10 +108,62 @@ for _utility_name in (
 
 
 @click.group()
-@click.version_option(version='1.0.6')
+@click.version_option(version=__version__)
 def cli():
     """AtomGit CLI - 基于Transformers和Hugging Face Hub的AtomGit平台模型文件上传下载工具"""
     pass
+
+
+def _stable_version_option(ctx, param, value):
+    if value is not None and not is_stable_version(value):
+        raise click.BadParameter("must be an exact stable X.Y.Z version")
+    return value
+
+
+@cli.command()
+@click.option(
+    "--version",
+    "target_version",
+    callback=_stable_version_option,
+    help="目标 GitHub Release 版本（X.Y.Z）；默认使用最高已完成稳定 Release",
+)
+@click.option(
+    "--force-reinstall",
+    is_flag=True,
+    default=False,
+    help="即使版本相同也重新安装已校验的 wheel",
+)
+def update(target_version, force_reinstall):
+    """从已完成的 GitHub Release 更新当前 Python 中的 AtomGit CLI。"""
+    try:
+        result = run_update(
+            version=target_version,
+            force_reinstall=force_reinstall,
+            python=sys.executable,
+        )
+    except ReleaseError as error:
+        raise click.ClickException(str(error)) from error
+
+    status = result.get("status")
+    if status == "source":
+        click.echo(
+            "检测到 Git/可编辑源码安装；atomgit update 不会修改源码。请执行 "
+            "git checkout yuto、git pull --ff-only，在隔离 conda 环境中安装锁定依赖，"
+            "然后重新执行 python -m pip install -e .。",
+            err=True,
+        )
+        raise click.exceptions.Exit(1)
+    if status == "skipped":
+        click.echo(f"AtomGit CLI 已是 {result['version']}，跳过更新。")
+        return
+    click.echo(
+        f"AtomGit CLI {result['version']} 已安装到 {result['python']}。\n"
+        f"包位置: {result.get('package', 'unknown')}\n"
+        f"命令路径: {result.get('command', 'unknown')}\n"
+        f"脚本目录: {result['scripts']}"
+    )
+    if result.get("completion_warning"):
+        click.echo(f"warning: {result['completion_warning']}", err=True)
 
 
 @cli.group()

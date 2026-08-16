@@ -35,40 +35,29 @@ python -m pip install -e .
 构建后应在隔离环境安装 wheel 并执行入口冒烟测试。仅构建成功不代表 wheel
 中的包结构和命令入口正确。
 
-## PyPI 发布
+## GitHub Release 分发
 
-`deploy.sh twine` 面向原有 PyPI 发布流程，需要发布 token，并会执行外部写
-操作。只有得到明确发布授权后才能运行。
+GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyPI。`deploy.sh`
+只负责本地构建、安装和生成 `SHA256SUMS`，不包含 twine、PyPI token 或远程写路径。
+第三方依赖仍可从用户配置的 pip 索引解析。
 
-PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` 版本。
+发布身份和版本规则：
 
-## yuto 独立分发
+1. `yuto` 是唯一发布分支；版本源在 `version.py`，使用稳定 `X.Y.Z`。
+2. 从明确的 `yuto` SHA 创建本地 `release/X.Y.Z` 准备分支，合并回 `yuto` 后才发布。
+3. 维护者手动启动 `.github/workflows/release.yml`，输入版本和精确 SHA；workflow
+   使用受保护的 `release-approval` 环境。
+4. Actions 创建不可移动的 annotated `X.Y.Z` tag，构建 wheel/sdist/checksum，先
+   创建 draft Release 并验证资产，再转为公开 Release。
+5. 重跑只接受同名且字节相同的 tag/asset；不覆盖不同内容。未完成 draft 不会被
+   安装器的稳定 resolver 选择。
 
-`yuto` 使用与上游 PyPI 区分的 GitHub Release 渠道：
+普通用户安装器选择最高的已完成纯数字 Release，显式 `--version X.Y.Z` 选择指定
+版本。历史 `v...` tag 和 Release 不删除，但永远不参与新的默认选择。
 
-1. 包版本使用 `1.0.6`，Git tag 使用 `v1.0.6`。
-2. 创建 GitHub Release，并上传 wheel 和源码归档。
-3. 为每个产物发布 SHA256。
-4. 提供仓库自有 `install.sh`，默认下载固定 Release，而不是不断变化的分支。
-5. 安装脚本支持显式版本、验证校验和，并为 Zsh 默认启用命令补全。
-
-仓库提供版本化、校验和安装脚本。激活目标 conda 环境后可运行：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.sh | sh
-```
-
-默认安装 `v1.0.6`；显式版本可用
-`sh install.sh --version 1.0.6`。脚本只从对应固定 GitHub Release
-下载 wheel 和 `SHA256SUMS`，校验成功后使用当前 conda 环境的
-`python -m pip` 安装。未激活 conda 或缺少校验工具时会停止，不会回退到系统
-Python。
-
-检测到 `$SHELL` 为 Zsh 时，官方安装器会在 wheel 成功安装后执行
-`atomgit completion install --shell zsh`；`--no-completion` 可显式关闭。补全
-设置失败会输出可重试警告，但不会否定已经成功的包安装。Bash/Fish 和非 Zsh
-启动文件不会被修改。标准 pip 没有受支持的安装后钩子，因此直接
-`python -m pip install` 的用户需要手动运行上述补全安装命令。
+源码开发者应使用 `git checkout yuto`、隔离 conda 环境、锁定依赖和
+`python -m pip install -e .`。源码更新使用 `git pull --ff-only` 后重新安装依赖和
+editable 包；`atomgit update` 会检测并拒绝修改这种安装。
 
 ## 发布门禁
 

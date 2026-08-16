@@ -1,0 +1,117 @@
+name: Release AtomGit CLI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Stable release version (X.Y.Z)"
+        required: true
+        type: string
+      source_sha:
+        description: "Exact yuto commit to release"
+        required: true
+        type: string
+
+concurrency:
+  group: atomgit-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release input
+        shell: bash
+        run: |
+          [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "${{ inputs.source_sha }}" =~ ^[0-9a-f]{40}$ ]]
+      - name: Check out exact yuto source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+      - name: Confirm source is on yuto
+        run: git branch -r --contains "${{ inputs.source_sha }}" | grep -E 'origin/yuto$'
+      - name: Build and checksum release assets
+        run: |
+          python -m pip install --disable-pip-version-check build
+          python -m build --wheel --sdist
+          test "$(find dist -maxdepth 1 -name 'atomgit-${{ inputs.version }}-py3-none-any.whl' | wc -l)" -eq 1
+          python - "${{ inputs.version }}" <<'PY'
+          import sys
+          import zipfile
+          from pathlib import Path
+          expected = sys.argv[1]
+          wheel = next(Path("dist").glob("atomgit-*.whl"))
+          with zipfile.ZipFile(wheel) as archive:
+              metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+              text = archive.read(metadata).decode("utf-8")
+          assert f"Name: atomgit\n" in text and f"Version: {expected}\n" in text
+          PY
+          cp LICENSE dist/LICENSE
+          sha256sum dist/* > dist/SHA256SUMS
+      - name: Upload immutable preparation artifact
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
+        with:
+          name: atomgit-release-${{ inputs.version }}
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment:
+      name: release-approval
+    permissions:
+      contents: write
+    steps:
+      - name: Download reviewed assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: atomgit-release-${{ inputs.version }}
+          path: dist
+      - name: Check existing tag and release state
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ inputs.version }}"; then
+            echo "annotated tag exists; the publish job will verify its exact source SHA and resume the draft Release"
+          fi
+      - name: Create annotated immutable tag
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          git fetch origin "${SOURCE_SHA}"
+          existing_commit=$(git ls-remote origin "refs/tags/${{ inputs.version }}^{}" | awk '{print $1}')
+          if [ -n "$existing_commit" ]; then
+            test "$existing_commit" = "${SOURCE_SHA}"
+          else
+            git tag -a "${{ inputs.version }}" "${SOURCE_SHA}" -m "AtomGit CLI ${{ inputs.version }}"
+            git push origin "${{ inputs.version }}"
+          fi
+      - name: Create or resume draft Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "${{ inputs.version }}" >/dev/null 2>&1; then
+            gh release create "${{ inputs.version }}" --draft --title "AtomGit CLI ${{ inputs.version }}" --notes-file /dev/null
+          fi
+          existing=$(gh release view "${{ inputs.version }}" --json assets --jq '.assets[].name' || true)
+          for asset in dist/*; do
+            name=$(basename "$asset")
+            if printf '%s\n' "$existing" | grep -Fxq "$name"; then
+              local_digest=$(sha256sum "$asset" | awk '{print $1}')
+              remote_digest=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}/assets" --paginate --jq ".[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+              test -n "$remote_digest" && test "$remote_digest" = "$local_digest" || { echo "existing asset bytes differ: $name"; exit 1; }
+              echo "asset already exists with identical bytes; keeping $name"
+              continue
+            fi
+            gh release upload "${{ inputs.version }}" "$asset"
+          done
+      - name: Verify exact assets and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ inputs.version }}" --json isDraft,isPrerelease,tagName --jq 'select(.isDraft == true and .isPrerelease == false and .tagName == "${{ inputs.version }}")'
+          gh release edit "${{ inputs.version }}" --draft=false

@@ -59,6 +59,22 @@ def main():
         repr(schema_errors),
     )
 
+    original_run_update = cli_mod.run_update
+    try:
+        cli_mod.run_update = lambda **kwargs: {
+            "status": "skipped",
+            "version": "1.0.6",
+            "python": kwargs["python"],
+        }
+        update_result = runner.invoke(cli_mod.cli, ["update"])
+        check(
+            "update baseline dispatches the current interpreter",
+            update_result.exit_code == 0 and "1.0.6" in update_result.output,
+            f"exit={update_result.exit_code}",
+        )
+    finally:
+        cli_mod.run_update = original_run_update
+
     for path, expected_spec in EXPECTED_PUBLIC_SCHEMA.items():
         command = command_at(path)
         label = " ".join(path) if path else "<root>"

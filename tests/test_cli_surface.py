@@ -28,6 +28,7 @@ def main():
     check("root help succeeds", root_help.exit_code == 0)
     for command in (
         "login",
+        "update",
         "logout",
         "whoami",
         "repo",
@@ -45,7 +46,7 @@ def main():
     )
 
     for command in (
-        "login", "logout", "whoami", "repo", "upload", "download",
+        "login", "update", "logout", "whoami", "repo", "upload", "download",
         "download-file", "config-show",
     ):
         result = runner.invoke(cli_mod.cli, [command, "--help"])
