@@ -4,6 +4,9 @@
 开发可以增加能力，但新增能力必须同步增加专项测试、基线登记和文档；不得在没有
 明确兼容决策的情况下删除、改名或破坏本文列出的命令、参数和行为。
 
+本接口清单属于完整[开发底线](development_floor.md)的一部分。完整底线还登记
+SDK、认证、仓库、上传、下载、安全、依赖、打包和跨平台行为不变量。
+
 精确接口契约位于 `tests/cli_baseline_contract.py`，接口和分派执行位于
 `tests/test_cli_feature_baseline.py`，基线自身的防绕过测试位于
 `tests/test_cli_baseline_guard.py`。DoD 入口 `python tests/run_cli_baseline.py`

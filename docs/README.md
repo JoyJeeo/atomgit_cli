@@ -10,6 +10,8 @@
 - [development.md](development.md)：conda 环境、分支、Issue 开发流程，以及
   Codex 对话切换和 worktree 交接规则。
 - [testing.md](testing.md)：离线、契约、打包和远程测试规范。
+- [development_floor.md](development_floor.md)：所有现有和未来能力必须共同遵守的
+  能力登记、行为不变量、证据和阻断门禁。
 - [release.md](release.md)：当前打包方式和 `yuto` 独立分发目标。
 - [faq.md](faq.md)：常见开发和使用问题。
 - [yuto_branch.md](yuto_branch.md)：`main` 与 `yuto` 的权威分支关系。

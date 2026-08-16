@@ -22,10 +22,15 @@
 
 token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
 隔离、URL 重定向、路径穿越、HTTP 响应完整性、临时文件清理和 wheel 安装均有
-隔离离线测试。当前完整矩阵包含 62 个 pytest case（自执行脚本内部可包含多个
+隔离离线测试。当前完整矩阵包含 70 个 pytest case（自执行脚本内部可包含多个
 聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
 验收证据。维护者已授权两个固定测试仓库可直接重跑连线测试；其他仓库或
 操作仍需单独授权。
+
+能力 ID、行为不变量、证据映射和完整阻断规则见
+[开发底线](development_floor.md)。`tests/development_floor_contract.py` 登记
+26 个能力和 61 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
+文档和工作流标记都保持关联。
 
 ## 环境
 
@@ -90,6 +95,9 @@ login/logout/whoami/config-show 的认证、Git helper、失败与脱敏分支�
 schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。回归失败必须修复
 开发代码并重跑完整门禁，不得为了通过而删除或放宽已有断言。只有当前 Issue 明确
 记录维护者批准的兼容性破坏时，才允许同步修改旧基线契约。
+每个新行为还必须同步登记稳定能力 ID 或不变量 ID，并把专项测试映射到该能力。
+完整 baseline 适用于所有开发 Issue；失败或未运行会阻断完成、交付、合并、推送、
+发布和继续扩展其他功能。
 `tests/test_login_error_semantics.py` 进一步验证登录身份接口的 401、403、429、
 5xx、网络、超时和畸形响应分类，且 token 与原始异常文本不会进入输出。
 `tests/test_login_response_bound.py` 验证身份响应最多读取 1 MiB 加 1 字节，并在
