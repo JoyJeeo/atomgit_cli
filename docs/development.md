@@ -71,6 +71,23 @@ python -c "import atomgit, atomgit_hub"
 8. 对高风险变更按 `.ai/REVIEW.md` 独立评审。
 9. 经授权后再提交、推送或创建 PR。
 
+## 开发底线
+
+所有开发 Issue 在实现前必须登记受影响能力 ID、需要保护的既有行为不变量、
+新增或改变的不变量、专项测试和证据类别。新功能必须同时进入
+`tests/development_floor_contract.py` 的能力登记册和对应用户文档。
+
+专项测试通过后仍必须运行：
+
+```bash
+python tests/run_cli_baseline.py
+```
+
+该完整门禁适用于功能、缺陷、测试、文档、重构、兼容、分发和发布工作。失败或
+未运行时不得完成 Issue、验收、交付 commit、合并、推送、发布或继续扩展功能。
+不得通过删除或放宽旧测试来适配非预期回归。正式定义和完整规则见
+[development_floor.md](development_floor.md)。
+
 完整的角色、Issue 合同和可复用 Prompt 见 `.ai/WORKFLOW.md`。任何时候只能在
 `.ai/TASK.md` 中激活一个 Issue。
 

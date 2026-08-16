@@ -28,6 +28,8 @@ applicable or reported with its residual risk; silence is not a pass.
 - [ ] Human acceptance is recorded before Issue delivery or merge. Direct
       planning and documentation requests are accepted through the normal user
       review of the delivered result.
+- [ ] `Affected Capability IDs`, `Protected Existing Invariants`, and `New Or
+      Changed Invariants` are explicit and agree with the executable ledger.
 
 ## Python Behavior Changes
 
@@ -41,12 +43,14 @@ applicable or reported with its residual risk; silence is not a pass.
 - [ ] `python -m compileall -q .` passes.
 - [ ] Externally visible behavior has matching documentation.
 
-## Mandatory CLI Feature Baseline Gate
+## Mandatory Development Floor Gate
 
-This gate applies to every feature and bug-fix Issue, including changes that
-are not expected to affect the CLI. It is not optional and may not be reported
-as not applicable. Run it after implementation and after every subsequent fix,
-before human acceptance, Issue completion, delivery, or merge:
+This gate applies to every development Issue, including feature, bug-fix,
+testing, documentation, refactoring, compatibility, distribution, and release
+work, even when the change is not expected to affect the CLI. It is not
+optional and may not be reported as not applicable. Run it after implementation
+and after every subsequent fix, before human acceptance, Issue completion,
+delivery, merge, push, tag, release, publication, or further feature expansion:
 
 ```bash
 python tests/run_cli_baseline.py
@@ -54,17 +58,21 @@ python tests/run_cli_baseline.py
 
 - [ ] The command ran in the `atomgit_cli` conda environment and the complete
       isolated pytest matrix passed, including the exact CLI schema, capability
-      registry, leaf dispatch, dependency, security, packaging, and portability
-      contracts.
+      and invariant registry, leaf dispatch, dependency, security, packaging,
+      and portability contracts.
 - [ ] The command and passing result are recorded in `TASK.md` verification
       evidence.
 - [ ] A new feature added or updated a focused executable test; a new public
       command or parameter updated the exact schema and dispatch contract; and
       every new `test_*.py` script was added to the capability registry.
+- [ ] Every affected capability and new or changed invariant has executable
+      evidence and matching documentation; controlled-remote evidence status is
+      accurate.
 - [ ] If the gate failed at any point, the Issue remained active, returned to
       implementation, and the regression was fixed before the gate was rerun.
-- [ ] A failing gate blocks acceptance, completion, commit for delivery, merge,
-      and push; repeat the repair-and-test loop until every check passes.
+- [ ] A failing or unrun gate blocks acceptance, completion, commit for
+      delivery, merge, push, tag, release, publication, and further feature
+      expansion; repeat the repair-and-test loop until every check passes.
 - [ ] The baseline was not removed, skipped, or weakened to make a regression
       pass. An intentional public compatibility break requires explicit
       maintainer authorization in the active Issue, matching documentation and

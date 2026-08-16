@@ -84,10 +84,30 @@ capability grouping for every offline script. `tests/test_cli_baseline_guard.py`
 proves that unregistered commands, parameters, tests, stale registrations,
 missing dispatches, and inert non-executing scripts fail the gate.
 
+## Development Floor
+
+`tests/development_floor_contract.py` is the executable ledger for stable
+capability IDs, observable invariant IDs, risk and evidence categories,
+offline regressions, documentation, and controlled-remote evidence status.
+`tests/test_development_floor.py` fails closed when a capability, invariant,
+test, document, or required workflow marker is missing, duplicate, stale, or
+incomplete.
+
+The current monotonic ledger has 26 capabilities, 61 invariants, and 70
+isolated offline pytest cases. Every offline test maps to at least one
+capability; every invariant maps to executable evidence assigned to that
+capability. New behavior updates the ledger in the same Issue.
+
+Every Issue records `Affected Capability IDs`, `Protected Existing Invariants`,
+`New Or Changed Invariants`, focused evidence, full-baseline evidence, and
+residual risks before delivery. See `DEVELOPMENT_FLOOR.md` for compatibility
+migration and blocking rules.
+
 ## Required Checks
 
 For a focused change, run the affected test scripts first. Before completion,
-run the mandatory comprehensive baseline plus:
+delivery, merge, push, release, or further feature expansion, run the mandatory
+comprehensive baseline plus:
 
 ```bash
 python tests/run_cli_baseline.py
@@ -95,13 +115,19 @@ python -m compileall -q .
 git diff --check
 ```
 
-The baseline runner invokes the complete isolated pytest matrix. A new feature
+The baseline runner invokes the complete isolated pytest matrix. It applies to
+every development Issue, including testing, documentation, refactoring,
+compatibility, distribution, and release work. A new feature
 must add or update a focused self-executing regression, register every new test
 script, update the exact CLI schema and leaf dispatch inventory when public
 surface changes, and update matching documentation. A baseline failure must be
 fixed in implementation code and rerun; do not weaken an established contract
 unless the active Issue records explicit maintainer authorization for that
 compatibility change.
+
+A failed or unrun complete baseline leaves the Issue active and blocks all
+delivery. It cannot be waived as not applicable. Tests and ledger entries may
+not be weakened to fit an unintended regression.
 
 If a required check cannot run, state the exact blocker and residual risk.
 

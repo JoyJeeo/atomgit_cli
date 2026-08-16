@@ -52,6 +52,21 @@ non-trivial changes.
 - Are assertions proving observable behavior rather than only call count?
 - Is a live test being implied by an offline mock?
 
+### Development Floor Review
+
+- Do `Affected Capability IDs` cover every behavior and safety boundary touched
+  by the diff?
+- Are `Protected Existing Invariants` still true and directly evidenced?
+- Did every new behavior add a stable capability or invariant and focused test?
+- Does every new test join both the exact script inventory and a capability
+  mapping?
+- Were any tests, assertions, evidence categories, or ledger counts weakened
+  to accommodate an unintended regression?
+- Did the complete baseline run after the last fix, and does `TASK.md` record
+  its exact result?
+- If compatibility intentionally changed, is explicit maintainer authorization
+  and the complete migration record present?
+
 ### Maintainability And Documentation
 
 - Does the change introduce CLI/SDK drift or needless duplication?
@@ -83,7 +98,9 @@ live-service risks.
 
 Use `REQUEST CHANGES` whenever any P0 or P1 is open, required evidence is
 missing, the implementation exceeds the active Issue, or mandatory tests did
-not run without an accepted blocker. `APPROVED` does not authorize commit,
+not run. A missing development-floor impact declaration, an unexplained ledger
+reduction, or a failed complete baseline is required evidence missing.
+`APPROVED` does not authorize commit,
 push, merge, Issue closure, or release.
 
 ## Long-Term Maintenance Audit

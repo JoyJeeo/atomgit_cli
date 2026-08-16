@@ -380,6 +380,9 @@ LEAF_DISPATCH_PATHS = (
 
 
 BASELINE_TEST_GROUPS = {
+    "development-floor": (
+        "test_development_floor.py",
+    ),
     "cli-interface-and-redaction": (
         "test_cli_baseline_guard.py",
         "test_cli_error_redaction.py",
@@ -471,7 +474,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 17
 BASELINE_PUBLIC_PARAMETER_COUNT = 42
 BASELINE_LEAF_COMMAND_COUNT = 13
-BASELINE_TEST_SCRIPT_COUNT = 69
+BASELINE_TEST_SCRIPT_COUNT = 70
 
 
 def _normalize_default(value):

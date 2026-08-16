@@ -13,6 +13,8 @@ It complements the source code and tests; it does not replace reading them.
 - `STYLE_GUIDE.md`: repository-specific Python, CLI, API, and documentation
   conventions.
 - `TESTING.md`: offline, contract, packaging, and optional live-test policy.
+- `DEVELOPMENT_FLOOR.md`: permanent capability, invariant, evidence, and
+  blocking-gate contract for all existing and future work.
 - `DOD.md`: change-type-specific definition of done.
 - `REVIEW.md`: independent review procedure and severity model.
 - `ROADMAP.md`: prioritized direction; roadmap entries are not active tasks.
@@ -31,6 +33,7 @@ then loads only the references needed for the requested task:
 | Runtime or structural change | `ARCHITECTURE.md` |
 | Python, CLI, SDK, or documentation implementation | `STYLE_GUIDE.md` |
 | Tests or verification | `TESTING.md` |
+| Any implementation or delivery decision | `DEVELOPMENT_FLOOR.md` |
 | Issue activation, handoff, delivery, or closure | `WORKFLOW.md` |
 | Independent review | `REVIEW.md` |
 | Planning or selecting future work | `ROADMAP.md` |

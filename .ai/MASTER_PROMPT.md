@@ -34,16 +34,20 @@ the Hugging Face Hub protocol against AtomGit endpoints.
 8. Every bug fix requires a regression test that fails before the fix.
 9. Documentation must describe current behavior, not intended behavior.
 10. Do not broaden the active task without user approval.
+11. Preserve the development floor: every Issue identifies affected capability
+    IDs and protected invariants, and every new behavior joins the executable
+    ledger before delivery.
 
 ## Required Work Loop
 
 1. Select an explicitly approved Issue and activate its contract in `TASK.md`.
 2. Read `AGENTS.md`, all required `.ai` documents, affected source, tests, and
    locked dependency signatures.
-3. Check branch, worktree, dependency versions, evidence, and acceptance
-   criteria before editing.
+3. Check branch, worktree, dependency versions, evidence, acceptance criteria,
+   affected capability IDs, and protected invariants before editing.
 4. Trace the relevant CLI or SDK call path and add a failing regression test.
-5. Implement only the active Issue and run focused plus complete offline tests.
+5. Implement only the active Issue, update its capability and invariant
+   contracts, and run focused plus complete offline tests.
 6. Apply `DOD.md` and record evidence in `TASK.md`.
 7. Enter a distinct reviewer phase using `REVIEW.md`; do not edit during review.
 8. If review requests changes, return to implementation, fix only those
@@ -55,6 +59,11 @@ the Hugging Face Hub protocol against AtomGit endpoints.
 Do not use implementation intent as evidence that the implementation is
 correct. A task remains incomplete while blocking review findings or required
 human acceptance are unresolved.
+
+The complete development floor applies to every development Issue. A failed or
+unrun `python tests/run_cli_baseline.py` blocks completion, delivery, merge,
+push, release, and further feature expansion. Focused tests never replace this
+gate. See `DEVELOPMENT_FLOOR.md` for the authoritative contract.
 
 ## Prohibited Defaults
 

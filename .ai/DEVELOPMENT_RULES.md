@@ -46,6 +46,28 @@ Every behavior change includes, as applicable:
 Do not mechanically edit README, examples, and every document for an internal
 refactor with no external effect. Update the smallest authoritative document.
 
+## Development Floor Impact
+
+Before editing, every active Issue must contain these explicit sections:
+
+- `Affected Capability IDs`;
+- `Protected Existing Invariants`;
+- `New Or Changed Invariants`;
+- focused tests and required evidence categories;
+- complete-baseline evidence and residual risks.
+
+New behavior must update `tests/development_floor_contract.py`, add or update a
+focused executable regression, and update the smallest authoritative document.
+Every new `test_*.py` must join both the exact test inventory and at least one
+capability mapping. Internal-only and documentation work still identifies the
+affected capability, including `FLOOR-REGISTRY` when only the gate changes.
+
+Do not delete, skip, weaken, or relabel a test or invariant to accommodate an
+unintended regression. An intentional compatibility migration requires the
+maintainer's explicit authorization, old and new behavior, affected IDs,
+replacement evidence, documentation, independent review, and a final passing
+complete baseline.
+
 ## Maintainability
 
 - Do not leave taskless TODOs, commented-out replacement implementations, dead

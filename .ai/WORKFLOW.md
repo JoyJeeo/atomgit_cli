@@ -133,6 +133,24 @@ Every Issue selected for implementation must provide:
 - delivery mode and individual Git/remote permissions;
 - DoD and human acceptance checklist.
 
+The Issue contract also contains these development-floor sections before any
+implementation edit:
+
+- `Affected Capability IDs`: every existing or new capability touched;
+- `Protected Existing Invariants`: observable old behavior that must remain;
+- `New Or Changed Invariants`: new behavior or an explicitly authorized
+  compatibility migration;
+- `Focused Tests And Evidence`: executable regressions plus dependency,
+  security, packaging, portability, or controlled-remote evidence;
+- `Complete Baseline Evidence`: the final
+  `python tests/run_cli_baseline.py` result after the last change;
+- `Residual Risks`: tests not run, partial remote evidence, and accepted
+  limitations.
+
+An Issue is not ready for implementation when affected capability IDs or
+protected invariants are unknown. An Issue is not ready for completion when
+the complete baseline is failed or unrun.
+
 An Issue is not ready when the expected remote behavior is guessed, the test
 repository is not safe, or success cannot be observed.
 
