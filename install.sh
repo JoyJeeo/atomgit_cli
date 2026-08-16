@@ -9,21 +9,27 @@ usage() {
     cat <<'EOF'
 Install a checksummed AtomGit CLI yuto wheel into the active conda environment.
 
-Usage: install.sh [--version VERSION]
+Usage: install.sh [--version VERSION] [--no-completion]
 
 Options:
   --version VERSION  Release version, default: 1.0.6
+  --no-completion    Do not install Zsh completion
   -h, --help         Show this help
 EOF
 }
 
 version="$DEFAULT_VERSION"
+install_completion=1
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version)
             [ "$#" -ge 2 ] || { echo "error: --version requires a value" >&2; exit 2; }
             version="$2"
             shift 2
+            ;;
+        --no-completion)
+            install_completion=0
+            shift
             ;;
         -h|--help)
             usage
@@ -101,3 +107,19 @@ fi
 echo "Checksum verified. Installing into $CONDA_PREFIX..."
 "$python_bin" -m pip install "$temporary_dir/$wheel_name"
 echo "AtomGit CLI $version installed successfully."
+
+if [ "$install_completion" -eq 1 ]; then
+    case "${SHELL:-}" in
+        */zsh)
+            if "$python_bin" -m atomgit completion install --shell zsh; then
+                echo "Zsh completion installed successfully."
+            else
+                echo "warning: AtomGit CLI was installed, but Zsh completion setup failed" >&2
+                echo "warning: retry with: atomgit completion install --shell zsh" >&2
+            fi
+            ;;
+        *)
+            echo "Shell is not Zsh; completion setup skipped."
+            ;;
+    esac
+fi

@@ -94,6 +94,7 @@ def _option(
 
 MODEL_DATASET_CHOICE = ("choice", ("model", "dataset"), True)
 VISIBILITY_CHOICE = ("choice", ("public", "private"), True)
+ZSH_CHOICE = ("choice", ("zsh",), False)
 EXISTING_PATH = (
     "path", True, True, True, True, False, False, False, False, None,
 )
@@ -348,6 +349,37 @@ EXPECTED_PUBLIC_SCHEMA = {
             ),
         ),
     },
+    ("completion",): {"kind": "group", "params": ()},
+    ("completion", "show"): {
+        "kind": "command",
+        "params": (
+            _argument("shell", parameter_type=ZSH_CHOICE),
+        ),
+    },
+    ("completion", "install"): {
+        "kind": "command",
+        "params": (
+            _option(
+                "shell",
+                "--shell",
+                default="zsh",
+                parameter_type=ZSH_CHOICE,
+                show_default=True,
+            ),
+        ),
+    },
+    ("completion", "uninstall"): {
+        "kind": "command",
+        "params": (
+            _option(
+                "shell",
+                "--shell",
+                default="zsh",
+                parameter_type=ZSH_CHOICE,
+                show_default=True,
+            ),
+        ),
+    },
     ("config-show",): {"kind": "command", "params": ()},
 }
 
@@ -376,6 +408,9 @@ LEAF_DISPATCH_PATHS = (
     ("upload",),
     ("download",),
     ("download-file",),
+    ("completion", "show"),
+    ("completion", "install"),
+    ("completion", "uninstall"),
 )
 
 
@@ -388,6 +423,7 @@ BASELINE_TEST_GROUPS = {
         "test_cli_error_redaction.py",
         "test_cli_feature_baseline.py",
         "test_cli_surface.py",
+        "test_shell_completion.py",
     ),
     "cache": (
         "test_cache_clear.py",
@@ -471,10 +507,10 @@ BASELINE_TEST_GROUPS = {
 }
 
 
-BASELINE_PUBLIC_COMMAND_COUNT = 17
-BASELINE_PUBLIC_PARAMETER_COUNT = 42
-BASELINE_LEAF_COMMAND_COUNT = 13
-BASELINE_TEST_SCRIPT_COUNT = 70
+BASELINE_PUBLIC_COMMAND_COUNT = 21
+BASELINE_PUBLIC_PARAMETER_COUNT = 45
+BASELINE_LEAF_COMMAND_COUNT = 16
+BASELINE_TEST_SCRIPT_COUNT = 71
 
 
 def _normalize_default(value):

@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 61
+BASELINE_INVARIANT_COUNT = 64
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -128,11 +128,17 @@ CAPABILITY_REGISTRY = {
                 "test_cli_feature_baseline.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "CLI-003",
+                "Zsh completion is derived from the live Click schema without executing callbacks or importing business dependencies.",
+                "test_shell_completion.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
             "test_cli_baseline_guard.py",
             "test_cli_surface.py",
+            "test_shell_completion.py",
             "test_wheel_smoke.py",
         ),
         ("docs/cli_feature_baseline.md", "docs/testing.md"),
@@ -743,10 +749,16 @@ CAPABILITY_REGISTRY = {
                 "test_sdk_upload_timeout.py",
                 "test_upload_progress.py",
             ),
+            _invariant(
+                "RUNTIME-003",
+                "Completion does not load HF or dataset runtimes, read credentials, access the network, or create configuration state.",
+                "test_shell_completion.py",
+            ),
         ),
         (
             "test_runtime_policy.py",
             "test_sdk_upload_timeout.py",
+            "test_shell_completion.py",
             "test_upload_progress.py",
         ),
         ("docs/architecture.md",),
@@ -815,8 +827,19 @@ CAPABILITY_REGISTRY = {
                 "test_installer.py",
                 "test_deploy_script.py",
             ),
+            _invariant(
+                "PKG-003",
+                "Official installation enables managed Zsh completion by default with opt-out, idempotent removal, and non-fatal setup failure.",
+                "test_installer.py",
+                "test_shell_completion.py",
+            ),
         ),
-        ("test_deploy_script.py", "test_installer.py", "test_wheel_smoke.py"),
+        (
+            "test_deploy_script.py",
+            "test_installer.py",
+            "test_shell_completion.py",
+            "test_wheel_smoke.py",
+        ),
         ("docs/release.md", "docs/testing.md"),
         ("offline-contract", "packaging-smoke"),
     ),
@@ -903,10 +926,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "61 条可观察行为不变量",
-        "70 个隔离 pytest case",
+        "64 条可观察行为不变量",
+        "71 个隔离 pytest case",
     ),
-    "docs/testing.md": ("70 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("71 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

@@ -6,6 +6,8 @@ PyPI releases.
 
 ## Unreleased
 
+- Add dynamic Zsh completion, a lightweight completion import path, and default
+  completion setup in the checksummed official installer.
 - Make CLI directory uploads resumable by default, add `--no-resumable`, and
   support `--path-in-repo` through stable local large-folder projections.
 

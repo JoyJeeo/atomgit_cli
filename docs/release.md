@@ -50,7 +50,7 @@ PyPI 的 `atomgit` 仍代表上游发行渠道，不应视为本仓库 `yuto` �
 2. 创建 GitHub Release，并上传 wheel 和源码归档。
 3. 为每个产物发布 SHA256。
 4. 提供仓库自有 `install.sh`，默认下载固定 Release，而不是不断变化的分支。
-5. 安装脚本支持显式版本，并验证校验和。
+5. 安装脚本支持显式版本、验证校验和，并为 Zsh 默认启用命令补全。
 
 仓库提供版本化、校验和安装脚本。激活目标 conda 环境后可运行：
 
@@ -63,6 +63,12 @@ curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.
 下载 wheel 和 `SHA256SUMS`，校验成功后使用当前 conda 环境的
 `python -m pip` 安装。未激活 conda 或缺少校验工具时会停止，不会回退到系统
 Python。
+
+检测到 `$SHELL` 为 Zsh 时，官方安装器会在 wheel 成功安装后执行
+`atomgit completion install --shell zsh`；`--no-completion` 可显式关闭。补全
+设置失败会输出可重试警告，但不会否定已经成功的包安装。Bash/Fish 和非 Zsh
+启动文件不会被修改。标准 pip 没有受支持的安装后钩子，因此直接
+`python -m pip install` 的用户需要手动运行上述补全安装命令。
 
 ## 发布门禁
 

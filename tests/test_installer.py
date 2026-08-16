@@ -50,7 +50,10 @@ def main():
         invocation_log = root / "python-invocation.txt"
         fake_python = bin_dir / "python"
         fake_python.write_text(
-            "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$ATOMGIT_INSTALL_TEST_LOG\"\n",
+            "#!/bin/sh\n"
+            "printf '%s\\n' \"$*\" >> \"$ATOMGIT_INSTALL_TEST_LOG\"\n"
+            "if [ \"${ATOMGIT_INSTALL_TEST_COMPLETION_FAIL:-0}\" = 1 ] "
+            "&& [ \"$1 $2 $3\" = '-m atomgit completion' ]; then exit 1; fi\n",
             encoding="utf-8",
         )
         fake_python.chmod(0o755)
@@ -61,19 +64,71 @@ def main():
                 "CONDA_PREFIX": str(conda_prefix),
                 "ATOMGIT_INSTALL_BASE_URL": release.parent.as_uri(),
                 "ATOMGIT_INSTALL_TEST_LOG": str(invocation_log),
+                "HOME": str(root / "home"),
+                "SHELL": "/bin/zsh",
+                "ZDOTDIR": str(root / "home"),
             }
         )
+        (root / "home").mkdir()
         success = run_installer(environment)
         check("default version install succeeds", success.returncode == 0, success.stderr)
-        invocation = invocation_log.read_text(encoding="utf-8")
-        check("active conda Python runs pip", invocation.startswith("-m pip install "))
-        check("fixed wheel name is installed", WHEEL_NAME in invocation)
+        invocations = invocation_log.read_text(encoding="utf-8").splitlines()
+        check("active conda Python runs pip", invocations[0].startswith("-m pip install "))
+        check("fixed wheel name is installed", WHEEL_NAME in invocations[0])
         check("success reports checksum verification", "Checksum verified" in success.stdout)
+        check(
+            "Zsh completion is installed by default",
+            invocations[1:] == ["-m atomgit completion install --shell zsh"],
+            repr(invocations),
+        )
 
         invocation_log.unlink()
         explicit = run_installer(environment, "--version", VERSION)
         check("explicit valid version succeeds", explicit.returncode == 0, explicit.stderr)
         check("explicit version invokes pip", invocation_log.exists())
+
+        invocation_log.unlink()
+        opted_out = run_installer(environment, "--no-completion")
+        opted_out_invocations = invocation_log.read_text(encoding="utf-8").splitlines()
+        check("completion opt-out succeeds", opted_out.returncode == 0, opted_out.stderr)
+        check(
+            "completion opt-out invokes only pip",
+            len(opted_out_invocations) == 1
+            and opted_out_invocations[0].startswith("-m pip install "),
+            repr(opted_out_invocations),
+        )
+
+        invocation_log.unlink()
+        non_zsh_environment = environment.copy()
+        non_zsh_environment["SHELL"] = "/bin/bash"
+        non_zsh = run_installer(non_zsh_environment)
+        non_zsh_invocations = invocation_log.read_text(encoding="utf-8").splitlines()
+        check("non-Zsh install succeeds", non_zsh.returncode == 0, non_zsh.stderr)
+        check(
+            "non-Zsh install does not modify completion",
+            len(non_zsh_invocations) == 1
+            and "completion" not in non_zsh_invocations[0],
+            repr(non_zsh_invocations),
+        )
+
+        invocation_log.unlink()
+        completion_failure_environment = environment.copy()
+        completion_failure_environment["ATOMGIT_INSTALL_TEST_COMPLETION_FAIL"] = "1"
+        completion_failure = run_installer(completion_failure_environment)
+        failure_invocations = invocation_log.read_text(encoding="utf-8").splitlines()
+        check(
+            "completion failure preserves successful package install",
+            completion_failure.returncode == 0
+            and failure_invocations[0].startswith("-m pip install ")
+            and failure_invocations[1:] == ["-m atomgit completion install --shell zsh"],
+            completion_failure.stderr,
+        )
+        check(
+            "completion failure reports an actionable warning",
+            "warning:" in completion_failure.stderr
+            and "atomgit completion install --shell zsh" in completion_failure.stderr,
+            completion_failure.stderr,
+        )
 
         invocation_log.unlink()
         checksums.write_text(f"{'0' * 64}  {WHEEL_NAME}\n", encoding="utf-8")

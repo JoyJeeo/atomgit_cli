@@ -34,6 +34,18 @@ SDK、认证、仓库、上传、下载、安全、依赖、打包和跨平台�
 仓库 ID 支持 `owner/repo` 及项目定义的多层 ID 映射。仓库管理命令需要登录，任务
 分支、标签和提交的具体 AtomGit 远端语义仍以专项契约和受控远程证据为准。
 
+## Zsh 命令补全
+
+| 命令 | 当前能力 | 基础保证 |
+|---|---|---|
+| `atomgit completion show zsh` | 输出 Click 原生 Zsh adapter | 候选来自实时命令树，不执行命令回调 |
+| `atomgit completion install --shell zsh` | 安装脚本并更新受控 `.zshrc` 配置块 | 原子、幂等、首次备份、并发保护和失败回滚 |
+| `atomgit completion uninstall --shell zsh` | 删除 AtomGit 管理的补全内容 | 保留所有无关 Zsh 配置，可重复执行 |
+
+按 Tab 的高频路径只加载 Click schema，不加载 API、Hugging Face Hub、datasets、
+Torch、PyArrow 或 Pandas，不读取凭据、不联网、不创建配置。首版只支持 Zsh 和
+本地路径；远端仓库、分支和文件名不在补全范围内。
+
 ## 上传
 
 ```text
@@ -103,6 +115,7 @@ atomgit download-file REPO FILENAME [OPTIONS]
 - 参数顺序、类型、必填性、默认值、flag、Choice 和长短选项必须精确一致；
 - 每条命令的 `--help` 可用；
 - 每个叶子命令必须登记且至少完成一次隔离成功分派；
+- 补全命令来自实时 schema，且补全进程保持轻量、离线和无凭据读取；
 - 关键参数到 API 层的映射保持不变；
 - 每个 `test_*.py` 必须且只能登记一次，并具有真正执行 `main()` 的入口；
 - 完整离线矩阵中的认证、仓库、上传、下载、SDK、依赖、安全、打包和跨平台

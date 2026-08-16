@@ -48,6 +48,9 @@ every remote path is verified; known status follows the interface list.
 - Explicit private creation and verified public creation
 - Explicit branch creation and CLI upload to existing non-main branches
 - Configuration-state display
+- Dynamic Zsh command, nested-command, option, choice, and local-path
+  completion, with default setup through the official installer and explicit
+  show/install/uninstall management
 
 ### Python SDK
 
@@ -92,6 +95,8 @@ every remote path is verified; known status follows the interface list.
 - User-facing failures should identify authentication, permission, repository,
   revision, request, timeout, or network causes when evidence allows it.
 - Existing command names and Python imports are compatibility surfaces.
+- Completion candidates come from the live Click tree; default completion is
+  local-only and must not read credentials or make remote requests.
 - CLI directory uploads exclude AppleDouble and `.DS_Store` metadata without
   broadly excluding intentional hidden files. Explicit CLI single-file upload
   of that metadata fails before authentication; SDK ignore defaults remain

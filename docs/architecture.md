@@ -18,6 +18,8 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   +-- python -m atomgit -----> __main__.py -----> cli.py
   |
   +-- import atomgit_hub ----> atomgit_hub.py ---> huggingface_hub/datasets
+  |
+  +-- Zsh Tab ---------------> 轻量 cli schema -> completion.py
 ```
 
 CLI 和 SDK 共享本地凭证，但不是同一业务实现：
@@ -37,6 +39,8 @@ atomgit_cli/
 ├── __init__.py           # 包元数据和公开导出
 ├── __main__.py           # python -m atomgit 入口
 ├── cli.py                # Click 命令树和用户交互
+├── cli_contracts.py      # CLI schema 与上传运行时共享的轻量常量
+├── completion.py         # Zsh completion adapter 与受控安装/卸载
 ├── api.py                # CLI 使用的 AtomGit/HF 包装层
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
@@ -75,9 +79,23 @@ atomgit = atomgit.cli:cli
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
+| `atomgit completion show zsh` | 输出 Zsh 补全 adapter | 否 |
+| `atomgit completion install --shell zsh` | 安装并启用 Zsh 补全 | 否 |
+| `atomgit completion uninstall --shell zsh` | 移除受控 Zsh 补全 | 否 |
 | `atomgit config-show` | 显示登录和 Git 集成状态 | 否 |
 
 注意：命令名是 `config-show`，不是旧文档中的 `config`。
+
+Click 每次补全都会启动新的 `atomgit` 进程。`_ATOMGIT_COMPLETE` 存在时，包入口
+只配置共享 HF 环境并加载轻量 CLI schema；`cli.py` 的 API 对象和工具函数按命令
+执行惰性解析，因此补全不会导入 HF Hub、datasets、Torch、PyArrow 或 Pandas。
+生成的 Zsh adapter 每次查询当前 Click 树，所以新增命令无需同步补全清单。
+
+补全安装在 `~/.atomgit/completions/atomgit.zsh` 写入 `0600` adapter，并只在
+`.zshrc` 中管理带边界标记的配置块；已有配置首次修改前备份。目录使用 `0700`，
+符号链接、畸形标记、相对 `ZDOTDIR` 或读取后的并发修改会失败关闭；`.zshrc`
+写入失败会回滚本次脚本和新建备份。官方安装器仅在 Zsh 下默认调用该能力，
+`--no-completion` 可关闭；标准 pip 不运行非标准安装后钩子。
 
 登录和 `whoami` 的远端失败采用固定、脱敏的类别提示：401、403、限流、服务端
 故障、网络/超时和无效响应分别保留可执行的诊断；CLI 不会把所有失败都归因为

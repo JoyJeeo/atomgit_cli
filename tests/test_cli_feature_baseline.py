@@ -140,6 +140,35 @@ def main():
             stack.enter_context(
                 patch.object(cli_mod, "check_git_available", return_value=False)
             )
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
+                    "completion_script",
+                    side_effect=lambda command, shell: (
+                        calls.append(("completion-show", command, shell))
+                        or "#compdef atomgit\n"
+                    ),
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
+                    "install_completion",
+                    side_effect=lambda command, shell: (
+                        calls.append(("completion-install", command, shell))
+                        or (root / "atomgit.zsh", home / ".zshrc")
+                    ),
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
+                    "uninstall_completion",
+                    side_effect=lambda shell: calls.append(
+                        ("completion-uninstall", shell)
+                    ),
+                )
+            )
 
             stack.enter_context(
                 patch.object(
@@ -285,6 +314,35 @@ def main():
                 config_result.exit_code == 0
                 and "已登录" in config_result.output,
                 f"exit={config_result.exit_code}",
+            )
+
+            completion_show = runner.invoke(
+                cli_mod.cli, ["completion", "show", "zsh"]
+            )
+            check(
+                "completion show baseline dispatches the live command tree",
+                completion_show.exit_code == 0
+                and ("completion-show", cli_mod.cli, "zsh") in calls
+                and "#compdef atomgit" in completion_show.output,
+                f"exit={completion_show.exit_code}",
+            )
+            completion_install = runner.invoke(
+                cli_mod.cli, ["completion", "install", "--shell", "zsh"]
+            )
+            check(
+                "completion install baseline dispatches managed Zsh setup",
+                completion_install.exit_code == 0
+                and ("completion-install", cli_mod.cli, "zsh") in calls,
+                f"exit={completion_install.exit_code}",
+            )
+            completion_uninstall = runner.invoke(
+                cli_mod.cli, ["completion", "uninstall", "--shell", "zsh"]
+            )
+            check(
+                "completion uninstall baseline dispatches managed removal",
+                completion_uninstall.exit_code == 0
+                and ("completion-uninstall", "zsh") in calls,
+                f"exit={completion_uninstall.exit_code}",
             )
 
             create_result = runner.invoke(

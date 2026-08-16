@@ -59,13 +59,21 @@ python -m pip install -e .
 curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.sh | sh
 ```
 
+官方安装器检测到 Zsh 时会默认安装命令补全；不希望修改 Zsh 启动配置时可下载
+安装脚本后使用 `sh install.sh --no-completion`。补全设置失败只会给出警告，不会
+把已经完成并通过校验的 wheel 安装回报为失败。
+
 从 `v1.0.6` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
 完整校验后安装：
 
 ```bash
 shasum -a 256 -c SHA256SUMS
 python -m pip install atomgit-1.0.6-py3-none-any.whl
+atomgit completion install --shell zsh
 ```
+
+标准 `pip install` 没有可靠的安装后配置钩子，因此直接安装 wheel 或 PyPI 包时需
+显式执行一次补全安装命令。
 
 发布页：<https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.6>
 
@@ -426,6 +434,28 @@ atomgit download-file your-username/your-dataset data/sample.csv \
 ```
 
 ### 4. 其他命令
+
+#### Zsh 命令补全
+
+官方安装器默认为 Zsh 启用补全。源码、wheel 或直接 pip 安装可手动执行：
+
+```bash
+atomgit completion install --shell zsh
+```
+
+补全候选直接来自当前 Click 命令树，新增命令无需维护另一份列表或重新安装补全
+脚本；支持命令、嵌套子命令、选项、枚举值和本地路径，不会补全远端仓库、分支或
+文件名，也不会在按 Tab 时读取 token 或访问网络。管理命令包括：
+
+```bash
+atomgit completion show zsh
+atomgit completion uninstall --shell zsh
+```
+
+安装只管理 `~/.atomgit/completions/atomgit.zsh` 和 `.zshrc` 中带 AtomGit 起止
+标记的配置块，并在首次修改已有配置时保留 `.zshrc.atomgit.bak`。为避免破坏
+dotfiles 管理，符号链接、畸形标记或操作期间发生的并发修改会被拒绝并返回非零；
+安装中途失败会回滚本次写入的补全脚本和新建备份。
 
 #### 列出当前用户可访问的仓库
 
@@ -828,6 +858,8 @@ atomgit/
 ├── __main__.py          # 主入口
 ├── cli.py               # CLI命令定义
 ├── api.py               # Hugging Face Hub API客户端
+├── cli_contracts.py     # CLI与运行时共享的轻量常量
+├── completion.py        # Zsh补全生成与安全安装
 ├── config.py            # 配置管理
 ├── runtime.py           # 共享HF端点和缓存策略
 ├── exceptions.py        # SDK异常类型
