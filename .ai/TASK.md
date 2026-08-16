@@ -1,22 +1,24 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-16 +0800`
-- Phase: `implementation complete; independent review approved; human acceptance and delivery authorized`
+- Phase: `implementation complete; independently reviewed; accepted, committed, merged locally, and ready to push yuto`
 - Base branch: `yuto`
 - Task branch: `codex/standardize-release-workflow`
 - Base commit: `c2dab6337370453117e0d3e3183c967c2f0ce9c2`
-- Current HEAD: `c2dab6337370453117e0d3e3183c967c2f0ce9c2`
+- Task commit: `be7956b feat(release): standardize GitHub release workflow`
+- Merge commit: `873904a789f83966ff0212053bde8272bc213529 merge: standardize GitHub release workflow`
+- Current HEAD: `873904a789f83966ff0212053bde8272bc213529`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty on the same worktree; implementation and tests are uncommitted; .ai/TASK.md must remain here until human acceptance`
-- Changed paths: `version source/core, CLI, installer, deploy/workflow, tests, docs, and AI contracts listed by git status`
-- Last completed action: `fixed independent-review findings and reran focused checks, wheel smoke, and the complete offline baseline`
-- Next exact action: `run the final gate after this documentation sync, commit the task branch, merge it into yuto locally, and push only yuto`
-- Blockers: `none for implementation; human acceptance remains required; the first version number using the new process is intentionally not selected by this Issue`
-- Tests run for this phase: `python tests/run_cli_baseline.py passed 73/73 in 58.62s after the final documentation sync; focused installer/deploy/release/update contracts passed; wheel smoke passed 26/26; compileall, pip check, diff check, shell syntax, locked dependency signatures, package build, and artifact audit passed`
+- Worktree state: `clean after local task commit and merge; this final delivery record is the only pending local documentation commit before push`
+- Changed paths: `none after the final delivery-record commit`
+- Last completed action: `committed be7956b and merged it into yuto as 873904a`
+- Next exact action: `push only yuto to github; do not push the task branch or perform tag/Release/PyPI/AtomGit operations`
+- Blockers: `none; the first version number using the new process is intentionally not selected by this Issue`
+- Tests run for this phase: `python tests/run_cli_baseline.py passed 73/73 in 58.62s; focused installer/deploy/release/update contracts passed; wheel smoke passed 26/26; compileall, pip check, diff check, shell syntax, locked dependency signatures, package build, and artifact audit passed`
 - Required worktree while this uncommitted handoff exists: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
@@ -593,7 +595,7 @@ source developer -> git clone/checkout yuto -> conda -> locked dependencies
   `python -m pip check`, `git diff --check`, locked Click/HF/datasets and
   packaging signature inspection, credential/generated-artifact audit, wheel
   plus sdist build in temporary storage, and isolated installed-artifact smoke.
-- Current state: `python tests/run_cli_baseline.py passed 73/73 in 58.52s after the last review fix`.
+- Current state: `python tests/run_cli_baseline.py passed 73/73 in 58.62s after the final documentation sync`.
 - Controlled remote evidence: `not required for implementation because this
   Issue must not publish or change AtomGit remote behavior; the future first
   real release requires a separate explicit authorization and release record`.
