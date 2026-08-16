@@ -12,8 +12,8 @@ import os
 from importlib import import_module
 
 from .runtime import configure_hf_environment
+from .version import __version__
 
-__version__ = '1.0.6'
 __author__ = 'JoyJeeo'
 __description__ = 'AtomGit模型文件上传下载CLI工具'
 

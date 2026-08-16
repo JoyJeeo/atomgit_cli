@@ -4,6 +4,8 @@
 from setuptools import setup, find_packages
 import os
 
+from version import __version__
+
 # 读取README文件
 def read_readme():
     try:
@@ -31,7 +33,7 @@ def read_requirements():
 
 setup(
     name='atomgit',
-    version='1.0.6',
+    version=__version__,
     author='JoyJeeo',
     author_email='JoyJeeo@163.com',
     description='AtomGit模型文件上传下载CLI工具',

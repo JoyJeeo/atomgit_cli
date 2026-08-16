@@ -15,7 +15,13 @@ source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate atomgit_cli
 ```
 
-## CLI 是怎样安装出来的？
+## 普通用户怎样安装 CLI？
+
+使用 `install.sh` 从已完成 GitHub Release 下载并校验 wheel；不要求 conda，可用
+`--python` 指定目标 Python。Windows 使用固定 Release wheel 和 `SHA256SUMS` 手工
+安装；POSIX/macOS/Linux 才支持 `install.sh`。
+
+## CLI 是怎样开发安装出来的？
 
 `setup.py` 注册 `atomgit=atomgit.cli:cli`。执行 `python -m pip install -e .`
 后，当前 conda 环境会生成 `atomgit` 命令。
@@ -160,7 +166,14 @@ CLI 会先估算继续等待与重建请求的剩余时间。只有重建预计�
 mock 只能证明本地参数构造符合测试预期。如果 fake 接受任意 `**kwargs`，它甚至
 可能接受真实 HF 方法拒绝的参数。依赖契约测试和受控远程回读缺一不可。
 
-## 可以直接运行 `deploy.sh twine` 吗？
+## `atomgit update` 会修改源码 checkout 吗？
 
-不可以作为日常测试运行。它会向 PyPI 写入发布产物，必须有明确发布授权。详细
-流程见 [release.md](release.md)。
+不会。editable/source 安装会被拒绝，并提示 `git checkout yuto`、
+`git pull --ff-only`、锁定依赖和 `pip install -e .` 的路径。只有 wheel 安装支持
+`atomgit update`。
+
+## 可以用 deploy.sh 发布到 PyPI 吗？
+
+不可以。AtomGit CLI 的唯一官方发布渠道是受保护的手动 GitHub Actions Release
+workflow；`deploy.sh` 没有 twine、PyPI token 或远程写路径。详细流程见
+[release.md](release.md)。

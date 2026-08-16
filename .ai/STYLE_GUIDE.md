@@ -54,6 +54,8 @@
 ## Change Discipline
 
 - Preserve unrelated formatting and metadata.
-- Keep version values synchronized when a release task changes the version.
+- Keep package metadata, CLI output, installer expectations, tests, and release
+  checks derived from `version.py`; do not duplicate a release version literal
+  in implementation code.
 - Do not combine dependency upgrades, behavior changes, and broad refactors in
   one task unless the task explicitly requires that migration.

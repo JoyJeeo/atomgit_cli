@@ -51,40 +51,63 @@ conda activate atomgit_cli
 python -m pip install -e .
 ```
 
-### 从 GitHub Release 安装 yuto 版本
+### 从 GitHub Release 安装
 
-激活目标 conda 环境后，可使用固定版本和 SHA-256 校验安装器：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/v1.0.6/install.sh | sh
-```
-
-官方安装器检测到 Zsh 时会默认安装命令补全；不希望修改 Zsh 启动配置时可下载
-安装脚本后使用 `sh install.sh --no-completion`。补全设置失败只会给出警告，不会
-把已经完成并通过校验的 wheel 安装回报为失败。
-
-从 `v1.0.6` Release 下载 wheel、源码包、`LICENSE` 和 `SHA256SUMS`，
-完整校验后安装：
+普通用户不需要 conda。安装器默认选择最高的、非 draft/非 prerelease、标签严格为
+`X.Y.Z` 的已完成 GitHub Release，只下载匹配的 wheel 和 `SHA256SUMS`，在 pip
+之前校验 Release、wheel 元数据和摘要：
 
 ```bash
-shasum -a 256 -c SHA256SUMS
-python -m pip install atomgit-1.0.6-py3-none-any.whl
-atomgit completion install --shell zsh
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh -o install.sh
+sh install.sh
+sh install.sh --version 1.0.6
+sh install.sh --python /absolute/path/to/python --force-reinstall
 ```
 
-标准 `pip install` 没有可靠的安装后配置钩子，因此直接安装 wheel 或 PyPI 包时需
-显式执行一次补全安装命令。
+`--python`、`--version`、`--force-reinstall` 和 `--no-completion` 可以组合。安装
+成功只会在目标解释器通过版本、CLI、模块和导入验证后报告；输出还会显示解释器、包
+位置、命令目录和 PATH 可见性。Zsh 下官方安装器默认启用 AtomGit 补全；设置失败是
+可见的非致命警告。
 
-发布页：<https://github.com/JoyJeeo/atomgit_cli/releases/tag/v1.0.6>
+历史 `v...` Release 保留为不可变记录，但新安装器不会选择它们。没有已完成的
+纯数字 Release 时安装会失败，不会回退到分支源码、归档或 PyPI。
 
-### 使用 PyPI 安装上游版本
+已安装的 wheel 用户可以更新当前正在运行的 Python：
 
 ```bash
-python -m pip install atomgit
+atomgit update
+atomgit update --version 1.0.6
+atomgit update --force-reinstall
 ```
 
-该命令安装 PyPI 上的上游发行版，不代表本仓库 `yuto` 分支。`yuto` 独立分发
-方案见 [docs/release.md](docs/release.md)。
+`atomgit update` 只使用执行该命令的 `sys.executable`。源码或 editable 安装会被
+拒绝，并提示使用 Git 更新 `yuto`，不会修改源码 checkout。
+
+Windows 用户请下载指定 GitHub Release 的 `atomgit-X.Y.Z-py3-none-any.whl` 和
+`SHA256SUMS`，使用支持的 Python 校验摘要后执行
+`py -m pip install atomgit-X.Y.Z-py3-none-any.whl`；`install.sh` 仅支持 POSIX/macOS/Linux。
+
+### 源码开发与更新
+
+```bash
+git clone https://github.com/JoyJeeo/atomgit_cli.git
+cd atomgit_cli
+git checkout yuto
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+源码更新使用 Git，不使用 `atomgit update`：
+
+```bash
+git pull --ff-only
+python -m pip install -r requirements.txt
+python -m pip install -e .
+```
+
+AtomGit CLI 不发布到 PyPI；pip 仍可从用户配置的索引解析第三方依赖。
 
 ### 虚拟环境推荐
 

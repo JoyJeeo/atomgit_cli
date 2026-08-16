@@ -50,7 +50,8 @@ atomgit_cli/
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
 ├── requirements.txt      # 运行依赖
-└── deploy.sh             # 本地构建、安装和 PyPI 发布脚本
+├── release.py            # Release 解析、校验、安装和 update 核心
+└── deploy.sh             # 本地构建、安装和 checksum 脚本
 ```
 
 仓库当前采用根目录包映射，不是 `src/` 布局。除非单独设计并验证打包迁移，不应
@@ -79,6 +80,7 @@ atomgit = atomgit.cli:cli
 | `atomgit upload` | 上传单文件或目录 | 是 |
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
+| `atomgit update` | 从已完成 GitHub Release 更新当前 Python | wheel 安装；源码安装拒绝 |
 | `atomgit completion show zsh` | 输出 Zsh 补全 adapter | 否 |
 | `atomgit completion install --shell zsh` | 安装并启用 Zsh 补全 | 否 |
 | `atomgit completion uninstall --shell zsh` | 移除受控 Zsh 补全 | 否 |
@@ -363,9 +365,10 @@ CLI 直连 resolve 下载在目标目录使用唯一临时文件，完整成功�
 - 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；
 - 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
-- 包名和版本为 `atomgit==1.0.6`；
+- 包名为 `atomgit`，版本由 `version.py` 单一来源提供；
 - `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；
-- `deploy.sh twine` 是真实 PyPI 写操作，不能作为日常验证运行。
+- `deploy.sh` 只执行本地 build/install/checksum；GitHub Release workflow 才是唯一
+  发布入口，仓库不包含 PyPI/twine 写路径。
 
 详细开发、测试和发布规则见：
 

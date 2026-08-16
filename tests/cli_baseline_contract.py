@@ -117,6 +117,23 @@ EXPECTED_PUBLIC_SCHEMA = {
             ),
         ),
     },
+    ("update",): {
+        "kind": "command",
+        "params": (
+            _option(
+                "target_version",
+                "--version",
+                default=None,
+            ),
+            _option(
+                "force_reinstall",
+                "--force-reinstall",
+                default=False,
+                parameter_type=("bool",),
+                is_flag=True,
+            ),
+        ),
+    },
     ("login",): {
         "kind": "command",
         "params": (
@@ -395,6 +412,7 @@ for _command_spec in EXPECTED_PUBLIC_SCHEMA.values():
 
 
 LEAF_DISPATCH_PATHS = (
+    ("update",),
     ("login",),
     ("logout",),
     ("whoami",),
@@ -424,6 +442,7 @@ BASELINE_TEST_GROUPS = {
         "test_cli_feature_baseline.py",
         "test_cli_surface.py",
         "test_shell_completion.py",
+        "test_update.py",
     ),
     "cache": (
         "test_cache_clear.py",
@@ -501,16 +520,17 @@ BASELINE_TEST_GROUPS = {
     "distribution-and-portability": (
         "test_deploy_script.py",
         "test_installer.py",
+        "test_release_workflow.py",
         "test_wheel_smoke.py",
         "test_windows_compatibility.py",
     ),
 }
 
 
-BASELINE_PUBLIC_COMMAND_COUNT = 21
-BASELINE_PUBLIC_PARAMETER_COUNT = 45
-BASELINE_LEAF_COMMAND_COUNT = 16
-BASELINE_TEST_SCRIPT_COUNT = 71
+BASELINE_PUBLIC_COMMAND_COUNT = 22
+BASELINE_PUBLIC_PARAMETER_COUNT = 47
+BASELINE_LEAF_COMMAND_COUNT = 17
+BASELINE_TEST_SCRIPT_COUNT = 73
 
 
 def _normalize_default(value):

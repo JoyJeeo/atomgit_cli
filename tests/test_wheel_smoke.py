@@ -2,6 +2,7 @@
 """Build and install the current wheel entirely in temporary directories."""
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -13,7 +14,8 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "1.0.6"
+VERSION_TEXT = (REPOSITORY_ROOT / "version.py").read_text(encoding="utf-8")
+EXPECTED_VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', VERSION_TEXT).group(1)
 SOURCE_FILES = (
     "__init__.py",
     "__main__.py",
@@ -33,6 +35,7 @@ SOURCE_FILES = (
     "CHANGELOG.md",
     "MANIFEST.in",
     "install.sh",
+    "version.py",
 )
 results = []
 
@@ -169,6 +172,7 @@ def main():
             ("login",),
             ("logout",),
             ("whoami",),
+            ("update",),
             ("repo",),
             ("repo", "create"),
             ("completion",),

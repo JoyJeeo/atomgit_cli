@@ -1,9 +1,8 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 
-# AtomGit CLI 部署脚本
-# 用法: ./deploy.sh [build|install|twine]
-# pip install build twine
+# AtomGit CLI 本地构建脚本
+# 用法: ./deploy.sh [build|install|checksums]
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -87,57 +86,23 @@ install() {
     fi
 }
 
-# 上传到 PyPI 函数
-twine_upload() {
+checksums() {
     require_conda_python
-    echo -e "${GREEN}[TWINE]${NC} 准备上传到 PyPI..."
-    
-    # 检查环境变量
-    if [ -z "$atomgitsdktoken" ]; then
-        echo -e "${RED}✗ 错误：未设置环境变量 atomgitsdktoken${NC}"
-        echo -e "${YELLOW}请设置环境变量：${NC}"
-        echo -e "${YELLOW}  export atomgitsdktoken=\"your-token-here\"${NC}"
-        exit 1
-    fi
-    
-    # 检查 dist 目录
     if [ ! -d "dist" ]; then
-        echo -e "${RED}✗ dist 目录不存在！${NC}"
-        echo -e "${YELLOW}请先运行: ./deploy.sh build${NC}"
+        echo -e "${RED}✗ dist 目录不存在；请先运行 ./deploy.sh build${NC}"
         exit 1
     fi
-    
-    # 检查 dist 目录是否为空
-    if [ -z "$(ls -A dist/)" ]; then
-        echo -e "${RED}✗ dist 目录为空！${NC}"
-        echo -e "${YELLOW}请先运行: ./deploy.sh build${NC}"
+    wheel_file=$(find dist -maxdepth 1 -type f -name 'atomgit-*.whl' -print -quit)
+    if [ -z "$wheel_file" ]; then
+        echo -e "${RED}✗ 未找到 AtomGit wheel${NC}"
         exit 1
     fi
-    
-    echo -e "${YELLOW}准备上传的文件：${NC}"
-    ls -lh dist/
-    
-    # 确认上传
-    echo ""
-    echo -e "${YELLOW}是否确认上传到 PyPI? (y/N)${NC}"
-    read -r confirm
-    
-    if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-        echo -e "${YELLOW}已取消上传${NC}"
-        exit 0
-    fi
-    
-    # 上传
-    echo -e "${YELLOW}开始上传...${NC}"
-    TWINE_USERNAME="__token__" TWINE_PASSWORD="$atomgitsdktoken" \
-        "$PYTHON_BIN" -m twine upload dist/*
-    
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓ 上传成功！${NC}"
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$wheel_file" > dist/SHA256SUMS
     else
-        echo -e "${RED}✗ 上传失败！${NC}"
-        exit 1
+        shasum -a 256 "$wheel_file" > dist/SHA256SUMS
     fi
+    echo -e "${GREEN}✓ 已生成 dist/SHA256SUMS；仅供 GitHub Release 审核使用${NC}"
 }
 
 # 显示帮助信息
@@ -147,12 +112,9 @@ show_help() {
     echo "用法:"
     echo "  ./deploy.sh build       构建包（清理 dist 目录并重新构建）"
     echo "  ./deploy.sh install     安装构建好的包"
-    echo "  ./deploy.sh twine       上传包到 PyPI"
+    echo "  ./deploy.sh checksums   生成 GitHub Release 所需 SHA256SUMS"
     echo ""
-    echo "环境变量:"
-    echo "  atomgitsdktoken        PyPI 上传 token（使用 twine 时必需）"
-    echo ""
-    echo "build/install/twine 必须在已激活的 conda 环境中运行。"
+    echo "build/install/checksums 必须在已激活的 conda 环境中运行。"
 }
 
 # 主函数
@@ -164,8 +126,8 @@ main() {
         install)
             install
             ;;
-        twine)
-            twine_upload
+        checksums)
+            checksums
             ;;
         help|--help|-h)
             show_help

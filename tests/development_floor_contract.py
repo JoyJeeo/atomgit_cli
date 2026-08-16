@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 64
+BASELINE_INVARIANT_COUNT = 69
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -133,6 +133,12 @@ CAPABILITY_REGISTRY = {
                 "Zsh completion is derived from the live Click schema without executing callbacks or importing business dependencies.",
                 "test_shell_completion.py",
             ),
+            _invariant(
+                "CLI-004",
+                "The Release-based update command exposes strict version and force-reinstall options without changing existing command schemas.",
+                "test_update.py",
+                "test_cli_feature_baseline.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
@@ -140,6 +146,7 @@ CAPABILITY_REGISTRY = {
             "test_cli_surface.py",
             "test_shell_completion.py",
             "test_wheel_smoke.py",
+            "test_update.py",
         ),
         ("docs/cli_feature_baseline.md", "docs/testing.md"),
         ("offline-contract", "packaging-smoke"),
@@ -161,11 +168,17 @@ CAPABILITY_REGISTRY = {
                 "Missing, duplicate, or stale leaf dispatch registration fails the baseline.",
                 "test_cli_baseline_guard.py",
             ),
+            _invariant(
+                "DISPATCH-003",
+                "Update dispatch targets the running interpreter and refuses source installations without Git mutation.",
+                "test_update.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
             "test_cli_surface.py",
             "test_cli_baseline_guard.py",
+            "test_update.py",
         ),
         ("docs/cli_feature_baseline.md",),
     ),
@@ -833,11 +846,24 @@ CAPABILITY_REGISTRY = {
                 "test_installer.py",
                 "test_shell_completion.py",
             ),
+            _invariant(
+                "PKG-004",
+                "Release installation accepts only completed pure-numeric Releases and validates wheel identity and checksums before pip.",
+                "test_release_workflow.py",
+                "test_installer.py",
+            ),
+            _invariant(
+                "PKG-005",
+                "Local packaging helpers contain no AtomGit PyPI or twine publication path; publication is manual protected workflow only.",
+                "test_release_workflow.py",
+                "test_deploy_script.py",
+            ),
         ),
         (
             "test_deploy_script.py",
             "test_installer.py",
             "test_shell_completion.py",
+            "test_release_workflow.py",
             "test_wheel_smoke.py",
         ),
         ("docs/release.md", "docs/testing.md"),
@@ -862,11 +888,18 @@ CAPABILITY_REGISTRY = {
                 "test_git_credentials_isolation.py",
                 "test_download_prune.py",
             ),
+            _invariant(
+                "PORT-003",
+                "The bootstrap selects an explicit or supported Python 3.9+ interpreter without requiring conda, while update uses sys.executable.",
+                "test_installer.py",
+                "test_update.py",
+            ),
         ),
         (
             "test_download_prune.py",
             "test_git_credentials_isolation.py",
             "test_installer.py",
+            "test_update.py",
             "test_wheel_smoke.py",
             "test_windows_compatibility.py",
         ),
@@ -926,10 +959,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "64 条可观察行为不变量",
-        "71 个隔离 pytest case",
+        "69 条可观察行为不变量",
+        "73 个隔离 pytest case",
     ),
-    "docs/testing.md": ("71 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("73 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 
