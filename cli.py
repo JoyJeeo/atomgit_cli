@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import click
+import importlib
 import sys
 from pathlib import Path
 from getpass import getpass
@@ -14,39 +15,92 @@ except ImportError:
 configure_hf_environment()
 
 try:
+    from .cli_contracts import (
+        _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+        DEFAULT_UPLOAD_BATCH_SIZE,
+    )
+    from .completion import (
+        CompletionConfigError,
+        completion_script,
+        install_completion,
+        uninstall_completion,
+    )
     from .config import config
-    from .api import (
-        api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_SIZE,
-    )
-    from .utils import (
-        print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, is_supported_upload_revision,
-        get_directory_size,
-        format_file_size, count_files_in_directory, confirm_action,
-        get_upload_file_stats, clear_atomgit_cache,
-        is_valid_path, ensure_directory, setup_git_credentials,
-        clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, effective_cli_upload_ignore_patterns,
-        is_macos_metadata_file, get_atomgit_git_helper_status,
-        validate_upload_path_no_symlinks,
-    )
 except ImportError:
+    from cli_contracts import (
+        _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+        DEFAULT_UPLOAD_BATCH_SIZE,
+    )
+    from completion import (
+        CompletionConfigError,
+        completion_script,
+        install_completion,
+        uninstall_completion,
+    )
     from config import config
-    from api import (
-        api, _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_SIZE,
-    )
-    from utils import (
-        print_success, print_error, print_warning, print_info,
-        validate_repo_name, validate_repo_type, is_supported_upload_revision,
-        get_directory_size,
-        format_file_size, count_files_in_directory, confirm_action,
-        get_upload_file_stats, clear_atomgit_cache,
-        is_valid_path, ensure_directory, setup_git_credentials,
-        clear_git_credentials, check_git_available, normalize_path_in_repo,
-        parse_ignore_patterns, effective_cli_upload_ignore_patterns,
-        is_macos_metadata_file, get_atomgit_git_helper_status,
-        validate_upload_path_no_symlinks,
-    )
+
+
+def _import_runtime_module(name):
+    if __package__:
+        return importlib.import_module(f".{name}", __package__)
+    return importlib.import_module(name)
+
+
+class _LazyObject:
+    """Preserve patchable CLI globals without importing their runtime module."""
+
+    def __init__(self, module_name, attribute_name):
+        object.__setattr__(self, "_module_name", module_name)
+        object.__setattr__(self, "_attribute_name", attribute_name)
+
+    def _resolve(self):
+        module = _import_runtime_module(object.__getattribute__(self, "_module_name"))
+        return getattr(module, object.__getattribute__(self, "_attribute_name"))
+
+    def __getattr__(self, name):
+        return getattr(self._resolve(), name)
+
+    def __setattr__(self, name, value):
+        setattr(self._resolve(), name, value)
+
+    def __delattr__(self, name):
+        delattr(self._resolve(), name)
+
+
+api = _LazyObject("api", "api")
+
+
+def _lazy_utility(name):
+    def call(*args, **kwargs):
+        return getattr(_import_runtime_module("utils"), name)(*args, **kwargs)
+
+    call.__name__ = name
+    return call
+
+
+for _utility_name in (
+    "print_success",
+    "print_error",
+    "print_warning",
+    "print_info",
+    "validate_repo_name",
+    "is_supported_upload_revision",
+    "format_file_size",
+    "get_upload_file_stats",
+    "clear_atomgit_cache",
+    "is_valid_path",
+    "ensure_directory",
+    "setup_git_credentials",
+    "clear_git_credentials",
+    "check_git_available",
+    "normalize_path_in_repo",
+    "parse_ignore_patterns",
+    "effective_cli_upload_ignore_patterns",
+    "is_macos_metadata_file",
+    "get_atomgit_git_helper_status",
+    "validate_upload_path_no_symlinks",
+):
+    globals()[_utility_name] = _lazy_utility(_utility_name)
 
 
 @click.group()
@@ -54,6 +108,55 @@ except ImportError:
 def cli():
     """AtomGit CLI - 基于Transformers和Hugging Face Hub的AtomGit平台模型文件上传下载工具"""
     pass
+
+
+@cli.group()
+def completion():
+    """管理 Zsh 命令补全"""
+    pass
+
+
+@completion.command(name="show")
+@click.argument("shell", type=click.Choice(["zsh"], case_sensitive=False))
+def show_completion(shell):
+    """输出指定 shell 的补全脚本"""
+    try:
+        click.echo(completion_script(cli, shell), nl=False)
+    except CompletionConfigError as error:
+        raise click.ClickException(str(error)) from error
+
+
+@completion.command(name="install")
+@click.option(
+    "--shell",
+    type=click.Choice(["zsh"], case_sensitive=False),
+    default="zsh",
+    show_default=True,
+)
+def install_shell_completion(shell):
+    """安装并启用指定 shell 的补全"""
+    try:
+        script_path, zshrc_path = install_completion(cli, shell)
+    except CompletionConfigError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo(f"Zsh 补全已安装: {script_path}")
+    click.echo(f"启动配置已更新: {zshrc_path}")
+
+
+@completion.command(name="uninstall")
+@click.option(
+    "--shell",
+    type=click.Choice(["zsh"], case_sensitive=False),
+    default="zsh",
+    show_default=True,
+)
+def uninstall_shell_completion(shell):
+    """移除 AtomGit 管理的 shell 补全"""
+    try:
+        uninstall_completion(shell)
+    except CompletionConfigError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo("Zsh 补全已移除")
 
 
 @cli.command()

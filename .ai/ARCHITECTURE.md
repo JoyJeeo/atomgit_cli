@@ -21,6 +21,11 @@ atomgit_hub.py -------------------------+
      |
      v
 huggingface_hub / datasets
+
+Zsh completion adapter
+     |
+     v
+lightweight cli.py schema -> live Click candidates
 ```
 
 The CLI and SDK are parallel wrappers. `atomgit_hub.py` does not call
@@ -30,9 +35,14 @@ or covered by shared contract tests.
 ## Modules
 
 - `__main__.py`: `python -m atomgit` entry point.
-- `__init__.py`: package metadata and public exports.
+- `__init__.py`: package metadata and public exports; completion requests skip
+  eager business and SDK exports while retaining runtime environment policy.
 - `cli.py`: Click command tree, argument validation, user-facing output, and
-  exit codes.
+  exit codes; API and utility dependencies resolve only when callbacks run.
+- `cli_contracts.py`: lightweight constants shared by Click metadata and the
+  upload runtime.
+- `completion.py`: dynamic Zsh adapter generation and bounded, atomic
+  startup-file management.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
@@ -62,6 +72,11 @@ or covered by shared contract tests.
   installs an empty reset plus the AtomGit helper for each AtomGit host, and
   restores the previous values on logout.
 - Tokens are persisted locally and must never enter logs or fixtures.
+- Zsh completion queries the current Click tree on every Tab without loading
+  business dependencies, reading credentials, accessing the network, or
+  creating configuration. Its installer owns only the private adapter and one
+  marked `.zshrc` block, rejects unsafe symbolic-link, marker, and concurrent
+  modification states, and rolls back files created by an incomplete install.
 
 ## Repository ID Rules
 

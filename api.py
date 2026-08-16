@@ -38,6 +38,17 @@ except ImportError:
 
 configure_hf_environment()
 
+try:
+    from .cli_contracts import (
+        _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+        DEFAULT_UPLOAD_BATCH_SIZE,
+    )
+except ImportError:
+    from cli_contracts import (
+        _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+        DEFAULT_UPLOAD_BATCH_SIZE,
+    )
+
 
 import huggingface_hub._upload_large_folder as hf_large_folder
 import huggingface_hub.lfs as hf_lfs
@@ -1750,8 +1761,6 @@ def _download_atomgit_file(
     raise last_error
 
 
-_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
-DEFAULT_UPLOAD_BATCH_SIZE = 20
 _RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
 _RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
 _RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
