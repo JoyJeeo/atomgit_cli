@@ -1,20 +1,23 @@
 # Current Issue Contract
 
-Status: `active`
+Status: `completed`
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-16 +0800`
-- Phase: `implementation accepted; authorized delivery is in progress`
+- Phase: `implementation accepted, committed, merged into yuto, pushed, and GitHub Issue #25 closed`
 - Base branch: `yuto`
 - Task branch: `codex/fast-zsh-completion`
 - Base commit: `b47cf06355bcddf79f32ab4856d7437841cbd2b8`
 - Current HEAD before branch creation: `b47cf06355bcddf79f32ab4856d7437841cbd2b8`
+- Task commit: `e9776bf feat(completion): add fast zsh completion`
+- Merge commit: `f947ba8 merge: add fast zsh completion`
+- Current HEAD before this final delivery record: `f947ba88340ca515778011ee09596c7f58afb6ae`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with the complete Issue implementation, tests, installer, and documentation on the local-only task branch`
-- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`, `.ai/PRODUCT.md`, `.ai/TASK.md`, `.ai/TESTING.md`, `CHANGELOG.md`, `README.md`, `__init__.py`, `api.py`, `cli.py`, `cli_contracts.py`, `completion.py`, `docs/architecture.md`, `docs/cli_feature_baseline.md`, `docs/development_floor.md`, `docs/release.md`, `docs/testing.md`, `install.sh`, `tests/cli_baseline_contract.py`, `tests/development_floor_contract.py`, `tests/test_cli_feature_baseline.py`, `tests/test_installer.py`, `tests/test_shell_completion.py`, `tests/test_wheel_smoke.py`
-- Last completed action: `received explicit maintainer acceptance and authorization to commit, merge, push yuto, and close Issue #25`
-- Next exact action: `commit the complete implementation on the local-only task branch, merge it locally into yuto, push only yuto, and close Issue #25 with final evidence`
+- Worktree state: `clean after this final delivery record is committed and pushed`
+- Changed paths: `none after the final delivery-record commit`
+- Last completed action: `pushed yuto through f947ba8 and closed GitHub Issue #25 with final verification evidence`
+- Next exact action: `none; reset TASK.md to inactive before selecting another Issue`
 - Blockers: `none`
 - Tests run: `pre-implementation test_shell_completion.py failed 6/12 as required; final post-review test_shell_completion.py passed 20/20, test_installer.py 21/21, and test_cli_feature_baseline.py 63/63; final python tests/run_cli_baseline.py passed 71/71 in 63.96s after the last review fix and documentation sync; python -m compileall -q ., python -m pip check, git diff --check, Click 8.4.2/HF 1.1.7/datasets 4.4.1 signature checks, credential diff scan, and completion performance probe passed; console completion first invocation was 0.0279 seconds and warm median was 0.0289 seconds`
 - Required worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
