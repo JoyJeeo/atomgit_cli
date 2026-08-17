@@ -22,7 +22,8 @@ Status: `active`
 - Third-approval checkpoint commit: `61d18e214383db0446454cc8eeb6b104494270fd docs(ai): record third 1.1.0 approval gate`
 - Installer repair commit: `5eb1177177543e6e471243f98c754199690e1a17 fix(install): allow GitHub release asset redirects`
 - Installer repair merge commit: `777b719653496c3352fff8f7015fed39c157fc03 merge: fix installer release redirects`
-- Current yuto HEAD: `777b719653496c3352fff8f7015fed39c157fc03`
+- Installer delivery-record commit: `410e46b59185ae68ae1810e32ca38556e8059d3b docs(ai): record installer repair delivery`
+- Installer code-bearing yuto HEAD: `777b719653496c3352fff8f7015fed39c157fc03`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `clean on yuto, synchronized with github/yuto after the installer repair merge`
 - Changed paths: `install.sh`, `tests/test_installer.py`, `.ai/TASK.md`
