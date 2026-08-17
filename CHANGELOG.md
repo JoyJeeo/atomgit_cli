@@ -6,6 +6,33 @@ PyPI releases.
 
 ## Unreleased
 
+## 1.1.1 - 2026-08-17
+
+- Scope dynamic Zsh completion to the active conda environment with dedicated
+  activation and deactivation hooks, exact Click function cleanup, atomic
+  installation, and explicit migration from the 1.1.0 global `.zshrc` setup.
+- Add confirmed `atomgit uninstall` and the official `uninstall.sh` curl
+  entrypoint, preserving configuration, credentials, caches, repositories, and
+  all unrelated environment files.
+- Detect direct pip removal through the standalone activation hook and print an
+  exact, read-only official cleanup warning until the user runs that cleanup.
+- Keep non-conda and venv installation supported while accurately skipping
+  conda-only completion, and refresh only a matching environment during update.
+- Extend the executable development floor to 74 isolated offline scripts and
+  78 registered invariants, including real Zsh environment switching, legacy
+  migration safety, symlink-parent rejection, and installed/already-removed
+  uninstall paths.
+
+Known limitations:
+
+- Environment-managed automatic completion requires conda and Zsh; other
+  installations remain fully usable without automatic completion.
+- Completion and uninstall child processes cannot unload functions already
+  present in their parent shell, so they print reactivation or `exec zsh`
+  guidance.
+- `install.sh` and `uninstall.sh` support POSIX/macOS/Linux. Windows users use
+  the checksummed wheel workflow and Python package tools.
+
 ## 1.1.0 - 2026-08-17
 
 - Harden resumable model and dataset uploads with exact AtomGit endpoint and

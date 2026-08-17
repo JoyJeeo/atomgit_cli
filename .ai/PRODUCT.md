@@ -6,7 +6,7 @@
 - CLI command: `atomgit`
 - Python imports: `atomgit` and compatibility module `atomgit_hub`
 - Development mainline: `yuto`
-- Current package version: `1.1.0`
+- Current package version: `1.1.1`
 
 ## Users
 

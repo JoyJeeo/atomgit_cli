@@ -1,38 +1,44 @@
-# AtomGit CLI 1.1.0
+# AtomGit CLI 1.1.1
 
-This is the first stable pure-numeric AtomGit CLI Release and the cutover to
-the checksummed GitHub Release installation and update channel.
+This release makes shell completion environment-owned and adds a complete,
+official uninstall lifecycle for ordinary users.
 
 ## Highlights
 
-- Hardened resumable model and dataset uploads with exact AtomGit endpoint and
-  target validation, bounded commit retries, configurable batches, lifecycle
-  progress, and recovery for persistently slow LFS flows.
-- Added automatic Git LFS policy repair and synchronization, canonical pointer
-  generation, bounded preupload failure handling, and default macOS metadata
-  filtering for directory uploads.
-- Added dynamic Zsh completion through a lightweight import path, with managed
-  completion enabled by default in the official installer.
-- Added `atomgit update` for checksum-verified updates of wheel installations;
-  source and editable installations remain Git-managed.
-- Established the executable development floor and mandatory complete offline
-  baseline across CLI, SDK, dependency, packaging, security, and portability
-  contracts.
-- Standardized protected GitHub Release publication with an authoritative
-  version source, immutable `X.Y.Z` tags, checksummed assets, and no AtomGit CLI
-  publication to PyPI.
+- Zsh completion now belongs to the active conda environment. Activation loads
+  that environment's live Click schema, while deactivation removes its
+  `_atomgit_completion` function and `compdef` binding before another
+  environment loads.
+- New installs no longer write global completion under `~/.atomgit` or modify
+  `.zshrc`. Existing 1.1.0 global completion is migrated only after explicit
+  confirmation, with the original configuration backed up and unrelated bytes,
+  mode, and final-newline state preserved.
+- Added `atomgit uninstall`, which displays the interpreter, environment root,
+  package version, and exact managed targets before confirmation. The official
+  `uninstall.sh` curl entrypoint also works idempotently after a prior direct
+  pip removal.
+- Official uninstall preserves AtomGit configuration, credentials, caches,
+  repositories, and unrelated conda files. Managed-path removal rejects final
+  or parent symlinks and concurrent changes.
+- A standalone activation hook detects non-official direct pip removal and
+  prints exact cleanup guidance without deleting or rewriting anything.
+- Non-conda and venv installation remain supported; automatic environment
+  completion is skipped with an accurate message.
+- The complete offline development floor now covers 74 scripts and 78
+  invariants, including real Zsh environment switching and both uninstall
+  states.
 
 ## Known Limitations
 
-- `install.sh` supports POSIX/macOS/Linux. Windows users must follow the README
-  procedure to verify and install the universal wheel.
-- `atomgit update` refuses source/editable installations and directs developers
-  to update the `yuto` checkout with Git.
-- Failed update verification prints an exact recovery command, but dependency
-  rollback is not atomic; use an isolated venv or conda environment for
-  production installations.
-- Release discovery depends on GitHub API availability and rate limits. It does
-  not fall back to PyPI, branch archives, or historical `v...` Releases.
+- Automatic managed completion requires conda and Zsh. Other supported Python
+  environments remain usable without automatic completion.
+- A child command cannot unload completion already loaded in its parent shell;
+  completion removal and package uninstall therefore print an environment
+  reactivation or `exec zsh` instruction.
+- `install.sh` and `uninstall.sh` support POSIX/macOS/Linux. Windows users must
+  follow the README procedure for the checksummed universal wheel.
+- Release discovery still depends on GitHub API availability and rate limits
+  and never falls back to PyPI, branch archives, or historical `v...` Releases.
 
 See `CHANGELOG.md` for the full version history and `docs/release.md` for the
 artifact and verification policy.
