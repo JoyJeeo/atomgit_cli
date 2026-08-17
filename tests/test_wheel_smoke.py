@@ -24,6 +24,7 @@ SOURCE_FILES = (
     "cli.py",
     "cli_contracts.py",
     "completion.py",
+    "uninstaller.py",
     "config.py",
     "exceptions.py",
     "utils.py",
@@ -35,6 +36,7 @@ SOURCE_FILES = (
     "CHANGELOG.md",
     "MANIFEST.in",
     "install.sh",
+    "uninstall.sh",
     "version.py",
 )
 results = []
@@ -179,6 +181,7 @@ def main():
             ("logout",),
             ("whoami",),
             ("update",),
+            ("uninstall",),
             ("repo",),
             ("repo", "create"),
             ("completion",),

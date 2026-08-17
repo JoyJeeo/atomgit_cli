@@ -39,8 +39,9 @@ SDK、认证、仓库、上传、下载、安全、依赖、打包和跨平台�
 | 命令 | 当前能力 | 基础保证 |
 |---|---|---|
 | `atomgit completion show zsh` | 输出 Click 原生 Zsh adapter | 候选来自实时命令树，不执行命令回调 |
-| `atomgit completion install --shell zsh` | 安装脚本并更新受控 `.zshrc` 配置块 | 原子、幂等、首次备份、并发保护和失败回滚 |
-| `atomgit completion uninstall --shell zsh` | 删除 AtomGit 管理的补全内容 | 保留所有无关 Zsh 配置，可重复执行 |
+| `atomgit completion install --shell zsh` | 为当前 conda 环境安装 adapter 和激活/停用 hook | 原子、幂等、环境隔离、并发保护和失败回滚 |
+| `atomgit completion uninstall --shell zsh` | 删除当前 conda 环境的三个受控补全文件 | 保留其他环境、用户配置和无关文件，可重复执行 |
+| `atomgit uninstall [--yes]` | 显示计划并卸载当前 Python 包和环境补全 | 默认确认；拒绝源码/editable 安装；保留配置、凭证、缓存和仓库 |
 
 按 Tab 的高频路径只加载 Click schema，不加载 API、Hugging Face Hub、datasets、
 Torch、PyArrow 或 Pandas，不读取凭据、不联网、不创建配置。首版只支持 Zsh 和

@@ -41,6 +41,7 @@ atomgit_cli/
 ├── cli.py                # Click 命令树和用户交互
 ├── cli_contracts.py      # CLI schema 与上传运行时共享的轻量常量
 ├── completion.py         # Zsh completion adapter 与受控安装/卸载
+├── uninstaller.py        # 当前环境受控状态与包卸载计划
 ├── api.py                # CLI 使用的 AtomGit/HF 包装层
 ├── atomgit_hub.py        # 对外 Python SDK
 ├── config.py             # ~/.atomgit/config.json 配置
@@ -81,6 +82,7 @@ atomgit = atomgit.cli:cli
 | `atomgit download` | 下载整个仓库 | 公开仓库可匿名 |
 | `atomgit download-file` | 下载仓库中的单个文件 | 公开仓库可匿名 |
 | `atomgit update` | 从已完成 GitHub Release 更新当前 Python | wheel 安装；源码安装拒绝 |
+| `atomgit uninstall [--yes]` | 确认后清理环境补全并卸载当前 Python 包 | 否 |
 | `atomgit completion show zsh` | 输出 Zsh 补全 adapter | 否 |
 | `atomgit completion install --shell zsh` | 安装并启用 Zsh 补全 | 否 |
 | `atomgit completion uninstall --shell zsh` | 移除受控 Zsh 补全 | 否 |
@@ -93,11 +95,15 @@ Click 每次补全都会启动新的 `atomgit` 进程。`_ATOMGIT_COMPLETE` 存�
 执行惰性解析，因此补全不会导入 HF Hub、datasets、Torch、PyArrow 或 Pandas。
 生成的 Zsh adapter 每次查询当前 Click 树，所以新增命令无需同步补全清单。
 
-补全安装在 `~/.atomgit/completions/atomgit.zsh` 写入 `0600` adapter，并只在
-`.zshrc` 中管理带边界标记的配置块；已有配置首次修改前备份。目录使用 `0700`，
-符号链接、畸形标记、相对 `ZDOTDIR` 或读取后的并发修改会失败关闭；`.zshrc`
-写入失败会回滚本次脚本和新建备份。官方安装器仅在 Zsh 下默认调用该能力，
-`--no-completion` 可关闭；标准 pip 不运行非标准安装后钩子。
+补全只写入当前解释器匹配的 `CONDA_PREFIX`：adapter 位于
+`share/atomgit/completions`，激活/停用 hook 位于 `etc/conda/*activate.d`。
+deactivate hook 在 conda 改写 `CONDA_PREFIX` 前解除 Click 8.4.2 生成的
+`_atomgit_completion` 与 `compdef` 绑定，activate hook 在新环境变量生效后加载该
+环境 adapter。三文件写入原子、幂等并在失败时回滚；符号链接、非普通文件和并发
+修改失败关闭。旧版全局 `.zshrc` 配置只在交互确认后备份和迁移。非 conda 安装
+跳过自动补全。直接 pip 删除包后，独立 activate hook 只打印官方清理指引，不
+修改任何状态；`atomgit uninstall` 和 `uninstall.sh` 仅删除上述精确环境文件并
+保留用户配置、凭证、缓存和仓库。
 
 登录和 `whoami` 的远端失败采用固定、脱敏的类别提示：401、403、限流、服务端
 故障、网络/超时和无效响应分别保留可执行的诊断；CLI 不会把所有失败都归因为

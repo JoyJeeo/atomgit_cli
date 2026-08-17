@@ -183,255 +183,302 @@ def main():
             show.stdout or show.stderr,
         )
 
+        completion_module = importlib.import_module("atomgit.completion")
+        from atomgit.cli import cli
+
+        isolated_home = patch.dict(
+            os.environ,
+            {"HOME": str(home), "ZDOTDIR": str(home)},
+        )
+        isolated_home.start()
+
+        prefix_a = root / "conda-a"
+        prefix_b = root / "conda-b"
+        prefix_a.mkdir()
+        prefix_b.mkdir()
         zshrc = home / ".zshrc"
         zshrc.write_text("export USER_SETTING=kept\n", encoding="utf-8")
-        install = run(
-            [sys.executable, "-m", "atomgit", "completion", "install", "--shell", "zsh"],
-            normal_environment,
-        )
-        completion_file = home / ".atomgit" / "completions" / "atomgit.zsh"
-        installed_zshrc = zshrc.read_text(encoding="utf-8")
+
+        with patch.object(completion_module, "_active_conda_prefix", return_value=prefix_a):
+            paths_a = completion_module.install_completion(cli)
+            first_contents = tuple(path.read_text(encoding="utf-8") for path in paths_a)
+            completion_module.install_completion(cli)
         check(
-            "completion install writes only managed Zsh content",
-            install.returncode == 0
-            and completion_file.is_file()
-            and (home / ".zshrc.atomgit.bak").read_text(encoding="utf-8")
-            == "export USER_SETTING=kept\n"
-            and "export USER_SETTING=kept" in installed_zshrc
-            and installed_zshrc.count(">>> atomgit completion >>>") == 1
-            and installed_zshrc.count("<<< atomgit completion <<<") == 1,
-            install.stdout or install.stderr,
-        )
-        check(
-            "completion files use private modes without changing HOME",
-            stat.S_IMODE(home.stat().st_mode) != 0o700
-            and stat.S_IMODE((home / ".atomgit").stat().st_mode) == 0o700
-            and stat.S_IMODE(completion_file.parent.stat().st_mode) == 0o700
-            and stat.S_IMODE(completion_file.stat().st_mode) == 0o600,
-            oct(stat.S_IMODE(home.stat().st_mode)),
-        )
-        install_again = run(
-            [sys.executable, "-m", "atomgit", "completion", "install", "--shell", "zsh"],
-            normal_environment,
+            "completion is owned only by the active conda environment",
+            paths_a
+            == (
+                prefix_a / "share/atomgit/completions/atomgit.zsh",
+                prefix_a / "etc/conda/activate.d/atomgit-completion.sh",
+                prefix_a / "etc/conda/deactivate.d/atomgit-completion.sh",
+            )
+            and all(path.is_file() for path in paths_a)
+            and tuple(path.read_text(encoding="utf-8") for path in paths_a)
+            == first_contents
+            and zshrc.read_text(encoding="utf-8") == "export USER_SETTING=kept\n"
+            and not (home / ".atomgit").exists(),
         )
         check(
-            "completion installation is idempotent",
-            install_again.returncode == 0
-            and zshrc.read_text(encoding="utf-8") == installed_zshrc,
-            install_again.stdout or install_again.stderr,
+            "hooks use the locked Click function and unload before switching",
+            "_atomgit_completion" in first_contents[1]
+            and "compdef -d atomgit" in first_contents[1]
+            and "_atomgit_completion" in first_contents[2]
+            and "compdef -d atomgit" in first_contents[2],
         )
 
-        uninstall = run(
-            [sys.executable, "-m", "atomgit", "completion", "uninstall", "--shell", "zsh"],
-            normal_environment,
+        with patch.object(completion_module, "_active_conda_prefix", return_value=prefix_b):
+            paths_b = completion_module.install_completion(cli)
+        check(
+            "two conda environments own isolated completion adapters",
+            all(path.is_file() for path in paths_a + paths_b)
+            and set(paths_a).isdisjoint(paths_b),
+        )
+
+        for prefix in (prefix_a, prefix_b):
+            environment_python = prefix / "bin/python"
+            environment_python.parent.mkdir()
+            environment_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            environment_python.chmod(0o755)
+        paths_a[0].write_text(
+            "_atomgit_completion() { print ENV_A; }\n"
+            "compdef _atomgit_completion atomgit\n",
+            encoding="utf-8",
+        )
+        paths_b[0].write_text(
+            "_atomgit_completion() { print ENV_B; }\n"
+            "compdef _atomgit_completion atomgit\n",
+            encoding="utf-8",
+        )
+        switch_script = r'''
+autoload -Uz compinit
+compinit -d "$HOME/.zcompdump"
+export CONDA_PREFIX="$1"
+source "$2"
+[[ "${functions[_atomgit_completion]}" == *ENV_A* ]] || exit 11
+[[ "${_comps[atomgit]-}" == "_atomgit_completion" ]] || exit 12
+source "$3"
+(( ! $+functions[_atomgit_completion] )) || exit 13
+[[ -z "${_comps[atomgit]-}" ]] || exit 14
+export CONDA_PREFIX="$4"
+source "$5"
+[[ "${functions[_atomgit_completion]}" == *ENV_B* ]] || exit 15
+[[ "${_comps[atomgit]-}" == "_atomgit_completion" ]] || exit 16
+'''
+        switched = run(
+            [
+                "zsh",
+                "-f",
+                "-c",
+                switch_script,
+                "zsh",
+                prefix_a,
+                paths_a[1],
+                paths_a[2],
+                prefix_b,
+                paths_b[1],
+            ],
+            os.environ.copy(),
         )
         check(
-            "completion uninstall preserves unrelated Zsh configuration",
-            uninstall.returncode == 0
-            and not completion_file.exists()
+            "Zsh deactivation unloads A before activation loads B",
+            switched.returncode == 0,
+            switched.stdout + switched.stderr,
+        )
+
+        paths_a[0].write_text(first_contents[0], encoding="utf-8")
+        fake_python = prefix_a / "bin/python"
+        fake_python.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        fake_python.chmod(0o755)
+        warning = run(
+            ["zsh", "-c", 'source "$1"', "zsh", paths_a[1]],
+            {**os.environ, "CONDA_PREFIX": str(prefix_a)},
+        )
+        check(
+            "post-pip activation warning is exact and non-mutating",
+            warning.returncode == 0
+            and warning.stderr == completion_module._ACTIVATION_WARNING
+            and tuple(path.read_text(encoding="utf-8") for path in paths_a)
+            == first_contents,
+            warning.stderr,
+        )
+
+        with patch.object(completion_module, "_active_conda_prefix", return_value=prefix_a):
+            completion_module.uninstall_completion()
+            completion_module.uninstall_completion()
+        check(
+            "environment completion removal is exact and idempotent",
+            all(not path.exists() for path in paths_a)
+            and all(path.exists() for path in paths_b)
             and zshrc.read_text(encoding="utf-8") == "export USER_SETTING=kept\n",
-            uninstall.stdout or uninstall.stderr,
-        )
-        uninstall_again = run(
-            [sys.executable, "-m", "atomgit", "completion", "uninstall", "--shell", "zsh"],
-            normal_environment,
-        )
-        check(
-            "completion removal is idempotent",
-            uninstall_again.returncode == 0,
-            uninstall_again.stdout or uninstall_again.stderr,
         )
 
-        appended_home = root / "appended-home"
-        appended_home.mkdir()
-        appended_zshrc = appended_home / ".zshrc"
-        appended_zshrc.write_text("export BEFORE=1", encoding="utf-8")
-        appended_environment = normal_environment.copy()
-        appended_environment.update(
-            {"HOME": str(appended_home), "ZDOTDIR": str(appended_home)}
+        old_script = home / ".atomgit/completions/atomgit.zsh"
+        old_script.parent.mkdir(parents=True)
+        old_script.write_text("legacy\n", encoding="utf-8")
+        original_zshrc = "export USER_SETTING=kept\n"
+        zshrc.write_text(
+            original_zshrc + completion_module._managed_block(old_script, True),
+            encoding="utf-8",
         )
-        appended_install = run(
-            [sys.executable, "-m", "atomgit", "completion", "install"],
-            appended_environment,
-        )
-        with appended_zshrc.open("a", encoding="utf-8") as file:
-            file.write("export AFTER=1\n")
-        appended_uninstall = run(
-            [sys.executable, "-m", "atomgit", "completion", "uninstall"],
-            appended_environment,
-        )
+        with patch.object(completion_module, "_active_conda_prefix", return_value=prefix_a):
+            try:
+                completion_module.install_completion(cli)
+            except completion_module.CompletionConfigError as error:
+                migration_error = str(error)
+            else:
+                migration_error = ""
+            migrated_paths = completion_module.install_completion(
+                cli, migrate_legacy=True
+            )
         check(
-            "completion removal separates configuration appended after its block",
-            appended_install.returncode == 0
-            and appended_uninstall.returncode == 0
-            and appended_zshrc.read_text(encoding="utf-8")
-            == "export BEFORE=1\nexport AFTER=1\n",
-            appended_uninstall.stdout or appended_uninstall.stderr,
+            "legacy global completion requires confirmation and migrates safely",
+            "明确确认" in migration_error
+            and not old_script.exists()
+            and zshrc.read_text(encoding="utf-8") == original_zshrc
+            and (home / ".zshrc.atomgit.bak").is_file()
+            and all(path.exists() for path in migrated_paths),
+            migration_error,
         )
 
-        malformed_home = root / "malformed-home"
-        malformed_home.mkdir()
-        malformed_zshrc = malformed_home / ".zshrc"
-        malformed_content = "# >>> atomgit completion >>>\nuser-content\n"
-        malformed_zshrc.write_text(malformed_content, encoding="utf-8")
-        malformed_environment = normal_environment.copy()
-        malformed_environment.update(
-            {"HOME": str(malformed_home), "ZDOTDIR": str(malformed_home)}
+        no_newline_home = root / "legacy-no-newline-home"
+        no_newline_home.mkdir()
+        no_newline_script = no_newline_home / ".atomgit/completions/atomgit.zsh"
+        no_newline_script.parent.mkdir(parents=True)
+        no_newline_script.write_text("legacy\n", encoding="utf-8")
+        no_newline_zshrc = no_newline_home / ".zshrc"
+        no_newline_original = "export NO_FINAL_NEWLINE=1"
+        no_newline_managed = (
+            no_newline_original
+            + "\n"
+            + completion_module._managed_block(no_newline_script, False)
         )
-        malformed = run(
-            [sys.executable, "-m", "atomgit", "completion", "install"],
-            malformed_environment,
-        )
+        no_newline_zshrc.write_text(no_newline_managed, encoding="utf-8")
+        no_newline_zshrc.chmod(0o640)
+        no_newline_prefix = root / "legacy-no-newline-conda"
+        no_newline_prefix.mkdir()
+        with patch.dict(
+            os.environ,
+            {"HOME": str(no_newline_home), "ZDOTDIR": str(no_newline_home)},
+        ), patch.object(
+            completion_module,
+            "_active_conda_prefix",
+            return_value=no_newline_prefix,
+        ):
+            completion_module.install_completion(cli, migrate_legacy=True)
+        no_newline_backup = no_newline_home / ".zshrc.atomgit.bak"
         check(
-            "malformed managed markers fail without changing Zsh content",
-            malformed.returncode != 0
-            and malformed_zshrc.read_text(encoding="utf-8") == malformed_content,
-            malformed.stdout or malformed.stderr,
+            "legacy migration preserves bytes, mode, backup, and final-newline state",
+            no_newline_zshrc.read_text(encoding="utf-8") == no_newline_original
+            and stat.S_IMODE(no_newline_zshrc.stat().st_mode) == 0o640
+            and no_newline_backup.read_text(encoding="utf-8") == no_newline_managed
+            and stat.S_IMODE(no_newline_backup.stat().st_mode) == 0o640,
         )
 
-        symlink_home = root / "symlink-home"
-        symlink_home.mkdir()
-        symlink_target = symlink_home / "real-zshrc"
-        symlink_target.write_text("export LINK_TARGET=kept\n", encoding="utf-8")
-        (symlink_home / ".zshrc").symlink_to(symlink_target)
-        symlink_environment = normal_environment.copy()
-        symlink_environment.update(
-            {"HOME": str(symlink_home), "ZDOTDIR": str(symlink_home)}
-        )
-        symlink_result = run(
-            [sys.executable, "-m", "atomgit", "completion", "install"],
-            symlink_environment,
-        )
-        check(
-            "symbolic-link Zsh configuration fails closed",
-            symlink_result.returncode != 0
-            and symlink_target.read_text(encoding="utf-8")
-            == "export LINK_TARGET=kept\n",
-            symlink_result.stdout or symlink_result.stderr,
-        )
-
-        relative_environment = normal_environment.copy()
-        relative_environment["ZDOTDIR"] = "relative-zdotdir"
-        relative_result = run(
-            [sys.executable, "-m", "atomgit", "completion", "install"],
-            relative_environment,
-        )
-        check(
-            "relative ZDOTDIR fails closed",
-            relative_result.returncode != 0
-            and "绝对路径" in (relative_result.stdout + relative_result.stderr),
-            relative_result.stdout or relative_result.stderr,
-        )
-
-        completion_module = importlib.import_module("atomgit.completion")
-        concurrent_home = root / "concurrent-home"
+        concurrent_home = root / "legacy-concurrent-home"
         concurrent_home.mkdir()
+        concurrent_script = concurrent_home / ".atomgit/completions/atomgit.zsh"
+        concurrent_script.parent.mkdir(parents=True)
+        concurrent_script.write_text("legacy\n", encoding="utf-8")
         concurrent_zshrc = concurrent_home / ".zshrc"
-        concurrent_zshrc.write_text("export ORIGINAL=1\n", encoding="utf-8")
+        concurrent_zshrc.write_text(
+            "export BEFORE=1\n"
+            + completion_module._managed_block(concurrent_script, True),
+            encoding="utf-8",
+        )
+        concurrent_prefix = root / "legacy-concurrent-conda"
+        concurrent_prefix.mkdir()
         actual_atomic_write = completion_module._atomic_write
 
-        def edit_during_install(path, *args, **kwargs):
-            if path == concurrent_zshrc:
-                concurrent_zshrc.write_text("export CONCURRENT=1\n", encoding="utf-8")
-            return actual_atomic_write(path, *args, **kwargs)
-
-        concurrent_environment = {
-            "HOME": str(concurrent_home),
-            "ZDOTDIR": str(concurrent_home),
-        }
-        install_error = None
-        with patch.dict(os.environ, concurrent_environment), patch.object(
-            completion_module,
-            "_atomic_write",
-            side_effect=edit_during_install,
-        ):
-            try:
-                completion_module.install_completion(None)
-            except completion_module.CompletionConfigError as error:
-                install_error = error
-        concurrent_script = (
-            concurrent_home / ".atomgit" / "completions" / "atomgit.zsh"
-        )
-        check(
-            "completion install preserves concurrent Zsh edits and rolls back",
-            install_error is not None
-            and "并发修改" in str(install_error)
-            and concurrent_zshrc.read_text(encoding="utf-8")
-            == "export CONCURRENT=1\n"
-            and not concurrent_script.exists()
-            and not (concurrent_home / ".zshrc.atomgit.bak").exists(),
-            str(install_error),
-        )
-
-        script_failure_home = root / "script-failure-home"
-        script_failure_home.mkdir()
-        script_failure_zshrc = script_failure_home / ".zshrc"
-        script_failure_zshrc.write_text("export ORIGINAL=2\n", encoding="utf-8")
-        script_failure_environment = {
-            "HOME": str(script_failure_home),
-            "ZDOTDIR": str(script_failure_home),
-        }
-        script_failure_path = (
-            script_failure_home / ".atomgit" / "completions" / "atomgit.zsh"
-        )
-
-        def fail_script_write(path, *args, **kwargs):
-            if path == script_failure_path:
-                raise completion_module.CompletionConfigError("injected script failure")
-            return actual_atomic_write(path, *args, **kwargs)
-
-        script_error = None
-        with patch.dict(os.environ, script_failure_environment), patch.object(
-            completion_module,
-            "_atomic_write",
-            side_effect=fail_script_write,
-        ):
-            try:
-                completion_module.install_completion(None)
-            except completion_module.CompletionConfigError as error:
-                script_error = error
-        check(
-            "completion install removes a new backup when script setup fails",
-            script_error is not None
-            and script_failure_zshrc.read_text(encoding="utf-8")
-            == "export ORIGINAL=2\n"
-            and not script_failure_path.exists()
-            and not (script_failure_home / ".zshrc.atomgit.bak").exists(),
-            str(script_error),
-        )
-
-        with patch.dict(os.environ, concurrent_environment):
-            completion_module.install_completion(None)
-        installed_content = concurrent_zshrc.read_text(encoding="utf-8")
-
-        def edit_during_uninstall(path, *args, **kwargs):
+        def edit_legacy_during_migration(path, *args, **kwargs):
             if path == concurrent_zshrc:
                 concurrent_zshrc.write_text(
-                    installed_content + "export CONCURRENT=2\n",
+                    "export CONCURRENT_EDIT=kept\n",
                     encoding="utf-8",
                 )
             return actual_atomic_write(path, *args, **kwargs)
 
-        uninstall_error = None
-        with patch.dict(os.environ, concurrent_environment), patch.object(
+        with patch.dict(
+            os.environ,
+            {"HOME": str(concurrent_home), "ZDOTDIR": str(concurrent_home)},
+        ), patch.object(
+            completion_module,
+            "_active_conda_prefix",
+            return_value=concurrent_prefix,
+        ), patch.object(
             completion_module,
             "_atomic_write",
-            side_effect=edit_during_uninstall,
+            side_effect=edit_legacy_during_migration,
         ):
             try:
-                completion_module.uninstall_completion()
+                completion_module.install_completion(cli, migrate_legacy=True)
             except completion_module.CompletionConfigError as error:
-                uninstall_error = error
+                concurrent_error = str(error)
+            else:
+                concurrent_error = ""
         check(
-            "completion uninstall preserves concurrent Zsh edits",
-            uninstall_error is not None
-            and "并发修改" in str(uninstall_error)
-            and concurrent_zshrc.read_text(encoding="utf-8").endswith(
-                "export CONCURRENT=2\n"
-            )
-            and concurrent_script.exists(),
-            str(uninstall_error),
+            "legacy migration preserves a concurrent Zsh edit and rolls back environment files",
+            "并发修改" in concurrent_error
+            and concurrent_zshrc.read_text(encoding="utf-8")
+            == "export CONCURRENT_EDIT=kept\n"
+            and concurrent_script.exists()
+            and all(
+                not path.exists()
+                for path in completion_module.managed_completion_paths(
+                    concurrent_prefix
+                )
+            ),
+            concurrent_error,
         )
+
+        unsafe_prefix = root / "unsafe-conda"
+        unsafe_prefix.mkdir()
+        symlink_target = root / "outside-share"
+        symlink_target.mkdir()
+        (unsafe_prefix / "share").symlink_to(symlink_target)
+        with patch.object(
+            completion_module, "_active_conda_prefix", return_value=unsafe_prefix
+        ):
+            try:
+                completion_module.install_completion(cli)
+            except completion_module.CompletionConfigError as error:
+                symlink_error = str(error)
+            else:
+                symlink_error = ""
+        check(
+            "completion refuses symlinked managed directories",
+            "符号链接" in symlink_error and not list(symlink_target.iterdir()),
+            symlink_error,
+        )
+
+        rollback_prefix = root / "rollback-conda"
+        rollback_prefix.mkdir()
+        rollback_paths = completion_module.managed_completion_paths(rollback_prefix)
+        actual_atomic_write = completion_module._atomic_write
+
+        def fail_second_write(path, *args, **kwargs):
+            if path == rollback_paths[1]:
+                raise completion_module.CompletionConfigError("injected failure")
+            return actual_atomic_write(path, *args, **kwargs)
+
+        with patch.object(
+            completion_module, "_active_conda_prefix", return_value=rollback_prefix
+        ), patch.object(
+            completion_module, "legacy_completion_present", return_value=False
+        ), patch.object(
+            completion_module, "_atomic_write", side_effect=fail_second_write
+        ):
+            try:
+                completion_module.install_completion(cli)
+            except completion_module.CompletionConfigError as error:
+                rollback_error = str(error)
+            else:
+                rollback_error = ""
+        check(
+            "multi-file completion install rolls back on failure",
+            "injected failure" in rollback_error
+            and all(not path.exists() for path in rollback_paths),
+            rollback_error,
+        )
+        isolated_home.stop()
 
     passed = sum(1 for _, condition, _ in results if condition)
     print(f"summary: {passed}/{len(results)} passed")

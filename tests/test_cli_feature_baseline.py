@@ -169,10 +169,21 @@ def main():
             stack.enter_context(
                 patch.object(
                     cli_mod,
+                    "legacy_completion_present",
+                    return_value=False,
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
                     "install_completion",
-                    side_effect=lambda command, shell: (
+                    side_effect=lambda command, shell, migrate_legacy=False: (
                         calls.append(("completion-install", command, shell))
-                        or (root / "atomgit.zsh", home / ".zshrc")
+                        or (
+                            root / "atomgit.zsh",
+                            root / "activate.sh",
+                            root / "deactivate.sh",
+                        )
                     ),
                 )
             )
@@ -183,6 +194,26 @@ def main():
                     side_effect=lambda shell: calls.append(
                         ("completion-uninstall", shell)
                     ),
+                )
+            )
+            uninstall_plan = {
+                "python": sys.executable,
+                "prefix": sys.prefix,
+                "version": atomgit.__version__,
+                "managed_paths": (),
+            }
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
+                    "build_uninstall_plan",
+                    return_value=uninstall_plan,
+                )
+            )
+            stack.enter_context(
+                patch.object(
+                    cli_mod,
+                    "run_uninstall",
+                    side_effect=lambda plan: calls.append(("uninstall", plan)),
                 )
             )
 
@@ -359,6 +390,13 @@ def main():
                 completion_uninstall.exit_code == 0
                 and ("completion-uninstall", "zsh") in calls,
                 f"exit={completion_uninstall.exit_code}",
+            )
+            package_uninstall = runner.invoke(cli_mod.cli, ["uninstall", "--yes"])
+            check(
+                "package uninstall baseline dispatches the reviewed plan",
+                package_uninstall.exit_code == 0
+                and ("uninstall", uninstall_plan) in calls,
+                f"exit={package_uninstall.exit_code}",
             )
 
             create_result = runner.invoke(

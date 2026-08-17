@@ -66,12 +66,36 @@ def main():
         log.unlink()
         completion = run(environment, "--python", str(fake_python))
         invocations = log.read_text(encoding="utf-8").splitlines()
-        check("completion remains enabled by default", completion.returncode == 0 and any("completion install" in line for line in invocations))
+        check(
+            "non-conda installation skips environment-only completion",
+            completion.returncode == 0
+            and not any("completion install" in line for line in invocations)
+            and "not an active conda environment" in completion.stdout,
+            completion.stdout + completion.stderr,
+        )
+
+        conda_prefix = root / "conda-env"
+        (conda_prefix / "bin").mkdir(parents=True)
+        conda_python = conda_prefix / "bin" / "python"
+        conda_python.write_text(fake_python.read_text(encoding="utf-8"), encoding="utf-8")
+        conda_python.chmod(0o755)
+        conda_environment = environment.copy()
+        conda_environment["CONDA_PREFIX"] = str(conda_prefix)
+        log.unlink()
+        conda_completion = run(conda_environment, "--python", str(conda_python))
+        invocations = log.read_text(encoding="utf-8").splitlines()
+        check(
+            "matching conda installation enables environment completion",
+            conda_completion.returncode == 0
+            and any("completion install" in line for line in invocations),
+            repr(invocations),
+        )
 
         log.unlink()
         failed_completion_env = environment.copy()
         failed_completion_env["ATOMGIT_INSTALL_TEST_COMPLETION_FAIL"] = "1"
-        failed_completion = run(failed_completion_env, "--python", str(fake_python))
+        failed_completion_env["CONDA_PREFIX"] = str(conda_prefix)
+        failed_completion = run(failed_completion_env, "--python", str(conda_python))
         check("completion setup failure is nonfatal", failed_completion.returncode == 0)
         check("completion setup warning is visible", "warning:" in failed_completion.stderr)
 

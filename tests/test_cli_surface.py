@@ -29,6 +29,7 @@ def main():
     for command in (
         "login",
         "update",
+        "uninstall",
         "logout",
         "whoami",
         "repo",
@@ -46,7 +47,7 @@ def main():
     )
 
     for command in (
-        "login", "update", "logout", "whoami", "repo", "upload", "download",
+        "login", "update", "uninstall", "logout", "whoami", "repo", "upload", "download",
         "download-file", "config-show",
     ):
         result = runner.invoke(cli_mod.cli, [command, "--help"])

@@ -23,10 +23,16 @@ try:
         CompletionConfigError,
         completion_script,
         install_completion,
+        legacy_completion_present,
         uninstall_completion,
     )
     from .config import config
     from .release import ReleaseError, is_stable_version, run_update
+    from .uninstaller import (
+        UninstallError,
+        build_uninstall_plan,
+        run_uninstall,
+    )
     from .version import __version__
 except ImportError:
     from cli_contracts import (
@@ -37,10 +43,12 @@ except ImportError:
         CompletionConfigError,
         completion_script,
         install_completion,
+        legacy_completion_present,
         uninstall_completion,
     )
     from config import config
     from release import ReleaseError, is_stable_version, run_update
+    from uninstaller import UninstallError, build_uninstall_plan, run_uninstall
     from version import __version__
 
 
@@ -166,6 +174,41 @@ def update(target_version, force_reinstall):
         click.echo(f"warning: {result['completion_warning']}", err=True)
 
 
+@cli.command()
+@click.option(
+    "--yes",
+    is_flag=True,
+    default=False,
+    help="跳过确认（仅用于官方自动化卸载入口）",
+)
+def uninstall(yes):
+    """卸载当前 Python 中的 AtomGit CLI，并清理当前环境补全。"""
+    try:
+        plan = build_uninstall_plan()
+    except UninstallError as error:
+        raise click.ClickException(str(error)) from error
+
+    click.echo(f"Python 解释器: {plan['python']}")
+    click.echo(f"环境根目录: {plan['prefix']}")
+    click.echo(f"AtomGit 版本: {plan['version']}")
+    if plan["managed_paths"]:
+        click.echo("将删除的环境补全文件:")
+        for path in plan["managed_paths"]:
+            click.echo(f"  {path}")
+    else:
+        click.echo("环境补全文件: 无（当前解释器不属于活动 conda 环境）")
+
+    if not yes and not click.confirm("确认卸载 AtomGit CLI？"):
+        raise click.Abort()
+    try:
+        run_uninstall(plan)
+    except UninstallError as error:
+        raise click.ClickException(str(error)) from error
+    click.echo("AtomGit CLI 已从当前 Python 卸载。")
+    if plan["managed_paths"]:
+        click.echo("当前 shell 可能仍加载旧补全；请执行 conda deactivate/activate 或 exec zsh。")
+
+
 @cli.group()
 def completion():
     """管理 Zsh 命令补全"""
@@ -192,11 +235,25 @@ def show_completion(shell):
 def install_shell_completion(shell):
     """安装并启用指定 shell 的补全"""
     try:
-        script_path, zshrc_path = install_completion(cli, shell)
+        migrate_legacy = False
+        if legacy_completion_present():
+            click.echo("检测到旧版全局补全和 .zshrc 受控配置。")
+            migrate_legacy = click.confirm(
+                "是否备份 .zshrc、移除旧版全局补全并迁移到当前 conda 环境？"
+            )
+            if not migrate_legacy:
+                raise click.Abort()
+        script_path, activate_path, deactivate_path = install_completion(
+            cli,
+            shell,
+            migrate_legacy=migrate_legacy,
+        )
     except CompletionConfigError as error:
         raise click.ClickException(str(error)) from error
     click.echo(f"Zsh 补全已安装: {script_path}")
-    click.echo(f"启动配置已更新: {zshrc_path}")
+    click.echo(f"Conda 激活 hook 已安装: {activate_path}")
+    click.echo(f"Conda 停用 hook 已安装: {deactivate_path}")
+    click.echo("请重新激活当前 conda 环境，或执行 exec zsh 后再使用补全。")
 
 
 @completion.command(name="uninstall")
@@ -209,10 +266,12 @@ def install_shell_completion(shell):
 def uninstall_shell_completion(shell):
     """移除 AtomGit 管理的 shell 补全"""
     try:
-        uninstall_completion(shell)
+        paths = uninstall_completion(shell)
     except CompletionConfigError as error:
         raise click.ClickException(str(error)) from error
-    click.echo("Zsh 补全已移除")
+    click.echo("当前 conda 环境的 Zsh 补全已移除")
+    if paths:
+        click.echo("当前 shell 可能仍加载旧补全；请重新激活环境或执行 exec zsh。")
 
 
 @cli.command()

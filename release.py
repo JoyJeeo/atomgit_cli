@@ -357,8 +357,27 @@ def run_update(*, version=None, force_reinstall=False, python=sys.executable, ap
             api_url=api_url,
             download_base=download_base,
         )
-        completion_path = Path.home() / ".atomgit" / "completions" / "atomgit.zsh"
-        if completion_path.is_file():
+        prefix_result = subprocess.run(
+            [python, "-c", "import pathlib, sys; print(pathlib.Path(sys.prefix).resolve())"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        conda_prefix = os.environ.get("CONDA_PREFIX")
+        matching_prefix = None
+        if conda_prefix and prefix_result.returncode == 0:
+            try:
+                candidate = Path(conda_prefix).resolve(strict=True)
+                if candidate == Path(prefix_result.stdout.strip()):
+                    matching_prefix = candidate
+            except OSError:
+                matching_prefix = None
+        activation_hook = (
+            matching_prefix / "etc/conda/activate.d/atomgit-completion.sh"
+            if matching_prefix
+            else None
+        )
+        if activation_hook and activation_hook.is_file():
             completion_result = subprocess.run(
                 [python, "-m", "atomgit", "completion", "install", "--shell", "zsh"],
                 check=False,

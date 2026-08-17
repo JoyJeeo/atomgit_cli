@@ -41,8 +41,10 @@ or covered by shared contract tests.
   exit codes; API and utility dependencies resolve only when callbacks run.
 - `cli_contracts.py`: lightweight constants shared by Click metadata and the
   upload runtime.
-- `completion.py`: dynamic Zsh adapter generation and bounded, atomic
-  startup-file management.
+- `completion.py`: dynamic Zsh adapter generation plus atomic conda-environment
+  adapter and activation/deactivation hook management.
+- `uninstaller.py`: exact managed-path manifest, uninstall planning, and safe
+  current-environment cleanup shared by CLI behavior and shell contracts.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
@@ -80,9 +82,11 @@ or covered by shared contract tests.
 - Tokens are persisted locally and must never enter logs or fixtures.
 - Zsh completion queries the current Click tree on every Tab without loading
   business dependencies, reading credentials, accessing the network, or
-  creating configuration. Its installer owns only the private adapter and one
-  marked `.zshrc` block, rejects unsafe symbolic-link, marker, and concurrent
-  modification states, and rolls back files created by an incomplete install.
+  creating configuration. Each active conda environment owns only its adapter
+  and activation/deactivation hooks; environment switches unload the previous
+  Click function before loading the next. Legacy global `.zshrc` state migrates
+  only after confirmation. Exact-path uninstall preserves user configuration,
+  and a hook left after direct pip removal warns without mutating state.
 
 ## Repository ID Rules
 
