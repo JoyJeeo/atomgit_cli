@@ -5,20 +5,22 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `release preparation committed, merged locally, and ready for final delivery-record commit and yuto push`
+- Phase: `release workflow prepare succeeded; publish is waiting for required maintainer environment approval`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
 - Task commit: `ef0bbbd07ba29e4c14d6767bf417a8cce4e9055c chore(release): prepare 1.1.0`
 - Merge commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f merge: prepare 1.1.0 release`
-- Current HEAD before this delivery-record commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f`
+- Delivery-record commit: `8b784e9be4e4a152b24e497b2e002f89ca45b485 docs(ai): record 1.1.0 release preparation`
+- Publication source SHA: `8b784e9be4e4a152b24e497b2e002f89ca45b485`
+- Current yuto HEAD before this approval-gate checkpoint: `8b784e9be4e4a152b24e497b2e002f89ca45b485`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only for this final TASK.md delivery record; all release source changes are committed and merged`
+- Worktree state: `dirty only for this approval-gate TASK.md checkpoint; all release source changes are committed, merged, and pushed`
 - Changed paths: `.ai/TASK.md`
-- Last completed action: `committed ef0bbbd on local release/1.1.0 and merged it into yuto as 7dd4df0 without pushing the release branch`
-- Next exact action: `commit this delivery record, resolve the resulting exact yuto SHA, push only yuto, configure the protected release-approval environment, and dispatch the 1.1.0 workflow with that SHA`
-- Blockers: `publication is blocked until the release-approval GitHub environment is configured with a required maintainer reviewer; GitHub currently reports zero environments`
-- Tests run for this phase: `after review fixes, python tests/run_cli_baseline.py passed 73/73 in 103.28s; focused release workflow passed 25/25, development-floor passed 15/15, and wheel smoke passed 27/27 with atomgit 1.1.0 and Production/Stable metadata; compileall, bash/sh syntax, pip check, locked dependency versions/signatures, git diff --check, secret-pattern audit, exact four-asset inventory, all three SHA-256 entries, wheel/sdist content audit, and LICENSE identity passed`
+- Last completed action: `pushed only yuto through 8b784e9, configured release-approval with required reviewer JoyJeeo and yuto-only deployment policy, dispatched workflow run 31992068193 for source 8b784e9, and observed prepare complete successfully with publish waiting`
+- Next exact action: `maintainer inspects workflow run 31992068193 and approves the release-approval deployment in GitHub; then monitor publish to completion and perform remote asset, tag, Release, checksum, and fresh installation verification`
+- Blockers: `required human protected-environment approval is pending; the AI must not approve it through the API on the maintainer's behalf`
+- Tests run for this phase: `after review fixes, python tests/run_cli_baseline.py passed 73/73 in 103.28s; focused release workflow passed 25/25, development-floor passed 15/15, and wheel smoke passed 27/27 with atomgit 1.1.0 and Production/Stable metadata; compileall, bash/sh syntax, pip check, locked dependency versions/signatures, git diff --check, secret-pattern audit, exact four-asset inventory, all three SHA-256 entries, wheel/sdist content audit, and LICENSE identity passed; remote workflow prepare job 95277274983 passed input validation, exact yuto checkout/containment, build/checksum, and immutable artifact upload`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
