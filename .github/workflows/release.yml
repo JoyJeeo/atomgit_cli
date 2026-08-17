@@ -120,7 +120,7 @@ jobs:
             name=$(basename "$asset")
             if printf '%s\n' "$existing" | grep -Fxq "$name"; then
               local_digest=$(sha256sum "$asset" | awk '{print $1}')
-              remote_digest=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}/assets" --paginate --jq ".[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+              remote_digest=$(gh release view "${{ inputs.version }}" --json assets --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
               test -n "$remote_digest" && test "$remote_digest" = "$local_digest" || { echo "existing asset bytes differ: $name"; exit 1; }
               echo "asset already exists with identical bytes; keeping $name"
               continue
@@ -140,7 +140,7 @@ jobs:
           for asset in dist/*; do
             name=$(basename "$asset")
             local_digest=$(sha256sum "$asset" | awk '{print $1}')
-            remote_digest=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}/assets" --paginate --jq ".[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+            remote_digest=$(gh release view "${{ inputs.version }}" --json assets --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
             test -n "$remote_digest" && test "$remote_digest" = "$local_digest" || { echo "remote asset bytes differ after upload: $name"; exit 1; }
           done
           gh release edit "${{ inputs.version }}" --draft=false

@@ -5,7 +5,7 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `tagger-identity fix delivered; second workflow prepare succeeded and publish is waiting for required maintainer approval`
+- Phase: `supported digest-query draft-resume fix fully verified and independently approved; ready for commit, merge, push, and protected resume run`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
@@ -16,14 +16,15 @@ Status: `active`
 - Approval-gate checkpoint commit: `73d76663ec33156f14b04855aeeca59c363c9ce7 docs(ai): record 1.1.0 release approval gate`
 - Tagger-identity fix commit: `22bcaab fix(release): configure annotated tag identity`
 - Tagger-identity merge commit and publication source SHA: `444f5f30b1fb79c559e8b06dbcf055a0e755d0bd merge: fix release tag identity`
-- Current yuto HEAD before this second-approval checkpoint: `444f5f30b1fb79c559e8b06dbcf055a0e755d0bd`
+- Second-approval checkpoint commit: `2f4c09088da612df5c972b0fc72363a3ed1d19c0 docs(ai): record second 1.1.0 approval gate`
+- Current HEAD: `2f4c09088da612df5c972b0fc72363a3ed1d19c0`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only for this second-approval TASK.md checkpoint; the fix is committed, merged, and pushed`
-- Changed paths: `.ai/TASK.md`
-- Last completed action: `committed 22bcaab, merged and pushed only yuto at 444f5f3, dispatched new workflow run 31993162566 for that exact SHA, and observed prepare job 95280137530 succeed with publish waiting`
-- Next exact action: `maintainer approves release-approval for run 31993162566; then monitor publish and verify the annotated tag, completed Release, exact remote assets/digests, checksums, and fresh installation`
-- Blockers: `required human approval for the second protected deployment is pending; the prior run approval does not apply to a new workflow run`
-- Tests run for this phase: `remote run 31992068193 prepare succeeded and protected approval was recorded, but publish failed before tag creation with exit 128 and Committer identity unknown; post-fix release workflow contract passed 26/26, development-floor contract passed 15/15, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 85.80s`
+- Worktree state: `dirty only with the supported digest-query fix, focused workflow contract, and this TASK.md checkpoint`
+- Changed paths: `.ai/TASK.md`, `.github/workflows/release.yml`, `tests/test_release_workflow.py`
+- Last completed action: `independent review approved both supported digest lookups and the immutable-tag, same-byte draft resume path with no open findings`
+- Next exact action: `commit on local release/1.1.0, merge into yuto, push only yuto, and dispatch a new protected run whose source_sha remains the immutable tagged commit 444f5f3`
+- Blockers: `none; annotated tag 1.1.0 correctly peels to 444f5f3 and the Release remains a non-prerelease draft with the exact four assets and recorded digests`
+- Tests run for this phase: `run 31993162566 proved tag/draft/upload behavior but failed final digest lookup before publication; the supported gh release view digest query was confirmed read-only against the draft; post-fix release workflow contract passed 26/26, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 70.52s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
@@ -226,6 +227,10 @@ Status: `active`
 
 ## Review Record
 
+- Digest-query draft-resume review: `APPROVED; no findings. Both existing-asset
+  and final post-upload checks use the supported gh release view assets API,
+  the invalid endpoint is contractually absent, and the current tag/draft state
+  is safe to resume without deletion, replacement, or tag movement`.
 - Tagger-identity failure-fix review: `APPROVED; no findings. The exit-128
   diagnosis matches the failed step, the repository-local bot identity precedes
   annotated tag creation, global Git state is untouched, the focused regression
