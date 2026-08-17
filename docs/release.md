@@ -50,8 +50,10 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
 4. Actions 使用仓库局部的 `github-actions[bot]` 身份创建不可移动的
    annotated `X.Y.Z` tag，构建 wheel/sdist/checksum，先创建 draft Release 并验证
    资产，再转为公开 Release。
-5. 重跑只接受同名且字节相同的 tag/asset；不覆盖不同内容。未完成 draft 不会被
-   安装器的稳定 resolver 选择。
+5. 部分 draft 重跑只接受同名且字节相同的既有 asset；完整 draft 则下载并验证其
+   原始四个 asset、GitHub digest、`SHA256SUMS`、源码 LICENSE 和稳定 wheel/sdist 元数据后
+   原样继续发布。两种恢复都不覆盖或替换内容，未完成 draft 不会被安装器的稳定
+   resolver 选择。
 6. GitHub Release 正文来自精确发布 SHA 中的 `RELEASE_NOTES.md`，必须列出本版
    范围和已知限制，不得使用空说明发布。
 

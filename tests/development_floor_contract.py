@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 71
+BASELINE_INVARIANT_COUNT = 72
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -866,6 +866,11 @@ CAPABILITY_REGISTRY = {
             _invariant(
                 "PKG-007",
                 "Annotated release tags use a repository-local GitHub Actions bot identity without mutating global Git configuration.",
+                "test_release_workflow.py",
+            ),
+            _invariant(
+                "PKG-008",
+                "A complete draft Release is resumed only from its downloaded, checksummed, wheel-and-sdist-metadata-validated original assets, without rebuilding or replacing them.",
                 "test_release_workflow.py",
             ),
         ),

@@ -73,7 +73,9 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ inputs.source_sha }}
-          sparse-checkout: RELEASE_NOTES.md
+          sparse-checkout: |
+            RELEASE_NOTES.md
+            LICENSE
           sparse-checkout-cone-mode: false
       - name: Validate release notes identity
         run: |
@@ -115,7 +117,61 @@ jobs:
             gh release create "${{ inputs.version }}" --draft --title "AtomGit CLI ${{ inputs.version }}" --notes-file RELEASE_NOTES.md
           fi
           gh release edit "${{ inputs.version }}" --notes-file RELEASE_NOTES.md
+          expected=$(printf '%s\n' LICENSE SHA256SUMS "atomgit-${{ inputs.version }}-py3-none-any.whl" "atomgit-${{ inputs.version }}.tar.gz" | sort)
           existing=$(gh release view "${{ inputs.version }}" --json assets --jq '.assets[].name' || true)
+          unexpected=$(comm -13 <(printf '%s\n' "$expected") <(printf '%s\n' "$existing" | sort))
+          test -z "$unexpected" || { echo "draft Release contains unexpected assets"; exit 1; }
+          if [ "$(printf '%s\n' "$existing" | sort)" = "$expected" ]; then
+            mkdir remote-dist
+            gh release download "${{ inputs.version }}" --dir remote-dist
+            for asset in remote-dist/*; do
+              name=$(basename "$asset")
+              local_digest=$(sha256sum "$asset" | awk '{print $1}')
+              remote_digest=$(gh release view "${{ inputs.version }}" --json assets --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+              test -n "$remote_digest" && test "$remote_digest" = "$local_digest" || { echo "downloaded draft asset differs from its recorded digest: $name"; exit 1; }
+            done
+            (cd remote-dist && sha256sum --strict -c SHA256SUMS)
+            cmp LICENSE remote-dist/LICENSE
+            python - "remote-dist/SHA256SUMS" "remote-dist/atomgit-${{ inputs.version }}-py3-none-any.whl" "remote-dist/atomgit-${{ inputs.version }}.tar.gz" "${{ inputs.version }}" <<'PY'
+          import re
+          import sys
+          import tarfile
+          import zipfile
+          from pathlib import Path
+
+          checksum_path = Path(sys.argv[1])
+          wheel_path = Path(sys.argv[2])
+          sdist_path = Path(sys.argv[3])
+          version = sys.argv[4]
+          expected_names = {"LICENSE", f"atomgit-{version}-py3-none-any.whl", f"atomgit-{version}.tar.gz"}
+          entries = checksum_path.read_text(encoding="utf-8").splitlines()
+          names = []
+          for entry in entries:
+              match = re.fullmatch(r"[0-9a-f]{64}  ([^/]+)", entry)
+              assert match, f"invalid checksum entry: {entry!r}"
+              names.append(match.group(1))
+          assert set(names) == expected_names and len(names) == len(expected_names)
+          with zipfile.ZipFile(wheel_path) as archive:
+              metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+              text = archive.read(metadata).decode("utf-8")
+          assert "Name: atomgit\n" in text
+          assert f"Version: {version}\n" in text
+          assert "Classifier: Development Status :: 5 - Production/Stable\n" in text
+          with tarfile.open(sdist_path, "r:gz") as archive:
+              expected_metadata = f"atomgit-{version}/PKG-INFO"
+              members = [member for member in archive.getmembers() if member.name == expected_metadata]
+              assert len(members) == 1
+              package_info = archive.extractfile(members[0])
+              assert package_info is not None
+              text = package_info.read().decode("utf-8")
+          assert "Name: atomgit\n" in text
+          assert f"Version: {version}\n" in text
+          assert "Classifier: Development Status :: 5 - Production/Stable\n" in text
+          PY
+            echo "ASSET_DIR=remote-dist" >> "$GITHUB_ENV"
+            echo "complete draft verified; preserving and publishing its original assets"
+            exit 0
+          fi
           for asset in dist/*; do
             name=$(basename "$asset")
             if printf '%s\n' "$existing" | grep -Fxq "$name"; then
@@ -127,6 +183,7 @@ jobs:
             fi
             gh release upload "${{ inputs.version }}" "$asset"
           done
+          echo "ASSET_DIR=dist" >> "$GITHUB_ENV"
       - name: Verify exact assets and publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -137,7 +194,7 @@ jobs:
           expected_assets=$(printf '%s\n' LICENSE SHA256SUMS "atomgit-${{ inputs.version }}-py3-none-any.whl" "atomgit-${{ inputs.version }}.tar.gz" | sort)
           actual_assets=$(gh release view "${{ inputs.version }}" --json assets --jq '.assets[].name' | sort)
           test "$actual_assets" = "$expected_assets" || { echo "remote Release asset set differs from the exact expected set"; exit 1; }
-          for asset in dist/*; do
+          for asset in "$ASSET_DIR"/*; do
             name=$(basename "$asset")
             local_digest=$(sha256sum "$asset" | awk '{print $1}')
             remote_digest=$(gh release view "${{ inputs.version }}" --json assets --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')

@@ -115,9 +115,29 @@ def main():
             "remote Release asset set differs from the exact expected set" in text
             and "remote asset bytes differ after upload" in text
             and "releases/tags/${{ inputs.version }}/assets" not in text
-            and text.count('.assets[] | select(.name == \\"$name\\") | .digest') == 2
+            and text.count('.assets[] | select(.name == \\"$name\\") | .digest') == 3
             and text.index("remote asset bytes differ after upload")
             < text.index('gh release edit "${{ inputs.version }}" --draft=false'),
+        )
+        check(
+            "complete drafts preserve and validate their original assets",
+            'gh release download "${{ inputs.version }}" --dir remote-dist' in text
+            and "downloaded draft asset differs from its recorded digest" in text
+            and "sha256sum --strict -c SHA256SUMS" in text
+            and "cmp LICENSE remote-dist/LICENSE" in text
+            and 'tarfile.open(sdist_path, "r:gz")' in text
+            and 'expected_metadata = f"atomgit-{version}/PKG-INFO"' in text
+            and "member.name == expected_metadata" in text
+            and 'echo "ASSET_DIR=remote-dist" >> "$GITHUB_ENV"' in text
+            and 'for asset in "$ASSET_DIR"/*' in text
+            and "Production/Stable" in text
+            and "--clobber" not in text,
+        )
+        check(
+            "partial drafts reject unexpected assets and retain same-byte checks",
+            "draft Release contains unexpected assets" in text
+            and "existing asset bytes differ" in text
+            and 'echo "ASSET_DIR=dist" >> "$GITHUB_ENV"' in text,
         )
         check("release workflow refuses mismatched existing assets", "existing asset bytes differ" in text and "--clobber" not in text)
 

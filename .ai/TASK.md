@@ -5,9 +5,9 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `digest-query fix delivered; third workflow prepare succeeded and protected draft-resume publish awaits maintainer approval`
+- Phase: `immutable complete-draft recovery fully reverified and independently approved; ready for commit, merge, push, and protected resume run`
 - Base branch: `yuto`
-- Task branch: `release/1.1.0` (local only; never push)
+- Task branch: `release/1.1.0-draft-resume` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
 - Task commit: `ef0bbbd07ba29e4c14d6767bf417a8cce4e9055c chore(release): prepare 1.1.0`
 - Merge commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f merge: prepare 1.1.0 release`
@@ -19,14 +19,15 @@ Status: `active`
 - Second-approval checkpoint commit: `2f4c09088da612df5c972b0fc72363a3ed1d19c0 docs(ai): record second 1.1.0 approval gate`
 - Digest-query fix commit: `5edea99 fix(release): use supported asset digest query`
 - Digest-query merge commit: `90ef14239619d5a67892e28d89b3881a6d06562b merge: fix release asset verification`
-- Current yuto HEAD before this third-approval checkpoint: `90ef14239619d5a67892e28d89b3881a6d06562b`
+- Third-approval checkpoint commit: `61d18e214383db0446454cc8eeb6b104494270fd docs(ai): record third 1.1.0 approval gate`
+- Current yuto HEAD: `61d18e214383db0446454cc8eeb6b104494270fd`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only for this third-approval TASK.md checkpoint; digest fix is committed, merged, and pushed`
-- Changed paths: `.ai/TASK.md`
-- Last completed action: `committed 5edea99, merged and pushed only yuto at 90ef142, dispatched run 31996384445 using immutable source_sha 444f5f3, and observed prepare job 95288667604 succeed`
-- Next exact action: `maintainer approves release-approval for run 31996384445; then monitor same-byte draft resume through public Release and complete post-publication verification`
-- Blockers: `required human approval for the third protected deployment is pending; each new workflow run requires its own approval`
-- Tests run for this phase: `run 31993162566 proved tag/draft/upload behavior but failed final digest lookup before publication; the supported gh release view digest query was confirmed read-only against the draft; post-fix release workflow contract passed 26/26, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 70.52s`
+- Worktree state: `dirty on local-only release/1.1.0-draft-resume with the complete-draft immutable recovery fix in progress`
+- Changed paths: `.github/workflows/release.yml`, `tests/test_release_workflow.py`, `tests/development_floor_contract.py`, `docs/release.md`, `.ai/DEVELOPMENT_FLOOR.md`, `.ai/TESTING.md`, `.ai/TASK.md`
+- Last completed action: `resolved the review P2 with exact root sdist PKG-INFO validation, reran all mandatory checks, and received final independent approval with no open findings`
+- Next exact action: `commit on local release/1.1.0-draft-resume, merge into yuto, push only yuto, and dispatch another protected resume run using immutable source_sha 444f5f3`
+- Blockers: `none for local repair; the next workflow run will require a new maintainer approval`
+- Tests run for this phase: `run 31996384445 prepare succeeded and publish stopped before mutation on SHA256SUMS mismatch; final real draft recovery simulation passed all GitHub digest, strict SHA256SUMS, source LICENSE, wheel metadata, and root sdist PKG-INFO checks; release workflow contract passed 28/28, development-floor contract passed 15/15 with 26 capabilities and 72 invariants, shell syntax passed, final python tests/run_cli_baseline.py passed 73/73 in 61.90s, compileall, pip check, and git diff --check passed`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
@@ -188,6 +189,9 @@ Status: `active`
   basenames, so strict installer validation accepts the published wheel.
 - `REL-110-007`: a fresh runner can create the annotated stable tag because the
   workflow configures its repository-local tagger identity before `git tag -a`.
+- `PKG-008`: a complete draft is resumed only after downloading and validating
+  its original exact assets, checksums, and stable wheel/sdist metadata; reruns do not
+  require nondeterministic rebuild bytes to match and never replace draft assets.
 
 ## Acceptance Criteria
 
@@ -229,6 +233,12 @@ Status: `active`
 
 ## Review Record
 
+- Complete-draft immutable recovery review: `APPROVED after one P2 correction;
+  the initial review required direct sdist PKG-INFO identity and stable-classifier
+  validation in addition to wheel metadata. The final path validates exact asset
+  inventory, GitHub digests, strict checksums, source LICENSE, wheel and root
+  sdist metadata, preserves original bytes without replacement, and keeps partial
+  drafts fail-closed. No open findings`.
 - Digest-query draft-resume review: `APPROVED; no findings. Both existing-asset
   and final post-upload checks use the supported gh release view assets API,
   the invalid endpoint is contractually absent, and the current tag/draft state
