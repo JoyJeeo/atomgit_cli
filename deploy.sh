@@ -97,10 +97,11 @@ checksums() {
         echo -e "${RED}✗ 未找到 AtomGit wheel${NC}"
         exit 1
     fi
+    wheel_name=$(basename "$wheel_file")
     if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$wheel_file" > dist/SHA256SUMS
+        (cd dist && sha256sum "$wheel_name") > dist/SHA256SUMS
     else
-        shasum -a 256 "$wheel_file" > dist/SHA256SUMS
+        (cd dist && shasum -a 256 "$wheel_name") > dist/SHA256SUMS
     fi
     echo -e "${GREEN}✓ 已生成 dist/SHA256SUMS；仅供 GitHub Release 审核使用${NC}"
 }

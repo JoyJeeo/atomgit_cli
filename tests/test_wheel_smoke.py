@@ -106,6 +106,12 @@ def main():
             )
         classifiers = wheel_metadata.get_all("Classifier", [])
         check(
+            "wheel declares the stable development status",
+            "Development Status :: 5 - Production/Stable" in classifiers
+            and "Development Status :: 4 - Beta" not in classifiers,
+            repr(classifiers),
+        )
+        check(
             "wheel requires Python 3.9 or newer",
             wheel_metadata.get("Requires-Python") == ">=3.9",
             repr(wheel_metadata.get("Requires-Python")),

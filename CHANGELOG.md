@@ -6,10 +6,37 @@ PyPI releases.
 
 ## Unreleased
 
-- Add dynamic Zsh completion, a lightweight completion import path, and default
-  completion setup in the checksummed official installer.
-- Make CLI directory uploads resumable by default, add `--no-resumable`, and
-  support `--path-in-repo` through stable local large-folder projections.
+## 1.1.0 - 2026-08-17
+
+- Harden resumable model and dataset uploads with exact AtomGit endpoint and
+  target validation, bounded commit retries, configurable batches, lifecycle
+  progress, and recovery for persistently slow LFS flows.
+- Automatically repair and synchronize repository Git LFS policy, emit
+  canonical pointers, bound preupload failures, and ignore macOS metadata by
+  default during directory uploads.
+- Add dynamic Zsh completion with a lightweight import path and default managed
+  completion setup in the checksummed ordinary-user installer.
+- Establish the executable development-floor registry and mandatory complete
+  offline baseline for CLI, SDK, dependency, packaging, security, and
+  portability invariants.
+- Standardize GitHub Release as the only official publication channel, with a
+  single authoritative version source, immutable pure-numeric tags, protected
+  manual publication, checksummed wheel installation, and `atomgit update`.
+- Separate ordinary wheel installation and updates from the documented
+  Git/conda/editable source-development workflow.
+
+Known limitations:
+
+- `install.sh` supports POSIX/macOS/Linux; Windows installation uses the
+  checksummed universal wheel procedure documented in the README.
+- Source/editable installations must update through Git and are intentionally
+  refused by `atomgit update`.
+- Update verification provides an exact recovery command, but arbitrary
+  third-party dependency rollback is not atomic; isolated environments remain
+  recommended.
+- GitHub Release discovery is subject to GitHub API availability and rate
+  limits and never falls back to PyPI, a branch archive, or historical `v...`
+  Releases.
 
 ## 1.0.6 - 2026-08-08
 

@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 69
+BASELINE_INVARIANT_COUNT = 70
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -857,6 +857,11 @@ CAPABILITY_REGISTRY = {
                 "Local packaging helpers contain no AtomGit PyPI or twine publication path; publication is manual protected workflow only.",
                 "test_release_workflow.py",
                 "test_deploy_script.py",
+            ),
+            _invariant(
+                "PKG-006",
+                "The protected publication job checks out the exact release source, publishes version-matched notes, rejects public-release mutation, and verifies the exact remote asset set and bytes before publication.",
+                "test_release_workflow.py",
             ),
         ),
         (
