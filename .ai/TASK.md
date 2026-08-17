@@ -5,7 +5,7 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `post-publication installer redirect and explicit-version validation repair implemented and reverified; ready for local delivery decision`
+- Phase: `post-publication installer redirect and explicit-version validation repair merged, pushed, and remotely reverified; awaiting human acceptance`
 - Base branch: `yuto`
 - Task branch: `fix/installer-release-redirect` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
@@ -20,14 +20,16 @@ Status: `active`
 - Digest-query fix commit: `5edea99 fix(release): use supported asset digest query`
 - Digest-query merge commit: `90ef14239619d5a67892e28d89b3881a6d06562b merge: fix release asset verification`
 - Third-approval checkpoint commit: `61d18e214383db0446454cc8eeb6b104494270fd docs(ai): record third 1.1.0 approval gate`
-- Current yuto HEAD: `47bdb0a752f073925f176153c7a08932dca7e23a`
+- Installer repair commit: `5eb1177177543e6e471243f98c754199690e1a17 fix(install): allow GitHub release asset redirects`
+- Installer repair merge commit: `777b719653496c3352fff8f7015fed39c157fc03 merge: fix installer release redirects`
+- Current yuto HEAD: `777b719653496c3352fff8f7015fed39c157fc03`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty on local-only fix/installer-release-redirect with two installer compatibility fixes in progress`
+- Worktree state: `clean on yuto, synchronized with github/yuto after the installer repair merge`
 - Changed paths: `install.sh`, `tests/test_installer.py`, `.ai/TASK.md`
-- Last completed action: `real temporary-venv installation from the public 1.1.0 Release passed after allowing release-assets.githubusercontent.com and fixing explicit stable-version validation`
-- Next exact action: `complete independent review, then commit locally; pushing the yuto installer source requires the maintainer's delivery authorization`
-- Blockers: `none for local verification; the immutable 1.1.0 tag cannot be changed, so the repaired installer must be delivered through a mutable development branch or a future release`
-- Tests run for this phase: `tests/test_installer.py passed 14/14; real temporary-venv install from GitHub Release 1.1.0 passed with python -m atomgit reporting 1.1.0; shell syntax, compileall, and git diff --check passed; final python tests/run_cli_baseline.py passed 73/73 in 61.01s`
+- Last completed action: `downloaded the pushed yuto installer from raw.githubusercontent.com into a fresh temporary venv and verified both python -m atomgit --version and atomgit --version report 1.1.0`
+- Next exact action: `maintainer retries the yuto installer command and accepts or reports the observed result`
+- Blockers: `none; immutable 1.1.0 tag and Release assets remain unchanged, while the repaired bootstrap is delivered from yuto`
+- Tests run for this phase: `tests/test_installer.py passed 14/14; local and pushed-yuto temporary-venv installations from GitHub Release 1.1.0 passed with both entry points reporting 1.1.0; shell syntax, compileall, pip check, and git diff --check passed; final python tests/run_cli_baseline.py passed 73/73 in 61.01s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
