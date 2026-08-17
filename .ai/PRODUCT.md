@@ -6,7 +6,7 @@
 - CLI command: `atomgit`
 - Python imports: `atomgit` and compatibility module `atomgit_hub`
 - Development mainline: `yuto`
-- Current package version: `1.0.5+yuto.1`
+- Current package version: `1.1.0`
 
 ## Users
 
@@ -49,8 +49,10 @@ every remote path is verified; known status follows the interface list.
 - Explicit branch creation and CLI upload to existing non-main branches
 - Configuration-state display
 - Dynamic Zsh command, nested-command, option, choice, and local-path
-  completion, with default setup through the official installer and explicit
-  show/install/uninstall management
+  completion owned by the active conda environment, with default setup through
+  the official installer and explicit show/install/uninstall management
+- Confirmed current-interpreter package uninstall plus an official curl cleanup
+  path that preserves user configuration and handles prior direct pip removal
 
 ### Python SDK
 

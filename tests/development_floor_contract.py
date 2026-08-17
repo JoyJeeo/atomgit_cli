@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 72
+BASELINE_INVARIANT_COUNT = 78
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -139,6 +139,12 @@ CAPABILITY_REGISTRY = {
                 "test_update.py",
                 "test_cli_feature_baseline.py",
             ),
+            _invariant(
+                "CLI-005",
+                "The public uninstall command shows interpreter, environment, version, and exact managed targets before confirmation or automated dispatch.",
+                "test_uninstaller.py",
+                "test_cli_feature_baseline.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
@@ -147,6 +153,7 @@ CAPABILITY_REGISTRY = {
             "test_shell_completion.py",
             "test_wheel_smoke.py",
             "test_update.py",
+            "test_uninstaller.py",
         ),
         ("docs/cli_feature_baseline.md", "docs/testing.md"),
         ("offline-contract", "packaging-smoke"),
@@ -173,12 +180,19 @@ CAPABILITY_REGISTRY = {
                 "Update dispatch targets the running interpreter and refuses source installations without Git mutation.",
                 "test_update.py",
             ),
+            _invariant(
+                "DISPATCH-004",
+                "Uninstall dispatch confirms by default and passes only the displayed current-interpreter plan to package removal.",
+                "test_uninstaller.py",
+                "test_cli_feature_baseline.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
             "test_cli_surface.py",
             "test_cli_baseline_guard.py",
             "test_update.py",
+            "test_uninstaller.py",
         ),
         ("docs/cli_feature_baseline.md",),
     ),
@@ -873,6 +887,21 @@ CAPABILITY_REGISTRY = {
                 "A complete draft Release is resumed only from its downloaded, checksummed, wheel-and-sdist-metadata-validated original assets, without rebuilding or replacing them.",
                 "test_release_workflow.py",
             ),
+            _invariant(
+                "PKG-009",
+                "Conda activation and deactivation hooks load and unload only the active environment's Click-derived Zsh completion.",
+                "test_shell_completion.py",
+            ),
+            _invariant(
+                "PKG-010",
+                "Official CLI and curl uninstall paths are idempotent, remove only exact package-managed environment files, and preserve user data.",
+                "test_uninstaller.py",
+            ),
+            _invariant(
+                "PKG-011",
+                "An activation hook left after direct pip removal emits the exact recovery warning without filesystem mutation.",
+                "test_shell_completion.py",
+            ),
         ),
         (
             "test_deploy_script.py",
@@ -880,6 +909,7 @@ CAPABILITY_REGISTRY = {
             "test_shell_completion.py",
             "test_release_workflow.py",
             "test_wheel_smoke.py",
+            "test_uninstaller.py",
         ),
         ("docs/release.md", "docs/testing.md"),
         ("offline-contract", "packaging-smoke"),
@@ -908,6 +938,11 @@ CAPABILITY_REGISTRY = {
                 "The bootstrap selects an explicit or supported Python 3.9+ interpreter without requiring conda, while update uses sys.executable.",
                 "test_installer.py",
                 "test_update.py",
+            ),
+            _invariant(
+                "PORT-004",
+                "Non-conda installation remains supported and skips conda-only completion with accurate guidance.",
+                "test_installer.py",
             ),
         ),
         (
@@ -974,10 +1009,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "69 条可观察行为不变量",
-        "73 个隔离 pytest case",
+        "78 条可观察行为不变量",
+        "74 个隔离 pytest case",
     ),
-    "docs/testing.md": ("73 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("74 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

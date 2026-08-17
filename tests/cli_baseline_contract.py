@@ -134,6 +134,18 @@ EXPECTED_PUBLIC_SCHEMA = {
             ),
         ),
     },
+    ("uninstall",): {
+        "kind": "command",
+        "params": (
+            _option(
+                "yes",
+                "--yes",
+                default=False,
+                parameter_type=("bool",),
+                is_flag=True,
+            ),
+        ),
+    },
     ("login",): {
         "kind": "command",
         "params": (
@@ -413,6 +425,7 @@ for _command_spec in EXPECTED_PUBLIC_SCHEMA.values():
 
 LEAF_DISPATCH_PATHS = (
     ("update",),
+    ("uninstall",),
     ("login",),
     ("logout",),
     ("whoami",),
@@ -443,6 +456,7 @@ BASELINE_TEST_GROUPS = {
         "test_cli_surface.py",
         "test_shell_completion.py",
         "test_update.py",
+        "test_uninstaller.py",
     ),
     "cache": (
         "test_cache_clear.py",
@@ -527,10 +541,10 @@ BASELINE_TEST_GROUPS = {
 }
 
 
-BASELINE_PUBLIC_COMMAND_COUNT = 22
-BASELINE_PUBLIC_PARAMETER_COUNT = 47
-BASELINE_LEAF_COMMAND_COUNT = 17
-BASELINE_TEST_SCRIPT_COUNT = 73
+BASELINE_PUBLIC_COMMAND_COUNT = 23
+BASELINE_PUBLIC_PARAMETER_COUNT = 48
+BASELINE_LEAF_COMMAND_COUNT = 18
+BASELINE_TEST_SCRIPT_COUNT = 74
 
 
 def _normalize_default(value):

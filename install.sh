@@ -239,17 +239,21 @@ print("Package and command verification passed.")
 PY
 
 if [ "$install_completion" -eq 1 ]; then
-    case "${SHELL:-}" in
-        */zsh)
-            if "$python_bin" -m atomgit completion install --shell zsh; then
-                echo "Zsh completion installed successfully."
-            else
-                echo "warning: AtomGit CLI was installed, but Zsh completion setup failed" >&2
-                echo "warning: retry with: $python_bin -m atomgit completion install --shell zsh" >&2
-            fi
-            ;;
-        *)
-            echo "Shell is not Zsh; completion setup skipped."
-            ;;
-    esac
+    if [ -n "${CONDA_PREFIX:-}" ] && [ -x "$CONDA_PREFIX/bin/python" ] && [ "$python_bin" -ef "$CONDA_PREFIX/bin/python" ]; then
+        case "${SHELL:-}" in
+            */zsh)
+                if "$python_bin" -m atomgit completion install --shell zsh; then
+                    echo "Zsh completion installed for the active conda environment."
+                else
+                    echo "warning: AtomGit CLI was installed, but conda-scoped Zsh completion setup failed" >&2
+                    echo "warning: retry interactively with: $python_bin -m atomgit completion install --shell zsh" >&2
+                fi
+                ;;
+            *)
+                echo "Shell is not Zsh; completion setup skipped."
+                ;;
+        esac
+    else
+        echo "Selected Python is not an active conda environment; environment-only Zsh completion was skipped."
+    fi
 fi

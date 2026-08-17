@@ -66,8 +66,9 @@ sh install.sh --python /absolute/path/to/python --force-reinstall
 
 `--python`、`--version`、`--force-reinstall` 和 `--no-completion` 可以组合。安装
 成功只会在目标解释器通过版本、CLI、模块和导入验证后报告；输出还会显示解释器、包
-位置、命令目录和 PATH 可见性。Zsh 下官方安装器默认启用 AtomGit 补全；设置失败是
-可见的非致命警告。
+位置、命令目录和 PATH 可见性。目标解释器属于当前活动 conda 环境且使用 Zsh 时，
+官方安装器默认启用该环境自己的 AtomGit 补全；非 conda/venv 安装会准确说明已跳过，
+设置失败是可见的非致命警告。
 
 历史 `v...` Release 保留为不可变记录，但新安装器不会选择它们。没有已完成的
 纯数字 Release 时安装会失败，不会回退到分支源码、归档或 PyPI。
@@ -108,6 +109,20 @@ python -m pip install -e .
 ```
 
 AtomGit CLI 不发布到 PyPI；pip 仍可从用户配置的索引解析第三方依赖。
+
+### 官方卸载
+
+普通用户使用官方入口完整卸载当前解释器中的包和当前 conda 环境的受控补全：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/uninstall.sh | sh
+```
+
+也可直接运行 `atomgit uninstall`；该命令先显示解释器、环境根目录、版本和受控
+目标，再要求确认。`--yes` 仅供官方非交互脚本使用。卸载不会删除
+`~/.atomgit/config.json`、凭证、缓存或仓库。直接执行 `python -m pip uninstall
+atomgit` 不是官方完整卸载路径；若环境补全仍存在，下次 conda 激活会只打印清理
+指引，直到执行上述官方命令为止。
 
 ### 虚拟环境推荐
 
@@ -460,7 +475,7 @@ atomgit download-file your-username/your-dataset data/sample.csv \
 
 #### Zsh 命令补全
 
-官方安装器默认为 Zsh 启用补全。源码、wheel 或直接 pip 安装可手动执行：
+官方安装器在活动 conda + Zsh 环境中默认启用补全。可手动执行：
 
 ```bash
 atomgit completion install --shell zsh
@@ -475,10 +490,12 @@ atomgit completion show zsh
 atomgit completion uninstall --shell zsh
 ```
 
-安装只管理 `~/.atomgit/completions/atomgit.zsh` 和 `.zshrc` 中带 AtomGit 起止
-标记的配置块，并在首次修改已有配置时保留 `.zshrc.atomgit.bak`。为避免破坏
-dotfiles 管理，符号链接、畸形标记或操作期间发生的并发修改会被拒绝并返回非零；
-安装中途失败会回滚本次写入的补全脚本和新建备份。
+安装只管理当前 `CONDA_PREFIX` 下的 adapter、`activate.d` hook 和 `deactivate.d`
+hook；激活环境时加载该环境的实时 schema，停用时先解除 `_atomgit_completion`
+和 `compdef` 绑定。非 conda 环境不会写全局补全或 `.zshrc`。若检测到 1.1.0 的
+旧版全局补全，会先说明迁移内容并要求明确确认；迁移保留 `.zshrc.atomgit.bak`
+和全部无关配置。受控路径中的符号链接、非普通文件或并发修改会失败关闭，安装
+中途失败会回滚本次环境文件。
 
 #### 列出当前用户可访问的仓库
 
@@ -883,6 +900,7 @@ atomgit/
 ├── api.py               # Hugging Face Hub API客户端
 ├── cli_contracts.py     # CLI与运行时共享的轻量常量
 ├── completion.py        # Zsh补全生成与安全安装
+├── uninstaller.py       # 环境受控文件和包卸载策略
 ├── config.py            # 配置管理
 ├── runtime.py           # 共享HF端点和缓存策略
 ├── exceptions.py        # SDK异常类型
@@ -891,6 +909,7 @@ atomgit/
 ├── requirements.txt     # 依赖包
 ├── setup.py             # 包安装配置
 ├── deploy.sh            # 构建/安装/发布脚本
+├── install.sh / uninstall.sh # 官方普通用户安装与卸载入口
 ├── tests/               # 集成测试（upload 各能力）
 └── README.md            # 说明文档
 ```
