@@ -5,7 +5,7 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `supported digest-query draft-resume fix fully verified and independently approved; ready for commit, merge, push, and protected resume run`
+- Phase: `digest-query fix delivered; third workflow prepare succeeded and protected draft-resume publish awaits maintainer approval`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
@@ -17,13 +17,15 @@ Status: `active`
 - Tagger-identity fix commit: `22bcaab fix(release): configure annotated tag identity`
 - Tagger-identity merge commit and publication source SHA: `444f5f30b1fb79c559e8b06dbcf055a0e755d0bd merge: fix release tag identity`
 - Second-approval checkpoint commit: `2f4c09088da612df5c972b0fc72363a3ed1d19c0 docs(ai): record second 1.1.0 approval gate`
-- Current HEAD: `2f4c09088da612df5c972b0fc72363a3ed1d19c0`
+- Digest-query fix commit: `5edea99 fix(release): use supported asset digest query`
+- Digest-query merge commit: `90ef14239619d5a67892e28d89b3881a6d06562b merge: fix release asset verification`
+- Current yuto HEAD before this third-approval checkpoint: `90ef14239619d5a67892e28d89b3881a6d06562b`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with the supported digest-query fix, focused workflow contract, and this TASK.md checkpoint`
-- Changed paths: `.ai/TASK.md`, `.github/workflows/release.yml`, `tests/test_release_workflow.py`
-- Last completed action: `independent review approved both supported digest lookups and the immutable-tag, same-byte draft resume path with no open findings`
-- Next exact action: `commit on local release/1.1.0, merge into yuto, push only yuto, and dispatch a new protected run whose source_sha remains the immutable tagged commit 444f5f3`
-- Blockers: `none; annotated tag 1.1.0 correctly peels to 444f5f3 and the Release remains a non-prerelease draft with the exact four assets and recorded digests`
+- Worktree state: `dirty only for this third-approval TASK.md checkpoint; digest fix is committed, merged, and pushed`
+- Changed paths: `.ai/TASK.md`
+- Last completed action: `committed 5edea99, merged and pushed only yuto at 90ef142, dispatched run 31996384445 using immutable source_sha 444f5f3, and observed prepare job 95288667604 succeed`
+- Next exact action: `maintainer approves release-approval for run 31996384445; then monitor same-byte draft resume through public Release and complete post-publication verification`
+- Blockers: `required human approval for the third protected deployment is pending; each new workflow run requires its own approval`
 - Tests run for this phase: `run 31993162566 proved tag/draft/upload behavior but failed final digest lookup before publication; the supported gh release view digest query was confirmed read-only against the draft; post-fix release workflow contract passed 26/26, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 70.52s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
