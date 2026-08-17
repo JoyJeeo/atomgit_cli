@@ -5,7 +5,7 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `tagger-identity failure fix fully verified and independently approved; ready for commit, merge, push, and new protected run`
+- Phase: `tagger-identity fix delivered; second workflow prepare succeeded and publish is waiting for required maintainer approval`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
@@ -14,13 +14,15 @@ Status: `active`
 - Delivery-record commit: `8b784e9be4e4a152b24e497b2e002f89ca45b485 docs(ai): record 1.1.0 release preparation`
 - Publication source SHA: `8b784e9be4e4a152b24e497b2e002f89ca45b485`
 - Approval-gate checkpoint commit: `73d76663ec33156f14b04855aeeca59c363c9ce7 docs(ai): record 1.1.0 release approval gate`
-- Current HEAD: `73d76663ec33156f14b04855aeeca59c363c9ce7`
+- Tagger-identity fix commit: `22bcaab fix(release): configure annotated tag identity`
+- Tagger-identity merge commit and publication source SHA: `444f5f30b1fb79c559e8b06dbcf055a0e755d0bd merge: fix release tag identity`
+- Current yuto HEAD before this second-approval checkpoint: `444f5f30b1fb79c559e8b06dbcf055a0e755d0bd`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with the tagger-identity fix, its focused contract and development-floor record, release documentation, and this TASK.md checkpoint`
-- Changed paths: `.ai/DEVELOPMENT_FLOOR.md`, `.ai/TASK.md`, `.github/workflows/release.yml`, `docs/release.md`, `tests/development_floor_contract.py`, `tests/test_release_workflow.py`
-- Last completed action: `independent review approved the failure diagnosis, repository-local identity fix, regression, documentation, and no-state recovery path with no open findings`
-- Next exact action: `commit the fix on local release/1.1.0, merge it into yuto, push only yuto, verify remote tag/Release remain absent, and dispatch a new protected run using the exact merged yuto SHA`
-- Blockers: `none; the failed run left no remote tag, draft, public Release, or uploaded Release asset`
+- Worktree state: `dirty only for this second-approval TASK.md checkpoint; the fix is committed, merged, and pushed`
+- Changed paths: `.ai/TASK.md`
+- Last completed action: `committed 22bcaab, merged and pushed only yuto at 444f5f3, dispatched new workflow run 31993162566 for that exact SHA, and observed prepare job 95280137530 succeed with publish waiting`
+- Next exact action: `maintainer approves release-approval for run 31993162566; then monitor publish and verify the annotated tag, completed Release, exact remote assets/digests, checksums, and fresh installation`
+- Blockers: `required human approval for the second protected deployment is pending; the prior run approval does not apply to a new workflow run`
 - Tests run for this phase: `remote run 31992068193 prepare succeeded and protected approval was recorded, but publish failed before tag creation with exit 128 and Committer identity unknown; post-fix release workflow contract passed 26/26, development-floor contract passed 15/15, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 85.80s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
