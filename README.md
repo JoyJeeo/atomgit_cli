@@ -60,7 +60,7 @@ python -m pip install -e .
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh -o install.sh
 sh install.sh
-sh install.sh --version 1.1.0
+sh install.sh --version 1.1.1
 sh install.sh --python /absolute/path/to/python --force-reinstall
 ```
 
@@ -77,7 +77,7 @@ sh install.sh --python /absolute/path/to/python --force-reinstall
 
 ```bash
 atomgit update
-atomgit update --version 1.1.0
+atomgit update --version 1.1.1
 atomgit update --force-reinstall
 ```
 

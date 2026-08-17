@@ -5,14 +5,18 @@ Status: active
 ## Handoff Snapshot
 
 - Updated: 2026-08-17 +0800
-- Phase: implementation accepted, independently reviewed, and fully verified;
-  ready for authorized task-branch commit and local merge into yuto
+- Phase: 1.1.1 release identity independently reviewed and fully verified;
+  ready for the authorized local release commit and yuto merge
 - Base branch: yuto
 - Proposed task branch: feature/conda-completion-uninstall (local only; never
   push the task branch)
 - Base commit: 8dac686c68b4a141bbdcfa5f23e3fdd8a283a531
 - Task branch: feature/conda-completion-uninstall (local only; never push)
-- Current HEAD: 8dac686c68b4a141bbdcfa5f23e3fdd8a283a531
+- Task commit: f6081b60560c161994c106bbcefbe2f0990761f3
+- Local yuto merge: 78bc92a09d20e8ccd017e5752116f4f67e97a407
+  (not pushed yet)
+- Release branch: release/1.1.1 (local only; never push)
+- Current HEAD before release edits: 78bc92a
 - Worktree: /Users/yutaozhang/yuto/codes/atomgit_cli
 - Worktree state before this handoff edit: clean on yuto and synchronized with
   github/yuto
@@ -27,8 +31,8 @@ Status: active
 - Last completed action: resolved two independent-review rounds of findings,
   passed the third review with APPROVED, and reran the complete baseline and
   static gates after the final symlink-parent fix
-- Next exact action: create the authorized conventional task commit, merge it
-  locally into yuto, then create local release/1.1.1 from that exact yuto SHA
+- Next exact action: create the conventional local release commit, merge it
+  into yuto, rerun the post-merge gate, and push only yuto
 - Blockers: none for local development
 - Tests run for this Issue: focused completion 19/19, installer contracts,
   uninstaller 14/14, updater contracts, wheel smoke 28/28, development-floor
@@ -383,3 +387,13 @@ acknowledge itself.
 - Release boundary: maintainer selected and authorized 1.1.1; release identity
   and notes will be prepared on a separate local release branch only after this
   Issue is reviewed and merged locally into yuto.
+- Release-preparation evidence: version.py, wheel metadata, Release Notes, and
+  workflow input all resolve to 1.1.1; release workflow contract passed 28
+  checks, wheel smoke passed 28/28, focused installer/uninstaller checks passed,
+  and the complete baseline passed 74 cases in 66.47 seconds. Pip check,
+  compileall, shell syntax, and diff check passed after the final release edit.
+- Release review: APPROVED with no findings. Historical 1.1.0 references are
+  intentional release/migration facts; version.py, built wheel metadata,
+  Release Notes, CHANGELOG, and current-version docs agree on 1.1.1. Protected
+  tag, public-Release rejection, draft-resume, exact-asset, checksum, and
+  release-note workflow contracts remain executable and passing.
