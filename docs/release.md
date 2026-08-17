@@ -47,8 +47,9 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
 2. 从明确的 `yuto` SHA 创建本地 `release/X.Y.Z` 准备分支，合并回 `yuto` 后才发布。
 3. 维护者手动启动 `.github/workflows/release.yml`，输入版本和精确 SHA；workflow
    使用受保护的 `release-approval` 环境。
-4. Actions 创建不可移动的 annotated `X.Y.Z` tag，构建 wheel/sdist/checksum，先
-   创建 draft Release 并验证资产，再转为公开 Release。
+4. Actions 使用仓库局部的 `github-actions[bot]` 身份创建不可移动的
+   annotated `X.Y.Z` tag，构建 wheel/sdist/checksum，先创建 draft Release 并验证
+   资产，再转为公开 Release。
 5. 重跑只接受同名且字节相同的 tag/asset；不覆盖不同内容。未完成 draft 不会被
    安装器的稳定 resolver 选择。
 6. GitHub Release 正文来自精确发布 SHA 中的 `RELEASE_NOTES.md`，必须列出本版

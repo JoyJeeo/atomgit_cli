@@ -75,6 +75,14 @@ def main():
         text = workflow.read_text(encoding="utf-8")
         check("release workflow is manual", "workflow_dispatch:" in text)
         check("release workflow creates annotated stable tags", "git tag -a" in text and "v${" not in text)
+        check(
+            "annotated tags use the repository-local Actions identity",
+            'git config --local user.name "github-actions[bot]"' in text
+            and 'git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"'
+            in text
+            and text.index('git config --local user.name "github-actions[bot]"')
+            < text.index("git tag -a"),
+        )
         check("release workflow has no PyPI or token write path", "twine" not in text and "atomgitsdktoken" not in text)
         check("release workflow pauses in a protected environment", "release-approval" in text and "contents: write" in text)
         check(

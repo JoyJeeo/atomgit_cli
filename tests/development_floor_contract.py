@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 70
+BASELINE_INVARIANT_COUNT = 71
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -861,6 +861,11 @@ CAPABILITY_REGISTRY = {
             _invariant(
                 "PKG-006",
                 "The protected publication job checks out the exact release source, publishes version-matched notes, rejects public-release mutation, and verifies the exact remote asset set and bytes before publication.",
+                "test_release_workflow.py",
+            ),
+            _invariant(
+                "PKG-007",
+                "Annotated release tags use a repository-local GitHub Actions bot identity without mutating global Git configuration.",
                 "test_release_workflow.py",
             ),
         ),
