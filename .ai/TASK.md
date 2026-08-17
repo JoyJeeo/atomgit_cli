@@ -5,8 +5,8 @@ Status: active
 ## Handoff Snapshot
 
 - Updated: 2026-08-17 +0800
-- Phase: 1.1.1 release identity independently reviewed and fully verified;
-  ready for the authorized local release commit and yuto merge
+- Phase: task and 1.1.1 release preparation locally merged into yuto with the
+  post-merge gate passing; ready to push yuto and dispatch the protected release
 - Base branch: yuto
 - Proposed task branch: feature/conda-completion-uninstall (local only; never
   push the task branch)
@@ -17,6 +17,8 @@ Status: active
   (not pushed yet)
 - Release branch: release/1.1.1 (local only; never push)
 - Current HEAD before release edits: 78bc92a
+- Release commit: 6bd0b506fa551da5aa42f7a029bca8f396c13b7b
+- Local release merge: 3aaf03d (not pushed yet)
 - Worktree: /Users/yutaozhang/yuto/codes/atomgit_cli
 - Worktree state before this handoff edit: clean on yuto and synchronized with
   github/yuto
@@ -31,8 +33,9 @@ Status: active
 - Last completed action: resolved two independent-review rounds of findings,
   passed the third review with APPROVED, and reran the complete baseline and
   static gates after the final symlink-parent fix
-- Next exact action: create the conventional local release commit, merge it
-  into yuto, rerun the post-merge gate, and push only yuto
+- Next exact action: commit this delivery-gate record, fetch and verify that
+  github/yuto still equals the recorded base, push only yuto, then dispatch the
+  protected release workflow with version 1.1.1 and the exact pushed HEAD
 - Blockers: none for local development
 - Tests run for this Issue: focused completion 19/19, installer contracts,
   uninstaller 14/14, updater contracts, wheel smoke 28/28, development-floor
@@ -397,3 +400,8 @@ acknowledge itself.
   Release Notes, CHANGELOG, and current-version docs agree on 1.1.1. Protected
   tag, public-Release rejection, draft-resume, exact-asset, checksum, and
   release-note workflow contracts remain executable and passing.
+- Post-merge evidence: on yuto at local merge 3aaf03d,
+  `python tests/run_cli_baseline.py` passed 74 cases in 65.47 seconds;
+  `python -m pip check`, `python -m compileall -q .`, `git diff --check`, and
+  clean-worktree inspection passed. Neither local task branch nor local release
+  branch has been pushed.
