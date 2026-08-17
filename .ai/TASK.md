@@ -1,12 +1,12 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: 2026-08-17 +0800
-- Phase: task and 1.1.1 release preparation locally merged into yuto with the
-  post-merge gate passing; ready to push yuto and dispatch the protected release
+- Phase: implemented, verified, independently reviewed, merged, pushed, and
+  published as the immutable AtomGit CLI 1.1.1 GitHub Release
 - Base branch: yuto
 - Proposed task branch: feature/conda-completion-uninstall (local only; never
   push the task branch)
@@ -18,7 +18,10 @@ Status: active
 - Release branch: release/1.1.1 (local only; never push)
 - Current HEAD before release edits: 78bc92a
 - Release commit: 6bd0b506fa551da5aa42f7a029bca8f396c13b7b
-- Local release merge: 3aaf03d (not pushed yet)
+- Local release merge: 3aaf03d
+- Published source and annotated tag target:
+  f472c2894ca03b2ff43fb7f5c809f39e4e2664fc
+- Final yuto HEAD: this TASK finalization commit, pushed only to github/yuto
 - Worktree: /Users/yutaozhang/yuto/codes/atomgit_cli
 - Worktree state before this handoff edit: clean on yuto and synchronized with
   github/yuto
@@ -30,19 +33,17 @@ Status: active
   tests/test_cli_surface.py, tests/test_installer.py,
   tests/test_shell_completion.py, tests/test_uninstaller.py, and
   tests/test_wheel_smoke.py
-- Last completed action: resolved two independent-review rounds of findings,
-  passed the third review with APPROVED, and reran the complete baseline and
-  static gates after the final symlink-parent fix
-- Next exact action: commit this delivery-gate record, fetch and verify that
-  github/yuto still equals the recorded base, push only yuto, then dispatch the
-  protected release workflow with version 1.1.1 and the exact pushed HEAD
-- Blockers: none for local development
+- Last completed action: verified the public 1.1.1 tag, Release state, exact
+  four assets, GitHub digests, SHA256SUMS, default installer selection, isolated
+  installed imports, version output, and uninstall help
+- Next exact action: none; select and authorize a new Issue before further work
+- Blockers: none
 - Tests run for this Issue: focused completion 19/19, installer contracts,
   uninstaller 14/14, updater contracts, wheel smoke 28/28, development-floor
   contract 15/15, and complete baseline 74 passed; shell syntax, locked Click
   rendering, pip check, compileall, and diff check also passed
-- Required continuation worktree while this handoff is uncommitted:
-  /Users/yutaozhang/yuto/codes/atomgit_cli
+- Worktree state after finalization: clean yuto synchronized with github/yuto;
+  local task and release branches were never pushed
 
 ## Active Issue
 
@@ -387,9 +388,8 @@ acknowledge itself.
   environments but has not been manually exercised across older conda/Zsh
   combinations; child processes cannot unload their parent shell and therefore
   print reactivation/`exec zsh` guidance by design.
-- Release boundary: maintainer selected and authorized 1.1.1; release identity
-  and notes will be prepared on a separate local release branch only after this
-  Issue is reviewed and merged locally into yuto.
+- Release boundary: completed under the maintainer's explicit 1.1.1 publication
+  authorization; no PyPI/TestPyPI publication or 1.1.0 mutation occurred.
 - Release-preparation evidence: version.py, wheel metadata, Release Notes, and
   workflow input all resolve to 1.1.1; release workflow contract passed 28
   checks, wheel smoke passed 28/28, focused installer/uninstaller checks passed,
@@ -405,3 +405,19 @@ acknowledge itself.
   `python -m pip check`, `python -m compileall -q .`, `git diff --check`, and
   clean-worktree inspection passed. Neither local task branch nor local release
   branch has been pushed.
+- Remote delivery: only yuto was pushed. Protected workflow run 32027925051
+  completed successfully after the authorized `release-approval` gate and
+  created annotated tag 1.1.1 at
+  f472c2894ca03b2ff43fb7f5c809f39e4e2664fc.
+- Public Release: https://github.com/JoyJeeo/atomgit_cli/releases/tag/1.1.1 is
+  non-draft and non-prerelease with exactly LICENSE, SHA256SUMS,
+  atomgit-1.1.1-py3-none-any.whl, and atomgit-1.1.1.tar.gz. Downloaded assets
+  passed SHA256SUMS verification.
+- Post-publication ordinary-user evidence: install.sh without an explicit
+  version selected 1.1.1 into a temporary venv; package location, command path,
+  `atomgit --version`, `atomgit uninstall --help`, `import atomgit`, and
+  `import atomgit_hub` all resolved to that isolated installation.
+- Publication annotation: GitHub warned that pinned checkout/upload-artifact
+  actions target Node.js 20 and were forced onto Node.js 24; both workflow jobs
+  still completed successfully. This is a future workflow-maintenance risk,
+  not a 1.1.1 release failure.
