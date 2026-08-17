@@ -114,6 +114,8 @@ def main():
             "remote assets are exact and byte-verified before publication",
             "remote Release asset set differs from the exact expected set" in text
             and "remote asset bytes differ after upload" in text
+            and "releases/tags/${{ inputs.version }}/assets" not in text
+            and text.count('.assets[] | select(.name == \\"$name\\") | .digest') == 2
             and text.index("remote asset bytes differ after upload")
             < text.index('gh release edit "${{ inputs.version }}" --draft=false'),
         )
