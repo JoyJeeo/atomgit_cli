@@ -40,6 +40,7 @@ jobs:
           python -m pip install --disable-pip-version-check build
           python -m build --wheel --sdist
           test "$(find dist -maxdepth 1 -name 'atomgit-${{ inputs.version }}-py3-none-any.whl' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name 'atomgit-${{ inputs.version }}.tar.gz' | wc -l)" -eq 1
           python - "${{ inputs.version }}" <<'PY'
           import sys
           import zipfile
@@ -52,7 +53,7 @@ jobs:
           assert f"Name: atomgit\n" in text and f"Version: {expected}\n" in text
           PY
           cp LICENSE dist/LICENSE
-          sha256sum dist/* > dist/SHA256SUMS
+          (cd dist && sha256sum LICENSE atomgit-${{ inputs.version }}-py3-none-any.whl atomgit-${{ inputs.version }}.tar.gz) > dist/SHA256SUMS
       - name: Upload immutable preparation artifact
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
@@ -68,6 +69,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out exact release notes
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.source_sha }}
+          sparse-checkout: RELEASE_NOTES.md
+          sparse-checkout-cone-mode: false
+      - name: Validate release notes identity
+        run: |
+          test -s RELEASE_NOTES.md
+          grep -Fx "# AtomGit CLI ${{ inputs.version }}" RELEASE_NOTES.md
       - name: Download reviewed assets
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
@@ -94,9 +105,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if ! gh release view "${{ inputs.version }}" >/dev/null 2>&1; then
-            gh release create "${{ inputs.version }}" --draft --title "AtomGit CLI ${{ inputs.version }}" --notes-file /dev/null
+          if gh release view "${{ inputs.version }}" >/dev/null 2>&1; then
+            release_state=$(gh release view "${{ inputs.version }}" --json isDraft,isPrerelease,tagName --jq '[.isDraft, .isPrerelease, .tagName] | @tsv')
+            expected_state=$(printf 'true\tfalse\t%s' "${{ inputs.version }}")
+            test "$release_state" = "$expected_state" || { echo "existing Release is not the expected unpublished draft"; exit 1; }
+          else
+            gh release create "${{ inputs.version }}" --draft --title "AtomGit CLI ${{ inputs.version }}" --notes-file RELEASE_NOTES.md
           fi
+          gh release edit "${{ inputs.version }}" --notes-file RELEASE_NOTES.md
           existing=$(gh release view "${{ inputs.version }}" --json assets --jq '.assets[].name' || true)
           for asset in dist/*; do
             name=$(basename "$asset")
@@ -113,5 +129,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${{ inputs.version }}" --json isDraft,isPrerelease,tagName --jq 'select(.isDraft == true and .isPrerelease == false and .tagName == "${{ inputs.version }}")'
+          release_state=$(gh release view "${{ inputs.version }}" --json isDraft,isPrerelease,tagName --jq '[.isDraft, .isPrerelease, .tagName] | @tsv')
+          expected_state=$(printf 'true\tfalse\t%s' "${{ inputs.version }}")
+          test "$release_state" = "$expected_state" || { echo "Release state changed before publication"; exit 1; }
+          expected_assets=$(printf '%s\n' LICENSE SHA256SUMS "atomgit-${{ inputs.version }}-py3-none-any.whl" "atomgit-${{ inputs.version }}.tar.gz" | sort)
+          actual_assets=$(gh release view "${{ inputs.version }}" --json assets --jq '.assets[].name' | sort)
+          test "$actual_assets" = "$expected_assets" || { echo "remote Release asset set differs from the exact expected set"; exit 1; }
+          for asset in dist/*; do
+            name=$(basename "$asset")
+            local_digest=$(sha256sum "$asset" | awk '{print $1}')
+            remote_digest=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}/assets" --paginate --jq ".[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+            test -n "$remote_digest" && test "$remote_digest" = "$local_digest" || { echo "remote asset bytes differ after upload: $name"; exit 1; }
+          done
           gh release edit "${{ inputs.version }}" --draft=false

@@ -4,7 +4,11 @@
 import os
 import subprocess
 import tempfile
+import zipfile
 from pathlib import Path
+
+from atomgit import __version__ as VERSION
+from atomgit.release import validate_release_assets
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,7 +50,7 @@ def main():
         fake.write_text(
             "#!/bin/sh\n"
             "printf '%s\\n' \"$*\" >> \"$DEPLOY_TEST_LOG\"\n"
-            "case \"$*\" in *'pip show atomgit'*) printf 'Version: 1.0.6\\nLocation: /fake\\n' ;; esac\n"
+            f"case \"$*\" in *'pip show atomgit'*) printf 'Version: {VERSION}\\nLocation: /fake\\n' ;; esac\n"
             "exit 0\n",
             encoding="utf-8",
         )
@@ -55,8 +59,12 @@ def main():
 
         dist = root / "dist"
         dist.mkdir()
-        wheel = dist / "atomgit-1.0.6-py3-none-any.whl"
-        wheel.write_bytes(b"wheel")
+        wheel = dist / f"atomgit-{VERSION}-py3-none-any.whl"
+        with zipfile.ZipFile(wheel, "w") as archive:
+            archive.writestr(
+                f"atomgit-{VERSION}.dist-info/METADATA",
+                f"Metadata-Version: 2.1\nName: atomgit\nVersion: {VERSION}\n",
+            )
         install_result = run(root, env, "install")
         check("offline local install succeeds", install_result.returncode == 0, install_result.stderr)
         check("install uses target python pip", "-m pip install" in log.read_text(encoding="utf-8"))
@@ -64,6 +72,11 @@ def main():
         checksum_result = run(root, env, "checksums")
         check("checksum helper succeeds", checksum_result.returncode == 0)
         check("checksum asset is generated", (dist / "SHA256SUMS").exists())
+        checksum_text = (dist / "SHA256SUMS").read_text(encoding="utf-8")
+        check(
+            "checksum uses the exact Release asset name",
+            validate_release_assets(wheel, checksum_text, VERSION),
+        )
 
         deploy_text = (root / "deploy.sh").read_text(encoding="utf-8")
         check("legacy PyPI path is absent", all(token not in deploy_text for token in ("twine", "atomgitsdktoken", "pypi")))

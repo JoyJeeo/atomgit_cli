@@ -10,7 +10,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from atomgit import release
+from atomgit import __version__, release
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +23,16 @@ def check(name, condition, detail=""):
 
 
 def main():
+    notes = ROOT / "RELEASE_NOTES.md"
+    check("versioned release notes exist", notes.exists())
+    if notes.exists():
+        first_line = notes.read_text(encoding="utf-8").splitlines()[0]
+        check(
+            "release notes match the authoritative version",
+            first_line == f"# AtomGit CLI {__version__}",
+            first_line,
+        )
+
     check("stable version accepts exact numeric SemVer", release.is_stable_version("1.2.3"))
     for invalid in ("v1.2.3", "1.2", "1.2.3-rc1", "1.2.3+yuto.1", "1.2.3.dev1", ""):
         check(f"stable version rejects {invalid or 'empty'}", not release.is_stable_version(invalid))
@@ -67,6 +77,38 @@ def main():
         check("release workflow creates annotated stable tags", "git tag -a" in text and "v${" not in text)
         check("release workflow has no PyPI or token write path", "twine" not in text and "atomgitsdktoken" not in text)
         check("release workflow pauses in a protected environment", "release-approval" in text and "contents: write" in text)
+        check(
+            "release checksums cover exact downloadable asset names",
+            "sha256sum LICENSE atomgit-${{ inputs.version }}-py3-none-any.whl atomgit-${{ inputs.version }}.tar.gz"
+            in text
+            and "sha256sum *" not in text,
+        )
+        check(
+            "release workflow publishes reviewed nonempty notes",
+            text.index("Check out exact release notes")
+            < text.index("Download reviewed assets")
+            and "grep -Fx" in text
+            and "--notes-file RELEASE_NOTES.md" in text
+            and "--notes-file /dev/null" not in text,
+        )
+        check(
+            "existing public Releases are rejected before asset mutation",
+            "existing Release is not the expected unpublished draft" in text
+            and text.index("existing Release is not the expected unpublished draft")
+            < text.index("for asset in dist/*"),
+        )
+        check(
+            "resumed drafts synchronize the reviewed release notes",
+            'gh release edit "${{ inputs.version }}" --notes-file RELEASE_NOTES.md'
+            in text,
+        )
+        check(
+            "remote assets are exact and byte-verified before publication",
+            "remote Release asset set differs from the exact expected set" in text
+            and "remote asset bytes differ after upload" in text
+            and text.index("remote asset bytes differ after upload")
+            < text.index('gh release edit "${{ inputs.version }}" --draft=false'),
+        )
         check("release workflow refuses mismatched existing assets", "existing asset bytes differ" in text and "--clobber" not in text)
 
     if any(not passed for _, passed, _ in RESULTS):

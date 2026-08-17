@@ -17,7 +17,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 - 🎨 彩色终端输出
 - 📊 上传进度条（可禁用）
 - 🔧 配置文件管理
-- 🧩 **上传能力增强（v1.0.6）**：
+- 🧩 **上传能力增强（1.1.0 稳定版）**：
   - 进度条开关（`--no-progress-bar`）
   - 仓库内目标路径（`-p/--path-in-repo`）
   - 仓库类型选择（`-r/--repo-type model|dataset`）
@@ -60,7 +60,7 @@ python -m pip install -e .
 ```bash
 curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh -o install.sh
 sh install.sh
-sh install.sh --version 1.0.6
+sh install.sh --version 1.1.0
 sh install.sh --python /absolute/path/to/python --force-reinstall
 ```
 
@@ -76,7 +76,7 @@ sh install.sh --python /absolute/path/to/python --force-reinstall
 
 ```bash
 atomgit update
-atomgit update --version 1.0.6
+atomgit update --version 1.1.0
 atomgit update --force-reinstall
 ```
 

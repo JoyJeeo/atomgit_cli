@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import atomgit  # noqa: F401
+import atomgit
 from click.testing import CliRunner
 
 
@@ -42,7 +42,7 @@ def main():
     version = runner.invoke(cli_mod.cli, ["--version"])
     check(
         "version succeeds",
-        version.exit_code == 0 and "1.0.6" in version.output,
+        version.exit_code == 0 and atomgit.__version__ in version.output,
     )
 
     for command in (

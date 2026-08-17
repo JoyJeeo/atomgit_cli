@@ -27,10 +27,16 @@ def main():
     original = cli_mod.run_update
     try:
         calls = []
-        cli_mod.run_update = lambda **kwargs: calls.append(kwargs) or {"status": "skipped", "version": "1.0.6"}
+        cli_mod.run_update = lambda **kwargs: calls.append(kwargs) or {
+            "status": "skipped",
+            "version": atomgit.__version__,
+        }
         result = runner.invoke(cli_mod.cli, ["update"])
         check("update targets the running interpreter", result.exit_code == 0 and calls and calls[0]["python"] == sys.executable)
-        check("equal-version update reports a skip", "1.0.6" in result.output and "跳过" in result.output)
+        check(
+            "equal-version update reports a skip",
+            atomgit.__version__ in result.output and "跳过" in result.output,
+        )
 
         cli_mod.run_update = lambda **kwargs: {"status": "source", "version": None}
         source_result = runner.invoke(cli_mod.cli, ["update"])

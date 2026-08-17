@@ -63,13 +63,13 @@ def main():
     try:
         cli_mod.run_update = lambda **kwargs: {
             "status": "skipped",
-            "version": "1.0.6",
+            "version": atomgit.__version__,
             "python": kwargs["python"],
         }
         update_result = runner.invoke(cli_mod.cli, ["update"])
         check(
             "update baseline dispatches the current interpreter",
-            update_result.exit_code == 0 and "1.0.6" in update_result.output,
+            update_result.exit_code == 0 and atomgit.__version__ in update_result.output,
             f"exit={update_result.exit_code}",
         )
     finally:

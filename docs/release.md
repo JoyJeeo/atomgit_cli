@@ -51,6 +51,8 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
    创建 draft Release 并验证资产，再转为公开 Release。
 5. 重跑只接受同名且字节相同的 tag/asset；不覆盖不同内容。未完成 draft 不会被
    安装器的稳定 resolver 选择。
+6. GitHub Release 正文来自精确发布 SHA 中的 `RELEASE_NOTES.md`，必须列出本版
+   范围和已知限制，不得使用空说明发布。
 
 普通用户安装器选择最高的已完成纯数字 Release，显式 `--version X.Y.Z` 选择指定
 版本。历史 `v...` tag 和 Release 不删除，但永远不参与新的默认选择。
