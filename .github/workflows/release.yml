@@ -94,6 +94,8 @@ jobs:
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           git fetch origin "${SOURCE_SHA}"
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           existing_commit=$(git ls-remote origin "refs/tags/${{ inputs.version }}^{}" | awk '{print $1}')
           if [ -n "$existing_commit" ]; then
             test "$existing_commit" = "${SOURCE_SHA}"

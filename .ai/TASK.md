@@ -5,7 +5,7 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `release workflow prepare succeeded; publish is waiting for required maintainer environment approval`
+- Phase: `tagger-identity failure fix fully verified and independently approved; ready for commit, merge, push, and new protected run`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
@@ -13,14 +13,15 @@ Status: `active`
 - Merge commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f merge: prepare 1.1.0 release`
 - Delivery-record commit: `8b784e9be4e4a152b24e497b2e002f89ca45b485 docs(ai): record 1.1.0 release preparation`
 - Publication source SHA: `8b784e9be4e4a152b24e497b2e002f89ca45b485`
-- Current yuto HEAD before this approval-gate checkpoint: `8b784e9be4e4a152b24e497b2e002f89ca45b485`
+- Approval-gate checkpoint commit: `73d76663ec33156f14b04855aeeca59c363c9ce7 docs(ai): record 1.1.0 release approval gate`
+- Current HEAD: `73d76663ec33156f14b04855aeeca59c363c9ce7`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only for this approval-gate TASK.md checkpoint; all release source changes are committed, merged, and pushed`
-- Changed paths: `.ai/TASK.md`
-- Last completed action: `pushed only yuto through 8b784e9, configured release-approval with required reviewer JoyJeeo and yuto-only deployment policy, dispatched workflow run 31992068193 for source 8b784e9, and observed prepare complete successfully with publish waiting`
-- Next exact action: `maintainer inspects workflow run 31992068193 and approves the release-approval deployment in GitHub; then monitor publish to completion and perform remote asset, tag, Release, checksum, and fresh installation verification`
-- Blockers: `required human protected-environment approval is pending; the AI must not approve it through the API on the maintainer's behalf`
-- Tests run for this phase: `after review fixes, python tests/run_cli_baseline.py passed 73/73 in 103.28s; focused release workflow passed 25/25, development-floor passed 15/15, and wheel smoke passed 27/27 with atomgit 1.1.0 and Production/Stable metadata; compileall, bash/sh syntax, pip check, locked dependency versions/signatures, git diff --check, secret-pattern audit, exact four-asset inventory, all three SHA-256 entries, wheel/sdist content audit, and LICENSE identity passed; remote workflow prepare job 95277274983 passed input validation, exact yuto checkout/containment, build/checksum, and immutable artifact upload`
+- Worktree state: `dirty only with the tagger-identity fix, its focused contract and development-floor record, release documentation, and this TASK.md checkpoint`
+- Changed paths: `.ai/DEVELOPMENT_FLOOR.md`, `.ai/TASK.md`, `.github/workflows/release.yml`, `docs/release.md`, `tests/development_floor_contract.py`, `tests/test_release_workflow.py`
+- Last completed action: `independent review approved the failure diagnosis, repository-local identity fix, regression, documentation, and no-state recovery path with no open findings`
+- Next exact action: `commit the fix on local release/1.1.0, merge it into yuto, push only yuto, verify remote tag/Release remain absent, and dispatch a new protected run using the exact merged yuto SHA`
+- Blockers: `none; the failed run left no remote tag, draft, public Release, or uploaded Release asset`
+- Tests run for this phase: `remote run 31992068193 prepare succeeded and protected approval was recorded, but publish failed before tag creation with exit 128 and Committer identity unknown; post-fix release workflow contract passed 26/26, development-floor contract passed 15/15, compileall and shell/diff checks passed, and python tests/run_cli_baseline.py passed 73/73 in 85.80s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
@@ -176,8 +177,12 @@ Status: `active`
 - `PKG-006`: the protected publish job checks out the exact source before
   downloading reviewed assets, publishes version-matched notes, rejects
   public-Release mutation, and verifies the exact remote asset set and bytes.
+- `PKG-007`: annotated tags use the repository-local GitHub Actions bot name and
+  noreply email without modifying global Git configuration.
 - `REL-110-006`: generated `SHA256SUMS` entries use exact downloadable asset
   basenames, so strict installer validation accepts the published wheel.
+- `REL-110-007`: a fresh runner can create the annotated stable tag because the
+  workflow configures its repository-local tagger identity before `git tag -a`.
 
 ## Acceptance Criteria
 
@@ -219,6 +224,10 @@ Status: `active`
 
 ## Review Record
 
+- Tagger-identity failure-fix review: `APPROVED; no findings. The exit-128
+  diagnosis matches the failed step, the repository-local bot identity precedes
+  annotated tag creation, global Git state is untouched, the focused regression
+  fails on the old workflow, and remote recovery starts from no tag or Release`.
 - Review status: `APPROVED in the final independent review after two REQUEST
   CHANGES rounds were fully corrected and reverified`.
 - Review findings: `P1 .github/workflows/release.yml did not reject an existing
