@@ -5,16 +5,18 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `implementation, verification, and independent review approved; ready for authorized release commit`
+- Phase: `release preparation committed, merged locally, and ready for final delivery-record commit and yuto push`
 - Base branch: `yuto`
 - Task branch: `release/1.1.0` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
-- Current HEAD: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
+- Task commit: `ef0bbbd07ba29e4c14d6767bf417a8cce4e9055c chore(release): prepare 1.1.0`
+- Merge commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f merge: prepare 1.1.0 release`
+- Current HEAD before this delivery-record commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with release-owned source, tests, workflow, documentation, and TASK.md; generated build artifacts were moved outside the worktree after audit`
-- Changed paths: `.ai/DEVELOPMENT_FLOOR.md`, `.ai/TASK.md`, `.github/workflows/release.yml`, `CHANGELOG.md`, `README.md`, `RELEASE_NOTES.md`, `deploy.sh`, `docs/architecture.md`, `docs/release.md`, `docs/upload_command_analysis.md`, `setup.py`, `tests/development_floor_contract.py`, `tests/test_cli_feature_baseline.py`, `tests/test_cli_surface.py`, `tests/test_deploy_script.py`, `tests/test_release_workflow.py`, `tests/test_update.py`, `tests/test_wheel_smoke.py`, `version.py`
-- Last completed action: `final independent read-only review returned APPROVED with no open findings after all implementation and evidence corrections`
-- Next exact action: `create the conventional release preparation commit, merge it locally into yuto, and push only yuto`
+- Worktree state: `dirty only for this final TASK.md delivery record; all release source changes are committed and merged`
+- Changed paths: `.ai/TASK.md`
+- Last completed action: `committed ef0bbbd on local release/1.1.0 and merged it into yuto as 7dd4df0 without pushing the release branch`
+- Next exact action: `commit this delivery record, resolve the resulting exact yuto SHA, push only yuto, configure the protected release-approval environment, and dispatch the 1.1.0 workflow with that SHA`
 - Blockers: `publication is blocked until the release-approval GitHub environment is configured with a required maintainer reviewer; GitHub currently reports zero environments`
 - Tests run for this phase: `after review fixes, python tests/run_cli_baseline.py passed 73/73 in 103.28s; focused release workflow passed 25/25, development-floor passed 15/15, and wheel smoke passed 27/27 with atomgit 1.1.0 and Production/Stable metadata; compileall, bash/sh syntax, pip check, locked dependency versions/signatures, git diff --check, secret-pattern audit, exact four-asset inventory, all three SHA-256 entries, wheel/sdist content audit, and LICENSE identity passed`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
