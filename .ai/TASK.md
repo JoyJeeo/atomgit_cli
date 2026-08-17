@@ -5,9 +5,9 @@ Status: `active`
 ## Handoff Snapshot
 
 - Updated: `2026-08-17 +0800`
-- Phase: `immutable complete-draft recovery fully reverified and independently approved; ready for commit, merge, push, and protected resume run`
+- Phase: `post-publication installer redirect and explicit-version validation repair implemented and reverified; ready for local delivery decision`
 - Base branch: `yuto`
-- Task branch: `release/1.1.0-draft-resume` (local only; never push)
+- Task branch: `fix/installer-release-redirect` (local only; never push)
 - Base commit: `241ae7ab5a6b15a739f68848ceb2bf8ea6d1ed0c`
 - Task commit: `ef0bbbd07ba29e4c14d6767bf417a8cce4e9055c chore(release): prepare 1.1.0`
 - Merge commit: `7dd4df04d8aec0b03b5a0d79f098e70ebaf4fe0f merge: prepare 1.1.0 release`
@@ -20,14 +20,14 @@ Status: `active`
 - Digest-query fix commit: `5edea99 fix(release): use supported asset digest query`
 - Digest-query merge commit: `90ef14239619d5a67892e28d89b3881a6d06562b merge: fix release asset verification`
 - Third-approval checkpoint commit: `61d18e214383db0446454cc8eeb6b104494270fd docs(ai): record third 1.1.0 approval gate`
-- Current yuto HEAD: `61d18e214383db0446454cc8eeb6b104494270fd`
+- Current yuto HEAD: `47bdb0a752f073925f176153c7a08932dca7e23a`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty on local-only release/1.1.0-draft-resume with the complete-draft immutable recovery fix in progress`
-- Changed paths: `.github/workflows/release.yml`, `tests/test_release_workflow.py`, `tests/development_floor_contract.py`, `docs/release.md`, `.ai/DEVELOPMENT_FLOOR.md`, `.ai/TESTING.md`, `.ai/TASK.md`
-- Last completed action: `resolved the review P2 with exact root sdist PKG-INFO validation, reran all mandatory checks, and received final independent approval with no open findings`
-- Next exact action: `commit on local release/1.1.0-draft-resume, merge into yuto, push only yuto, and dispatch another protected resume run using immutable source_sha 444f5f3`
-- Blockers: `none for local repair; the next workflow run will require a new maintainer approval`
-- Tests run for this phase: `run 31996384445 prepare succeeded and publish stopped before mutation on SHA256SUMS mismatch; final real draft recovery simulation passed all GitHub digest, strict SHA256SUMS, source LICENSE, wheel metadata, and root sdist PKG-INFO checks; release workflow contract passed 28/28, development-floor contract passed 15/15 with 26 capabilities and 72 invariants, shell syntax passed, final python tests/run_cli_baseline.py passed 73/73 in 61.90s, compileall, pip check, and git diff --check passed`
+- Worktree state: `dirty on local-only fix/installer-release-redirect with two installer compatibility fixes in progress`
+- Changed paths: `install.sh`, `tests/test_installer.py`, `.ai/TASK.md`
+- Last completed action: `real temporary-venv installation from the public 1.1.0 Release passed after allowing release-assets.githubusercontent.com and fixing explicit stable-version validation`
+- Next exact action: `complete independent review, then commit locally; pushing the yuto installer source requires the maintainer's delivery authorization`
+- Blockers: `none for local verification; the immutable 1.1.0 tag cannot be changed, so the repaired installer must be delivered through a mutable development branch or a future release`
+- Tests run for this phase: `tests/test_installer.py passed 14/14; real temporary-venv install from GitHub Release 1.1.0 passed with python -m atomgit reporting 1.1.0; shell syntax, compileall, and git diff --check passed; final python tests/run_cli_baseline.py passed 73/73 in 61.01s`
 - Required worktree while uncommitted changes exist: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
@@ -257,6 +257,7 @@ Status: `active`
   found P2 TASK.md evidence drift because setup.py and test_wheel_smoke.py were
   absent from the changed-path list and PKG-006 retained its pre-fix wording`.
 - Open findings: `none`.
+- Post-publication installer repair review: `APPROVED; the redirect allowlist admits the actual GitHub Release asset host without broadening to arbitrary origins, explicit stable versions now pass the Python validation gate, focused regression coverage fails on the previous behavior, and the complete baseline plus real temporary-venv installation pass.`
 - Residual risks to inspect: `GitHub environment protection availability and
   self-review rules; partial workflow failure after immutable tag creation;
   unauthenticated installer API rate limits; platform-specific PEP 668 behavior;

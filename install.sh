@@ -88,7 +88,7 @@ if ! "$python_bin" -m pip --version >/dev/null 2>&1; then
     echo "error: selected Python has no usable pip; create a venv/conda environment or choose another --python" >&2
     exit 1
 fi
-if [ -n "$version" ] && ! "$python_bin" -c 'import re, sys; raise SystemExit(0 if re.fullmatch(r"[0-9]+\\.[0-9]+\\.[0-9]+", sys.argv[1]) else 1)' "$version" >/dev/null 2>&1; then
+if [ -n "$version" ] && ! "$python_bin" -c 'import re, sys; raise SystemExit(0 if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", sys.argv[1]) else 1)' "$version" >/dev/null 2>&1; then
     echo "error: invalid stable version: $version" >&2
     exit 2
 fi
@@ -132,7 +132,13 @@ def get_bytes(url, limit):
         with urllib.request.urlopen(request, timeout=20) as response:
             initial_host = parsed.netloc.lower()
             final_host = urllib.parse.urlparse(response.geturl()).netloc.lower()
-            allowed_hosts = {initial_host, "github.com", "api.github.com", "objects.githubusercontent.com"}
+            allowed_hosts = {
+                initial_host,
+                "github.com",
+                "api.github.com",
+                "objects.githubusercontent.com",
+                "release-assets.githubusercontent.com",
+            }
             if final_host not in allowed_hosts:
                 fail("release download redirected to a disallowed origin")
             length = response.headers.get("Content-Length")
