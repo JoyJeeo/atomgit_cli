@@ -3,6 +3,7 @@
 
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -76,6 +77,16 @@ def main():
 
         invalid = run(environment, "--python", str(fake_python), "--version", "v1.2.3")
         check("legacy v version is rejected", invalid.returncode == 1 or invalid.returncode == 2)
+        valid_version_env = environment.copy()
+        valid_version_env["ATOMGIT_RELEASE_API_URL"] = "http://127.0.0.1:9/releases"
+        valid = run(valid_version_env, "--python", sys.executable, "--version", "1.1.0", "--no-completion")
+        check(
+            "valid stable version reaches Release lookup",
+            valid.returncode == 1
+            and "unable to download release data" in valid.stderr
+            and "invalid stable version" not in valid.stderr,
+            valid.stderr,
+        )
         source = run(environment, "--source")
         check("source installer mode is rejected", source.returncode == 2 and "git checkout yuto" in source.stderr)
         help_result = run({}, "--help")
@@ -83,6 +94,7 @@ def main():
 
         text = INSTALLER.read_text(encoding="utf-8")
         check("installer uses structured JSON parsing", "json.loads" in text and "grep" not in text)
+        check("installer allows GitHub Release asset redirects", "release-assets.githubusercontent.com" in text)
         check("installer never bypasses environment safety", all(token not in text for token in ("sudo", "--user", "--break-system-packages")))
         check("installer cleans a unique temporary directory", "mktemp -d" in text and "trap cleanup" in text)
 
