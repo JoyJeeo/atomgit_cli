@@ -1,12 +1,12 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `implementation, final verification, independent review, and
-  maintainer-authorized acceptance complete; delivery in progress`
+- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
+  verified`
 - Base branch: `yuto`
 - Base commit: `4f92e786c9a070511d15043f1b650c77c45d88e7`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
@@ -14,15 +14,22 @@ Status: active
 - Task branch: `codex/auth-repository-services-ownership` (local only; never
   push)
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with this Issue's uncommitted implementation,
-  tests, contracts, and documentation; continuation must use this worktree`
-- Last completed action: `reran the complete offline, artifact, structure,
-  ownership, dependency, compilation, and static-policy gates and satisfied
-  the maintainer's explicit test-then-accept delivery condition`
-- Next exact action: `create the cohesive local task commit, merge it into yuto
-  with --no-ff, push only yuto, and verify github/yuto; never push the task
-  branch`
+- Worktree state: `clean on yuto before this final delivery record commit`
+- Task commit: `e6525ccb58099ffdfed56df54fdd9a94473bcc3f`
+- Local yuto merge: `de842819dc726fdf2a3fd3b586b984f4a7dd670e`
+- Verified remote yuto: `de842819dc726fdf2a3fd3b586b984f4a7dd670e`
+- Last completed action: `created the cohesive task commit, merged it into
+  yuto with --no-ff, pushed only yuto, fetched github/yuto, and verified both
+  at de84281`
+- Next exact action: `none for this completed Issue; wait for an explicit new
+  development request before activating another Issue`
 - Blockers: `none`
+
+Delivery evidence: task commit `e6525cc`; local no-ff merge `de84281`; initial
+remote verification resolved `github/yuto` to
+`de842819dc726fdf2a3fd3b586b984f4a7dd670e`. The task branch remained local and
+was never pushed. No remote Issue/PR, tag, Release, publication, live AtomGit
+write, credential mutation, deletion, or upstream-main change was performed.
 
 The predecessor lifecycle Issue is complete, accepted, committed, locally
 merged, pushed, and remotely verified. Its task commit is `8e639b5`, local
