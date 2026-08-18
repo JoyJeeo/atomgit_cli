@@ -211,8 +211,12 @@ def main():
 
     transfer_definitions = {"upload_folder", "upload_directory"}
     check(
-        "unextracted upload methods remain implemented on the historical API class",
-        transfer_definitions <= _class_methods(source_texts["api"], "HuggingFaceAPI")
+        "upload methods remain outside repository service ownership",
+        not (
+            _class_methods(source_texts["api"], "HuggingFaceAPI") & transfer_definitions
+        )
+        and transfer_definitions
+        <= _class_methods(source_texts["upload.service"], "UploadServiceMixin")
         and not any(
             transfer_definitions
             & _class_methods(source_texts[name], "RepositoryServiceMixin")

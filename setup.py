@@ -61,6 +61,7 @@ setup(
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.services",
+        "atomgit.upload",
     ],
     package_dir={"": "src"},
     py_modules=["atomgit_hub"],

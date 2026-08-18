@@ -491,6 +491,7 @@ BASELINE_TEST_GROUPS = {
         "test_revision_rejection.py",
     ),
     "upload": (
+        "test_upload_domain_ownership.py",
         "test_auto_configure_lfs.py",
         "test_canonical_lfs_pointer.py",
         "test_lfs_slow_flow_recovery.py",
@@ -555,7 +556,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 23
 BASELINE_PUBLIC_PARAMETER_COUNT = 48
 BASELINE_LEAF_COMMAND_COUNT = 18
-BASELINE_TEST_SCRIPT_COUNT = 85
+BASELINE_TEST_SCRIPT_COUNT = 86
 
 
 def _normalize_default(value):

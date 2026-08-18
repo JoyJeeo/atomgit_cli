@@ -1,5 +1,8 @@
-"""Lightweight constants shared by the CLI schema and upload runtime."""
+"""Historical CLI path for lightweight upload contracts."""
 
+from .upload.contracts import (
+    _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+    DEFAULT_UPLOAD_BATCH_SIZE,
+)
 
-_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
-DEFAULT_UPLOAD_BATCH_SIZE = 20
+__all__ = ("_RESUMABLE_DEFAULT_REQUEST_TIMEOUT", "DEFAULT_UPLOAD_BATCH_SIZE")

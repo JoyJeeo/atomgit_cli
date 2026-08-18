@@ -1,15 +1,15 @@
-import errno
-import hashlib
+import errno  # noqa: F401 -- historical upload patch surface
+import hashlib  # noqa: F401 -- historical transfer patch surface
 import json
 import math
-import multiprocessing
+import multiprocessing  # noqa: F401 -- historical upload patch surface
 import ntpath  # noqa: F401
 import os
 import random
-import shutil
+import shutil  # noqa: F401 -- historical transfer patch surface
 import socket
 import ssl  # noqa: F401
-import stat
+import stat  # noqa: F401 -- historical upload patch surface
 import sys
 import tempfile
 import threading
@@ -37,21 +37,21 @@ configure_hf_environment()
 
 # isort: off -- runtime policy must precede all Hugging Face imports.
 try:
-    from .cli_contracts import (
+    from .cli_contracts import (  # noqa: F401
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
 except ImportError:
-    from cli_contracts import (
+    from cli_contracts import (  # noqa: F401
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
 
-import huggingface_hub._upload_large_folder as hf_large_folder  # noqa: E402
+import huggingface_hub._upload_large_folder as hf_large_folder  # noqa: E402,F401
 import huggingface_hub.lfs as hf_lfs  # noqa: E402
 from huggingface_hub import HfApi  # noqa: E402
 from huggingface_hub import close_session as close_hf_session  # noqa: E402,F401
-from huggingface_hub import constants as hf_constants  # noqa: E402
+from huggingface_hub import constants as hf_constants  # noqa: E402,F401
 from huggingface_hub import (  # noqa: E402,F401
     create_repo,
     get_hf_file_metadata,
@@ -66,7 +66,7 @@ from huggingface_hub._local_folder import (  # noqa: E402
 from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402,F401
 
 try:
-    from .config import config
+    from .config import config  # noqa: F401
     from .download import integrity as _download_integrity
     from .download import manifest as _download_manifest
     from .download import prune as _download_prune
@@ -74,7 +74,7 @@ try:
     from .download import service as _download_service
     from .download import transport as _download_transport
     from .download.service import DownloadServiceMixin
-    from .lfs_pointer import (
+    from .lfs_pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
@@ -115,7 +115,7 @@ try:
         validate_upload_path_no_symlinks,
     )
 except ImportError:
-    from config import config
+    from config import config  # noqa: F401
     from download import integrity as _download_integrity
     from download import manifest as _download_manifest
     from download import prune as _download_prune
@@ -123,7 +123,7 @@ except ImportError:
     from download import service as _download_service
     from download import transport as _download_transport
     from download.service import DownloadServiceMixin
-    from lfs_pointer import (
+    from lfs_pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
@@ -269,38 +269,6 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
         return items
 
 
-def _set_progress_bar(enabled: bool) -> None:
-    """控制 Hugging Face Hub 上传过程中的进度条显示。
-
-    注意：此为进程级全局状态（HF Hub 的设计）。
-    - enabled=True  时显式开启进度条（防御性兜底，覆盖任何先前禁用）；
-    - enabled=False 时关闭进度条（适用于日志/CI 等非交互场景）。
-
-    若环境变量 HF_HUB_DISABLE_PROGRESS_BARS=1 在 import 前已设置，则其优先级最高，
-    程序化开关将被忽略（HF Hub 既定行为）。
-    """
-    try:
-        if enabled:
-            enable_progress_bars()
-        else:
-            disable_progress_bars()
-    except Exception:
-        # 进度条控制不应影响上传主流程
-        pass
-
-
-def _capture_progress_bar_state():
-    if progress_bar_states is not None:
-        return dict(progress_bar_states)
-    return are_progress_bars_disabled()
-
-
-def _restore_progress_bar_state(state) -> None:
-    if progress_bar_states is not None and isinstance(state, dict):
-        progress_bar_states.clear()
-        progress_bar_states.update(state)
-        return
-    _set_progress_bar(not state)
 
 
 
@@ -346,10 +314,10 @@ def _restore_progress_bar_state(state) -> None:
 
 
 
-_RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
-_RESUMABLE_COMMIT_BACKOFF_BASE = 30.0
-_RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
-_RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
+
+
+
+
 _RESUMABLE_LFS_PREUPLOAD_MAX_ATTEMPTS = 3
 _RESUMABLE_LFS_PREUPLOAD_BACKOFF_BASE = 2.0
 _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP = 60.0
@@ -1037,163 +1005,30 @@ class ResumableLfsAttributesError(RuntimeError):
         super().__init__("server-selected LFS extensions need attributes")
 
 
-class ResumableTargetRevisionError(RuntimeError):
-    """A requested resumable upload revision does not exist."""
 
 
-_RESUMABLE_WORKER_ERROR_MESSAGES = {
-    "authentication": "resumable worker authentication failed",
-    "permission": "resumable worker permission check failed",
-    "repository": "resumable worker repository check failed",
-    "revision": "resumable worker revision check failed",
-    "request": "resumable worker request validation failed",
-    "payload_size": "resumable worker payload is too large",
-    "lfs_quota": "resumable worker LFS storage is insufficient",
-    "lfs_bandwidth": "resumable worker LFS bandwidth is insufficient",
-    "lfs_batch_rejected": "resumable worker LFS batch was rejected",
-    "rate_limit": "resumable worker was rate limited",
-    "service_unavailable": "resumable worker service is unavailable",
-    "timeout": "resumable worker timed out",
-    "connection": "resumable worker connection failed",
-    "upload_mode": "resumable worker upload mode is unsafe",
-    "lfs_attributes": "resumable worker LFS attributes need verification",
-    "lfs_pointer": "resumable worker LFS pointer verification failed",
-    "client_resource": "resumable worker client resources are insufficient",
-    "unknown": "resumable worker failed",
-}
 
 
-class ResumableWorkerError(RuntimeError):
-    """A credential-safe failure reconstructed from the upload child."""
-
-    def __init__(self, category: str, lfs_patterns=()):
-        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
-            category = "unknown"
-        self.category = category
-        self.lfs_patterns = (
-            _validated_lfs_patterns(lfs_patterns)
-            if category in ("upload_mode", "lfs_attributes")
-            else ()
-        )
-        super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
-class ResumableCommitError(RuntimeError):
-    """A resumable commit could not complete under the bounded retry policy."""
 
 
 class ResumableLfsPreuploadError(RuntimeError):
     """A resumable LFS preupload failed under the bounded retry policy."""
 
     def __init__(self, category: str):
-        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
+        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:  # noqa: F821
             category = "unknown"
         self.category = category
-        super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
+        super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])  # noqa: F821
 
 
-def _resumable_error_chain(error: BaseException):
-    """Yield a bounded exception chain without serializing exception text."""
-    current = error
-    seen = set()
-    for _ in range(8):
-        if not isinstance(current, BaseException) or id(current) in seen:
-            return
-        seen.add(id(current))
-        yield current
-        current = current.__cause__ or current.__context__
 
 
-def _resumable_error_status(error: BaseException) -> Optional[int]:
-    response = getattr(error, "response", None)
-    status_code = getattr(response, "status_code", None)
-    if isinstance(status_code, int):
-        return status_code
-    code = getattr(error, "code", None)
-    return code if isinstance(code, int) else None
 
 
-def _resumable_worker_error_category(error: BaseException) -> str:
-    """Reduce an arbitrary child failure to one bounded, non-sensitive code."""
-    for cause in _resumable_error_chain(error):
-        if isinstance(cause, ResumableWorkerError):
-            return cause.category
-        if isinstance(cause, ResumableUploadModeError):
-            return "upload_mode"
-        if isinstance(cause, ResumableLfsAttributesError):
-            return "lfs_attributes"
-        if isinstance(cause, ResumableLfsPreuploadError):
-            return cause.category
-        if isinstance(cause, CanonicalLfsPointerError):
-            return "lfs_pointer"
-
-        name = type(cause).__name__
-        if name == "RevisionNotFoundError":
-            return "revision"
-        if name == "RepositoryNotFoundError":
-            return "repository"
-        if name in ("GatedRepoError", "DisabledRepoError"):
-            return "permission"
-
-        credential_error = auth_error_kind(cause)
-        if credential_error in ("authentication", "permission"):
-            return credential_error
-
-        status_code = _resumable_error_status(cause)
-        if status_code == 401:
-            return "authentication"
-        if status_code == 403:
-            return "permission"
-        if status_code == 404:
-            return "repository"
-        if status_code == 413:
-            return "payload_size"
-        if status_code == 429:
-            return "rate_limit"
-        if status_code in (500, 502, 503, 504):
-            return "service_unavailable"
-        if status_code == 400 or name == "BadRequestError":
-            return "request"
-
-        if isinstance(
-            cause,
-            (httpx.TimeoutException, TimeoutError, socket.timeout),
-        ):
-            return "timeout"
-        if isinstance(
-            cause,
-            (httpx.NetworkError, ConnectionError),
-        ):
-            return "connection"
-        if isinstance(cause, MemoryError):
-            return "client_resource"
-        if isinstance(cause, OSError) and cause.errno in (
-            errno.EACCES,
-            errno.EPERM,
-            errno.EFBIG,
-            errno.EMFILE,
-            errno.ENFILE,
-            errno.ENOMEM,
-            errno.ENOSPC,
-            errno.EROFS,
-        ):
-            return "client_resource"
-    return "unknown"
 
 
-def _resumable_failure_envelope(error: BaseException) -> dict:
-    """Build the only error payload allowed across the process boundary."""
-    category = _resumable_worker_error_category(error)
-    envelope = {"category": category}
-    if category in ("upload_mode", "lfs_attributes"):
-        for cause in _resumable_error_chain(error):
-            patterns = _validated_lfs_patterns(
-                getattr(cause, "lfs_patterns", ())
-            )
-            if patterns:
-                envelope["lfs_patterns"] = list(patterns)
-                break
-    return envelope
 
 
 class _ResumableLfsAttributesPolicy:
@@ -1570,7 +1405,7 @@ def _configure_remote_lfs_attributes(
             if write_error is None:
                 raise RuntimeError(".gitattributes 提交后远端验证失败")
             if (
-                _resumable_error_status(write_error) not in (409, 412)
+                _resumable_error_status(write_error) not in (409, 412)  # noqa: F821
                 or attempt + 1 >= _LFS_GITATTRIBUTES_MAX_ATTEMPTS
             ):
                 raise write_error
@@ -1578,31 +1413,8 @@ def _configure_remote_lfs_attributes(
     raise RuntimeError(".gitattributes 并发更新重试次数已耗尽")
 
 
-def _commit_error_status(error: BaseException) -> Optional[int]:
-    response = getattr(error, "response", None)
-    status_code = getattr(response, "status_code", None)
-    return status_code if isinstance(status_code, int) else None
 
 
-def _commit_retry_after(error: BaseException) -> Optional[float]:
-    response = getattr(error, "response", None)
-    headers = getattr(response, "headers", None)
-    value = headers.get("Retry-After") if headers is not None else None
-    if not value:
-        return None
-    try:
-        return max(0.0, float(value))
-    except (TypeError, ValueError):
-        try:
-            retry_at = parsedate_to_datetime(value)
-            if retry_at.tzinfo is None:
-                retry_at = retry_at.replace(tzinfo=timezone.utc)
-            return max(
-                0.0,
-                (retry_at - datetime.now(timezone.utc)).total_seconds(),
-            )
-        except (TypeError, ValueError, OverflowError):
-            return None
 
 
 def _bounded_lfs_retry_after(error: BaseException) -> Optional[float]:
@@ -1648,7 +1460,7 @@ def _bounded_lfs_error_payload(error: BaseException) -> Optional[dict]:
 
 
 def _is_atomgit_lfs_quota_error(error: BaseException) -> bool:
-    if _resumable_error_status(error) != 413:
+    if _resumable_error_status(error) != 413:  # noqa: F821
         return False
     payload = _bounded_lfs_error_payload(error)
     if payload is None:
@@ -1665,10 +1477,10 @@ def _is_atomgit_lfs_quota_error(error: BaseException) -> bool:
 
 def _lfs_preupload_error_category(error: BaseException) -> tuple:
     """Return the safe category and whether one LFS failure is retryable."""
-    for cause in _resumable_error_chain(error):
+    for cause in _resumable_error_chain(error):  # noqa: F821
         if isinstance(cause, ResumableLfsPreuploadError):
             return cause.category, False
-        status_code = _resumable_error_status(cause)
+        status_code = _resumable_error_status(cause)  # noqa: F821
         if status_code == 401:
             return "authentication", False
         if status_code == 403:
@@ -1696,7 +1508,7 @@ def _lfs_preupload_error_category(error: BaseException) -> tuple:
             return "connection", True
         if isinstance(cause, ValueError):
             return "lfs_batch_rejected", False
-    category = _resumable_worker_error_category(error)
+    category = _resumable_worker_error_category(error)  # noqa: F821
     return category, False
 
 
@@ -1792,389 +1604,22 @@ class _ResumableLfsPreuploadController:
                 self._sleep(delay)
 
 
-def _is_ambiguous_commit_error(error: BaseException) -> bool:
-    status_code = _commit_error_status(error)
-    if status_code in (502, 503, 504):
-        return True
-    return isinstance(
-        error,
-        (
-            httpx.TimeoutException,
-            httpx.NetworkError,
-            TimeoutError,
-            ConnectionError,
-            socket.timeout,
-        ),
-    )
 
 
-def _is_retryable_commit_error(error: BaseException) -> bool:
-    status_code = _commit_error_status(error)
-    if status_code in (429, 502, 503, 504):
-        return True
-    return isinstance(
-        error,
-        (
-            httpx.TimeoutException,
-            httpx.NetworkError,
-            TimeoutError,
-            ConnectionError,
-            socket.timeout,
-        ),
-    )
 
 
-def _is_reducible_commit_error(error: BaseException) -> bool:
-    status_code = _commit_error_status(error)
-    if status_code in (413, 502, 503, 504):
-        return True
-    return isinstance(
-        error,
-        (httpx.ReadTimeout, httpx.WriteTimeout, TimeoutError, socket.timeout),
-    )
 
 
-def _operation_git_sha1(operation) -> Optional[str]:
-    upload_info = getattr(operation, "upload_info", None)
-    size = getattr(upload_info, "size", None)
-    source = getattr(operation, "path_or_fileobj", None)
-    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
-        return None
-    digest = hashlib.sha1()
-    digest.update(b"blob " + str(size).encode("ascii") + b"\0")
-    try:
-        if isinstance(source, bytes):
-            digest.update(source)
-        elif isinstance(source, (str, Path)):
-            with Path(source).open("rb") as stream:
-                while True:
-                    chunk = stream.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    digest.update(chunk)
-        elif hasattr(source, "read"):
-            position = source.tell()
-            try:
-                source.seek(0)
-                while True:
-                    chunk = source.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    digest.update(chunk)
-            finally:
-                source.seek(position)
-        else:
-            return None
-    except (OSError, ValueError, AttributeError):
-        return None
-    return digest.hexdigest()
 
 
-def _reconcile_resumable_commit_operations(
-    *, repo_id: str, repo_type: str, revision: str, operations, token: str
-) -> Set[str]:
-    """Return paths whose remote object identity matches the commit operation."""
-    if revision not in (None, "main"):
-        return set()
-    matched = set()
-    for operation in operations:
-        path_in_repo = getattr(operation, "path_in_repo", None)
-        upload_info = getattr(operation, "upload_info", None)
-        if not isinstance(path_in_repo, str) or upload_info is None:
-            continue
-        try:
-            algorithm, remote_digest, remote_size = _atomgit_file_checksum(
-                repo_id, repo_type, path_in_repo, token
-            )
-        except Exception:
-            continue
-        local_size = getattr(upload_info, "size", None)
-        if remote_size != local_size:
-            continue
-        if algorithm == "sha256":
-            local_sha256 = getattr(upload_info, "sha256", None)
-            if isinstance(local_sha256, bytes) and local_sha256.hex() == remote_digest:
-                matched.add(path_in_repo)
-        elif algorithm == "git-sha1":
-            if _operation_git_sha1(operation) == remote_digest:
-                matched.add(path_in_repo)
-    return matched
 
 
-def _next_resumable_commit_batch_size(item_count: int) -> int:
-    for batch_size in _RESUMABLE_COMMIT_BATCH_SIZES:
-        if batch_size < item_count:
-            return batch_size
-    return 1
 
 
-def _mark_resumable_operations_committed(
-    folder_path: Path, operations
-) -> None:
-    """Persist successful sub-commits before the outer HF batch completes."""
-    folder_path = Path(folder_path)
-    for operation in operations:
-        path_in_repo = getattr(operation, "path_in_repo", None)
-        upload_info = getattr(operation, "upload_info", None)
-        local_sha256 = getattr(upload_info, "sha256", None)
-        if not isinstance(path_in_repo, str) or not isinstance(local_sha256, bytes):
-            raise ResumableCommitError(
-                "resumable commit metadata is unavailable"
-            )
-        paths = get_local_upload_paths(folder_path, path_in_repo)
-        metadata = read_upload_metadata(folder_path, path_in_repo)
-        if metadata.sha256 != local_sha256.hex():
-            raise ResumableCommitError(
-                "resumable commit metadata changed during upload"
-            )
-        metadata.is_committed = True
-        metadata.save(paths)
 
 
-class _ResumableCommitController:
-    """Apply AtomGit-specific retry and reconciliation to HF commit calls."""
-
-    def __init__(
-        self,
-        create_commit,
-        *,
-        token: str,
-        sleep=time.sleep,
-        jitter=None,
-        reconcile=_reconcile_resumable_commit_operations,
-        max_attempts: int = _RESUMABLE_COMMIT_MAX_ATTEMPTS,
-        mark_committed=None,
-        canonical_payloads=canonical_lfs_payloads,
-        verify_committed=None,
-        fatal_callback=None,
-        event_callback=None,
-        lfs_attributes_policy=None,
-    ):
-        self._create_commit = create_commit
-        self._token = token
-        self._sleep = sleep
-        self._jitter = jitter or (
-            lambda delay: random.uniform(0.0, min(1.0, delay * 0.1))
-        )
-        self._reconcile = reconcile
-        self._max_attempts = max_attempts
-        self._mark_committed = mark_committed or (lambda operations: None)
-        self._canonical_payloads = canonical_payloads
-        self._verify_committed = verify_committed or (
-            lambda expectations, repo_id, revision: None
-        )
-        self._fatal_callback = fatal_callback
-        self._event_callback = event_callback
-        self._lfs_attributes_policy = lfs_attributes_policy
-
-    def _emit(self, kind: str, **details) -> None:
-        if self._event_callback is None:
-            return
-        try:
-            self._event_callback({"kind": kind, **details})
-        except Exception:
-            # Observability must never change upload or retry semantics.
-            pass
-
-    def _raise_fatal(self, error: BaseException, item_count: int):
-        status_code = _commit_error_status(error)
-        if status_code is not None:
-            detail = f"HTTP {status_code}"
-        else:
-            detail = type(error).__name__
-        wrapped = ResumableCommitError(
-            f"resumable commit failed for {item_count} file(s): {detail}"
-        )
-        if self._fatal_callback is not None:
-            self._fatal_callback(error)
-        raise wrapped from error
-
-    def _retry_delay(self, error: BaseException, attempt: int) -> float:
-        retry_after = _commit_retry_after(error)
-        if retry_after is not None:
-            return retry_after
-        delay = min(
-            _RESUMABLE_COMMIT_BACKOFF_BASE * (2 ** (attempt - 1)),
-            _RESUMABLE_COMMIT_BACKOFF_CAP,
-        )
-        return delay + self._jitter(delay)
-
-    def _commit_group(self, args, kwargs, operations):
-        operations = list(operations)
-        attempts = 0
-        last_error = None
-        while operations and attempts < self._max_attempts:
-            attempts += 1
-            call_kwargs = dict(kwargs)
-            call_kwargs["operations"] = operations
-            expectations = []
-            try:
-                with self._canonical_payloads() as expectations:
-                    result = self._create_commit(*args, **call_kwargs)
-                if expectations:
-                    commit_revision = getattr(result, "oid", None)
-                    if not isinstance(commit_revision, str) or not commit_revision:
-                        raise RuntimeError(
-                            "resumable commit revision is unavailable"
-                        )
-                    self._verify_committed(
-                        expectations,
-                        call_kwargs.get("repo_id"),
-                        commit_revision,
-                    )
-                self._mark_committed(operations)
-                return result
-            except Exception as error:
-                last_error = error
-                if _is_ambiguous_commit_error(error):
-                    self._emit(
-                        "reconcile_start",
-                        item_count=len(operations),
-                        attempt=attempts,
-                    )
-                    matched = self._reconcile(
-                        repo_id=call_kwargs.get("repo_id"),
-                        repo_type=call_kwargs.get("repo_type") or "model",
-                        revision=call_kwargs.get("revision") or "main",
-                        operations=operations,
-                        token=self._token,
-                    )
-                    matched_operations = [
-                        operation for operation in operations
-                        if getattr(operation, "path_in_repo", None) in matched
-                    ]
-                    if matched_operations:
-                        matched_expectations = [
-                            expectation for expectation in expectations
-                            if expectation.path_in_repo in matched
-                        ]
-                        try:
-                            if matched_expectations:
-                                self._verify_committed(
-                                    matched_expectations,
-                                    call_kwargs.get("repo_id"),
-                                    call_kwargs.get("revision") or "main",
-                                )
-                            self._mark_committed(matched_operations)
-                        except Exception as metadata_error:
-                            self._raise_fatal(
-                                metadata_error, len(matched_operations)
-                            )
-                    operations = [
-                        operation for operation in operations
-                        if getattr(operation, "path_in_repo", None) not in matched
-                    ]
-                    self._emit(
-                        "reconcile_result",
-                        confirmed=len(matched_operations),
-                        remaining=len(operations),
-                        attempt=attempts,
-                    )
-                    if not operations:
-                        return None
-                if _commit_error_status(error) == 413:
-                    break
-                if not _is_retryable_commit_error(error):
-                    self._raise_fatal(error, len(operations))
-                if attempts < self._max_attempts:
-                    delay = self._retry_delay(error, attempts)
-                    status_code = _commit_error_status(error)
-                    if status_code == 429:
-                        self._emit(
-                            "rate_limit_wait",
-                            delay=delay,
-                            attempt=attempts,
-                            item_count=len(operations),
-                        )
-                    self._emit(
-                        "retry",
-                        attempt=attempts + 1,
-                        max_attempts=self._max_attempts,
-                        item_count=len(operations),
-                        status_code=status_code,
-                        error_type=type(error).__name__,
-                    )
-                    self._sleep(delay)
-
-        if not operations:
-            return None
-        if (
-            len(operations) == 1
-            or not _is_reducible_commit_error(last_error)
-        ):
-            self._raise_fatal(last_error, len(operations))
-
-        batch_size = _next_resumable_commit_batch_size(len(operations))
-        self._emit(
-            "reduce",
-            from_size=len(operations),
-            to_size=batch_size,
-        )
-        result = None
-        for index in range(0, len(operations), batch_size):
-            result = self._commit_group(
-                args,
-                kwargs,
-                operations[index:index + batch_size],
-            )
-        return result
-
-    def create_commit(self, *args, **kwargs):
-        operations = list(kwargs.get("operations", ()))
-        if not operations:
-            return self._create_commit(*args, **kwargs)
-        try:
-            if self._lfs_attributes_policy is not None:
-                self._lfs_attributes_policy.validate_operations(operations)
-            _validate_resumable_commit_operations(operations)
-        except (ResumableUploadModeError, ResumableLfsAttributesError) as error:
-            if self._fatal_callback is not None:
-                self._fatal_callback(error)
-            raise
-        return self._commit_group(args, kwargs, operations)
 
 
-def _print_resumable_commit_event(event, batch_context) -> None:
-    """Print one credential-safe child event with its outer batch identity."""
-    if not batch_context:
-        return
-    current, total = batch_context
-    prefix = f"[批次 {current}/{total}]"
-    kind = event.get("kind")
-    if kind == "rate_limit_wait":
-        print(
-            f"{prefix} 请求限流，等待 {event['delay']:g} 秒后重试",
-            flush=True,
-        )
-    elif kind == "retry":
-        reason = (
-            f"HTTP {event['status_code']}"
-            if event.get("status_code") is not None
-            else event.get("error_type", "网络错误")
-        )
-        print(
-            f"{prefix} 重试 {event['attempt']}/{event['max_attempts']}"
-            f"（{reason}，{event['item_count']} 个文件）",
-            flush=True,
-        )
-    elif kind == "reconcile_start":
-        print(
-            f"{prefix} 提交结果不明确，正在核对远端状态"
-            f"（{event['item_count']} 个文件）",
-            flush=True,
-        )
-    elif kind == "reconcile_result":
-        print(
-            f"{prefix} 远端核对完成: 确认 {event['confirmed']}，"
-            f"仍待提交 {event['remaining']}",
-            flush=True,
-        )
-    elif kind == "reduce":
-        print(
-            f"{prefix} 降低提交批量: {event['from_size']} -> "
-            f"{event['to_size']}",
-            flush=True,
-        )
 
 
 def _print_resumable_lfs_preupload_event(event, batch_context) -> None:
@@ -2220,1297 +1665,149 @@ def _print_resumable_slow_flow_event(event, batch_context) -> None:
         )
 
 
-def _run_resumable_upload(
-    token, kwargs, result_queue,
-    request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
-    batch_context=None,
-    upload_deadline=None,
-    auto_configure_lfs=False,
-    configured_lfs_patterns=(),
-):
-    """Run HF's resumable uploader in an isolated child process.
-
-    The child is deliberately short-lived so a timed-out transfer can be
-    terminated without leaving worker threads running in the CLI process.
-    """
-    original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-    original_get_upload_mode = hf_large_folder._get_upload_mode
-    original_preupload_lfs = hf_large_folder._preupload_lfs
-    lfs_attributes_policy = (
-        _ResumableLfsAttributesPolicy(configured_lfs_patterns)
-        if auto_configure_lfs
-        else None
-    )
-    slow_flow_coordinator = _SlowFlowCoordinator(
-        deadline=upload_deadline,
-        event_callback=lambda event: _print_resumable_slow_flow_event(
-            event, batch_context
-        ),
-    )
-    result_sent = False
-
-    def send_failure(error):
-        nonlocal result_sent
-        if not result_sent:
-            result_queue.put((False, _resumable_failure_envelope(error)))
-            result_sent = True
-
-    def fatal_exit(error):
-        if multiprocessing.current_process().name == "MainProcess":
-            return
-        send_failure(error)
-        if hasattr(result_queue, "close"):
-            result_queue.close()
-        if hasattr(result_queue, "join_thread"):
-            result_queue.join_thread()
-        os._exit(1)
-
-    def get_upload_mode_with_policy(*args, **kwargs):
-        result = original_get_upload_mode(*args, **kwargs)
-        items = kwargs.get("items")
-        if items is None and args:
-            items = args[0]
-        try:
-            _validate_resumable_upload_mode_items(items or [])
-            if lfs_attributes_policy is not None:
-                lfs_attributes_policy.validate_items(items or [])
-        except (ResumableUploadModeError, ResumableLfsAttributesError) as error:
-            fatal_exit(error)
-            raise
-        return result
-
-    try:
-        hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
-        close_hf_session()
-        client = HfApi(endpoint=_atomgit_hf_endpoint(), token=token)
-        _refresh_unsafe_resumable_upload_modes(Path(kwargs["folder_path"]))
-        if lfs_attributes_policy is not None:
-            cached_patterns = _resumable_projection_lfs_patterns(
-                Path(kwargs["folder_path"])
-            )
-            if cached_patterns:
-                try:
-                    lfs_attributes_policy.validate_patterns(cached_patterns)
-                except ResumableLfsAttributesError as error:
-                    fatal_exit(error)
-                    raise
-
-        def existing_repo(repo_id, *, private=None, repo_type=None,
-                          exist_ok=False):
-            """Satisfy HF 1.1.7 setup after the parent validated the target."""
-            return type("_ExistingRepo", (), {"repo_id": repo_id})()
-
-        # HF 1.1.7 otherwise sends create_repo(exist_ok=True) before metadata
-        # recovery. AtomGit upload targets are required to pre-exist.
-        client.create_repo = existing_repo
-        hf_large_folder._get_upload_mode = get_upload_mode_with_policy
-        preupload_controller = _ResumableLfsPreuploadController(
-            original_preupload_lfs,
-            deadline=upload_deadline,
-            fatal_callback=fatal_exit,
-            event_callback=lambda event: _print_resumable_lfs_preupload_event(
-                event, batch_context
-            ),
-            lfs_attributes_policy=lfs_attributes_policy,
-        )
-        hf_large_folder._preupload_lfs = preupload_controller.preupload_lfs
-        create_commit = getattr(client, "create_commit", None)
-        if callable(create_commit):
-            controller = _ResumableCommitController(
-                create_commit,
-                token=token,
-                mark_committed=lambda operations: (
-                    _mark_resumable_operations_committed(
-                        Path(kwargs["folder_path"]), operations
-                    )
-                ),
-                verify_committed=lambda expectations, repo_id, revision: (
-                    verify_canonical_lfs_pointers(
-                        token=token,
-                        repo_id=repo_id,
-                        revision=revision,
-                        expectations=expectations,
-                        timeout=min(request_timeout, 15),
-                    )
-                ),
-                fatal_callback=fatal_exit,
-                event_callback=lambda event: _print_resumable_commit_event(
-                    event, batch_context
-                ),
-                lfs_attributes_policy=lfs_attributes_policy,
-            )
-            client.create_commit = controller.create_commit
-        with _scoped_resumable_lfs_recovery(slow_flow_coordinator):
-            client.upload_large_folder(**kwargs)
-        result_queue.put((True, None))
-        result_sent = True
-    except BaseException as exc:
-        send_failure(exc)
-    finally:
-        hf_large_folder._get_upload_mode = original_get_upload_mode
-        hf_large_folder._preupload_lfs = original_preupload_lfs
-        hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
-        close_hf_session()
-
-
-class ResumableProjectionError(ValueError):
-    """A local resumable projection cannot be prepared safely."""
-
-
-def _resumable_projection_cache_root() -> Path:
-    """Return the private cache for stable path-in-repo upload projections."""
-    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
-    root = hf_home / "upload-projections"
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if root.is_symlink() or not root.is_dir():
-        raise ResumableProjectionError("断点续传投影缓存目录不安全")
-    os.chmod(root, 0o700)
-    return root
-
-
-def _ensure_projection_directory(path: Path, projection_root: Path) -> None:
-    """Create an internal projection directory without following symlinks."""
-    relative = path.relative_to(projection_root)
-    current = projection_root
-    for part in relative.parts:
-        current = current / part
-        if current.is_symlink():
-            raise ResumableProjectionError("断点续传投影缓存包含符号链接")
-        if current.exists() and not current.is_dir():
-            current.unlink()
-        current.mkdir(mode=0o700, exist_ok=True)
-
-
-def _source_projection_files(source: Path):
-    """Yield regular source files while excluding HF's local resume metadata."""
-    for root_name, directory_names, filenames in os.walk(
-        str(source), topdown=True, followlinks=False
-    ):
-        root = Path(root_name)
-        relative_root = root.relative_to(source)
-        if tuple(part.casefold() for part in relative_root.parts[:2]) == (
-            ".cache", "huggingface"
-        ):
-            directory_names[:] = []
-            continue
-
-        retained_directories = []
-        for name in directory_names:
-            candidate = root / name
-            if candidate.is_symlink():
-                raise ValueError("上传路径包含符号链接，已拒绝上传")
-            if name == ".git":
-                continue
-            relative = candidate.relative_to(source)
-            if tuple(part.casefold() for part in relative.parts[:2]) != (
-                ".cache", "huggingface"
-            ):
-                retained_directories.append(name)
-        directory_names[:] = retained_directories
-
-        for name in filenames:
-            candidate = root / name
-            if candidate.is_symlink():
-                raise ValueError("上传路径包含符号链接，已拒绝上传")
-            try:
-                file_stat = candidate.stat()
-            except OSError as error:
-                raise ValueError("无法读取上传目录，已拒绝上传") from error
-            if stat.S_ISREG(file_stat.st_mode):
-                yield candidate.relative_to(source), candidate, file_stat
-
-
-def _projection_file_is_current(
-    source: Path, destination: Path, source_stat
-) -> bool:
-    if destination.is_symlink():
-        try:
-            return os.path.samefile(source, destination)
-        except OSError:
-            return False
-    if not destination.is_file():
-        return False
-    try:
-        if os.path.samefile(source, destination):
-            return True
-        destination_stat = destination.stat()
-    except OSError:
-        return False
-    return (
-        destination_stat.st_size == source_stat.st_size
-        and destination_stat.st_mtime_ns == source_stat.st_mtime_ns
-    )
-
-
-def _is_projection_hf_metadata(path: Path, projection: Path) -> bool:
-    relative = path.relative_to(projection)
-    return tuple(part.casefold() for part in relative.parts[:2]) == (
-        ".cache", "huggingface"
-    )
-
-
-def _sync_resumable_projection(
-    source: Path,
-    projection: Path,
-    prefix: str = None,
-    ignore_patterns=None,
-    selected_paths: Optional[Set[Path]] = None,
-) -> None:
-    """Mirror source files below prefix while retaining HF metadata at root."""
-    payload_root = (
-        projection.joinpath(*prefix.split("/")) if prefix else projection
-    )
-    _ensure_projection_directory(payload_root, projection)
-    desired_paths = set()
-
-    source_files = filter_repo_objects(
-        _source_projection_files(source),
-        ignore_patterns=ignore_patterns,
-        key=lambda item: item[0].as_posix(),
-    )
-    for relative, source_file, source_stat in source_files:
-        if selected_paths is not None and relative not in selected_paths:
-            continue
-        desired_paths.add(relative)
-        destination = payload_root / relative
-        if _is_projection_hf_metadata(destination, projection):
-            raise ResumableProjectionError(
-                "上传内容与 HF 断点续传元数据路径冲突，请使用 --no-resumable"
-            )
-        _ensure_projection_directory(destination.parent, projection)
-        if destination.is_dir():
-            shutil.rmtree(destination)
-        elif _projection_file_is_current(source_file, destination, source_stat):
-            continue
-        elif destination.exists():
-            destination.unlink()
-
-        try:
-            os.link(source_file, destination)
-        except OSError:
-            try:
-                os.symlink(source_file, destination)
-            except OSError as error:
-                raise ResumableProjectionError(
-                    "无法为断点续传创建无副本投影；请确认缓存目录与源目录支持硬链接或符号链接"
-                ) from error
-
-    for root_name, directory_names, filenames in os.walk(
-        str(payload_root), topdown=False, followlinks=False
-    ):
-        root = Path(root_name)
-        for name in filenames:
-            candidate = root / name
-            relative = candidate.relative_to(payload_root)
-            if _is_projection_hf_metadata(candidate, projection):
-                continue
-            if relative not in desired_paths:
-                candidate.unlink()
-        for name in directory_names:
-            candidate = root / name
-            if candidate.is_symlink():
-                candidate.unlink()
-                continue
-            relative = candidate.relative_to(payload_root)
-            if _is_projection_hf_metadata(candidate, projection):
-                continue
-            try:
-                candidate.rmdir()
-            except OSError:
-                pass
-
-
-def _prepare_resumable_upload_projection(
-    source: Path,
-    repo_id: str,
-    repo_type: str,
-    revision: str,
-    path_in_repo: str = None,
-    ignore_patterns=None,
-    selected_paths: Optional[Set[Path]] = None,
-    batch_key: str = "all",
-) -> Path:
-    """Build or refresh one stable large-folder projection for a remote prefix."""
-    parts = path_in_repo.split("/") if path_in_repo else []
-    folded_parts = [part.casefold() for part in parts]
-    if ".git" in folded_parts or any(
-        folded_parts[index:index + 2] == [".cache", "huggingface"]
-        for index in range(len(folded_parts) - 1)
-    ):
-        raise ResumableProjectionError(
-            "断点续传模式不能上传到 HF 保留路径，请使用 --no-resumable"
-        )
-
-    source = source.expanduser().resolve(strict=True)
-    cache_root = _resumable_projection_cache_root()
-    try:
-        source.relative_to(cache_root)
-    except ValueError:
-        pass
-    else:
-        raise ResumableProjectionError("不能将断点续传投影缓存作为上传源")
-
-    identity = "\0".join(
-        (
-            _atomgit_hf_endpoint(),
-            str(source),
-            repo_id,
-            repo_type,
-            revision or "main",
-            path_in_repo or "",
-            batch_key,
-        )
-    )
-    projection = cache_root / hashlib.sha256(identity.encode("utf-8")).hexdigest()
-    _ensure_projection_directory(projection, cache_root)
-    os.chmod(projection, 0o700)
-    _sync_resumable_projection(
-        source,
-        projection,
-        path_in_repo,
-        ignore_patterns=ignore_patterns,
-        selected_paths=selected_paths,
-    )
-    return projection
-
-
-def _collect_resumable_upload_files(source: Path, ignore_patterns=None):
-    """Return deterministic source-relative files selected for upload."""
-    source_files = filter_repo_objects(
-        _source_projection_files(source),
-        ignore_patterns=ignore_patterns,
-        key=lambda item: item[0].as_posix(),
-    )
-    return sorted(list(source_files), key=lambda item: item[0].as_posix())
-
-
-def _resumable_committed_file_count(
-    projection: Path, selected_paths, path_in_repo: str = None
-) -> int:
-    """Count current projected files already committed by HF large-folder."""
-    prefix = f"{path_in_repo}/" if path_in_repo else ""
-    committed = 0
-    for relative_path in selected_paths:
-        try:
-            metadata = read_upload_metadata(
-                Path(projection), prefix + relative_path.as_posix()
-            )
-        except Exception:
-            # This helper is observational. HF remains authoritative and will
-            # validate or repair its own metadata in the upload process.
-            continue
-        if metadata.is_committed:
-            committed += 1
-    return committed
-
-
-def _print_upload_batch_plan(
-    file_count: int, batch_count: int, batch_size: int
-) -> None:
-    print(
-        f"上传批次计划: 共 {file_count} 个文件，{batch_count} 个批次，"
-        f"每批最多 {batch_size} 个文件",
-        flush=True,
-    )
-
-
-def _print_upload_batch_summary(
-    planned: int, submitted: int, skipped: int, completed: int
-) -> None:
-    print(
-        f"上传批次汇总: 计划 {planned}，新增提交 {submitted}，"
-        f"续传跳过 {skipped}，确认完成 {completed}",
-        flush=True,
-    )
-
-
-def _execute_resumable_upload_process(
-    *, token: str, upload_kwargs: dict, request_timeout: float,
-    upload_deadline, upload_timeout, batch_context,
-    auto_configure_lfs: bool = False, configured_lfs_patterns=(),
-) -> None:
-    """Run one outer resumable batch and require an explicit child result."""
-    methods = multiprocessing.get_all_start_methods()
-    context = multiprocessing.get_context(
-        "fork" if "fork" in methods else "spawn"
-    )
-    result_queue = context.Queue()
-    process = context.Process(
-        target=_run_resumable_upload,
-        args=(
-            token,
-            upload_kwargs,
-            result_queue,
-            request_timeout,
-            batch_context,
-            upload_deadline,
-            auto_configure_lfs,
-            configured_lfs_patterns,
-        ),
-    )
-    process.daemon = True
-    remaining_timeout = None
-    if upload_deadline is not None:
-        remaining_timeout = upload_deadline - time.monotonic()
-    if remaining_timeout is not None and remaining_timeout <= 0:
-        raise TimeoutError(
-            f"resumable upload timed out after {upload_timeout}s"
-        )
-    process.start()
-    process.join(remaining_timeout)
-    if process.is_alive():
-        process.terminate()
-        process.join(2)
-        raise TimeoutError(
-            f"resumable upload timed out after {upload_timeout}s"
-        )
-    try:
-        ok, error = result_queue.get(timeout=1)
-    except Exception as exc:
-        raise RuntimeError(
-            "resumable upload worker exited without a result"
-        ) from exc
-    if not ok:
-        category = error.get("category") if isinstance(error, dict) else None
-        patterns = (
-            error.get("lfs_patterns", ())
-            if isinstance(error, dict)
-            else ()
-        )
-        raise ResumableWorkerError(category or "unknown", patterns)
-
-
-def _validate_resumable_upload_target(
-    *, token: str, repo_id: str, revision: str = None,
-    request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
-) -> None:
-    """Perform one read-only repository/revision check before local hashing."""
-    repo_path = _atomgit_v5_repo_path(repo_id)
-    repository = _atomgit_v5_get_json(
-        repo_path, token, timeout=request_timeout
-    )
-    if not isinstance(repository, dict):
-        raise ValueError("repository response is malformed")
-    if revision in (None, "main"):
-        return
-
-    branch_path = repo_path + "/branches/" + quote(revision, safe="")
-    try:
-        branch = _atomgit_v5_get_json(
-            branch_path, token, timeout=request_timeout
-        )
-    except urllib.error.HTTPError as error:
-        if error.code == 404:
-            raise ResumableTargetRevisionError(
-                "target revision does not exist"
-            ) from error
-        raise
-    if not isinstance(branch, dict) or branch.get("name") != revision:
-        raise ResumableTargetRevisionError(
-            "target revision could not be verified"
-        )
-
-
-def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
-    """Call HF upload_folder while honoring the requested commit thread count."""
-    if num_workers == 5:
-        return upload_folder(**upload_kwargs)
-    kwargs = dict(upload_kwargs)
-    token = kwargs.pop("token", None)
-    client = HfApi(token=token)
-    original_create_commit = client.create_commit
-
-    def create_commit_with_workers(*args, **call_kwargs):
-        call_kwargs["num_threads"] = num_workers
-        return original_create_commit(*args, **call_kwargs)
-
-    client.create_commit = create_commit_with_workers
-    return client.upload_folder(**kwargs)
-
-
-def _prefix_resumable_ignore_patterns(path_in_repo: str, ignore_patterns):
-    """Apply source-relative ignore patterns to a projected remote prefix."""
-    if not path_in_repo or not ignore_patterns:
-        return ignore_patterns
-    return [
-        f"{path_in_repo}/{pattern.lstrip('/')}" for pattern in ignore_patterns
-    ]
-
-
-def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
-    """把 HF Hub 上传异常归类为 (error_type, hint) 二元组，供上层给出语义化提示。
-
-    覆盖以下典型情形（基于 huggingface_hub 错误类型与文本特征）：
-      - 认证失败 (401/403, 无有效 token)
-      - 仓库不存在 (RepositoryNotFoundError)
-      - 仓库已禁用 (DisabledRepoError)
-      - 分支不存在 (RevisionNotFoundError)
-      - 请求参数错误 (BadRequestError / 400)
-      - 超时 / 网络连接 (timeout / connection)
-      - 其他未知错误
-
-    返回 (error_type, hint)，其中 hint 是给用户的可执行建议。
-    """
-    if isinstance(e, ResumableWorkerError):
-        structured_errors = {
-            "authentication": (
-                "认证失败",
-                "登录凭证无效或已过期。请使用 'atomgit login' 重新登录后重试。",
-            ),
-            "permission": (
-                "权限不足",
-                "当前登录凭证无权上传到目标仓库。请检查仓库权限或目标命名空间。",
-            ),
-            "repository": (
-                "仓库不存在",
-                f"目标仓库 {repo_id or ''} 不存在或不可访问。请先使用 "
-                "'atomgit repo create' 创建仓库，或检查 repo_id / repo_type。",
-            ),
-            "revision": (
-                "分支/版本不存在",
-                "目标分支不存在且无法自动创建。请检查 revision 是否正确。",
-            ),
-            "request": (
-                "请求参数错误",
-                "请求参数不合法。请检查 repo_id、repo_type、path_in_repo 等参数。",
-            ),
-            "payload_size": (
-                "提交过大",
-                "提交已降至单文件仍超过服务端限制；断点状态已保留，请联系平台支持。",
-            ),
-            "lfs_quota": (
-                "LFS 存储空间不足",
-                "请增加仓库或账号的 LFS 配额，或删除无用对象并完成服务端 LFS GC；"
-                "断点状态已保留，释放空间后可重新执行同一命令。",
-            ),
-            "lfs_bandwidth": (
-                "LFS 带宽额度不足",
-                "请等待带宽额度重置或联系平台支持；断点状态已保留，"
-                "条件恢复后可重新执行同一命令。",
-            ),
-            "lfs_batch_rejected": (
-                "LFS 协商请求被拒绝",
-                "Git LFS Batch 请求被服务端拒绝；断点状态已保留，"
-                "请在平台支持解决后重新执行同一命令。",
-            ),
-            "rate_limit": (
-                "请求限流",
-                "服务端持续限流，上传已停止且断点状态已保留；请稍后重新执行同一命令。",
-            ),
-            "service_unavailable": (
-                "服务暂不可用",
-                "服务端暂时不可用，上传断点状态已保留；请稍后重新执行同一命令。",
-            ),
-            "timeout": (
-                "请求超时",
-                "请求超时。可使用 -t/--timeout 增大超时时间后重试。",
-            ),
-            "connection": (
-                "网络连接失败",
-                "无法连接到服务器。请检查网络或代理设置后重试。",
-            ),
-            "upload_mode": (
-                "上传模式不安全",
-                "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-                "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
-                "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
-            ),
-            "lfs_pointer": (
-                "LFS 指针验证失败",
-                "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
-                "Git blob 确认；本次上传未确认成功，请保留断点并联系平台支持。",
-            ),
-            "client_resource": (
-                "客户端资源不足",
-                "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
-            ),
-            "unknown": (
-                "未知错误",
-                "上传子进程失败且未能安全识别原因；断点状态已保留，请稍后重试。",
-            ),
-        }
-        return structured_errors[e.category]
-
-    if isinstance(e, ResumableUploadModeError):
-        return (
-            "上传模式不安全",
-            "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
-            "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
-            "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
-        )
-
-    if isinstance(e, CanonicalLfsPointerError):
-        return (
-            "LFS 指针验证失败",
-            "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
-            "Git blob 确认；本次上传未确认成功，请联系平台支持。",
-        )
-
-    if isinstance(e, ResumableTargetRevisionError):
-        return (
-            "分支/版本不存在",
-            "目标分支不存在且无法自动创建。请检查 revision 是否正确。",
-        )
-
-    msg = str(e)
-    ename = type(e).__name__
-
-    # 仓库已禁用（需放在 RepositoryNotFoundError 之前，避免被 403 误吞）
-    if ename == "DisabledRepoError" or "disabled" in msg.lower() and "repo" in msg.lower():
-        return "仓库已禁用", "该仓库已被作者禁用，无法上传。请联系仓库所有者。"
-
-    # 分支/版本不存在
-    if ename == "RevisionNotFoundError" or "revision" in msg.lower() and ("not found" in msg.lower() or "404" in msg):
-        return "分支/版本不存在", f"目标分支不存在且无法自动创建。请检查 revision 是否正确。"
-
-    # 受限仓库的可靠特征。HF 401 通用文案（"If you are trying to access a
-    # private or gated repo..."）也含 "gated" 一词，不能仅凭该词判定。
-    gated_markers = (
-        "cannot access gated repo" in msg.lower()
-        or "you are not on the authorized list" in msg.lower()
-        or "you are not in the authorized list" in msg.lower()
-        or "repo is gated" in msg.lower()
-        or "is gated" in msg.lower()
-    )
-
-    # 仓库不存在（HF 既定：404/401 或 "Repository Not Found"、"创建提交前仓库
-    # 必须已存在 / 检查 repo_id 与 repo_type" 等特征；preupload 预检对不存在
-    # 或不可访问的仓库返回 404/401）
-    if (
-        ename in ("RepositoryNotFoundError", "GatedRepoError")
-        or "repository not found" in msg.lower()
-        or ("404" in msg and "not found" in msg.lower())
-        or "creating a commit assumes that the repo already exists" in msg.lower()
-        or "please make sure you specified the correct `repo_id` and `repo_type`" in msg.lower()
-    ):
-        if ename == "GatedRepoError" or gated_markers:
-            return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
-        if "preupload" in msg.lower():
-            return (
-                "仓库不存在",
-                f"目标仓库 {repo_id or ''} 不存在或为私有且无访问权限。"
-                "请先使用 'atomgit repo create' 创建仓库，或检查 repo_id / repo_type。",
-            )
-        return "仓库不存在", f"仓库 {repo_id or ''} 不存在或为私有且无访问权限。请检查 repo_id/repo_type，或先 atomgit login。"
-
-    # 受限仓库（文本特征兜底：仅限明确的 gated 语义）
-    if gated_markers:
-        return "受限仓库", "该仓库为受限仓库(gated)，您未在授权名单内。请在平台申请访问权限。"
-
-    if isinstance(e, ResumableProjectionError):
-        return "本地投影失败", msg
-
-    if "429" in msg or "too many requests" in msg.lower():
-        return (
-            "请求限流",
-            "服务端持续限流，上传已停止且断点状态已保留；请稍后重新执行同一命令。",
-        )
-
-    if "413" in msg:
-        return (
-            "提交过大",
-            "提交已降至单文件仍超过服务端限制；断点状态已保留，请联系平台支持。",
-        )
-
-    if any(code in msg for code in ("502", "503", "504")):
-        return (
-            "服务暂不可用",
-            "服务端暂时不可用，上传断点状态已保留；请稍后重新执行同一命令。",
-        )
-
-    # 请求参数错误
-    if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
-        return "请求参数错误", "请求参数不合法。请检查 repo_id、repo_type、path_in_repo 等参数。"
-
-    # 认证/权限失败（且不属于上述仓库类错误）
-    credential_error = auth_error_kind(e)
-    if credential_error == "authentication":
-        return (
-            "认证失败",
-            "登录凭证无效或已过期。请使用 'atomgit login' 重新登录后重试。",
-        )
-    if credential_error == "permission":
-        return (
-            "权限不足",
-            "当前登录凭证无权上传到目标仓库。请检查仓库权限或目标命名空间。",
-        )
-
-    # 超时
-    if "timeout" in msg.lower() or "timed out" in msg.lower() or ename == "TimeoutError":
-        return "请求超时", "请求超时。可使用 -t/--timeout 增大超时时间后重试。"
-
-    # 网络连接
-    if "connection" in msg.lower() or "connectionerror" in ename.lower() or "resolve" in msg.lower():
-        return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
-
-    # 其他
-    return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+try:
+    from .upload import errors as _upload_errors
+    from .upload import ordinary as _upload_ordinary
+    from .upload import projection as _upload_projection
+    from .upload import resumable as _upload_resumable
+    from .upload import service as _upload_service
+    from .upload.service import UploadServiceMixin
+except ImportError:
+    from upload import errors as _upload_errors
+    from upload import ordinary as _upload_ordinary
+    from upload import projection as _upload_projection
+    from upload import resumable as _upload_resumable
+    from upload import service as _upload_service
+    from upload.service import UploadServiceMixin
+
+_UPLOAD_OWNER_EXPORTS = {
+    "_set_progress_bar": _upload_ordinary,
+    "_capture_progress_bar_state": _upload_ordinary,
+    "_restore_progress_bar_state": _upload_ordinary,
+    "_upload_folder_with_workers": _upload_ordinary,
+    "_RESUMABLE_WORKER_ERROR_MESSAGES": _upload_errors,
+    "ResumableTargetRevisionError": _upload_errors,
+    "ResumableWorkerError": _upload_errors,
+    "ResumableCommitError": _upload_errors,
+    "_resumable_error_chain": _upload_errors,
+    "_resumable_error_status": _upload_errors,
+    "_resumable_worker_error_category": _upload_errors,
+    "_resumable_failure_envelope": _upload_errors,
+    "_classify_upload_error": _upload_errors,
+    "ResumableProjectionError": _upload_projection,
+    "_resumable_projection_cache_root": _upload_projection,
+    "_ensure_projection_directory": _upload_projection,
+    "_source_projection_files": _upload_projection,
+    "_projection_file_is_current": _upload_projection,
+    "_is_projection_hf_metadata": _upload_projection,
+    "_sync_resumable_projection": _upload_projection,
+    "_prepare_resumable_upload_projection": _upload_projection,
+    "_collect_resumable_upload_files": _upload_projection,
+    "_resumable_committed_file_count": _upload_projection,
+    "_RESUMABLE_COMMIT_MAX_ATTEMPTS": _upload_resumable,
+    "_RESUMABLE_COMMIT_BACKOFF_BASE": _upload_resumable,
+    "_RESUMABLE_COMMIT_BACKOFF_CAP": _upload_resumable,
+    "_RESUMABLE_COMMIT_BATCH_SIZES": _upload_resumable,
+    "_commit_error_status": _upload_resumable,
+    "_commit_retry_after": _upload_resumable,
+    "_is_ambiguous_commit_error": _upload_resumable,
+    "_is_retryable_commit_error": _upload_resumable,
+    "_is_reducible_commit_error": _upload_resumable,
+    "_operation_git_sha1": _upload_resumable,
+    "_reconcile_resumable_commit_operations": _upload_resumable,
+    "_next_resumable_commit_batch_size": _upload_resumable,
+    "_mark_resumable_operations_committed": _upload_resumable,
+    "_ResumableCommitController": _upload_resumable,
+    "_print_resumable_commit_event": _upload_resumable,
+    "_run_resumable_upload": _upload_resumable,
+    "_print_upload_batch_plan": _upload_resumable,
+    "_print_upload_batch_summary": _upload_resumable,
+    "_execute_resumable_upload_process": _upload_resumable,
+    "_validate_resumable_upload_target": _upload_resumable,
+    "_prefix_resumable_ignore_patterns": _upload_resumable,
+}
+for _upload_name, _upload_owner in _UPLOAD_OWNER_EXPORTS.items():
+    globals()[_upload_name] = getattr(_upload_owner, _upload_name)
+
+_UPLOAD_OWNER_CONSUMERS = {
+    "_set_progress_bar": (_upload_ordinary, _upload_service),
+    "_capture_progress_bar_state": (_upload_ordinary, _upload_service),
+    "_restore_progress_bar_state": (_upload_ordinary, _upload_service),
+    "_upload_folder_with_workers": (_upload_ordinary, _upload_service),
+    "ResumableTargetRevisionError": (_upload_errors, _upload_resumable),
+    "ResumableWorkerError": (
+        _upload_errors,
+        _upload_resumable,
+        _upload_service,
+    ),
+    "ResumableCommitError": (_upload_errors, _upload_resumable),
+    "_resumable_failure_envelope": (_upload_errors, _upload_resumable),
+    "_classify_upload_error": (_upload_errors, _upload_service),
+    "ResumableProjectionError": (_upload_errors, _upload_projection),
+    "_prepare_resumable_upload_projection": (
+        _upload_projection,
+        _upload_service,
+    ),
+    "_collect_resumable_upload_files": (_upload_projection, _upload_service),
+    "_resumable_committed_file_count": (
+        _upload_projection,
+        _upload_service,
+    ),
+    "_print_upload_batch_plan": (_upload_resumable, _upload_service),
+    "_print_upload_batch_summary": (_upload_resumable, _upload_service),
+    "_execute_resumable_upload_process": (_upload_resumable, _upload_service),
+    "_validate_resumable_upload_target": (_upload_resumable, _upload_service),
+    "_prefix_resumable_ignore_patterns": (_upload_resumable, _upload_service),
+}
 
 class HuggingFaceAPI(
-    AuthenticationServiceMixin, RepositoryServiceMixin, DownloadServiceMixin
+    AuthenticationServiceMixin,
+    RepositoryServiceMixin,
+    DownloadServiceMixin,
+    UploadServiceMixin,
 ):
     """AtomGit API client with historical identity and owned service methods."""
 
     def __init__(self):
         pass
 
-    def upload_folder(self, file_path: Path, repo_id: str,
-                   remote_path: str = None, message: str = None,
-                   upload_timeout: Optional[float] = None,
-                   progress_bar: bool = True,
-                   path_in_repo: str = None,
-                   repo_type: str = None,
-                   revision: str = None,
-                   ignore_patterns=None,
-                   num_workers: int = 5) -> bool:
-        """上传单个文件 - 使用Hugging Face Hub SDK
 
-        优先使用 HF ``upload_file`` 直接以文件路径上传，避免旧实现中
-        "先复制再上传"的额外本地拷贝开销；仅在 HF 版本过旧（无
-        ``upload_file``）时回退到 ``upload_folder`` + 唯一系统临时目录。
-
-        Args:
-            path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
-                否则文件会被放到该前缀下（如 ``sub/`` → ``sub/<文件名>``）。
-            repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
-                默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
-                CLI 会在调用本方法前拒绝其他值。
-            ignore_patterns: 单文件上传路径下该参数仅会匹配 ``file_path.name``，
-                几乎不生效——主要对目录上传有意义。新实现（``upload_file``）
-                不支持该参数，传入时若非空会回退到 ``upload_folder`` 旧路径
-                以保留语义。
-        """
-        if not is_supported_upload_revision(revision):
-            print("上传 revision 名称不合法，已拒绝上传")
-            return False
-        try:
-            try:
-                validate_upload_path_no_symlinks(file_path)
-            except ValueError as error:
-                print(str(error))
-                return False
-            if not file_path.exists():
-                print(f"文件不存在: {file_path}")
-                return False
-
-            credentials = config.get_credentials()
-            if not credentials:
-                print("未找到登录凭证")
-                return False
-
-            # 规范化 path_in_repo（remote_path 为旧别名，向后兼容）
-            try:
-                pipr = normalize_path_in_repo(path_in_repo if path_in_repo is not None else remote_path)
-            except ValueError as e:
-                print(f"上传路径不合法: {e}")
-                return False
-
-            original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-            original_progress_state = _capture_progress_bar_state()
-            _set_progress_bar(progress_bar)
-
-            commit_message = message or "Upload folder using atomgit client"
-            normalized_repo_id = self._normalize_repo_id(repo_id)
-            # 使用 Monkey Patch 方式临时修改 huggingface_hub 的默认超时配置
-            request_timeout = (
-                upload_timeout
-                if upload_timeout is not None
-                else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
-            )
-            hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
-            close_hf_session()
-
-            try:
-                # 路径2（推荐）：直接 upload_file，无本地拷贝
-                if hf_upload_file is not None and not ignore_patterns:
-                    # upload_file 需要完整的 path_in_repo（含文件名）
-                    remote_file_path = f"{pipr}/{file_path.name}" if pipr else file_path.name
-                    file_kwargs = dict(
-                        path_or_fileobj=str(file_path),
-                        path_in_repo=remote_file_path,
-                        repo_id=normalized_repo_id,
-                        token=credentials['token'],
-                        commit_message=commit_message,
-                    )
-                    upload_repo_type = _atomgit_repo_type(repo_type)
-                    if upload_repo_type is not None:
-                        file_kwargs['repo_type'] = upload_repo_type
-                    if revision is not None:
-                        file_kwargs['revision'] = revision
-                    run_canonical_lfs_upload(
-                        lambda: hf_upload_file(**file_kwargs),
-                        token=credentials['token'],
-                        repo_id=normalized_repo_id,
-                        timeout=min(request_timeout, 15),
-                    )
-                    return True
-
-                # 路径1（回退）：upload_folder + 临时目录拷贝（旧实现）
-                # 触发条件：HF 版本过旧无 upload_file，或用户传了 ignore_patterns
-                import tempfile
-                with tempfile.TemporaryDirectory(prefix="atomgit-upload-") as temp_name:
-                    temp_dir = Path(temp_name)
-                    if pipr:
-                        target_file = temp_dir / pipr / file_path.name
-                        target_file.parent.mkdir(parents=True, exist_ok=True)
-                        upload_path_in_repo = f"{pipr}/"
-                    else:
-                        target_file = temp_dir / file_path.name
-                        upload_path_in_repo = "./"
-                    import shutil
-                    shutil.copy2(file_path, target_file)
-                    upload_kwargs = dict(
-                        repo_id=normalized_repo_id,
-                        folder_path=str(temp_dir),
-                        path_in_repo=upload_path_in_repo,
-                        token=credentials['token'],
-                        commit_message=commit_message,
-                    )
-                    upload_repo_type = _atomgit_repo_type(repo_type)
-                    if upload_repo_type is not None:
-                        upload_kwargs['repo_type'] = upload_repo_type
-                    if revision is not None:
-                        upload_kwargs['revision'] = revision
-                    if ignore_patterns:
-                        upload_kwargs['ignore_patterns'] = ignore_patterns
-                    run_canonical_lfs_upload(
-                        lambda: upload_folder(**upload_kwargs),
-                        token=credentials['token'],
-                        repo_id=normalized_repo_id,
-                        timeout=min(request_timeout, 15),
-                    )
-                    return True
-            finally:
-                hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
-                close_hf_session()
-                _restore_progress_bar_state(original_progress_state)
-        except Exception as e:
-            err_type, hint = _classify_upload_error(e, repo_id=repo_id)
-            print(f"上传文件失败[{err_type}]")
-            print(f"💡 建议: {hint}")
-            return False
-
-    def upload_directory(self, dir_path: Path, repo_id: str,
-                        message: str = None, progress_callback=None,
-                        upload_timeout: Optional[float] = None,
-                        progress_bar: bool = True,
-                        path_in_repo: str = None,
-                        repo_type: str = None,
-                        revision: str = None,
-                        ignore_patterns=None,
-                        resumable: bool = False,
-                        num_workers: int = 5,
-                        auto_configure_lfs: bool = False,
-                        batch_size: int = DEFAULT_UPLOAD_BATCH_SIZE) -> bool:
-        """上传目录 - 使用Hugging Face Hub SDK
-
-        Args:
-            path_in_repo: 仓库内目标目录前缀。为空/``./`` 时上传到仓库根目录；
-                否则目录内容会被放到该前缀下。
-            repo_type: 仓库类型，``model`` 或 ``dataset``。为空时由 HF
-                默认按 ``model`` 处理（保持既有行为）。
-            revision: 上传目标 revision。AtomGit 当前仅支持空值或 ``main``；
-                CLI 会在调用本方法前拒绝其他值。
-            ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
-                ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
-            resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF
-                ``upload_large_folder``：进程级元数据写入目录下
-                ``.cache/.huggingface/``，中断后再次执行可自动续传；适合
-                大目录。CLI 使用按上传身份隔离的私有持久投影；
-                ``path_in_repo`` 非空时将源目录内容放到对应远端前缀下，同时
-                保留 HF 元数据。该模式不支持单一
-                ``message`` / ``commit_message``（会产生多次提交），且 HF
-                要求 ``repo_type`` 必填，为空时默认 ``model``。
-            num_workers: 上传 worker 数，默认为 5；适用于断点续传和普通目录上传。
-            batch_size: 外层目录批次的最大文件数，必须为 1..20 的整数。
-            auto_configure_lfs: 仅用于 resumable。服务端将文件判定为 LFS 时，
-                检查并补齐根目录 ``.gitattributes`` 的安全扩展名规则；同时保留
-                超大 regular 文件的策略修复。规则作用于整个目标仓库。
-        """
-        if not is_supported_upload_revision(revision):
-            print("上传 revision 名称不合法，已拒绝上传")
-            return False
-        if auto_configure_lfs and not resumable:
-            print("--auto-configure-lfs 仅支持 resumable 目录上传")
-            return False
-        if (
-            not isinstance(batch_size, int)
-            or isinstance(batch_size, bool)
-            or not 1 <= batch_size <= DEFAULT_UPLOAD_BATCH_SIZE
-        ):
-            print("上传批次大小必须是 1 到 20 之间的整数")
-            return False
-        try:
-            try:
-                validate_upload_path_no_symlinks(dir_path)
-            except ValueError as error:
-                print(str(error))
-                return False
-            if not dir_path.exists() or not dir_path.is_dir():
-                print(f"目录不存在: {dir_path}")
-                return False
-
-            credentials = config.get_credentials()
-            if not credentials:
-                print("未找到登录凭证")
-                return False
-
-            # 规范化 path_in_repo
-            try:
-                pipr = normalize_path_in_repo(path_in_repo)
-            except ValueError as e:
-                print(f"上传路径不合法: {e}")
-                return False
-
-            original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-            original_progress_state = _capture_progress_bar_state()
-            _set_progress_bar(progress_bar)
-
-            try:
-                commit_message = message or "Upload folder using atomgit client"
-                request_timeout = (
-                    upload_timeout
-                    if upload_timeout is not None
-                    else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
-                )
-                hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
-                close_hf_session()
-
-                selected_files = _collect_resumable_upload_files(
-                    dir_path, ignore_patterns
-                )
-                batches = [
-                    selected_files[index:index + batch_size]
-                    for index in range(0, len(selected_files), batch_size)
-                ] or [[]]
-                batch_count = len(batches)
-                total_files = len(selected_files)
-                submitted_files = 0
-                skipped_files = 0
-                completed_files = 0
-                _print_upload_batch_plan(
-                    total_files, batch_count, batch_size
-                )
-
-                if resumable:
-                    # 断点续传/分块上传：走 upload_large_folder
-                    eff_repo_type = _atomgit_repo_type(repo_type) or "model"
-                    normalized_repo_id = self._normalize_repo_id(repo_id)
-                    upload_deadline = (
-                        None
-                        if upload_timeout is None
-                        else time.monotonic() + upload_timeout
-                    )
-                    _validate_resumable_upload_target(
-                        token=credentials['token'],
-                        repo_id=normalized_repo_id,
-                        revision=revision,
-                        request_timeout=request_timeout,
-                    )
-                    attempted_lfs_patterns = set()
-                    for batch_index, batch in enumerate(batches):
-                        batch_number = batch_index + 1
-                        batch_file_count = len(batch)
-                        print(
-                            f"[批次 {batch_number}/{batch_count}] 开始: "
-                            f"{batch_file_count} 个文件",
-                            flush=True,
-                        )
-                        selected_paths = {item[0] for item in batch}
-                        upload_root = None
-                        batch_skipped = 0
-                        try:
-                            upload_root = _prepare_resumable_upload_projection(
-                                dir_path,
-                                normalized_repo_id,
-                                eff_repo_type,
-                                revision,
-                                pipr,
-                                ignore_patterns=None,
-                                selected_paths=selected_paths,
-                                batch_key=f"batch-{batch_size}-{batch_index}",
-                            )
-                            batch_skipped = _resumable_committed_file_count(
-                                upload_root, selected_paths, pipr
-                            )
-                            if batch_skipped:
-                                print(
-                                    f"[批次 {batch_number}/{batch_count}] "
-                                    f"续传跳过: {batch_skipped} 个已确认完成文件",
-                                    flush=True,
-                                )
-
-                            lf_kwargs = dict(
-                                repo_id=normalized_repo_id,
-                                folder_path=str(upload_root),
-                                repo_type=eff_repo_type,
-                                num_workers=num_workers or 5,
-                            )
-                            if revision is not None:
-                                lf_kwargs['revision'] = revision
-                            if ignore_patterns:
-                                lf_kwargs['ignore_patterns'] = (
-                                    _prefix_resumable_ignore_patterns(
-                                        pipr, ignore_patterns
-                                    )
-                                )
-                            while True:
-                                try:
-                                    # Fully committed projections still enter HF
-                                    # so authorization remains checked.
-                                    _execute_resumable_upload_process(
-                                        token=credentials['token'],
-                                        upload_kwargs=lf_kwargs,
-                                        request_timeout=request_timeout,
-                                        upload_deadline=upload_deadline,
-                                        upload_timeout=upload_timeout,
-                                        batch_context=(
-                                            batch_number, batch_count
-                                        ),
-                                        auto_configure_lfs=auto_configure_lfs,
-                                        configured_lfs_patterns=_validated_lfs_patterns(
-                                            attempted_lfs_patterns
-                                        ),
-                                    )
-                                    break
-                                except ResumableWorkerError as error:
-                                    if (
-                                        error.category not in (
-                                            "upload_mode", "lfs_attributes"
-                                        )
-                                        or not auto_configure_lfs
-                                    ):
-                                        raise
-                                    patterns = _validated_lfs_patterns(
-                                        error.lfs_patterns
-                                    )
-                                    new_patterns = tuple(
-                                        pattern
-                                        for pattern in patterns
-                                        if pattern not in attempted_lfs_patterns
-                                    )
-                                    if (
-                                        len(attempted_lfs_patterns)
-                                        + len(new_patterns)
-                                        > _RESUMABLE_LFS_PATTERN_MAX_COUNT
-                                    ):
-                                        print(
-                                            f"[批次 {batch_number}/{batch_count}] "
-                                            "本次上传检测到的 LFS 扩展名超过自动配置上限；"
-                                            "请手动配置 .gitattributes",
-                                            flush=True,
-                                        )
-                                        raise
-                                    if not new_patterns:
-                                        if not patterns:
-                                            print(
-                                                f"[批次 {batch_number}/{batch_count}] "
-                                                "无法从文件名推导安全的扩展名规则；"
-                                                "请手动配置 .gitattributes",
-                                                flush=True,
-                                            )
-                                        else:
-                                            print(
-                                                f"[批次 {batch_number}/{batch_count}] "
-                                                "已尝试的 Git LFS 规则仍未生效；"
-                                                "已停止自动修改以避免循环提交",
-                                                flush=True,
-                                            )
-                                        raise
-                                    attempted_lfs_patterns.update(new_patterns)
-                                    if error.category == "lfs_attributes":
-                                        print(
-                                            f"[批次 {batch_number}/{batch_count}] "
-                                            "检测到服务端判定为 LFS 的文件类型；"
-                                            "正在检查远端 .gitattributes",
-                                            flush=True,
-                                        )
-                                    else:
-                                        print(
-                                            f"[批次 {batch_number}/{batch_count}] "
-                                            "检测到超大 regular 文件，需要配置 Git LFS",
-                                            flush=True,
-                                        )
-                                    print(
-                                        "将使用 --auto-configure-lfs 提交规则: "
-                                        + ", ".join(new_patterns)
-                                        + "（规则作用于整个仓库）",
-                                        flush=True,
-                                    )
-                                    configuration_timeout = request_timeout
-                                    if upload_deadline is not None:
-                                        remaining = (
-                                            upload_deadline - time.monotonic()
-                                        )
-                                        if remaining <= 0:
-                                            raise TimeoutError(
-                                                "resumable upload timed out "
-                                                "during Git LFS configuration"
-                                            )
-                                        configuration_timeout = min(
-                                            request_timeout, remaining
-                                        )
-                                    outcome = _configure_remote_lfs_attributes(
-                                        token=credentials['token'],
-                                        repo_id=normalized_repo_id,
-                                        repo_type=eff_repo_type,
-                                        revision=revision,
-                                        patterns=new_patterns,
-                                        request_timeout=configuration_timeout,
-                                    )
-                                    if outcome["changed"]:
-                                        action = (
-                                            "已创建" if outcome["created"]
-                                            else "已更新"
-                                        )
-                                        continuation = (
-                                            "正在刷新上传模式并重试当前批次"
-                                            if error.category == "upload_mode"
-                                            else "正在重试当前批次"
-                                        )
-                                        print(
-                                            f"[批次 {batch_number}/{batch_count}] "
-                                            f"{action}远端 .gitattributes；"
-                                            f"{continuation}",
-                                            flush=True,
-                                        )
-                                    else:
-                                        continuation = (
-                                            "正在刷新上传模式并重试当前批次"
-                                            if error.category == "upload_mode"
-                                            else "正在重试当前批次"
-                                        )
-                                        print(
-                                            f"[批次 {batch_number}/{batch_count}] "
-                                            "远端 .gitattributes 已包含所需规则；"
-                                            f"{continuation}",
-                                            flush=True,
-                                        )
-                        except Exception:
-                            confirmed_in_batch = batch_skipped
-                            if upload_root is not None:
-                                confirmed_in_batch = max(
-                                    confirmed_in_batch,
-                                    _resumable_committed_file_count(
-                                        upload_root, selected_paths, pipr
-                                    ),
-                                )
-                            skipped_files += batch_skipped
-                            submitted_files += max(
-                                0, confirmed_in_batch - batch_skipped
-                            )
-                            completed_files += confirmed_in_batch
-                            remaining_files = total_files - completed_files
-                            print(
-                                f"[批次 {batch_number}/{batch_count}] 失败: "
-                                f"累计确认完成 {completed_files}/{total_files}，"
-                                f"剩余 {remaining_files}",
-                                flush=True,
-                            )
-                            print(
-                                "断点元数据已保留；修复问题后重新执行同一命令可继续上传",
-                                flush=True,
-                            )
-                            _print_upload_batch_summary(
-                                total_files,
-                                submitted_files,
-                                skipped_files,
-                                completed_files,
-                            )
-                            raise
-
-                        skipped_files += batch_skipped
-                        newly_submitted = batch_file_count - batch_skipped
-                        submitted_files += newly_submitted
-                        completed_files += batch_file_count
-                        print(
-                            f"[批次 {batch_number}/{batch_count}] 成功: "
-                            f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"
-                            f"累计完成 {completed_files}/{total_files}",
-                            flush=True,
-                        )
-                else:
-                    # 仓库内目标前缀：空 → "./"（根目录）
-                    upload_path_in_repo = pipr + "/" if pipr else "./"
-                    upload_kwargs = dict(
-                        repo_id=self._normalize_repo_id(repo_id),
-                        folder_path=str(dir_path),
-                        path_in_repo=upload_path_in_repo,
-                        token=credentials['token'],
-                        commit_message=commit_message,
-                    )
-                    upload_repo_type = _atomgit_repo_type(repo_type)
-                    if upload_repo_type is not None:
-                        upload_kwargs['repo_type'] = upload_repo_type
-                    if revision is not None:
-                        upload_kwargs['revision'] = revision
-                    for batch_index, batch in enumerate(batches):
-                        batch_number = batch_index + 1
-                        batch_file_count = len(batch)
-                        print(
-                            f"[批次 {batch_number}/{batch_count}] 开始: "
-                            f"{batch_file_count} 个文件",
-                            flush=True,
-                        )
-                        try:
-                            if batch:
-                                upload_kwargs['allow_patterns'] = [
-                                    item[0].as_posix() for item in batch
-                                ]
-                            if ignore_patterns:
-                                upload_kwargs['ignore_patterns'] = ignore_patterns
-                            run_canonical_lfs_upload(
-                                lambda: _upload_folder_with_workers(
-                                    upload_kwargs, num_workers or 5
-                                ),
-                                token=credentials['token'],
-                                repo_id=upload_kwargs['repo_id'],
-                                timeout=min(request_timeout, 15),
-                            )
-                        except Exception:
-                            remaining_files = total_files - completed_files
-                            print(
-                                f"[批次 {batch_number}/{batch_count}] 失败: "
-                                f"累计确认完成 {completed_files}/{total_files}，"
-                                f"剩余 {remaining_files}",
-                                flush=True,
-                            )
-                            _print_upload_batch_summary(
-                                total_files,
-                                submitted_files,
-                                skipped_files,
-                                completed_files,
-                            )
-                            raise
-                        submitted_files += batch_file_count
-                        completed_files += batch_file_count
-                        print(
-                            f"[批次 {batch_number}/{batch_count}] 成功: "
-                            f"新增提交 {batch_file_count}，续传跳过 0，"
-                            f"累计完成 {completed_files}/{total_files}",
-                            flush=True,
-                        )
-
-                _print_upload_batch_summary(
-                    total_files,
-                    submitted_files,
-                    skipped_files,
-                    completed_files,
-                )
-
-                return True
-            finally:
-                hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
-                close_hf_session()
-                _restore_progress_bar_state(original_progress_state)
-
-        except Exception as e:
-            err_type, hint = _classify_upload_error(e, repo_id=repo_id)
-            print(f"上传目录失败[{err_type}]")
-            print(f"💡 建议: {hint}")
-            return False
     
 
 
@@ -3523,6 +1820,73 @@ _download_integrity._is_not_found_error = _is_not_found_error
 _download_transport._is_not_found_error = _is_not_found_error
 _download_integrity._atomgit_open_url = _atomgit_open_url
 _download_transport._atomgit_open_url = _atomgit_open_url
+
+_UPLOAD_PATCH_TARGETS = {
+    "HfApi": (_upload_ordinary, _upload_resumable),
+    "upload_folder": (_upload_ordinary, _upload_service),
+    "hf_upload_file": (_upload_service,),
+    "are_progress_bars_disabled": (_upload_ordinary,),
+    "disable_progress_bars": (_upload_ordinary,),
+    "enable_progress_bars": (_upload_ordinary,),
+    "progress_bar_states": (_upload_ordinary,),
+    "errno": (_upload_errors,),
+    "httpx": (_upload_errors, _upload_resumable),
+    "socket": (_upload_errors, _upload_resumable),
+    "auth_error_kind": (_upload_errors,),
+    "CanonicalLfsPointerError": (_upload_errors,),
+    "ResumableUploadModeError": (_upload_errors, _upload_resumable),
+    "ResumableLfsAttributesError": (_upload_errors, _upload_resumable),
+    "ResumableLfsPreuploadError": (_upload_errors,),
+    "_validated_lfs_patterns": (_upload_errors, _upload_service),
+    "hashlib": (_upload_projection, _upload_resumable),
+    "os": (_upload_projection, _upload_resumable),
+    "shutil": (_upload_projection, _upload_service),
+    "stat": (_upload_projection,),
+    "filter_repo_objects": (_upload_projection,),
+    "read_upload_metadata": (_upload_projection, _upload_resumable),
+    "_atomgit_hf_endpoint": (_upload_projection, _upload_resumable),
+    "multiprocessing": (_upload_resumable,),
+    "random": (_upload_resumable,),
+    "time": (_upload_resumable, _upload_service),
+    "urllib": (_upload_resumable,),
+    "datetime": (_upload_resumable,),
+    "timezone": (_upload_resumable,),
+    "parsedate_to_datetime": (_upload_resumable,),
+    "quote": (_upload_resumable,),
+    "hf_large_folder": (_upload_resumable,),
+    "hf_constants": (_upload_resumable, _upload_service),
+    "close_hf_session": (_upload_resumable, _upload_service),
+    "get_local_upload_paths": (_upload_resumable,),
+    "_atomgit_file_checksum": (_upload_resumable,),
+    "_atomgit_v5_get_json": (_upload_resumable,),
+    "_atomgit_v5_repo_path": (_upload_resumable,),
+    "canonical_lfs_payloads": (_upload_resumable,),
+    "verify_canonical_lfs_pointers": (_upload_resumable,),
+    "_ResumableLfsAttributesPolicy": (_upload_resumable,),
+    "_ResumableLfsPreuploadController": (_upload_resumable,),
+    "_SlowFlowCoordinator": (_upload_resumable,),
+    "_print_resumable_lfs_preupload_event": (_upload_resumable,),
+    "_print_resumable_slow_flow_event": (_upload_resumable,),
+    "_refresh_unsafe_resumable_upload_modes": (_upload_resumable,),
+    "_resumable_projection_lfs_patterns": (_upload_resumable,),
+    "_scoped_resumable_lfs_recovery": (_upload_resumable,),
+    "_validate_resumable_commit_operations": (_upload_resumable,),
+    "_validate_resumable_upload_mode_items": (_upload_resumable,),
+    "_RESUMABLE_DEFAULT_REQUEST_TIMEOUT": (_upload_resumable, _upload_service),
+    "config": (_upload_service,),
+    "is_supported_upload_revision": (_upload_service,),
+    "normalize_path_in_repo": (_upload_service,),
+    "validate_upload_path_no_symlinks": (_upload_service,),
+    "run_canonical_lfs_upload": (_upload_service,),
+    "_atomgit_repo_type": (_upload_service,),
+    "DEFAULT_UPLOAD_BATCH_SIZE": (_upload_service,),
+    "_RESUMABLE_LFS_PATTERN_MAX_COUNT": (_upload_service,),
+    "_configure_remote_lfs_attributes": (_upload_service,),
+    **{
+        name: _UPLOAD_OWNER_CONSUMERS.get(name, (owner,))
+        for name, owner in _UPLOAD_OWNER_EXPORTS.items()
+    },
+}
 
 _DOWNLOAD_PATCH_TARGETS = {
     "errno": (_download_manifest,),
@@ -3702,6 +2066,13 @@ for _patch_name, _download_targets in _DOWNLOAD_PATCH_TARGETS.items():
     # before its forwarding module type becomes active.
     _patch_value = globals()[_patch_name]
     for _patch_target in _download_targets:
+        setattr(_patch_target, _patch_name, _patch_value)
+
+for _patch_name, _upload_targets in _UPLOAD_PATCH_TARGETS.items():
+    _existing_targets = _PATCH_TARGETS.get(_patch_name, ())
+    _PATCH_TARGETS[_patch_name] = tuple(dict.fromkeys((*_existing_targets, *_upload_targets)))
+    _patch_value = globals()[_patch_name]
+    for _patch_target in _upload_targets:
         setattr(_patch_target, _patch_name, _patch_value)
 
 _FacadeModule = type(

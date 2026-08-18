@@ -43,6 +43,7 @@ SETUPTOOLS_LAYOUT = {
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.services",
+        "atomgit.upload",
     ],
     "py-modules": ["atomgit_hub"],
     "package-dir": {"": "src"},
@@ -71,24 +72,25 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 85,
-        "changes": 571,
-        "digest": "5ca1424fcb36c1bb325d0393f381d68e92deb3ab7143ad19d79611de153fee70",
+        "files": 84,
+        "changes": 532,
+        "digest": "a5be5a27460780fdf37bfd76d85fb5ddd41ebaa877cd56357ba2ee4bff9e40f1",
     },
     "isort": {
-        "files": 87,
-        "changes": 105,
-        "digest": "972967a0800e1d1b04e19b1c599cf168f2e633b11582e16757f88e906c392891",
+        "files": 86,
+        "changes": 104,
+        "digest": "8d2e171782a9b2d062821af269c72a60cccb1cce2713bd84ed6dc0f055b6f7a7",
     },
     "ruff": {
-        "files": 19,
-        "changes": 196,
-        "digest": "c3ac420be181056120251c3bd88fb2096d49e844abc2b95df572fbc4e0dca4d5",
+        "files": 18,
+        "changes": 195,
+        "digest": "d0cf5b9e44cfff2b71abcf73936c513a189d907035a1b61c1edd768bbd3c9482",
     },
 }
 
 CLEAN_POLICY_FILES = {
     "src/atomgit/completion.py",
+    "src/atomgit/cli_contracts.py",
     "src/atomgit/config.py",
     "src/atomgit/download/__init__.py",
     "src/atomgit/download/integrity.py",
@@ -111,6 +113,13 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/services/__init__.py",
     "src/atomgit/services/authentication.py",
     "src/atomgit/services/repositories.py",
+    "src/atomgit/upload/__init__.py",
+    "src/atomgit/upload/contracts.py",
+    "src/atomgit/upload/errors.py",
+    "src/atomgit/upload/ordinary.py",
+    "src/atomgit/upload/projection.py",
+    "src/atomgit/upload/resumable.py",
+    "src/atomgit/upload/service.py",
     "src/atomgit/runtime.py",
     "src/atomgit/uninstaller.py",
     "src/atomgit/utils.py",
@@ -122,6 +131,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_infrastructure_utils_ownership.py",
     "tests/test_environment_lifecycle_ownership.py",
     "tests/test_download_domain_ownership.py",
+    "tests/test_upload_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
 }
 
