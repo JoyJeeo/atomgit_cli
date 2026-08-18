@@ -41,10 +41,9 @@ or covered by shared contract tests.
   exit codes; API and utility dependencies resolve only when callbacks run.
 - `cli_contracts.py`: lightweight constants shared by Click metadata and the
   upload runtime.
-- `completion.py`: dynamic Zsh adapter generation plus atomic conda-environment
-  adapter and activation/deactivation hook management.
-- `uninstaller.py`: exact managed-path manifest, uninstall planning, and safe
-  current-environment cleanup shared by CLI behavior and shell contracts.
+- `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
+  generation and atomic conda-environment hook management.
+- `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
@@ -59,6 +58,8 @@ or covered by shared contract tests.
 - `infrastructure/`: owned runtime/config, validation, output, filesystem,
   cache, and Git credential-helper implementations plus one internal utility
   aggregation surface.
+- `lifecycle/`: owned environment/origin policy, exact managed paths, completion
+  transactions, and safe uninstall implementation.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -170,9 +171,12 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-Infrastructure extraction is fail-closed through exact nested-module,
-artifact, facade-debt, identity, and old-path patch-seam contracts. The two
-current forbidden-direction exceptions are `cli -> api` and
-`uninstaller -> release`; they are explicit migration debt, not approved
-patterns for new code. The target tree remains a plan until implementation
-moves, and package/facade conversion remains isolated in later Issues.
+Infrastructure and lifecycle extraction are fail-closed through exact
+nested-module, artifact, facade-debt, identity, and old-path patch-seam
+contracts. The remaining forbidden-direction exception is `cli -> api`; it is
+explicit migration debt, not an approved pattern for new code. Source/editable
+installation detection now has one lifecycle owner shared by update and
+uninstall policy, and the package-absent POSIX uninstall fallback retains
+executable manifest and safety parity. The remaining target tree stays a plan
+until implementation moves, and package/facade conversion remains isolated in
+later Issues.

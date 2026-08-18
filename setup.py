@@ -55,7 +55,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/JoyJeeo/atomgit_cli",
     license="Apache-2.0",
-    packages=["atomgit", "atomgit.infrastructure"],
+    packages=["atomgit", "atomgit.infrastructure", "atomgit.lifecycle"],
     package_dir={"": "src"},
     py_modules=["atomgit_hub"],
     include_package_data=False,

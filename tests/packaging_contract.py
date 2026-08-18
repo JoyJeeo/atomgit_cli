@@ -37,7 +37,7 @@ PROJECT_METADATA = {
 }
 
 SETUPTOOLS_LAYOUT = {
-    "packages": ["atomgit", "atomgit.infrastructure"],
+    "packages": ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle"],
     "py-modules": ["atomgit_hub"],
     "package-dir": {"": "src"},
     "include-package-data": False,
@@ -65,23 +65,24 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 88,
-        "changes": 633,
-        "digest": "02fe19beeba439f383ca0b3b32a0a3c2299203734cbcecfefbbf682303a809a0",
+        "files": 85,
+        "changes": 627,
+        "digest": "683a66342475958e29826ec52f368726cdea03f07b4fe9f98a0080c6f9129420",
     },
     "isort": {
-        "files": 89,
-        "changes": 110,
-        "digest": "00588fd87184d9470cd3dfafa8254b08eb7eea822e6d0404507d2d3745dbf3ad",
+        "files": 88,
+        "changes": 109,
+        "digest": "7b14e35ac08ea1ce9a87a5d55f5ee8569eab214736da6a70e874248ec0f26901",
     },
     "ruff": {
         "files": 19,
-        "changes": 204,
-        "digest": "9241c79a4203ad2ce230bd318928a9542f1ebc2bb2974d8f74f9ae1504589487",
+        "changes": 205,
+        "digest": "b25d7a3cb4130a462083c66143bfe3cc47013550b6c8f3f9e05709066d614f60",
     },
 }
 
 CLEAN_POLICY_FILES = {
+    "src/atomgit/completion.py",
     "src/atomgit/config.py",
     "src/atomgit/infrastructure/__init__.py",
     "src/atomgit/infrastructure/cache.py",
@@ -89,7 +90,13 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/infrastructure/output.py",
     "src/atomgit/infrastructure/utils.py",
     "src/atomgit/infrastructure/validation.py",
+    "src/atomgit/lifecycle/__init__.py",
+    "src/atomgit/lifecycle/completion.py",
+    "src/atomgit/lifecycle/environment.py",
+    "src/atomgit/lifecycle/managed_paths.py",
+    "src/atomgit/lifecycle/uninstall.py",
     "src/atomgit/runtime.py",
+    "src/atomgit/uninstaller.py",
     "src/atomgit/utils.py",
     "setup.py",
     "src/atomgit_hub.py",
@@ -97,6 +104,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_src_layout_migration.py",
     "tests/test_packaging_metadata.py",
     "tests/test_infrastructure_utils_ownership.py",
+    "tests/test_environment_lifecycle_ownership.py",
 }
 
 
