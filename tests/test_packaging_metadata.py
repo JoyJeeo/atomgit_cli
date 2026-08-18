@@ -107,8 +107,18 @@ def main():
         CLEAN_POLICY_FILES
         == {
             "setup.py",
+            "src/atomgit/config.py",
+            "src/atomgit/infrastructure/__init__.py",
+            "src/atomgit/infrastructure/cache.py",
+            "src/atomgit/infrastructure/filesystem.py",
+            "src/atomgit/infrastructure/output.py",
+            "src/atomgit/infrastructure/utils.py",
+            "src/atomgit/infrastructure/validation.py",
+            "src/atomgit/runtime.py",
+            "src/atomgit/utils.py",
             "src/atomgit_hub.py",
             "tests/packaging_contract.py",
+            "tests/test_infrastructure_utils_ownership.py",
             "tests/test_src_layout_migration.py",
             "tests/test_packaging_metadata.py",
         },

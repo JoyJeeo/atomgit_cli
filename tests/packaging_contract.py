@@ -37,7 +37,7 @@ PROJECT_METADATA = {
 }
 
 SETUPTOOLS_LAYOUT = {
-    "packages": ["atomgit"],
+    "packages": ["atomgit", "atomgit.infrastructure"],
     "py-modules": ["atomgit_hub"],
     "package-dir": {"": "src"},
     "include-package-data": False,
@@ -66,27 +66,37 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 88,
-        "changes": 648,
-        "digest": "315c528c5fc0a7d93a3b5545c7cab19b26c8722d64d81fbd735a3f64d52989fd",
+        "changes": 633,
+        "digest": "02fe19beeba439f383ca0b3b32a0a3c2299203734cbcecfefbbf682303a809a0",
     },
     "isort": {
         "files": 89,
         "changes": 110,
-        "digest": "53f098da404539124cddd7d2ba732ca3e1ddf45fe6c4c9a7592cadd1a464e04f",
+        "digest": "00588fd87184d9470cd3dfafa8254b08eb7eea822e6d0404507d2d3745dbf3ad",
     },
     "ruff": {
         "files": 19,
-        "changes": 205,
-        "digest": "ba8269eedcf674468e62bc02884f7c15e4ac5099dfd4433680978821a6992e64",
+        "changes": 204,
+        "digest": "9241c79a4203ad2ce230bd318928a9542f1ebc2bb2974d8f74f9ae1504589487",
     },
 }
 
 CLEAN_POLICY_FILES = {
+    "src/atomgit/config.py",
+    "src/atomgit/infrastructure/__init__.py",
+    "src/atomgit/infrastructure/cache.py",
+    "src/atomgit/infrastructure/filesystem.py",
+    "src/atomgit/infrastructure/output.py",
+    "src/atomgit/infrastructure/utils.py",
+    "src/atomgit/infrastructure/validation.py",
+    "src/atomgit/runtime.py",
+    "src/atomgit/utils.py",
     "setup.py",
     "src/atomgit_hub.py",
     "tests/packaging_contract.py",
     "tests/test_src_layout_migration.py",
     "tests/test_packaging_metadata.py",
+    "tests/test_infrastructure_utils_ownership.py",
 }
 
 
@@ -102,7 +112,7 @@ def discover_python_files(repository_root):
             (
                 *root.glob("*.py"),
                 *root.joinpath("src").glob("*.py"),
-                *root.joinpath("src", "atomgit").glob("*.py"),
+                *root.joinpath("src", "atomgit").rglob("*.py"),
                 *root.joinpath("tests").glob("*.py"),
             )
         )

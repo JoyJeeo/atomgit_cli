@@ -47,16 +47,18 @@ or covered by shared contract tests.
   current-environment cleanup shared by CLI behavior and shell contracts.
 - `api.py`: CLI-facing authentication and repository operations.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
-- `runtime.py`: shared AtomGit endpoint, XET, and HF cache environment policy.
+- `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
 - `release.py`: standard-library Release resolver, asset/checksum/wheel metadata
   validator, target-interpreter installer, post-install verification, and
   `atomgit update` policy shared with the POSIX bootstrap contract.
 - `exceptions.py`: stable public SDK failure hierarchy.
-- `config.py`: in-memory configuration plus persistence to
-  `~/.atomgit/config.json`.
-- `utils.py`: validation, formatting, filesystem helpers, and Git credential
-  helper installation/removal.
+- `config.py`: historical facade preserving the shared configuration class and
+  singleton.
+- `utils.py`: historical utility facade preserving public and patch seams.
+- `infrastructure/`: owned runtime/config, validation, output, filesystem,
+  cache, and Git credential-helper implementations plus one internal utility
+  aggregation surface.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -157,7 +159,8 @@ risks through focused tasks and compatibility tests.
 
 ## Structural Refactor Gate
 
-The current flat modules remain the implemented architecture. The approved
+The flat public modules plus the extracted infrastructure package are the
+implemented architecture. The approved
 long-term dependency direction is facade/CLI/SDK to services, transfers,
 lifecycle, or distribution, then to infrastructure/LFS, with only the
 registered special directions. `tests/structure_contract.py` assigns every
@@ -167,7 +170,9 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-The two current forbidden-direction exceptions are `cli -> api` and
+Infrastructure extraction is fail-closed through exact nested-module,
+artifact, facade-debt, identity, and old-path patch-seam contracts. The two
+current forbidden-direction exceptions are `cli -> api` and
 `uninstaller -> release`; they are explicit migration debt, not approved
 patterns for new code. The target tree remains a plan until implementation
 moves, and package/facade conversion remains isolated in later Issues.

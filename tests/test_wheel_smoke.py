@@ -23,23 +23,7 @@ from structure_contract import EXPECTED_SDIST_FILES, EXPECTED_WHEEL_FILES  # noq
 
 VERSION_TEXT = (REPOSITORY_ROOT / "src" / "atomgit" / "version.py").read_text(encoding="utf-8")
 EXPECTED_VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', VERSION_TEXT).group(1)
-SOURCE_FILES = (
-    "src/atomgit/__init__.py",
-    "src/atomgit/__main__.py",
-    "src/atomgit/api.py",
-    "src/atomgit/atomgit_hub.py",
-    "src/atomgit/cli.py",
-    "src/atomgit/cli_contracts.py",
-    "src/atomgit/completion.py",
-    "src/atomgit/uninstaller.py",
-    "src/atomgit/config.py",
-    "src/atomgit/exceptions.py",
-    "src/atomgit/lfs_pointer.py",
-    "src/atomgit/release.py",
-    "src/atomgit/utils.py",
-    "src/atomgit/runtime.py",
-    "src/atomgit/version.py",
-    "src/atomgit_hub.py",
+SOURCE_FILES = tuple(sorted(EXPECTED_SDIST_FILES)) + (
     "setup.py",
     "requirements.txt",
     "README.md",
@@ -252,7 +236,9 @@ def main():
                         "prefix = str(pathlib.Path(sys.prefix).resolve()); "
                         "modules=(atomgit, atomgit_hub) + tuple(importlib.import_module(n) "
                         "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.utils', "
-                        "'atomgit.release', 'atomgit.lfs_pointer')); "
+                        "'atomgit.release', 'atomgit.lfs_pointer', "
+                        "'atomgit.infrastructure.validation', "
+                        "'atomgit.infrastructure.git_credentials')); "
                         "assert all(str(pathlib.Path(m.__file__).resolve()).startswith(prefix) "
                         "for m in modules); "
                         "print('installed-wheel', atomgit.__version__)"
@@ -342,7 +328,8 @@ def main():
                     "import importlib, pathlib; import atomgit, atomgit_hub; "
                     "root=pathlib.Path(%r).resolve(); "
                     "modules=(atomgit, atomgit_hub, importlib.import_module('atomgit.release'), "
-                    "importlib.import_module('atomgit.lfs_pointer')); "
+                    "importlib.import_module('atomgit.lfs_pointer'), "
+                    "importlib.import_module('atomgit.infrastructure.validation')); "
                     "invalid=[str(pathlib.Path(m.__file__).resolve()) for m in modules "
                     "if root not in pathlib.Path(m.__file__).resolve().parents]; "
                     "assert not invalid, invalid; print('installed-editable', atomgit.__version__)"
