@@ -1,22 +1,25 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `foundation implemented, focused and complete offline verification
-  passed, independent review approved, and task branch is ready for delivery`
+- Phase: `foundation implemented, verified, independently reviewed, committed,
+  and merged locally into yuto; this finalization records completed delivery`
 - Base branch: `yuto`
 - Base commit: `18c3f22e7469d43c2cf91eeb435a343897716b45`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all
   resolved to the base commit before activation
 - Task branch: `codex/structure-compatibility-foundation` (local only; never
   push the task branch)
-- Current HEAD: `18c3f22e7469d43c2cf91eeb435a343897716b45`
+- Task commit: `7e85f6de409b4ba458069231af8358817efbf793`
+- Local yuto merge: `3ffe9cf` (`merge: establish compatibility gates`)
+- Current HEAD before this finalization edit: `3ffe9cf`
+- Final yuto HEAD: `this TASK finalization commit, pushed only to github/yuto`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state before this handoff edit: `clean on yuto and synchronized
-  with github/yuto`
+- Worktree state before this finalization edit: `clean on yuto, ahead of
+  github/yuto by the local task commit and no-ff merge`
 - Changed paths: `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`,
   `.ai/TASK.md`, `.ai/TESTING.md`, `docs/architecture.md`,
   `docs/development_floor.md`, `docs/testing.md`,
@@ -26,20 +29,17 @@ Status: active
   `tests/test_installer.py`, `tests/test_public_import_contract.py`,
   `tests/test_refactor_behavior_guard.py`, `tests/test_structure_guard.py`, and
   `tests/test_wheel_smoke.py`
-- Last completed action: `resolved the independent-review monotonic-debt
-  finding, reran the focused structure/development-floor guards, and passed
-  the post-review-fix complete 79-case offline baseline`
-- Next exact action: `run final supporting checks after this TASK update,
-  create the cohesive local task commit, merge it no-ff into yuto, finalize
-  this handoff with exact task/merge SHA values, rerun the required final
-  checks, commit the delivery record, and push only yuto`
-- Blockers: `none for the active foundation Issue`
+- Last completed action: `created task commit 7e85f6d and merged it no-ff into
+  yuto as 3ffe9cf without pushing the local task branch`
+- Next exact action: `none after committing this finalization, rerunning the
+  final gates, pushing only yuto, and verifying github/yuto; activate the next
+  approved program Issue separately from the delivered yuto HEAD`
+- Blockers: `none`
 - Tests run for this Issue: `all required pre-edit focused tests passed;
   changed/new focused tests passed; complete offline baseline passed twice at
   79/79 after implementation and again after the review fix; compileall,
   pip check, and diff check passed before the final TASK update`
-- Required continuation worktree while this handoff is uncommitted:
-  `/Users/yutaozhang/yuto/codes/atomgit_cli`
+- Delivery branch: `yuto`; the local task branch was never pushed
 
 ## Active Issue
 
