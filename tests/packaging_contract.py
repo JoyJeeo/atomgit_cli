@@ -39,6 +39,7 @@ PROJECT_METADATA = {
 SETUPTOOLS_LAYOUT = {
     "packages": [
         "atomgit",
+        "atomgit.download",
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.services",
@@ -71,24 +72,31 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 85,
-        "changes": 608,
-        "digest": "abfefdffb1886b6ecac36ea20b8cc86265b0a13db3d57fe511281f7ce1093107",
+        "changes": 571,
+        "digest": "5ca1424fcb36c1bb325d0393f381d68e92deb3ab7143ad19d79611de153fee70",
     },
     "isort": {
-        "files": 88,
-        "changes": 108,
-        "digest": "7ed6cc5b7e3e652a519ebb22234a0506471267b73c9c0197a6690fe9c1de97fa",
+        "files": 87,
+        "changes": 105,
+        "digest": "972967a0800e1d1b04e19b1c599cf168f2e633b11582e16757f88e906c392891",
     },
     "ruff": {
         "files": 19,
-        "changes": 197,
-        "digest": "aaedfaf1cbfbb03685f27f5e06ec86e3d7a4f653f882b8e5b85e4f9767105c1b",
+        "changes": 196,
+        "digest": "c3ac420be181056120251c3bd88fb2096d49e844abc2b95df572fbc4e0dca4d5",
     },
 }
 
 CLEAN_POLICY_FILES = {
     "src/atomgit/completion.py",
     "src/atomgit/config.py",
+    "src/atomgit/download/__init__.py",
+    "src/atomgit/download/integrity.py",
+    "src/atomgit/download/manifest.py",
+    "src/atomgit/download/prune.py",
+    "src/atomgit/download/resume.py",
+    "src/atomgit/download/service.py",
+    "src/atomgit/download/transport.py",
     "src/atomgit/infrastructure/__init__.py",
     "src/atomgit/infrastructure/cache.py",
     "src/atomgit/infrastructure/filesystem.py",
@@ -113,6 +121,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_packaging_metadata.py",
     "tests/test_infrastructure_utils_ownership.py",
     "tests/test_environment_lifecycle_ownership.py",
+    "tests/test_download_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
 }
 

@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 98
+BASELINE_INVARIANT_COUNT = 100
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -135,10 +135,17 @@ CAPABILITY_REGISTRY = {
                 "test_auth_repository_services_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-011",
+                "CLI API download implementations have exact transfer owners while historical API symbols, methods, signatures, patch seams, and structural debt remain stable.",
+                "test_download_domain_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
             "test_development_floor.py",
+            "test_download_domain_ownership.py",
             "test_environment_lifecycle_ownership.py",
             "test_cli_baseline_guard.py",
             "test_cli_feature_baseline.py",
@@ -1010,10 +1017,18 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-018",
+                "Source, editable, wheel, and sdist surfaces include the exact nested download package and historical API surface without repository leakage.",
+                "test_download_domain_ownership.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
             "test_deploy_script.py",
+            "test_download_domain_ownership.py",
             "test_environment_lifecycle_ownership.py",
             "test_installer.py",
             "test_infrastructure_utils_ownership.py",
@@ -1155,10 +1170,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "98 条可观察行为不变量",
-        "84 个隔离 pytest case",
+        "100 条可观察行为不变量",
+        "85 个隔离 pytest case",
     ),
-    "docs/testing.md": ("84 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("85 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

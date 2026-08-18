@@ -189,7 +189,7 @@ def main():
         "the API facade debt ceiling tightens with moved implementation",
         LEGACY_FACADE_DEBT["api"]["max_lines"] < 5496
         and LEGACY_FACADE_DEBT["api"]["max_functions"] < 121
-        and LEGACY_FACADE_DEBT["api"]["max_classes"] == 21,
+        and LEGACY_FACADE_DEBT["api"]["max_classes"] <= 21,
     )
 
     placeholder = dict(source_texts)
@@ -209,14 +209,9 @@ def main():
         repr(errors),
     )
 
-    transfer_definitions = {
-        "upload_folder",
-        "upload_directory",
-        "download_repo",
-        "download_file",
-    }
+    transfer_definitions = {"upload_folder", "upload_directory"}
     check(
-        "transfer methods remain implemented on the historical API class",
+        "unextracted upload methods remain implemented on the historical API class",
         transfer_definitions <= _class_methods(source_texts["api"], "HuggingFaceAPI")
         and not any(
             transfer_definitions

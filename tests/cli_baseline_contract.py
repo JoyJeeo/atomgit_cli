@@ -517,6 +517,7 @@ BASELINE_TEST_GROUPS = {
     ),
     "download-and-data-integrity": (
         "test_cli_download_file.py",
+        "test_download_domain_ownership.py",
         "test_download_checksum.py",
         "test_download_contract.py",
         "test_download_existing_file_policy.py",
@@ -554,7 +555,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 23
 BASELINE_PUBLIC_PARAMETER_COUNT = 48
 BASELINE_LEAF_COMMAND_COUNT = 18
-BASELINE_TEST_SCRIPT_COUNT = 84
+BASELINE_TEST_SCRIPT_COUNT = 85
 
 
 def _normalize_default(value):
