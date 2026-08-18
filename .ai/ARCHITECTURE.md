@@ -144,3 +144,20 @@ and must not report creation or upload success.
 
 Do not perform a broad architectural rewrite as incidental work. Address these
 risks through focused tasks and compatibility tests.
+
+## Structural Refactor Gate
+
+The current flat modules remain the implemented architecture. The approved
+long-term dependency direction is facade/CLI/SDK to services, transfers,
+lifecycle, or distribution, then to infrastructure/LFS, with only the
+registered special directions. `tests/structure_contract.py` assigns every
+current module an owner and records current edges, public surfaces, artifact
+contents, and exact legacy size ceilings. `tests/test_structure_guard.py`
+requires debt removal and declaration tightening in the same change, and
+rejects new edges, new forbidden directions, facade growth, cycles, unowned
+modules, and empty placeholders.
+
+The two current forbidden-direction exceptions are `cli -> api` and
+`uninstaller -> release`; they are explicit migration debt, not approved
+patterns for new code. The target tree remains a plan until implementation
+moves, and package/facade conversion remains isolated in later Issues.

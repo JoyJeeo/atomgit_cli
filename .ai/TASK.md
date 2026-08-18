@@ -1,423 +1,892 @@
 # Current Issue Contract
 
-Status: completed
+Status: active
 
 ## Handoff Snapshot
 
-- Updated: 2026-08-17 +0800
-- Phase: implemented, verified, independently reviewed, merged, pushed, and
-  published as the immutable AtomGit CLI 1.1.1 GitHub Release
-- Base branch: yuto
-- Proposed task branch: feature/conda-completion-uninstall (local only; never
+- Updated: `2026-08-18 +0800`
+- Phase: `foundation implemented, focused and complete offline verification
+  passed, independent review approved, and task branch is ready for delivery`
+- Base branch: `yuto`
+- Base commit: `18c3f22e7469d43c2cf91eeb435a343897716b45`
+- Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all
+  resolved to the base commit before activation
+- Task branch: `codex/structure-compatibility-foundation` (local only; never
   push the task branch)
-- Base commit: 8dac686c68b4a141bbdcfa5f23e3fdd8a283a531
-- Task branch: feature/conda-completion-uninstall (local only; never push)
-- Task commit: f6081b60560c161994c106bbcefbe2f0990761f3
-- Local yuto merge: 78bc92a09d20e8ccd017e5752116f4f67e97a407
-  (not pushed yet)
-- Release branch: release/1.1.1 (local only; never push)
-- Current HEAD before release edits: 78bc92a
-- Release commit: 6bd0b506fa551da5aa42f7a029bca8f396c13b7b
-- Local release merge: 3aaf03d
-- Published source and annotated tag target:
-  f472c2894ca03b2ff43fb7f5c809f39e4e2664fc
-- Final yuto HEAD: this TASK finalization commit, pushed only to github/yuto
-- Worktree: /Users/yutaozhang/yuto/codes/atomgit_cli
-- Worktree state before this handoff edit: clean on yuto and synchronized with
-  github/yuto
-- Changed paths: .ai/ARCHITECTURE.md, .ai/PRODUCT.md, .ai/TASK.md, MANIFEST.in,
-  README.md, cli.py, completion.py, install.sh, release.py, uninstall.sh,
-  uninstaller.py, docs/architecture.md, docs/cli_feature_baseline.md,
-  docs/development_floor.md, docs/testing.md, tests/cli_baseline_contract.py,
-  tests/development_floor_contract.py, tests/test_cli_feature_baseline.py,
-  tests/test_cli_surface.py, tests/test_installer.py,
-  tests/test_shell_completion.py, tests/test_uninstaller.py, and
-  tests/test_wheel_smoke.py
-- Last completed action: verified the public 1.1.1 tag, Release state, exact
-  four assets, GitHub digests, SHA256SUMS, default installer selection, isolated
-  installed imports, version output, and uninstall help
-- Next exact action: none; select and authorize a new Issue before further work
-- Blockers: none
-- Tests run for this Issue: focused completion 19/19, installer contracts,
-  uninstaller 14/14, updater contracts, wheel smoke 28/28, development-floor
-  contract 15/15, and complete baseline 74 passed; shell syntax, locked Click
-  rendering, pip check, compileall, and diff check also passed
-- Worktree state after finalization: clean yuto synchronized with github/yuto;
-  local task and release branches were never pushed
+- Current HEAD: `18c3f22e7469d43c2cf91eeb435a343897716b45`
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
+- Worktree state before this handoff edit: `clean on yuto and synchronized
+  with github/yuto`
+- Changed paths: `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`,
+  `.ai/TASK.md`, `.ai/TESTING.md`, `docs/architecture.md`,
+  `docs/development_floor.md`, `docs/testing.md`,
+  `tests/cli_baseline_contract.py`, `tests/development_floor_contract.py`,
+  `tests/structure_contract.py`, `tests/test_global_state_contract.py`,
+  `tests/test_hf_api_contract.py`, `tests/test_import_order_contract.py`,
+  `tests/test_installer.py`, `tests/test_public_import_contract.py`,
+  `tests/test_refactor_behavior_guard.py`, `tests/test_structure_guard.py`, and
+  `tests/test_wheel_smoke.py`
+- Last completed action: `resolved the independent-review monotonic-debt
+  finding, reran the focused structure/development-floor guards, and passed
+  the post-review-fix complete 79-case offline baseline`
+- Next exact action: `run final supporting checks after this TASK update,
+  create the cohesive local task commit, merge it no-ff into yuto, finalize
+  this handoff with exact task/merge SHA values, rerun the required final
+  checks, commit the delivery record, and push only yuto`
+- Blockers: `none for the active foundation Issue`
+- Tests run for this Issue: `all required pre-edit focused tests passed;
+  changed/new focused tests passed; complete offline baseline passed twice at
+  79/79 after implementation and again after the review fix; compileall,
+  pip check, and diff check passed before the final TASK update`
+- Required continuation worktree while this handoff is uncommitted:
+  `/Users/yutaozhang/yuto/codes/atomgit_cli`
 
 ## Active Issue
 
-- Remote Issue: none; do not create one without explicit authorization
-- ID: LOCAL-DIST-CONDA-COMPLETION-UNINSTALL
-- Title: Isolate Zsh completion by conda environment and add official uninstall
-- Primary type: distribution
-- Secondary types: cli, compatibility, documentation, testing
-- Priority: P2
-- Observable objective: ordinary users can install and uninstall AtomGit
-  through official curl entrypoints while each conda environment owns and
-  loads only its own AtomGit Zsh completion; non-official pip removal is
-  detected later and reported without silent cleanup
-- User impact: switching conda environments no longer shares stale global
-  completion, complete uninstall has one supported path, and users who bypass
-  it receive an exact actionable warning rather than unexplained residual
-  completion
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-REFACTOR-STRUCTURE-COMPATIBILITY-FOUNDATION`
+- Title: `Establish behavior-preserving structure and capability ownership
+  gates`
+- Primary type: `testing`
+- Secondary types: `compatibility`, `distribution`, `documentation`,
+  `refactoring`
+- Priority: `P1`
+- Observable objective: `make the complete current 1.1.1 behavior, public
+  imports, dependency boundaries, package contents, import ordering, global
+  state restoration, and architecture ownership executable blocking contracts
+  before any source-layout or domain extraction work begins`
+- User impact: `none by design; this Issue adds prevention and evidence so the
+  approved structural program cannot silently change existing behavior`
 
 ## Authorization And Delivery
 
-- User authorization: the maintainer explicitly accepted this design and asked
-  that it be persisted as the next local Issue for continued development
-- Authorized local actions: create the local task branch from yuto; edit
-  completion, CLI, installer, uninstaller, tests, documentation, executable
-  development-floor contracts, and TASK.md; create temporary isolated
-  environment fixtures; run offline tests, packaging checks, and independent
-  review
-- Remote actions: maintainer authorized completion of delivery for version
-  1.1.1 on 2026-08-17: merge locally into yuto, push only yuto, and publish the
-  immutable GitHub Release through the protected workflow; never push the task
-  or release-preparation branch and do not publish to PyPI/TestPyPI
-- Live AtomGit actions: none required or authorized
-- Delivery mode: complete implementation and independent review, merge the
-  task and release-preparation branches locally into yuto, push only yuto, then
-  dispatch and verify the protected release workflow
-- Release decision: maintainer selected and authorized stable version 1.1.1;
-  this explicit choice overrides the earlier SemVer recommendation for a minor
-  version despite the new public uninstall command
-- Prohibited: PyPI/TestPyPI publication, historical 1.1.0 tag or Release
-  mutation, pushing local task/release branches, global credential/config
-  deletion, unrelated runtime changes, upstream main changes, and silent
-  cleanup triggered by post-pip detection
+- User authorization: `on 2026-08-18 the maintainer approved the complete
+  capability-oriented structure program, explicitly accepted the three
+  migration conditions below, and requested that the plan be persisted as a
+  local development Issue so the next conversation can start implementation`
+- Accepted migration conditions:
+  1. `the src migration is mechanical and retains the existing module shape`
+  2. `domain implementations are extracted incrementally behind the existing
+     modules`
+  3. `api.py and cli.py become package facades only at the end, in separate
+     independently verified Issues`
+- Program authorization: `execute the approved program sequentially, one local
+  Issue at a time; finish, verify, independently review, merge, and deliver
+  each Issue before activating its successor`
+- Current-Issue local actions: `edit AI and human development-floor documents,
+  add declarative structure and behavior contracts, add or strengthen offline
+  tests, update exact baseline and capability registries, inspect locked
+  dependency signatures, run offline tests and packaging checks, perform
+  independent review, create the cohesive local task commit, merge locally
+  into yuto after verification, and push only yuto according to the standing
+  maintainer delivery rules`
+- Current-Issue production restrictions: `do not move source files, add src/,
+  add pyproject.toml, split api.py/cli.py/utils.py, change setup.py, change
+  runtime behavior, change CLI/SDK behavior, or create placeholder packages`
+- Remote actions authorized for program delivery: `push only the locally
+  merged yuto branch after each completed and verified Issue; never push any
+  task branch`
+- Remote actions not authorized: `GitHub Issue creation or transition, PR
+  creation, tag or Release creation/mutation, PyPI/TestPyPI publication, live
+  AtomGit repository operations, credential mutation, or upstream main
+  changes`
+- Delivery mode: `sequential local task branch -> focused and complete offline
+  verification -> independent review -> cohesive commit -> local no-ff merge
+  into yuto -> push only yuto; then activate the next approved Issue`
 
-## Evidence And Constraints
+## Recovered Repository Facts
 
-- AtomGit 1.1.0 is already published as an immutable GitHub Release.
-- The current official installer selects a checksummed GitHub Release wheel and
-  supports conda, venv, and ordinary Python 3.9+ without requiring conda.
-- Current completion install writes a user-global script under
-  ~/.atomgit/completions and a managed block in ~/.zshrc, so different conda
-  environments share one completion definition.
-- Removing completion files does not unload functions already sourced into the
-  current Zsh process.
-- A child process started through curl-pipe-sh or python-m-atomgit cannot mutate
-  its parent Zsh process. Disk cleanup commands must therefore print an exact
-  reactivation or exec-zsh instruction when in-memory state may remain.
-- pip has no reliable package post-install or post-uninstall callback. Direct
-  python -m pip install/uninstall is a non-official path and cannot be
-  intercepted reliably by AtomGit.
-- The warning after non-official pip removal must be implemented by a standalone
-  conda activation hook left by the official installer. It must not depend on
-  importing AtomGit after the package has been removed.
-- Detection is read-only. It may inspect package presence and managed paths and
-  print guidance, but it must not delete, rewrite, reinstall, invoke pip, or
-  change user configuration.
-- huggingface-hub==1.1.7, datasets==4.4.1, Click 8.4.2, Python >=3.9, both CLI
-  entry points, and all unrelated CLI/SDK behavior remain locked compatibility
+- AtomGit CLI version `1.1.1` is published and the source branch is clean at
+  the recorded base SHA.
+- The pre-Issue executable development floor contained `26` capability IDs,
+  `78` observable invariants, and `74` isolated offline pytest cases; the
+  implemented foundation contains `26/85/79`.
+- The activation mismatch between `.ai/DEVELOPMENT_FLOOR.md`'s old 72/73
+  counts and the executable ledger's pre-Issue 78/74 counts was reconciled;
+  all authorities now record the delivered 85/79 counts.
+- `api.py` has 5,496 lines and owns authentication, repository V5 operations,
+  downloads, integrity, manifests, resume, pruning, upload, resumable transfer,
+  projection, LFS policies, recovery, error classification, and the public
+  `HuggingFaceAPI` facade.
+- `utils.py` has 861 lines and mixes validation, output, cache, file
+  statistics, download error policy, and Git credential-helper state.
+- `cli.py` has 908 lines and combines the exact Click schema, user
+  interaction, output/exit conversion, and command dispatch.
+- `completion.py`, `uninstaller.py`, `release.py`, `install.sh`, and
+  `uninstall.sh` implement the 1.1.1 environment lifecycle and distribution
   contracts.
-
-## Accepted Product Design
-
-### Official Commands
-
-The supported ordinary-user lifecycle is:
-
-    curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh | sh
-    curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/uninstall.sh | sh
-    atomgit completion install
-    atomgit completion uninstall
-    atomgit uninstall
-
-The completion commands have no scope option and operate only on the current
-active conda environment. The uninstall command may expose an explicit yes flag
-for the official non-interactive script while remaining confirm-before-delete
-for direct interactive use.
-
-### Environment-Owned Completion
-
-For an active conda environment, managed files live only below CONDA_PREFIX:
-
-    $CONDA_PREFIX/share/atomgit/completions/atomgit.zsh
-    $CONDA_PREFIX/etc/conda/activate.d/atomgit-completion.sh
-    $CONDA_PREFIX/etc/conda/deactivate.d/atomgit-completion.sh
-
-- Activation loads the completion generated by that environment's installed
-  AtomGit.
-- Deactivation removes that environment's in-memory completion binding before
-  another environment loads its own.
-- Exact Click-generated functions and compdef cleanup must be derived from the
-  real locked Click 8.4.2 output before implementation.
-- New installs do not write ~/.zshrc or a global ~/.atomgit completion.
-- Non-conda package installation remains supported; automatic Zsh completion is
-  skipped with an accurate message rather than making conda mandatory.
-
-### Completion Management
-
-- atomgit completion install writes only the current conda environment's
-  managed script and hooks and is atomic, idempotent, symlink-safe, and
-  concurrency-safe.
-- atomgit completion uninstall removes only those current-environment files.
-- Neither command can directly unload the parent shell when invoked as a child
-  process; when necessary it prints the exact command to reactivate the
-  environment or execute exec zsh.
-- Existing global managed completion is not silently removed. Migration must
-  identify the old managed block, explain the change, and require explicit user
-  confirmation while preserving all unrelated .zshrc content and backups.
-
-### Complete Uninstall
-
-- atomgit uninstall shows the selected interpreter, environment root, package
-  version, and managed targets before mutation and asks for confirmation unless
-  an explicit automation flag is supplied.
-- It cleans the current environment's completion and conda hooks, then invokes
-  that same interpreter's python -m pip uninstall atomgit.
-- It preserves ~/.atomgit/config.json, credentials, caches, repositories, and
-  every unrelated user or conda file.
-- It rejects source/editable installs with accurate developer guidance.
-- uninstall.sh is an official, idempotent cleanup entrypoint. It works both
-  while AtomGit is installed and after pip has already removed the package.
-- If the package still exists, uninstall.sh uses the supported internal
-  uninstall path. If it is absent, the script cleans only the exact managed
-  environment paths after showing what will change.
-
-### Non-Official pip Removal Warning
-
-After python -m pip uninstall atomgit, the next activation of an environment
-that still owns AtomGit completion prints exactly this guidance and performs no
-other action:
-
-    [AtomGit] 检测到 atomgit 已通过 pip 卸载，但当前环境仍有补全配置。
-
-    请执行官方清理命令：
-      curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/uninstall.sh | sh
-
-    当前 shell 中已加载的补全需要重新启动 Zsh：
-      exec zsh
-
-The warning repeats on later activations until the user explicitly runs the
-official cleanup. It does not create a marker, rewrite a hook, or silently
-acknowledge itself.
+- The package uses a root mapping in setup.py:
+  `packages=['atomgit']`, `package_dir={'atomgit': '.'}`, and
+  `py_modules=['atomgit_hub']`.
+- The current SDK source participates in package exports and the top-level
+  `atomgit_hub` compatibility import. A future src migration must preserve
+  both identities without duplicating implementation logic.
+- Many tests patch private names through `sys.modules['atomgit.api']` and
+  `sys.modules['atomgit.utils']`. A simple re-export does not preserve
+  monkeypatch propagation to a new owner module.
+- Click completion starts a new process and depends on eager runtime policy plus
+  lazy business imports; package or import-order changes can break completion
+  without changing command definitions.
+- Hugging Face request timeout and progress state are process-global and must
+  be restored across success and all failure exits.
+- `install.sh` runs before the package exists and `uninstall.sh` has a
+  fallback after the package may have been removed. Bootstrap/fallback rules
+  may exist in Shell, but they must be generated from or contract-checked
+  against authoritative Python policy rather than evolve independently.
 
 ## Current And Expected Behavior
 
 ### Current
 
-- Official installation writes a global completion file and managed .zshrc
-  block.
-- Completion is shared across conda environments rather than owned by one.
-- There is no official uninstall.sh or public atomgit uninstall command.
-- Direct pip removal can leave global completion with no lifecycle guidance.
+- Current CLI, SDK, lifecycle, distribution, security, dependency, and
+  portability behavior is protected by the 26-capability/78-invariant ledger
+  and 74-case baseline.
+- Exact CLI schema and dispatch are registered, but there is no single
+  cross-cutting refactor contract for public imports, deterministic observable
+  output, dependency direction, facade growth, source/editable/wheel parity,
+  or package discovery.
+- Existing domain tests prove many call arguments and state outcomes, but the
+  evidence is distributed and does not fail closed on every planned structural
+  regression.
+- The repository remains a flat root-mapped Python package.
 
-### Expected
+### Expected After This Issue
 
-- Official conda installation writes only environment-owned completion and
-  activation/deactivation hooks.
-- Switching environments unloads the previous environment's binding and loads
-  the active environment's schema.
-- Official uninstall cleans package-owned environment state while preserving
-  user data.
-- Direct pip removal remains possible but unsupported; the next activation
-  emits the accepted warning without mutation.
-- Plain Python and venv installation remain functional and receive a truthful
-  completion-skipped message.
+- Human and executable development-floor counts agree.
+- A declarative contract records current and target ownership, allowed
+  dependency directions, forbidden imports, public compatibility surfaces,
+  legacy debt, and artifact expectations.
+- Focused tests fail when a public import disappears, observable CLI behavior
+  changes, import order changes runtime policy, completion becomes heavy, a
+  global state leaks, a real locked dependency call no longer binds, an
+  artifact omits a module, or a new forbidden dependency edge appears.
+- Current legacy architecture is explicitly allowed but cannot grow. The gate
+  tightens monotonically as debt is removed.
+- No product source, runtime behavior, package layout, command, output, SDK
+  signature, script, installer, uninstaller, or remote call changes.
 
 ## Scope
 
-### In Scope
+### In Scope For The Active Foundation Issue
 
-- Refactor completion path/state ownership from global user files to the active
-  conda environment.
-- Add safe conda activation and deactivation hooks.
-- Add public atomgit uninstall with confirmation and an automation flag.
-- Add official uninstall.sh with installed-package and already-removed fallback
-  behavior.
-- Update install.sh and update-time completion refresh to the environment model.
-- Add explicit legacy-global migration behavior with confirmation.
-- Add exact non-mutating pip-removal warning behavior.
-- Update CLI schema, dispatch, development-floor registry, user documentation,
-  installation/uninstallation guidance, and focused tests.
+- Correct the stale development-floor count in the smallest authoritative AI
+  document and verify all references to current executable counts.
+- Add a declarative behavior/structure contract using the repository's
+  executable-contract pattern.
+- Add a structure guard for ownership, dependency direction, forbidden edges,
+  facade restrictions, artifact expectations, and monotonic legacy debt.
+- Add a public import contract for source and installed surfaces, including
+  package exports, `atomgit_hub`, `HuggingFaceAPI`, global `api`, stable
+  exceptions, version, and CLI entry object.
+- Add deterministic representative CLI evidence for stdout, stderr, exit
+  status, Click exception category, redaction, and downstream calls.
+- Add import-order and completion-lightness evidence in clean subprocesses.
+- Add or strengthen global timeout/progress/runtime-state restoration evidence.
+- Strengthen real locked dependency call-site evidence without permissive
+  `**kwargs` fakes.
+- Strengthen POSIX installer/uninstaller syntax and fallback-policy parity
+  evidence without changing their behavior.
+- Register every new test exactly once and map it to affected capabilities and
+  invariants.
+- Update only the smallest authoritative architecture/testing/development-floor
+  documents required for the permanent gate.
 
-### Out Of Scope
+### Out Of Scope For The Active Foundation Issue
 
-- Intercepting, wrapping, disabling, or replacing pip.
-- Publishing AtomGit on PyPI or TestPyPI.
-- Automatic cleanup after detecting non-official pip removal.
-- Deleting user credentials, configuration, caches, repositories, or unrelated
-  shell/conda files.
-- Bash/Fish completion, non-conda activation frameworks, dependency upgrades,
-  runtime feature work, version selection, tag creation, or Release publication.
+- `pyproject.toml`, package-discovery changes, dependency changes, or broad
+  formatter adoption.
+- Creating `src/`, moving production files, or creating target packages.
+- Extracting implementation from any production module.
+- Converting `api.py`, `cli.py`, or another file into a package.
+- Broad reformatting, type-hint sweeps, or logging changes.
+- Any CLI schema, output, help, exit, exception, SDK signature, call order,
+  retry, timeout, progress, cache, credential, install, update, completion,
+  uninstall, Release, or remote behavior change.
+- Live tests, Release publication, remote Issue operations, dependency upgrade,
+  or upstream integration.
+
+## Behavior-Nonregression Contract
+
+This contract applies to every Issue in the approved program. Each later
+`TASK.md` must copy its affected clauses into `Protected Existing
+Invariants`.
+
+### CLI Contract
+
+- `EXPECTED_PUBLIC_SCHEMA` remains exact for every command, group, option,
+  argument, declaration, type, default, flag, visibility, help behavior, and
+  dispatch leaf.
+- Both `atomgit` and `python -m atomgit` remain usable.
+- Registered deterministic scenarios preserve stdout, stderr, exit code, Click
+  exception category, prompt/abort semantics, redaction, and downstream calls.
+- `atomgit uninstall` continues to accept only `--yes`.
+- Completion show/install/uninstall retains the exact Zsh schema.
+- Existing Chinese terminology remains stable and no credential or remote body
+  enters output.
+
+### Public Import And SDK Contract
+
+- `import atomgit`, `import atomgit_hub`, `import atomgit.api`,
+  `import atomgit.cli`, and `import atomgit.utils` remain valid in source,
+  editable, and isolated wheel environments.
+- `atomgit.cli:cli`, `HuggingFaceAPI`, global `api`, `__version__`,
+  current lazy exports, SDK functions, and public exceptions remain available
+  with compatible identities and signatures.
+- SDK return values, validation errors, stable exception classes, cause
+  preservation, and absence of CLI-only colored output remain unchanged.
+- Compatibility is provided at historical paths; no generic compatibility
+  dumping-ground package is added.
+
+### External Boundary Contract
+
+- HF Hub, datasets, AtomGit V5, Git, pip, filesystem, subprocess, and network
+  calls retain registered arguments, counts, ordering, authentication
+  placement, and failure classification.
+- Production calls bind against `huggingface-hub==1.1.7` and
+  `datasets==4.4.1`; permissive fakes are not compatibility evidence.
+- Remote writes gain no generic retry; current ambiguity recovery and
+  post-write verification remain operation-specific.
+- Configuration and Git helper operations preserve unrelated user state,
+  modes, rollback, redaction, and exact-host isolation.
+
+### Upload Contract
+
+- Single-file, ordinary-folder, resumable-folder, model, and dataset routing
+  preserve defaults and parameters.
+- Ignore rules, macOS metadata exclusions, repo type, revision, prefix, worker,
+  1..20 batch range, timeout, progress, and opt-in LFS semantics remain.
+- Projection identity, file selection, metadata separation, resource lifetime,
+  cleanup, batching, retry/reduction, deadline, and reconciliation remain.
+- LFS attributes remain opt-in, concurrency-safe, parent-commit guarded, and
+  fail closed on unverified edits.
+- LFS pointer bytes remain canonical ASCII v1 ending in one LF, preserve OID
+  and size, and are raw-blob verified before success.
+- Timeout and progress state restore after success and all tested failures.
+
+### Download Contract
+
+- Anonymous/public and authenticated/private selection, repo-type resolution,
+  paths, existing-file policy, force, checksum, resume, manifest, redirect,
+  framing, retry, and cleanup remain.
+- Traversal, unsafe redirect, credential forwarding, malformed response,
+  ambiguous type, symlink/reparse-point, Unicode metadata, and concurrent
+  manifest protections remain.
+- Prune remains explicit and removes only regular files recorded by the last
+  successful whole-repository manifest.
+- Failure never replaces a valid destination with unverified partial content
+  or exposes credentials.
+
+### Runtime And Import Contract
+
+- `HF_ENDPOINT`, `HF_HUB_DISABLE_XET`, and `HF_HOME` are configured
+  idempotently before HF constants are consumed.
+- Runtime import does not create the cache directory.
+- Supported import orders converge on the same runtime policy.
+- Completion loads the live Click schema without HF, datasets, Torch, PyArrow,
+  Pandas, business APIs, credentials, network, or config creation.
+- Process-global timeout/progress restores for representative CLI and SDK
+  success, handled failure, propagated failure, and subprocess boundaries.
+
+### Completion And Environment Lifecycle Contract
+
+- New setup writes no global `~/.zshrc` block or global completion file.
+- Exact managed paths remain:
+  - `$CONDA_PREFIX/share/atomgit/completions/atomgit.zsh`
+  - `$CONDA_PREFIX/etc/conda/activate.d/atomgit-completion.sh`
+  - `$CONDA_PREFIX/etc/conda/deactivate.d/atomgit-completion.sh`
+- Activation loads only the active environment and deactivation unloads it
+  before another environment loads.
+- Install/uninstall remains atomic, idempotent, private-mode, symlink-safe,
+  exact-path-only, and concurrency-safe.
+- Legacy migration requires confirmation and preserves unrelated zshrc bytes,
+  mode, backup, newline state, and concurrent edits or rolls back.
+- Child commands do not claim to mutate a parent shell and retain the current
+  reactivation/`exec zsh` guidance.
+- Post-pip activation warning remains exact and non-mutating.
+
+### Uninstall Contract
+
+- CLI displays interpreter, resolved prefix, version, and exact targets before
+  confirmation or `--yes`.
+- The plan is recomputed before mutation and must equal the displayed plan.
+- Pip uses running `sys.executable -m pip uninstall --yes atomgit`.
+- Source/editable installs remain rejected.
+- Only exact regular files under the matching conda prefix are removed;
+  symlink, non-directory, non-regular, mismatch, and concurrent changes fail.
+- Configuration, credentials, cache, repositories, unrelated conda files, and
+  user files are preserved.
+- `uninstall.sh` remains idempotent before and after direct pip removal.
+- Non-conda uninstall remains supported.
+
+### Installation, Update, Packaging, And Release Contract
+
+- `install.sh` and `uninstall.sh` remain POSIX `/bin/sh` entrypoints.
+- Install/update select only completed strict `X.Y.Z` Releases, validate
+  identity, wheel, bounds, redirects, and SHA-256 before pip, and never fall
+  back to source or AtomGit on PyPI.
+- Non-conda Python 3.9+ installation remains supported.
+- Matching conda install/update refreshes only that environment's completion.
+- Wheel preserves both CLI entries and both imports, correct metadata, and
+  installed-only provenance.
+- Build helpers remain build/check/install-only; publication stays manual,
+  protected, checksummed, immutable, and secret-free.
+- Shell bootstrap/post-removal fallback may exist only when package code is
+  unavailable and must be generated from or parity-tested against Python
+  policy.
+
+### Portability And Safety Contract
+
+- Python `>=3.9`, Click `8.4.2`, HF Hub `1.1.7`, and datasets `4.4.1`
+  remain compatibility contracts.
+- New syntax remains Python 3.9 parseable.
+- Windows safety remains for cross-platform commands; POSIX scripts do not
+  claim Windows support.
+- Offline tests never access real credentials, global Git config, user startup
+  files, production repositories, or live writes.
+
+## Structure Nonregression Contract
+
+### Ownership And Dependency Direction
+
+Approved final direction:
+
+```text
+cli / api facade / sdk
+            |
+            v
+services / transfers / lifecycle / distribution
+            |
+            v
+infrastructure / lfs
+```
+
+Allowed special directions:
+
+```text
+transfers -> lfs
+distribution -> lifecycle
+```
+
+Forbidden directions:
+
+```text
+services -> cli/api/sdk
+transfers -> cli/sdk
+lifecycle -> distribution
+infrastructure -> services
+lfs -> transfers
+sdk -> cli
+```
+
+- CLI owns Click schema, prompts, output, exit conversion, and service calls.
+- SDK owns public parameters, return values, exception conversion, and service
+  calls.
+- Domain modules do not import Click.
+- Infrastructure does not import services, CLI, SDK, or domain orchestration.
+- `services` is limited to auth and repository use cases; transfer, LFS,
+  lifecycle, and distribution remain explicit vertical domains.
+- New modules require a capability owner, immediate production responsibility,
+  and executable tests. Empty placeholders are prohibited.
+- Shared cross-domain code requires at least two real production callers and a
+  shared contract; otherwise it remains in its owner domain.
+
+### Facade Rules
+
+- `atomgit.api`, `atomgit.cli`, `atomgit.utils`, and top-level
+  `atomgit_hub` are stable compatibility paths.
+- Existing modules remain facades during extraction. No generic
+  `compatibility/` package is created.
+- Final facades contain only export/dispatch/lazy-import compatibility logic,
+  not network, filesystem, retry, transfer, Release, or environment rules.
+- Current facade-sized modules are recorded legacy debt. The gate allows the
+  baseline but rejects new unowned functions or growth and tightens as debt is
+  removed.
+- `api.py -> api/__init__.py` and `cli.py -> cli/__init__.py` are separate
+  final Issues and never combined with domain extraction.
+
+### Monkeypatch And Test-Seam Rules
+
+- Inventory every affected production import and test patch before extraction.
+- Re-export is not proof that assignment through the old module reaches the
+  new owner.
+- Each patch seam must use an old-path proxy, explicit dependency injection,
+  equivalent owner-bound evidence before test migration, or remain unmoved.
+- Migrating a private patch target cannot reduce behavior, parameter, call
+  order, cleanup, or failure assertions.
+
+### Package Discovery Rules
+
+- Future setuptools discovery includes every intended
+  `src/atomgit/**/__init__.py` package.
+- A guard compares source modules, build metadata, wheel, and sdist; omitted
+  source is blocking.
+- Installed smoke runs outside the repo with isolated `PYTHONPATH`.
+- Src migration retains flat module identities; domain packages appear only
+  when implementation moves.
+- Preserving package SDK exports and top-level `atomgit_hub` may require one
+  minimal shim in the src Issue. It contains no duplicated SDK logic and is
+  proven in source/editable/wheel environments.
+
+### Shell/Python Boundary Rules
+
+- Shell owns environment discovery, forwarding, bootstrap setup, and simple
+  orchestration.
+- Python owns Release, checksum/wheel validation, environment matching,
+  managed-path policy, state planning, and other complex rules when available.
+- Pre-install/post-removal fallbacks are explicit exceptions because package
+  code may be unavailable; they are generated or parity-tested, not
+  independently maintained.
+- Root install/uninstall/deploy entrypaths remain stable.
 
 ## Affected Capability IDs
 
-- FLOOR-REGISTRY: register all new tests and monotonic invariants.
-- CLI-SURFACE: add atomgit uninstall and its exact parameters/help.
-- CLI-DISPATCH: prove uninstall dispatch and failure/confirmation exits.
-- RUNTIME: preserve completion's no-network, no-credential, lightweight path.
-- PACKAGING: installer, uninstaller, completion ownership, and recovery warning.
-- PORTABILITY: preserve non-conda installation and supported Python behavior.
+- `FLOOR-REGISTRY`
+- `CLI-SURFACE`
+- `CLI-DISPATCH`
+- `RUNTIME`
+- `DEPENDENCY-CONTRACT`
+- `PACKAGING`
+- `PORTABILITY`
+- `ERROR-REDACTION`
+- Every other capability remains protected by the complete baseline.
 
 ## Protected Existing Invariants
 
-- FLOOR-001 through FLOOR-004 remain complete, monotonic, isolated, and
-  blocking.
-- CLI-001 through CLI-004 preserve the exact existing public schema, usable
-  entry points, live-schema completion, and update options except for the
-  explicitly added uninstall command.
-- DISPATCH-001 preserves successful isolated dispatch for every public leaf.
-- RUNTIME-003 completion never imports business dependencies, reads
-  credentials, accesses the network, or creates AtomGit runtime configuration.
-- PKG-001 and PKG-002 preserve wheel entry points and safe installer/deploy
-  invocation.
-- PKG-004 through PKG-008 preserve checksummed stable Release selection and all
-  protected publication behavior.
-- PORT-001 through PORT-003 preserve Python/platform safety and installation
-  without requiring conda.
+- All actual pre-Issue `FLOOR-001` through `FLOOR-003`; the activation
+  handoff's reference to a current `FLOOR-004` was reconciled against the
+  executable registry, where that ID does not exist.
+- All current `CLI-001` through `CLI-005`.
+- All current `DISPATCH-001` through `DISPATCH-004`.
+- All current `RUNTIME-001` through `RUNTIME-003`.
+- Current `DEP-001` and `DEP-002`.
+- All current `PKG-001` through `PKG-011`.
+- All current `PORT-001` through `PORT-004`.
+- All current error-redaction invariants.
+- Every remaining invariant in the 78-invariant ledger through the mandatory
+  complete baseline. None may be removed, weakened, skipped, or relabeled.
 
-## New Or Changed Invariants
+## Proposed New Or Strengthened Invariants
 
-- CLI-005: atomgit uninstall has an exact registered schema, confirms destructive
-  intent by default, uses the running interpreter, and rejects source/editable
-  installs.
-- PKG-003 changes through an authorized compatibility migration: official Zsh
-  completion is owned by the active conda environment rather than global
-  ~/.zshrc state, while install opt-out and safe failure reporting remain.
-- PKG-009: environment activation/deactivation loads and unloads only the
-  active conda environment's AtomGit completion.
-- PKG-010: official internal and curl uninstall paths are idempotent, remove
-  only exact package-managed environment state, and preserve all user data.
-- PKG-011: an environment with AtomGit removed by pip and managed completion
-  remaining emits the exact accepted warning on activation and performs no
-  mutation.
-- PORT-004: non-conda installation remains supported and skips environment-only
-  completion with accurate guidance.
+Exact wording may tighten during test-first investigation, but the IDs and
+observable intent are approved:
 
-## Acceptance Criteria
+- `FLOOR-005`: refactor Issues cannot change/remove/weaken/skip/relabel
+  registered behavior; legacy structure may shrink but new violations fail.
+- `CLI-006`: deterministic CLI scenarios preserve exact stdout, stderr, exit,
+  exception category, prompt behavior, and redaction.
+- `DISPATCH-005`: covered leaves preserve exact target, arguments, count, and
+  ordering.
+- `RUNTIME-004`: fresh import permutations and completion converge on the
+  same light, idempotent HF policy.
+- `DEP-003`: representative production call sites bind real locked
+  signatures or strict autospecs.
+- `PKG-012`: source, editable, wheel, and sdist preserve public imports and
+  intended discovered modules without repository leakage.
+- `PORT-005`: installer/uninstaller remain POSIX and fallback decisions stay
+  aligned with Python policy.
+- Strengthen `RUNTIME-002` evidence for representative CLI/SDK success and
+  every failure boundary without changing its meaning.
 
-1. No new installation writes global ~/.zshrc or
-   ~/.atomgit/completions/atomgit.zsh.
-2. Two isolated synthetic conda environments can own distinct completion
-   scripts; deactivating A removes A's binding before B loads B's binding.
-3. Completion install/uninstall operates only under the active matching
-   CONDA_PREFIX, is idempotent and symlink/concurrency safe, and never touches
-   another environment.
-4. Legacy global completion migration requires explicit confirmation and
-   preserves unrelated .zshrc bytes, mode, final newline, backups, and
-   concurrent edits.
-5. atomgit uninstall is present in the exact CLI schema, prompts by default,
-   supports explicit automation, uses sys.executable, and rejects editable
-   installs.
-6. Official uninstall preserves configuration, credentials, cache, repositories,
-   and unrelated environment files.
-7. uninstall.sh succeeds both before and after direct pip removal and is
-   idempotent.
-8. The post-pip activation path prints the accepted Chinese warning exactly and
-   produces no filesystem, package, environment, or shell-config mutation.
-9. Commands that cannot modify their parent Zsh print accurate exec-zsh or
-   reactivation guidance.
-10. Non-conda installation and both CLI entry points remain functional without
-    global completion side effects.
-11. README and authoritative docs describe official versus non-official
-    lifecycle behavior and the future-release requirement accurately.
-12. Independent review returns APPROVED with no open P0/P1; all focused checks,
-    the complete baseline, compileall, pip check, and diff check pass.
+## Focused Test Design
 
-## Required Implementation Investigation
+Inspect existing evidence first and avoid duplicate tests. Approved candidates:
 
-- Capture the real Click 8.4.2 Zsh adapter and function/compdef names.
-- Verify conda activate.d/deactivate.d sourcing order for Zsh and environment
-  switches without relying on transcript assumptions.
-- Reuse or deliberately extend the existing editable-install detection in
-  release.py rather than duplicating incompatible logic.
-- Define exact environment matching between CONDA_PREFIX, sys.prefix, selected
-  --python, and executable paths, including symlinked interpreters.
-- Define a single manifest of managed paths shared contractually by Python and
-  shell cleanup so uninstall.sh fallback cannot drift.
+- `tests/structure_contract.py`: declarative current/target ownership, public
+  surfaces, dependency edges, legacy debt, facade and artifact expectations.
+- `tests/test_structure_guard.py`: ownership, forbidden edges/cycles, legacy
+  growth, empty/undiscovered packages, and negative mutation evidence.
+- `tests/test_refactor_behavior_guard.py`: deterministic CLI
+  output/exit/exception/dispatch scenarios.
+- `tests/test_public_import_contract.py`: imports, symbols, signatures, lazy
+  exports, facade identities, and installed provenance.
+- `tests/test_import_order_contract.py`: fresh import permutations and
+  completion lightness with isolated HOME/no network.
+- `tests/test_global_state_contract.py`: timeout/progress/runtime state around
+  representative CLI/SDK success/failure.
+- Extend `tests/test_hf_api_contract.py` for production call-site binding.
+- Extend installer/uninstaller/portability evidence for POSIX and policy parity
+  when possible without script behavior changes.
 
-## Focused Tests And Evidence
+Five new `test_*.py` scripts move 74 to 79 cases; seven new invariants move 78
+to 85. These final exact counts agree in the executable registries and all
+authoritative development-floor/testing documents.
 
-- Extend tests/test_shell_completion.py for environment paths, activation,
-  deactivation, migration confirmation, isolation, symlinks, modes, concurrent
-  edits, parent-shell guidance, and no business imports/network/config.
-- Extend tests/test_installer.py for conda-owned setup, non-conda skip,
-  --no-completion, exact interpreter selection, and hook contents.
-- Add tests/test_uninstaller.py for installed and already-pip-removed states,
-  confirmation, automation, editable refusal, idempotency, exact target
-  ownership, preserved user data, and exact warning-only activation behavior.
-- Register the new script in tests/cli_baseline_contract.py and map it to the
-  affected development-floor capabilities and invariants.
-- Update tests/test_cli_feature_baseline.py, tests/test_cli_surface.py,
-  tests/development_floor_contract.py, tests/test_development_floor.py,
-  tests/test_update.py, and tests/test_wheel_smoke.py as required by the exact
-  CLI, update-refresh, package, and floor contracts.
-- Use isolated temporary HOME, CONDA_PREFIX, ZDOTDIR, Git config, and synthetic
-  environment trees. No test may inspect the maintainer's real credentials or
-  mutate the real ~/.zshrc or active conda environment.
+## Active-Issue Implementation Sequence
 
-## Required Verification
+1. Reconcile this contract with exact Git state and executable registries.
+2. Run relevant existing focused tests before edits.
+3. Correct the pre-Issue stale development-floor counts.
+4. Add `tests/structure_contract.py`.
+5. Add structure guard and negative mutation evidence first.
+6. Add public import and deterministic behavior guards.
+7. Add import-order/completion and global-state contracts.
+8. Extend locked-signature and POSIX/fallback evidence.
+9. Register tests/invariants and update minimal authoritative documents.
+10. Run focused tests, full baseline, compileall, pip check, and diff check.
+11. Audit credentials, artifacts, behavior, assertions, and unrelated churn.
+12. Perform independent review, fix findings, rerun gates, update handoff, and
+    deliver under standing rules.
 
-- Focused scripts listed above in the atomgit_cli conda environment.
-- Shell syntax checks for install.sh, uninstall.sh, and generated hooks.
-- Real locked Click 8.4.2 adapter inspection.
-- Isolated wheel build/install smoke for both entry points and the new command.
-- python tests/run_cli_baseline.py after the final implementation edit and
-  after every review fix.
-- python -m compileall -q .
-- python -m pip check.
-- git diff --check plus artifact, credential, generated-file, and unrelated-diff
-  audit.
-- Independent review is mandatory because the change affects installation,
-  deletion, shell startup, public CLI surface, and packaging.
-- Live AtomGit evidence: not applicable.
+## Acceptance Criteria For The Active Issue
 
-## Completion And Release Boundary
+1. Human/executable counts agree and the prior stale statement is removed.
+2. Every current module has an owner and the target map is persisted without
+   source placeholders.
+3. The guard passes legacy state, rejects growth, and proves negative cases.
+4. Public imports, symbols, signatures, facade objects, CLI entry, and
+   installed provenance are blocking evidence.
+5. Deterministic CLI behavior is blocking without duplicated secrets or weaker
+   domain tests.
+6. Import ordering and completion preserve runtime policy/lightness.
+7. Timeout/progress/global state restore across representative boundaries.
+8. Production dependency calls bind real locked libraries.
+9. POSIX scripts and Shell/Python fallback parity are covered unchanged.
+10. New tests are registered once and invariants have evidence/docs.
+11. No production, package layout, dependency, CLI/SDK, script, or remote
+    behavior changes.
+12. Focused/full tests, supporting checks, audits, and review pass with no open
+    P0/P1 finding.
 
-- Complete-baseline evidence: `python tests/run_cli_baseline.py` passed all 74
-  isolated offline cases in 61.72 seconds after the final review fix.
-- Independent review: APPROVED on the third review. Round one requested changes
-  for missing executable fallback/shell-switch/migration evidence, incomplete
-  shell fingerprints, and dead migration code. Round two found that Python and
-  shell cleanup could follow symlinked parent directories. All findings were
-  fixed, covered by regression tests, and reverified; no P0/P1/P2/P3 remains.
-- Human acceptance: accepted for end-to-end delivery by the maintainer's
-  explicit 2026-08-17 instruction to complete development, verification,
-  commit, upload, and publish 1.1.1 after the recorded gates pass.
-- Additional evidence: focused scripts and isolated wheel smoke passed; Click
-  8.4.2 rendered `_atomgit_completion`; conda 26.1.1 source/order inspection
-  confirmed deactivate-before-prefix-change and activate-after-prefix-change;
-  `sh -n` and `zsh -n` checks, `python -m pip check`,
-  `python -m compileall -q .`, `git diff --check`, artifact inspection, and
-  credential-pattern audit passed.
-- Remaining risks: behavior is executable against Zsh 5.9 and synthetic conda
-  environments but has not been manually exercised across older conda/Zsh
-  combinations; child processes cannot unload their parent shell and therefore
-  print reactivation/`exec zsh` guidance by design.
-- Release boundary: completed under the maintainer's explicit 1.1.1 publication
-  authorization; no PyPI/TestPyPI publication or 1.1.0 mutation occurred.
-- Release-preparation evidence: version.py, wheel metadata, Release Notes, and
-  workflow input all resolve to 1.1.1; release workflow contract passed 28
-  checks, wheel smoke passed 28/28, focused installer/uninstaller checks passed,
-  and the complete baseline passed 74 cases in 66.47 seconds. Pip check,
-  compileall, shell syntax, and diff check passed after the final release edit.
-- Release review: APPROVED with no findings. Historical 1.1.0 references are
-  intentional release/migration facts; version.py, built wheel metadata,
-  Release Notes, CHANGELOG, and current-version docs agree on 1.1.1. Protected
-  tag, public-Release rejection, draft-resume, exact-asset, checksum, and
-  release-note workflow contracts remain executable and passing.
-- Post-merge evidence: on yuto at local merge 3aaf03d,
-  `python tests/run_cli_baseline.py` passed 74 cases in 65.47 seconds;
-  `python -m pip check`, `python -m compileall -q .`, `git diff --check`, and
-  clean-worktree inspection passed. Neither local task branch nor local release
-  branch has been pushed.
-- Remote delivery: only yuto was pushed. Protected workflow run 32027925051
-  completed successfully after the authorized `release-approval` gate and
-  created annotated tag 1.1.1 at
-  f472c2894ca03b2ff43fb7f5c809f39e4e2664fc.
-- Public Release: https://github.com/JoyJeeo/atomgit_cli/releases/tag/1.1.1 is
-  non-draft and non-prerelease with exactly LICENSE, SHA256SUMS,
-  atomgit-1.1.1-py3-none-any.whl, and atomgit-1.1.1.tar.gz. Downloaded assets
-  passed SHA256SUMS verification.
-- Post-publication ordinary-user evidence: install.sh without an explicit
-  version selected 1.1.1 into a temporary venv; package location, command path,
-  `atomgit --version`, `atomgit uninstall --help`, `import atomgit`, and
-  `import atomgit_hub` all resolved to that isolated installation.
-- Publication annotation: GitHub warned that pinned checkout/upload-artifact
-  actions target Node.js 20 and were forced onto Node.js 24; both workflow jobs
-  still completed successfully. This is a future workflow-maintenance risk,
-  not a 1.1.1 release failure.
+## Required Verification For The Active Issue
+
+- Pre-edit focused:
+  - `python tests/test_cli_baseline_guard.py`
+  - `python tests/test_cli_feature_baseline.py`
+  - `python tests/test_development_floor.py`
+  - `python tests/test_runtime_policy.py`
+  - `python tests/test_hf_api_contract.py`
+  - `python tests/test_shell_completion.py`
+  - `python tests/test_wheel_smoke.py`
+  - `python tests/test_installer.py`
+  - `python tests/test_uninstaller.py`
+- Post-edit: every new/changed test and all existing evidence it composes.
+- Mandatory after final edit and every review fix:
+  `python tests/run_cli_baseline.py`.
+- Supporting:
+  - `python -m compileall -q .`
+  - `python -m pip check`
+  - `git diff --check`
+- Temporary packaging must not alter repository build artifacts.
+- Inspect real Click 8.4.2, HF Hub 1.1.7, and datasets 4.4.1 signatures.
+- Live AtomGit evidence: `not applicable; no remote behavior changes`.
+
+## Approved Sequential Architecture Program
+
+The program is approved, but only one Issue may be active. Complete, verify,
+review, merge, and deliver each before activating its successor from new yuto.
+
+### 1. Structure/Behavior Compatibility Foundation (active)
+
+- Deliver the active Issue above.
+
+### 2. Packaging Metadata And Discovery Foundation
+
+- Add `pyproject.toml` with setuptools backend and deliberate Black/isort/Ruff/
+  pytest/package-discovery configuration.
+- Retain setup.py and requirements files during migration.
+- Record legacy tool debt; block new/changed violations.
+- No dependency upgrade, formatter sweep, src tree, or production moves.
+
+### 3. Mechanical Src Layout Migration
+
+- Move current modules to `src/atomgit/` retaining flat module identities.
+- Make only required packaging/import adjustments.
+- Preserve package SDK exports and top-level `atomgit_hub` with one
+  implementation and minimal shim.
+- Verify source/editable/wheel/sdist/entrypoints/provenance/import order/
+  completion/installer/updater/uninstaller.
+- No domain extraction.
+
+### 4. Infrastructure And Utils Ownership
+
+- Extract validation, output, cache, runtime/config support, and Git credential
+  ownership.
+- Keep `atomgit.utils` as historical facade.
+- Preserve patch seams explicitly; no logging/type/format sweep.
+
+### 5. Environment Lifecycle Ownership
+
+- Establish environment, managed paths, completion, and uninstall modules only
+  as implementation moves.
+- Centralize Python policy and parity-test package-absent Shell fallback.
+- Preserve PKG-009..011 paths, migration, concurrency, guidance, confirmation,
+  and user-data safety.
+
+### 6. Authentication And Repository Services
+
+- Extract auth and repository use cases.
+- Preserve `HuggingFaceAPI` signatures, CLI/SDK differences, V5 size/status/
+  ambiguity recovery, visibility, branch, delete, and repo-ID behavior.
+
+### 7. Download Domain
+
+- Create download package with service, transport, integrity, manifest, resume,
+  and prune as real code moves.
+- Preserve auth, framing, redirects, Windows/path safety, checksum, retry,
+  locking, cleanup, and redaction.
+
+### 8. Upload Domain
+
+- Create upload package with service, ordinary, resumable, projection, and
+  error policy as real code moves.
+- Preserve batching, timeout, progress, lifetime, projection, reconciliation,
+  retry/reduction, and CLI/SDK calls.
+
+### 9. LFS Domain
+
+- Establish pointer, policy, and transfer modules.
+- Preserve canonical bytes, verification, opt-in attributes, preupload,
+  slow-flow recovery, commit reconciliation, concurrency, and scoped behavior.
+- Enforce `transfers -> lfs`, never `lfs -> transfers`.
+
+### 10. SDK Ownership
+
+- Establish SDK download/upload/repository/dataset modules.
+- Keep top-level `atomgit_hub` thin and preserve exact public behavior.
+
+### 11. CLI Command Ownership
+
+- Extract auth/repository/transfer/lifecycle commands behind existing cli.py.
+- Keep only schema, prompt, output, exit conversion, and service calls.
+- Preserve completion/lazy import. Do not convert cli.py yet.
+
+### 12. API Facade Conversion
+
+- Convert api.py to api/__init__.py only after domain extraction.
+- Preserve symbols, objects, signatures, runtime, module identity, and seams.
+- Leave no network/filesystem/retry/transfer/state business implementation.
+
+### 13. CLI Facade Conversion
+
+- Convert cli.py to cli/__init__.py and cli/root.py only after extraction.
+- Preserve imports, entrypoint, module execution, completion, schema, dispatch,
+  help, output, and seams.
+
+### 14. Distribution Ownership And Shell Thinning
+
+- Establish distribution release/installation ownership.
+- Keep root install/uninstall/deploy entrypaths.
+- POSIX for install/uninstall; Bash strict mode for deploy only with evidence.
+- Generate or parity-test necessary bootstrap/fallback duplication.
+
+### 15. Test Layout Organization
+
+- Move tests into contract/CLI/SDK/auth/repository/upload/download/lifecycle/
+  distribution/packaging/Shell areas only after runner/registries support it.
+- Preserve self-executing isolated evidence until a separate approved migration.
+- Never move production and tests together in one high-risk Issue.
+
+### 16. Documentation And Final Architecture Audit
+
+- Synchronize AI/human architecture, testing, development, ownership, and
+  contributor guidance with delivered source.
+- Remove transitional statements only after executable proof.
+- Audit dependency direction, surfaces, artifacts, credentials, generated
+  files, and compatibility debt.
+- Never remove a facade/export without a separate authorized migration.
+
+## Approved Final Target Tree
+
+This is a target, not permission for empty packages:
+
+```text
+project-root/
+|-- pyproject.toml
+|-- setup.py
+|-- install.sh
+|-- uninstall.sh
+|-- deploy.sh
+|-- scripts/
+|   |-- lib/common.sh             # only with two justified callers
+|   `-- release_checks.py         # only with real shared policy
+|-- src/
+|   |-- atomgit/
+|   |   |-- __init__.py
+|   |   |-- __main__.py
+|   |   |-- version.py
+|   |   |-- exceptions.py
+|   |   |-- cli_contracts.py
+|   |   |-- utils.py              # historical facade
+|   |   |-- cli/
+|   |   |   |-- __init__.py
+|   |   |   |-- root.py
+|   |   |   |-- auth.py
+|   |   |   |-- repository.py
+|   |   |   |-- transfer.py
+|   |   |   `-- lifecycle.py
+|   |   |-- api/
+|   |   |   `-- __init__.py
+|   |   |-- services/
+|   |   |   |-- auth.py
+|   |   |   `-- repository.py
+|   |   |-- transfers/
+|   |   |   |-- download/
+|   |   |   |   |-- service.py
+|   |   |   |   |-- transport.py
+|   |   |   |   |-- integrity.py
+|   |   |   |   |-- manifest.py
+|   |   |   |   |-- resume.py
+|   |   |   |   `-- prune.py
+|   |   |   `-- upload/
+|   |   |       |-- service.py
+|   |   |       |-- ordinary.py
+|   |   |       |-- resumable.py
+|   |   |       |-- projection.py
+|   |   |       `-- errors.py
+|   |   |-- lfs/
+|   |   |   |-- pointer.py
+|   |   |   |-- policy.py
+|   |   |   `-- transfer.py
+|   |   |-- lifecycle/
+|   |   |   |-- environment.py
+|   |   |   |-- managed_paths.py
+|   |   |   |-- completion.py
+|   |   |   `-- uninstall.py
+|   |   |-- distribution/
+|   |   |   |-- release.py
+|   |   |   `-- installation.py
+|   |   |-- infrastructure/
+|   |   |   |-- runtime.py
+|   |   |   |-- config.py
+|   |   |   |-- cache.py
+|   |   |   |-- output.py
+|   |   |   `-- git_credentials.py
+|   |   `-- sdk/
+|   |       |-- download.py
+|   |       |-- upload.py
+|   |       |-- repository.py
+|   |       `-- dataset.py
+|   `-- atomgit_hub.py
+|-- tests/
+|   |-- contracts/
+|   |-- cli/
+|   |-- sdk/
+|   |-- auth/
+|   |-- repository/
+|   |-- upload/
+|   |-- download/
+|   |-- lifecycle/
+|   |-- distribution/
+|   |-- packaging/
+|   `-- shell/
+`-- docs/
+```
+
+## Future Capability Development Protocol
+
+Every future feature must:
+
+1. classify new versus extended capability;
+2. declare affected/protected IDs before editing;
+3. select an owner domain;
+4. keep CLI/SDK/Shell as adapters rather than duplicate owners;
+5. decide whether existing structure can accept it;
+6. if not, complete a behavior-neutral preparation Issue first;
+7. add failing evidence at the observable boundary;
+8. implement in the owner and expose through adapters;
+9. update ledger and minimal documentation;
+10. pass focused/full tests, review, and delivery gates.
+
+A feature may include only a small local extraction when it affects one domain,
+changes no public import/package surface, moves no shared global state, is fully
+covered, and is explicitly recorded. Broad moves and behavior never share an
+Issue.
+
+## Program-Wide Stop Conditions
+
+Stop and return to implementation when:
+
+- CLI schema/help/output/exit/exception/prompt/dispatch changes;
+- a public import/export/signature/facade/entrypoint changes incompatibly;
+- artifacts or discovery omit source, or installed smoke leaks repository code;
+- a forbidden import edge or cycle appears;
+- a facade gains unowned business logic;
+- a patch seam no longer reaches the real dependency without equal evidence;
+- completion becomes heavy or runtime depends on import order;
+- global/environment/cache/credential/temp/Git state leaks;
+- locked signatures reject a production call;
+- POSIX or Shell/Python parity fails;
+- behavior evidence must be weakened to pass;
+- focused/full tests, supporting gates, packaging, audit, or review fails.
+
+If existing behavior is wrong, pause refactoring and activate a separate bug or
+authorized compatibility-migration Issue.
+
+## Implementation And Verification Evidence
+
+- Implementation: `added the declarative current/target ownership,
+  dependency, public-surface, artifact, and exact legacy-debt contract; added
+  five focused self-executing guards; strengthened real locked-signature,
+  POSIX, wheel, sdist, and PEP 660 editable evidence; changed no production
+  module, script behavior, setup metadata, dependency, or package layout`
+- Final ledger: `26 stable capabilities, 85 observable invariants, and 79
+  isolated offline pytest cases`
+- Pre-edit focused evidence: `test_cli_baseline_guard.py 14/14,
+  test_cli_feature_baseline.py 69/69, test_development_floor.py 15/15,
+  test_runtime_policy.py 9/9, test_hf_api_contract.py 13/13,
+  test_shell_completion.py 19/19, test_wheel_smoke.py 28/28,
+  test_installer.py passed, and test_uninstaller.py 14/14`
+- Post-edit focused evidence: `test_structure_guard.py 13/13,
+  test_public_import_contract.py 8/8, test_refactor_behavior_guard.py 6/6,
+  test_import_order_contract.py 5/5, test_global_state_contract.py 7/7,
+  test_hf_api_contract.py 16/16, test_runtime_policy.py 9/9,
+  test_shell_completion.py 19/19, test_installer.py passed,
+  test_uninstaller.py 14/14, test_wheel_smoke.py 35/35, and
+  test_development_floor.py 15/15`
+- Complete offline gate: `python tests/run_cli_baseline.py` passed `79/79` in
+  `67.63s` after implementation and `79/79` in `71.26s` after the review fix,
+  both in the `atomgit_cli` conda environment`
+- Supporting evidence before final handoff edit: `python -m compileall -q .`,
+  `python -m pip check`, and `git diff --check` passed; pip reported no broken
+  requirements`
+- Locked dependency evidence: `huggingface-hub==1.1.7` and
+  `datasets==4.4.1` versions and real signatures were inspected; extracted
+  CLI/SDK production keyword sets bind successfully and an unsupported kwarg
+  fails closed`
+- Packaging evidence: `temporary source built one wheel and one sdist; every
+  intended runtime module was present; isolated wheel and explicit PEP 660
+  editable installs resolved outside the repository and left no build
+  artifact in the worktree`
+- Live AtomGit evidence: `not run and not applicable because this Issue changes
+  no production or remote behavior`
+- Human acceptance: `accepted through the maintainer's 2026-08-18 request to
+  begin the persisted Issue and perform development, verification, commit, and
+  push under the standing delivery rules`
+
+## Review Record
+
+- Design review: `accepted by the maintainer through the 2026-08-17 to
+  2026-08-18 discussion, including the target tree, ownership model,
+  nonregression contract, anti-degradation gates, Shell fallback exception,
+  sequential Issue program, and three mandatory migration conditions`
+- Implementation review: `APPROVED after complete-diff review against the
+  active Issue, locked signatures, source/tests/docs, supporting checks, and
+  the post-fix 79-case complete baseline`
+- Resolved finding: `P2 monotonic-debt gap: the first guard allowed removed
+  dependency/facade debt to regrow below the original ceiling and did not
+  explicitly assert cycle/artifact cross-checks; fixed by requiring exact
+  current edges and debt metrics, same-change declaration tightening, and
+  dedicated negative cycle, debt-removal, facade-shrink, and wheel-omission
+  evidence`
+- Open findings: `none; no P0, P1, P2, or P3 finding remains`
+- Residual risks:
+  - `the exact root-module/artifact registry must be deliberately migrated in
+    future approved layout Issues`
+  - `representative output snapshots cover selected high-risk branches rather
+    than every existing CLI outcome; the complete domain baseline remains the
+    broader evidence`
+  - `AST analysis recognizes current relative imports and registered lazy
+    import helpers, so a new dynamic mechanism requires an explicit guard
+    update`
+  - `re-export identity and monkeypatch propagation across owner moves`
+  - `dual atomgit_hub identities during src migration`
+  - `legacy setup.py develop cannot express the current root package mapping
+    in a clean environment; isolated editable evidence therefore uses explicit
+    setuptools PEP 517/660 until the packaging-metadata Issue modernizes the
+    default path`
+  - `future import-order and global-state paths beyond the registered
+    permutations/failure boundaries require new evidence when introduced`
+  - `Shell bootstrap/fallback drift while package code is unavailable`
+  - `tool adoption causing unrelated churn`
+  - `over-fragmentation, empty packages, generic services, or premature
+    abstractions`

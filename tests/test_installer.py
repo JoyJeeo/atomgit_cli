@@ -121,6 +121,18 @@ def main():
         check("installer allows GitHub Release asset redirects", "release-assets.githubusercontent.com" in text)
         check("installer never bypasses environment safety", all(token not in text for token in ("sudo", "--user", "--break-system-packages")))
         check("installer cleans a unique temporary directory", "mktemp -d" in text and "trap cleanup" in text)
+        syntax = subprocess.run(
+            ["sh", "-n", str(INSTALLER)],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        check(
+            "official installer script is POSIX syntax valid",
+            syntax.returncode == 0,
+            syntax.stderr,
+        )
 
     return 0 if all(condition for _, condition, _ in RESULTS) else 1
 
