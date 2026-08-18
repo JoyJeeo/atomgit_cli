@@ -1,12 +1,12 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `implementation complete, review approved, and final verification
-  complete; ready for cohesive commit and local delivery`
+- Phase: `implemented, independently reviewed, committed, merged locally into
+  yuto, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `c64e264` (`docs(ai): finalize structure compatibility
   foundation`)
@@ -14,7 +14,10 @@ Status: active
   to `c64e264` before activation
 - Task branch: `codex/packaging-metadata-discovery` (local only; never push the
   task branch)
-- Current HEAD: `c64e264`
+- Task commit: `2a5696e` (`test(packaging): establish metadata and tooling
+  gates`)
+- Local yuto merge: `555b278` (`merge: establish packaging metadata gates`)
+- Final remote yuto: `pending this handoff finalization commit`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state before activation: `clean`
 - Changed paths: `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`,
@@ -24,12 +27,14 @@ Status: active
   `requirements-dev.txt`, `setup.py`, `tests/cli_baseline_contract.py`,
   `tests/development_floor_contract.py`, `tests/packaging_contract.py`,
   `tests/test_packaging_metadata.py`, and `tests/test_wheel_smoke.py`
-- Last completed action: `implemented the packaging metadata/tooling contract,
+- Last completed action: `pushed yuto at 555b278 and verified github/yuto;
+  implemented the packaging metadata/tooling contract,
   fixed PEP 517 setup path resolution, removed pytest.ini after proving exact
   collection parity, tightened wheel/sdist exact artifact checks, and passed
   the complete offline baseline`
-- Next exact action: `create the cohesive task commit, merge it no-ff into yuto,
-  push only yuto, and verify github/yuto`
+- Next exact action: `activate the next approved program Issue separately from
+  the delivered yuto HEAD; do not infer or implement it from this completed
+  handoff`
 - Blockers: `none`
 - Tests run: `focused structure 13/13, public imports 8/8, packaging metadata
   12/12, wheel/sdist/editable smoke 36/36 after review fix, development floor
@@ -269,6 +274,8 @@ and final documentation/architecture audit.
 - Verdict: `APPROVED`
 - Findings: `P2 sdist metadata evidence gap fixed by asserting MANIFEST.in,
   pyproject.toml, and setup.py presence; all required gates reran and passed`
+- Delivery: `task branch remained local-only; yuto was merged no-ff and pushed;
+  github/yuto matched 555b278 before this finalization commit`
 - Residual risks to assess:
   - `setuptools behavior for the unusual root package mapping`
   - `setup.py and pyproject metadata drift during the later src migration`
