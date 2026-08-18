@@ -61,8 +61,10 @@ output、filesystem、cache、git_credentials、config 和 runtime owner。补�
 uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
 patch 接缝。认证和仓库 V5 管理实现已下沉到 `atomgit.services` 的 authentication
 与 repositories owner，`HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api`
-身份。下载、上传、resumable 和 LFS 方法仍在 `api.py`，没有提前创建后续 transfer、
-SDK 或 CLI 目标域空包。
+身份。CLI API 下载实现已下沉到 `atomgit.download` 的 service、transport、integrity、
+manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 接缝仍位于
+`atomgit.api`。SDK 下载仍由 `atomgit_hub.py` 持有，上传、resumable-upload 和 LFS
+仍在 `api.py`，没有提前创建后续 SDK、upload/LFS 或 CLI 目标域空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -79,7 +81,10 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 策略等价性。
 `tests/test_auth_repository_services_ownership.py` 锁定认证/仓库 owner provenance、
 历史 `HuggingFaceAPI` 类和全局 `api` 身份、方法/私有 helper 签名与旧路径 patch
-传播，并明确阻止传输实现提前进入 services。
+传播，并明确阻止传输实现进入 services。
+`tests/test_download_domain_ownership.py` 锁定 CLI API 下载 owner provenance、历史类/
+单例/方法/helper 身份和旧路径赋值/删除传播，并明确阻止 SDK 下载及上传 LFS helper
+提前进入 download 包。
 
 ## 3. 入口和命令树
 
@@ -342,6 +347,8 @@ URL 或其查询参数。
 `atomgit download-file` 调用 `api.download_file`；它与整仓下载一样先列文件、
 校验安全目标路径，再直连 resolve。SDK `download_file` 使用 HF
 `hf_hub_download`，因此缓存路径和异常类型与 CLI API 不同。
+这些 CLI API 下载职责现在由 `atomgit.download` 内的真实 owner 模块实现；
+`atomgit.api` 仅保留历史符号和 mixin 组合，不改变上述行为。
 
 ## 8. Python SDK
 

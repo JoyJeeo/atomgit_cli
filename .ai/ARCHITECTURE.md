@@ -44,8 +44,9 @@ or covered by shared contract tests.
 - `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
   generation and atomic conda-environment hook management.
 - `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
-- `api.py`: historical CLI-facing concrete client and singleton; service
-  methods resolve from owned mixins while transfer methods remain local.
+- `api.py`: historical CLI-facing concrete client and singleton; service and
+  CLI API download methods resolve from owned mixins while upload/LFS methods
+  remain local.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
@@ -63,6 +64,8 @@ or covered by shared contract tests.
   transactions, and safe uninstall implementation.
 - `services/`: owned bounded authentication and repository V5 management,
   including create/list/visibility/delete/branch final-state verification.
+- `download/`: owned CLI API download service, transport, integrity, manifest,
+  resume, and prune implementation; SDK downloads remain outside this package.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -163,8 +166,8 @@ risks through focused tasks and compatibility tests.
 
 ## Structural Refactor Gate
 
-The flat public modules plus the extracted infrastructure, lifecycle, and
-services packages are the
+The flat public modules plus the extracted infrastructure, lifecycle, services,
+and download packages are the
 implemented architecture. The approved
 long-term dependency direction is facade/CLI/SDK to services, transfers,
 lifecycle, or distribution, then to infrastructure/LFS, with only the
@@ -175,7 +178,8 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-Infrastructure, lifecycle, and authentication/repository service extraction are fail-closed through exact
+Infrastructure, lifecycle, authentication/repository service, and CLI API
+download extraction are fail-closed through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
 contracts. The remaining forbidden-direction exception is `cli -> api`; it is
 explicit migration debt, not an approved pattern for new code. Source/editable
@@ -184,6 +188,8 @@ uninstall policy, and the package-absent POSIX uninstall fallback retains
 executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
 global singleton keep their historical identities while moved methods have
 service provenance and old-path module-object patches reach their former call
-sites. The remaining target tree stays a plan
+sites. Download methods and helpers likewise retain old-path identities and
+patch propagation while SDK download and upload/LFS ownership remains pending.
+The remaining target tree stays a plan
 until implementation moves, and package/facade conversion remains isolated in
 later Issues.

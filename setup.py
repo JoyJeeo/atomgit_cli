@@ -57,6 +57,7 @@ setup(
     license="Apache-2.0",
     packages=[
         "atomgit",
+        "atomgit.download",
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.services",

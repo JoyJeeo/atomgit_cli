@@ -3,12 +3,12 @@ import hashlib
 import json
 import math
 import multiprocessing
-import ntpath
+import ntpath  # noqa: F401
 import os
 import random
 import shutil
 import socket
-import ssl
+import ssl  # noqa: F401
 import stat
 import sys
 import tempfile
@@ -17,14 +17,14 @@ import time
 import types
 import urllib.error
 import urllib.request
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager  # noqa: F401
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath, PureWindowsPath  # noqa: F401
 from statistics import median
-from typing import List, Optional, Set
-from urllib.parse import quote, urljoin, urlsplit
+from typing import List, Optional, Set  # noqa: F401
+from urllib.parse import quote, urljoin, urlsplit  # noqa: F401
 
 import httpx
 
@@ -49,19 +49,31 @@ except ImportError:
 
 import huggingface_hub._upload_large_folder as hf_large_folder  # noqa: E402
 import huggingface_hub.lfs as hf_lfs  # noqa: E402
+from huggingface_hub import HfApi  # noqa: E402
+from huggingface_hub import close_session as close_hf_session  # noqa: E402,F401
+from huggingface_hub import constants as hf_constants  # noqa: E402
 from huggingface_hub import (  # noqa: E402,F401
-    HfApi, close_session as close_hf_session, constants as hf_constants,
-    create_repo, get_hf_file_metadata, hf_hub_download, snapshot_download,
+    create_repo,
+    get_hf_file_metadata,
+    hf_hub_download,
+    snapshot_download,
     upload_folder,
 )
 from huggingface_hub._local_folder import (  # noqa: E402
     get_local_upload_paths,
     read_upload_metadata,
 )
-from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402
+from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402,F401
 
 try:
     from .config import config
+    from .download import integrity as _download_integrity
+    from .download import manifest as _download_manifest
+    from .download import prune as _download_prune
+    from .download import resume as _download_resume
+    from .download import service as _download_service
+    from .download import transport as _download_transport
+    from .download.service import DownloadServiceMixin
     from .lfs_pointer import (
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
@@ -72,15 +84,24 @@ try:
     from .services import authentication as _authentication_service
     from .services import repositories as _repository_service
     from .services.authentication import (  # noqa: F401
-        AuthenticationServiceMixin, _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+        _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+        AuthenticationServiceMixin,
     )
     from .services.repositories import (  # noqa: F401
-        RepositoryServiceMixin, _ATOMGIT_V5_API_BASE,
-        _ATOMGIT_V5_MAX_JSON_BYTES, _atomgit_repo_exists, _atomgit_repo_type,
-        _atomgit_v5_branch_commit_id, _atomgit_v5_commit_sha,
-        _atomgit_v5_get_json, _atomgit_v5_repo_path, _atomgit_v5_request_json,
-        _classify_create_repo_error, _is_definitive_v5_write_error,
-        _repo_private_state, _sanitized_v5_api_error,
+        _ATOMGIT_V5_API_BASE,
+        _ATOMGIT_V5_MAX_JSON_BYTES,
+        RepositoryServiceMixin,
+        _atomgit_repo_exists,
+        _atomgit_repo_type,
+        _atomgit_v5_branch_commit_id,
+        _atomgit_v5_commit_sha,
+        _atomgit_v5_get_json,
+        _atomgit_v5_repo_path,
+        _atomgit_v5_request_json,
+        _classify_create_repo_error,
+        _is_definitive_v5_write_error,
+        _repo_private_state,
+        _sanitized_v5_api_error,
     )
     from .utils import (  # noqa: F401
         auth_error_kind,
@@ -95,6 +116,13 @@ try:
     )
 except ImportError:
     from config import config
+    from download import integrity as _download_integrity
+    from download import manifest as _download_manifest
+    from download import prune as _download_prune
+    from download import resume as _download_resume
+    from download import service as _download_service
+    from download import transport as _download_transport
+    from download.service import DownloadServiceMixin
     from lfs_pointer import (
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
@@ -105,15 +133,24 @@ except ImportError:
     from services import authentication as _authentication_service
     from services import repositories as _repository_service
     from services.authentication import (  # noqa: F401
-        AuthenticationServiceMixin, _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+        _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+        AuthenticationServiceMixin,
     )
     from services.repositories import (  # noqa: F401
-        RepositoryServiceMixin, _ATOMGIT_V5_API_BASE,
-        _ATOMGIT_V5_MAX_JSON_BYTES, _atomgit_repo_exists, _atomgit_repo_type,
-        _atomgit_v5_branch_commit_id, _atomgit_v5_commit_sha,
-        _atomgit_v5_get_json, _atomgit_v5_repo_path, _atomgit_v5_request_json,
-        _classify_create_repo_error, _is_definitive_v5_write_error,
-        _repo_private_state, _sanitized_v5_api_error,
+        _ATOMGIT_V5_API_BASE,
+        _ATOMGIT_V5_MAX_JSON_BYTES,
+        RepositoryServiceMixin,
+        _atomgit_repo_exists,
+        _atomgit_repo_type,
+        _atomgit_v5_branch_commit_id,
+        _atomgit_v5_commit_sha,
+        _atomgit_v5_get_json,
+        _atomgit_v5_repo_path,
+        _atomgit_v5_request_json,
+        _classify_create_repo_error,
+        _is_definitive_v5_write_error,
+        _repo_private_state,
+        _sanitized_v5_api_error,
     )
     from utils import (  # noqa: F401
         auth_error_kind,
@@ -126,6 +163,76 @@ except ImportError:
         sanitized_download_error,
         validate_upload_path_no_symlinks,
     )
+
+_DOWNLOAD_OWNER_EXPORTS = {
+    "_atomgit_hf_endpoint": _download_transport,
+    "_atomgit_resolve_url": _download_transport,
+    "DownloadChecksumMismatchError": _download_integrity,
+    "DownloadChecksumMetadataError": _download_integrity,
+    "_atomgit_file_checksum": _download_integrity,
+    "_checksum_from_hf_metadata": _download_integrity,
+    "_checksum_from_metadata_values": _download_integrity,
+    "_atomgit_file_download_metadata": _download_integrity,
+    "_verify_download_checksum": _download_integrity,
+    "_resume_cache_root": _download_resume,
+    "_DOWNLOAD_MANIFEST_VERSION": _download_manifest,
+    "_DOWNLOAD_MANIFEST_MAX_BYTES": _download_manifest,
+    "_set_private_file_mode": _download_manifest,
+    "_download_manifest_root": _download_manifest,
+    "_download_manifest_path": _download_manifest,
+    "_load_download_manifest": _download_manifest,
+    "_write_download_manifest": _download_manifest,
+    "_windows_file_lock_module": _download_manifest,
+    "_try_lock_download_manifest_descriptor_windows": _download_manifest,
+    "_unlock_download_manifest_descriptor_windows": _download_manifest,
+    "_try_lock_download_manifest_descriptor": _download_manifest,
+    "_unlock_download_manifest_descriptor": _download_manifest,
+    "_download_manifest_lock": _download_manifest,
+    "_resume_cache_identity": _download_resume,
+    "_process_is_running": _download_resume,
+    "_resume_download_lock": _download_resume,
+    "_copy_resumed_file_to_destination": _download_resume,
+    "_parse_content_range": _download_resume,
+    "_atomgit_resume_raw": _download_resume,
+    "_download_atomgit_file_resumable": _download_resume,
+    "_atomgit_list_repo_files": _download_service,
+    "_repository_filename_parts": _download_prune,
+    "_safe_download_destination": _download_service,
+    "_WindowsFileAPI": _download_prune,
+    "_normalized_windows_handle_path": _download_prune,
+    "_prune_managed_download_file_windows": _download_prune,
+    "_uses_windows_prune": _download_prune,
+    "_prune_managed_download_file": _download_prune,
+    "_prune_managed_download_files": _download_prune,
+    "_atomgit_resolve_url_raw": _download_transport,
+    "_download_url_origin": _download_transport,
+    "_prepare_download_redirect": _download_transport,
+    "_AtomGitRedirectHandler": _download_transport,
+    "_atomgit_open_url": _download_transport,
+    "_atomgit_raw_http_request": _download_transport,
+    "_atomgit_raw_http_get": _download_transport,
+    "_atomgit_raw_http_head": _download_transport,
+    "_raw_metadata_size": _download_integrity,
+    "_atomgit_file_download_metadata_raw": _download_integrity,
+    "_copy_exact_http_body": _download_transport,
+    "_read_chunk_line": _download_transport,
+    "_copy_chunked_http_body": _download_transport,
+    "_copy_framed_http_body": _download_transport,
+    "_atomgit_download_raw": _download_transport,
+    "_download_atomgit_file": _download_transport,
+}
+for _download_name, _download_owner in _DOWNLOAD_OWNER_EXPORTS.items():
+    globals()[_download_name] = getattr(_download_owner, _download_name)
+
+# These exact aliases are consumed by unextracted upload/LFS code below and
+# keep its historical static resolution explicit.
+_atomgit_file_checksum = _download_integrity._atomgit_file_checksum
+_atomgit_hf_endpoint = _download_transport._atomgit_hf_endpoint
+_atomgit_open_url = _download_transport._atomgit_open_url
+_atomgit_resolve_url = _download_transport._atomgit_resolve_url
+
+# Shared repository policy remains the historical canonical old-path object.
+_is_not_found_error = _repository_service._is_not_found_error
 # isort: on
 
 try:
@@ -196,1456 +303,47 @@ def _restore_progress_bar_state(state) -> None:
     _set_progress_bar(not state)
 
 
-def _atomgit_hf_endpoint() -> str:
-    """AtomGit HF-compatible endpoint from the shared runtime policy."""
-    return os.environ.get("HF_ENDPOINT", "https://hub.atomgit.com")
-
-
-def _atomgit_resolve_url(
-    repo_id: str, repo_type: str, filename: str, revision: str = "main"
-) -> str:
-    """Build a direct resolve URL that bypasses the missing repo_info route."""
-    endpoint = _atomgit_hf_endpoint()
-    prefix = "datasets/" if repo_type == "dataset" else ""
-    # 文件名必须百分号编码（保留 / 分隔子目录），否则 urllib 发送
-    # 请求行时按 ASCII 编码，中文文件名会抛 UnicodeEncodeError。
-    encoded_filename = quote(filename, safe="/")
-    encoded_revision = quote(revision or "main", safe="")
-    return (
-        f"{endpoint}/{prefix}{repo_id}/resolve/"
-        f"{encoded_revision}/{encoded_filename}"
-    )
-
-
-class DownloadChecksumMismatchError(OSError):
-    """Downloaded or existing bytes do not match repository metadata."""
-
-
-class DownloadChecksumMetadataError(ValueError):
-    """AtomGit did not provide a supported strong checksum."""
-
-
-def _atomgit_file_checksum(
-    repo_id: str, repo_type: str, filename: str, token: str
-) -> tuple:
-    """Return (algorithm, digest, size) from AtomGit resolve metadata."""
-    checksum, _ = _atomgit_file_download_metadata(
-        repo_id, repo_type, filename, token
-    )
-    return checksum
-
-
-def _checksum_from_hf_metadata(metadata) -> tuple:
-    """Validate one locked HF metadata response as a strong checksum."""
-    return _checksum_from_metadata_values(metadata.etag, metadata.size)
-
-
-def _checksum_from_metadata_values(etag, size) -> tuple:
-    """Validate raw metadata values using the shared strong checksum policy."""
-    if (
-        not isinstance(etag, str)
-        or not isinstance(size, int)
-        or isinstance(size, bool)
-        or size < 0
-    ):
-        raise DownloadChecksumMetadataError("checksum metadata is unavailable")
-    digest = etag.strip().strip('"').lower()
-    if not digest or any(character not in "0123456789abcdef" for character in digest):
-        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
-    if len(digest) == 64:
-        algorithm = "sha256"
-    elif len(digest) == 40:
-        algorithm = "git-sha1"
-    else:
-        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
-    return algorithm, digest, size
-
-
-def _atomgit_file_download_metadata(
-    repo_id: str, repo_type: str, filename: str, token: str
-) -> tuple:
-    """Return a strong checksum and current credential-safe download URL."""
-    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename)
-    try:
-        metadata = get_hf_file_metadata(
-            resolve_url,
-            token=token if token else False,
-            timeout=60,
-            endpoint=_atomgit_hf_endpoint(),
-        )
-    except Exception as error:
-        if filename.isascii() or not _is_not_found_error(error):
-            raise
-        return _atomgit_file_download_metadata_raw(
-            repo_id, repo_type, filename, token
-        )
-    checksum = _checksum_from_hf_metadata(metadata)
-    location = urljoin(
-        resolve_url, getattr(metadata, "location", None) or resolve_url
-    )
-    _download_url_origin(location)
-    return checksum, location
-
-
-def _verify_download_checksum(path: Path, checksum: tuple) -> bool:
-    """Stream-hash one local file using a strong AtomGit checksum contract."""
-    algorithm, expected_digest, expected_size = checksum
-    try:
-        actual_size = path.stat().st_size
-    except OSError as error:
-        raise DownloadChecksumMismatchError("checksum mismatch") from error
-    if actual_size != expected_size:
-        raise DownloadChecksumMismatchError("checksum mismatch")
-
-    if algorithm == "sha256":
-        digest = hashlib.sha256()
-    elif algorithm == "git-sha1":
-        digest = hashlib.sha1()
-        digest.update(b"blob " + str(actual_size).encode("ascii") + b"\0")
-    else:
-        raise DownloadChecksumMetadataError("checksum metadata is unsupported")
-
-    bytes_read = 0
-    try:
-        with path.open("rb") as stream:
-            while True:
-                chunk = stream.read(1024 * 1024)
-                if not chunk:
-                    break
-                digest.update(chunk)
-                bytes_read += len(chunk)
-    except OSError as error:
-        raise DownloadChecksumMismatchError("checksum mismatch") from error
-    if bytes_read != expected_size or digest.hexdigest() != expected_digest:
-        raise DownloadChecksumMismatchError("checksum mismatch")
-    return True
-
-
-def _resume_cache_root() -> Path:
-    """Return the private cache used only for incomplete CLI downloads."""
-    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
-    root = hf_home / "resume"
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(root, 0o700)
-    return root
-
-
-_DOWNLOAD_MANIFEST_VERSION = 1
-_DOWNLOAD_MANIFEST_MAX_BYTES = 10 * 1024 * 1024
-
-
-def _set_private_file_mode(file_descriptor: int, path: Path) -> None:
-    """Set private mode on Unix and pre-3.13 Windows Python."""
-    fchmod = getattr(os, "fchmod", None)
-    if callable(fchmod):
-        fchmod(file_descriptor, 0o600)
-    else:
-        os.chmod(path, 0o600)
-
-
-def _download_manifest_root() -> Path:
-    """Return the private state directory for repository download manifests."""
-    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "atomgit"))
-    root = hf_home / "download-manifests"
-    root.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if root.is_symlink() or not root.is_dir():
-        raise ValueError("下载 manifest 缓存目录不安全")
-    os.chmod(root, 0o700)
-    return root
-
-
-def _download_manifest_path(
-    repo_id: str, repo_type: str, local_root: Path
-) -> Path:
-    """Return a credential-free opaque manifest path for one local checkout."""
-    identity = "\0".join(
-        (
-            _atomgit_hf_endpoint(),
-            repo_id,
-            repo_type,
-            str(Path(local_root).resolve()),
-        )
-    ).encode("utf-8")
-    return _download_manifest_root() / f"{hashlib.sha256(identity).hexdigest()}.json"
-
-
-def _load_download_manifest(manifest_path: Path) -> tuple:
-    """Load and validate managed repository filenames, failing closed."""
-    descriptor = None
-    try:
-        flags = os.O_RDONLY
-        if hasattr(os, "O_NOFOLLOW"):
-            flags |= os.O_NOFOLLOW
-        descriptor = os.open(str(manifest_path), flags)
-    except FileNotFoundError:
-        return False, set()
-    except OSError as error:
-        if manifest_path.is_symlink():
-            raise ValueError("下载 manifest 不是普通文件") from error
-        raise
-    try:
-        file_status = os.fstat(descriptor)
-        if not stat.S_ISREG(file_status.st_mode):
-            raise ValueError("下载 manifest 不是普通文件")
-        if file_status.st_size > _DOWNLOAD_MANIFEST_MAX_BYTES:
-            raise ValueError("下载 manifest 过大，已拒绝清理")
-        try:
-            with os.fdopen(descriptor, "r", encoding="utf-8") as manifest_file:
-                descriptor = None
-                payload = json.load(manifest_file)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise ValueError("下载 manifest 无效，已拒绝清理") from error
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
-    if (
-        not isinstance(payload, dict)
-        or payload.get("version") != _DOWNLOAD_MANIFEST_VERSION
-        or not isinstance(payload.get("files"), list)
-    ):
-        raise ValueError("下载 manifest 格式不受支持，已拒绝清理")
-    managed_files = set()
-    for filename in payload["files"]:
-        _repository_filename_parts(filename)
-        managed_files.add(filename)
-    return True, managed_files
-
-
-def _write_download_manifest(manifest_path: Path, managed_files) -> None:
-    """Atomically persist managed filenames with restrictive permissions."""
-    temporary_path = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            prefix=f".{manifest_path.name}.",
-            suffix=".tmp",
-            dir=manifest_path.parent,
-            delete=False,
-        ) as manifest_file:
-            temporary_path = Path(manifest_file.name)
-            _set_private_file_mode(manifest_file.fileno(), temporary_path)
-            json.dump(
-                {
-                    "version": _DOWNLOAD_MANIFEST_VERSION,
-                    "files": sorted(managed_files),
-                },
-                manifest_file,
-                ensure_ascii=False,
-                separators=(",", ":"),
-            )
-            manifest_file.write("\n")
-            manifest_file.flush()
-            os.fsync(manifest_file.fileno())
-        temporary_path.replace(manifest_path)
-        os.chmod(manifest_path, 0o600)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
-
-
-def _windows_file_lock_module():
-    """Load the Windows byte-range locking module only on Windows."""
-    import msvcrt
-
-    return msvcrt
-
-
-def _try_lock_download_manifest_descriptor_windows(
-    descriptor: int,
-) -> bool:
-    """Acquire a nonblocking one-byte Windows lock."""
-    locking = _windows_file_lock_module()
-    if os.fstat(descriptor).st_size == 0:
-        os.write(descriptor, b"\0")
-    os.lseek(descriptor, 0, os.SEEK_SET)
-    try:
-        locking.locking(descriptor, locking.LK_NBLCK, 1)
-    except OSError as error:
-        busy_errors = {errno.EACCES, errno.EAGAIN}
-        if hasattr(errno, "EDEADLK"):
-            busy_errors.add(errno.EDEADLK)
-        if error.errno in busy_errors:
-            return False
-        raise
-    return True
-
-
-def _unlock_download_manifest_descriptor_windows(descriptor: int) -> None:
-    """Release a Windows one-byte manifest lock."""
-    locking = _windows_file_lock_module()
-    os.lseek(descriptor, 0, os.SEEK_SET)
-    locking.locking(descriptor, locking.LK_UNLCK, 1)
-
-
-def _try_lock_download_manifest_descriptor(
-    descriptor: int,
-) -> Optional[str]:
-    """Acquire one nonblocking OS advisory lock and return its backend."""
-    if os.name == "nt":
-        if not _try_lock_download_manifest_descriptor_windows(descriptor):
-            return None
-        return "windows"
-
-    import fcntl
-
-    try:
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError as error:
-        if error.errno in (errno.EACCES, errno.EAGAIN):
-            return None
-        raise
-    return "posix"
-
-
-def _unlock_download_manifest_descriptor(
-    descriptor: int, backend: str
-) -> None:
-    """Release an advisory manifest lock acquired by the selected backend."""
-    if backend == "windows":
-        _unlock_download_manifest_descriptor_windows(descriptor)
-        return
-
-    import fcntl
-
-    fcntl.flock(descriptor, fcntl.LOCK_UN)
-
-
-@contextmanager
-def _download_manifest_lock(manifest_path: Path):
-    """Hold one OS-released transaction lock for an opaque manifest."""
-    lock_path = manifest_path.with_name(manifest_path.name + ".lock")
-    flags = os.O_CREAT | os.O_RDWR
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    descriptor = os.open(str(lock_path), flags, 0o600)
-    backend = None
-    try:
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-            raise ValueError("下载 manifest 锁不是普通文件")
-        _set_private_file_mode(descriptor, lock_path)
-        backend = _try_lock_download_manifest_descriptor(descriptor)
-        if backend is None:
-            raise RuntimeError("download manifest is already in use")
-        yield
-    finally:
-        try:
-            if backend is not None:
-                _unlock_download_manifest_descriptor(descriptor, backend)
-        finally:
-            os.close(descriptor)
-
-
-def _resume_cache_identity(
-    repo_id: str, repo_type: str, filename: str
-) -> str:
-    identity = "\0".join(
-        (_atomgit_hf_endpoint(), repo_id, repo_type, filename)
-    ).encode("utf-8")
-    return hashlib.sha256(identity).hexdigest()
-
-
-def _process_is_running(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    except OSError:
-        return False
-    return True
-
-
-@contextmanager
-def _resume_download_lock(lock_path: Path):
-    """Serialize writers while recovering locks left by dead processes."""
-    descriptor = None
-    for _ in range(2):
-        try:
-            descriptor = os.open(
-                str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
-            )
-            try:
-                os.write(descriptor, str(os.getpid()).encode("ascii"))
-            except Exception:
-                os.close(descriptor)
-                descriptor = None
-                lock_path.unlink(missing_ok=True)
-                raise
-            break
-        except FileExistsError:
-            try:
-                owner = int(lock_path.read_text(encoding="ascii").strip())
-            except (OSError, ValueError):
-                try:
-                    lock_age = time.time() - lock_path.stat().st_mtime
-                except OSError:
-                    lock_age = 0
-                if lock_age < 60:
-                    raise RuntimeError("download resume is already in progress")
-                owner = -1
-            if _process_is_running(owner):
-                raise RuntimeError("download resume is already in progress")
-            try:
-                lock_path.unlink()
-            except FileNotFoundError:
-                pass
-    if descriptor is None:
-        raise RuntimeError("unable to acquire download resume lock")
-    try:
-        yield
-    finally:
-        os.close(descriptor)
-        try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
-
-
-def _copy_resumed_file_to_destination(
-    partial_path: Path, destination: Path, checksum: tuple
-) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary_path = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb",
-            prefix=f".{destination.name}.",
-            suffix=".part",
-            dir=destination.parent,
-            delete=False,
-        ) as output:
-            temporary_path = Path(output.name)
-            with partial_path.open("rb") as source:
-                shutil.copyfileobj(source, output)
-        _verify_download_checksum(temporary_path, checksum)
-        temporary_path.replace(destination)
-        temporary_path = None
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
-
-
-def _parse_content_range(value: str, expected_start: int, expected_size: int) -> None:
-    try:
-        unit, value = value.split(" ", 1)
-        byte_range, total = value.split("/", 1)
-        start, end = byte_range.split("-", 1)
-        start, end, total = int(start), int(end), int(total)
-    except (AttributeError, TypeError, ValueError) as error:
-        raise urllib.error.URLError("invalid resume Content-Range") from error
-    if (
-        unit.lower() != "bytes"
-        or start != expected_start
-        or end < start
-        or total != expected_size
-    ):
-        raise urllib.error.URLError("unexpected resume Content-Range")
-
-
-def _atomgit_resume_raw(
-    url: str,
-    partial_stream,
-    headers,
-    resume_size: int,
-    expected_size: int,
-    timeout: int = 60,
-    max_redirects: int = 5,
-) -> None:
-    """Resume a raw UTF-8-path response with strict range validation."""
-    current_url = url
-    current_headers = dict(headers)
-    if resume_size:
-        current_headers["Range"] = f"bytes={resume_size}-"
-    for _ in range(max_redirects + 1):
-        parts = urlsplit(current_url)
-        host = parts.hostname
-        port = parts.port or (443 if parts.scheme == "https" else 80)
-        raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
-        status, response_headers, body, sock = _atomgit_raw_http_get(
-            host, port, parts.scheme, raw_path, current_headers, timeout
-        )
-        try:
-            if status in (301, 302, 303, 307, 308):
-                location = response_headers.get("location")
-                if not location:
-                    raise urllib.error.HTTPError(
-                        current_url, status, "Redirect without Location",
-                        response_headers, None,
-                    )
-                current_url, current_headers = _prepare_download_redirect(
-                    current_url, location, current_headers
-                )
-                continue
-            if resume_size and status == 206:
-                _parse_content_range(
-                    response_headers.get("content-range"), resume_size,
-                    expected_size,
-                )
-            elif resume_size and status == 200:
-                partial_stream.seek(0)
-                partial_stream.truncate()
-                resume_size = 0
-            elif not 200 <= status < 300:
-                raise urllib.error.HTTPError(
-                    current_url, status, "HTTP Error", response_headers, None
-                )
-            _copy_framed_http_body(body, response_headers, partial_stream)
-            if partial_stream.tell() != expected_size:
-                raise urllib.error.URLError("resumed download size mismatch")
-            return
-        finally:
-            try:
-                body.close()
-            finally:
-                sock.close()
-    raise urllib.error.HTTPError(
-        current_url, 302, "Too many redirects", {}, None
-    )
-
-
-def _download_atomgit_file_resumable(
-    repo_id: str,
-    repo_type: str,
-    filename: str,
-    destination: Path,
-    token: str,
-) -> None:
-    """Persist an interrupted range download and atomically install it."""
-    checksum, _ = _atomgit_file_download_metadata(
-        repo_id, repo_type, filename, token
-    )
-    _, expected_digest, expected_size = checksum
-    cache_root = _resume_cache_root()
-    identity = _resume_cache_identity(repo_id, repo_type, filename)
-    partial_path = cache_root / f"{identity}.{expected_digest}.part"
-    lock_path = cache_root / f"{identity}.lock"
-    headers = {"User-Agent": "atomgit-cli", "Accept": "*/*"}
-    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename)
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    with _resume_download_lock(lock_path):
-        for stale_path in cache_root.glob(f"{identity}.*.part"):
-            if stale_path != partial_path:
-                stale_path.unlink(missing_ok=True)
-        for attempt in range(2):
-            partial_path.touch(mode=0o600, exist_ok=True)
-            os.chmod(partial_path, 0o600)
-            if partial_path.stat().st_size > expected_size:
-                partial_path.unlink()
-                continue
-            try:
-                with partial_path.open("ab+") as partial_stream:
-                    partial_stream.seek(0, os.SEEK_END)
-                    resume_size = partial_stream.tell()
-                    if resume_size < expected_size:
-                        if filename.isascii():
-                            hf_http_get(
-                                resolve_url,
-                                partial_stream,
-                                resume_size=resume_size,
-                                headers=headers,
-                                expected_size=expected_size,
-                                displayed_filename=filename,
-                            )
-                        else:
-                            _atomgit_resume_raw(
-                                _atomgit_resolve_url_raw(
-                                    repo_id, repo_type, filename
-                                ),
-                                partial_stream,
-                                headers,
-                                resume_size,
-                                expected_size,
-                            )
-                _verify_download_checksum(partial_path, checksum)
-            except DownloadChecksumMismatchError:
-                partial_path.unlink(missing_ok=True)
-                if attempt == 0:
-                    continue
-                raise
-            _copy_resumed_file_to_destination(
-                partial_path, destination, checksum
-            )
-            partial_path.unlink(missing_ok=True)
-            return
-    raise RuntimeError("download resume failed")
-
-
-def _is_not_found_error(error: Exception) -> bool:
-    message = str(error).lower()
-    return "404" in message or "not found" in message
-
-
-def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
-    """List repo files without calling repo_info.
-
-    huggingface_hub 的 snapshot_download/hf_hub_download 第一步都会调用
-    repo_info（GET /api/models/{repo}），AtomGit hub 未实现该路由（404），
-    SDK 会在任何下载前中止。tree/list 与 resolve 路由已实现，因此在这里
-    列文件、再对每个文件直接走 resolve 下载。未显式指定类型时同时探测
-    model/dataset；若兼容路由返回不同内容，则要求调用方明确选择类型。
-
-    返回 (effective_repo_type, files)；所有候选都失败时抛出最后一次错误。
-    """
-    if repo_type not in (None, "model", "dataset"):
-        raise ValueError("repo_type 仅支持 model 或 dataset")
-
-    # HF Hub treats None as "use the ambient Hugging Face token". AtomGit
-    # anonymous requests must opt out explicitly so an unrelated credential is
-    # never attached after HF_ENDPOINT is redirected to hub.atomgit.com.
-    api = HfApi(token=token if token else False)
-    if repo_type is not None:
-        candidate = None if repo_type == "model" else "dataset"
-        files = api.list_repo_files(repo_id, repo_type=candidate)
-        return repo_type, list(files)
-
-    successes = {}
-    errors = []
-    candidates = [("model", None), ("dataset", "dataset")]
-    for effective_type, candidate in candidates:
-        try:
-            files = api.list_repo_files(repo_id, repo_type=candidate)
-        except Exception as error:
-            errors.append(error)
-            continue
-        successes[effective_type] = list(files)
-
-    if successes:
-        model_files = successes.get("model")
-        dataset_files = successes.get("dataset")
-        if model_files and dataset_files:
-            if set(model_files) != set(dataset_files):
-                raise ValueError(
-                    "仓库类型不明确，请使用 --repo-type model 或 dataset"
-                )
-            return "model", model_files
-        if model_files:
-            return "model", model_files
-        if dataset_files:
-            return "dataset", dataset_files
-        if model_files is not None:
-            return "model", model_files
-        return "dataset", dataset_files or []
-
-    for error in errors:
-        if is_auth_error(error):
-            raise error
-    for error in errors:
-        if not _is_not_found_error(error):
-            raise error
-    if errors:
-        raise errors[-1]
-    return "model", []
-
-
-def _repository_filename_parts(filename: str) -> tuple:
-    """Validate a repository filename and return its POSIX path parts."""
-    if not isinstance(filename, str) or not filename:
-        raise ValueError("仓库文件名为空或格式无效")
-    if "\\" in filename:
-        raise ValueError(f"仓库文件名包含不安全的反斜杠路径: {filename!r}")
-    if any(ord(character) < 32 or ord(character) == 127 for character in filename):
-        raise ValueError(f"仓库文件名包含控制字符: {filename!r}")
-
-    raw_parts = filename.split("/")
-    if any(part in ("", ".", "..") for part in raw_parts):
-        raise ValueError(f"仓库文件名包含不安全的路径片段: {filename!r}")
-
-    posix_path = PurePosixPath(filename)
-    windows_path = PureWindowsPath(filename)
-    if posix_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
-        raise ValueError(f"仓库文件名不能是绝对路径: {filename!r}")
-    return tuple(raw_parts)
-
-
-def _safe_download_destination(local_root: Path, filename: str) -> Path:
-    """Resolve a repository filename without allowing it to escape local_root."""
-    raw_parts = _repository_filename_parts(filename)
-
-    resolved_root = Path(local_root).resolve()
-    destination = resolved_root.joinpath(*raw_parts).resolve(strict=False)
-    try:
-        destination.relative_to(resolved_root)
-    except ValueError as error:
-        raise ValueError(
-            f"仓库文件路径超出下载目录: {filename!r}"
-        ) from error
-    return destination
-
-
-class _WindowsFileAPI:
-    """Minimal Win32 handle API used for race-safe managed-file deletion."""
-
-    FILE_ATTRIBUTE_DIRECTORY = 0x10
-    FILE_ATTRIBUTE_REPARSE_POINT = 0x400
-    _DELETE = 0x00010000
-    _FILE_READ_ATTRIBUTES = 0x00000080
-    _FILE_SHARE_READ_WRITE = 0x00000001 | 0x00000002
-    _OPEN_EXISTING = 3
-    _FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
-    _FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
-    _FILE_ATTRIBUTE_TAG_INFO_CLASS = 9
-    _FILE_DISPOSITION_INFO_CLASS = 4
-
-    def __init__(self):
-        import ctypes
-        from ctypes import wintypes
-
-        if os.name != "nt":
-            raise RuntimeError("Win32 file API is unavailable")
-
-        class FileAttributeTagInfo(ctypes.Structure):
-            _fields_ = [
-                ("FileAttributes", wintypes.DWORD),
-                ("ReparseTag", wintypes.DWORD),
-            ]
-
-        class FileDispositionInfo(ctypes.Structure):
-            _fields_ = [("DeleteFile", wintypes.BOOLEAN)]
-
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.CreateFileW.argtypes = [
-            wintypes.LPCWSTR,
-            wintypes.DWORD,
-            wintypes.DWORD,
-            wintypes.LPVOID,
-            wintypes.DWORD,
-            wintypes.DWORD,
-            wintypes.HANDLE,
-        ]
-        kernel32.CreateFileW.restype = wintypes.HANDLE
-        kernel32.GetFinalPathNameByHandleW.argtypes = [
-            wintypes.HANDLE,
-            wintypes.LPWSTR,
-            wintypes.DWORD,
-            wintypes.DWORD,
-        ]
-        kernel32.GetFinalPathNameByHandleW.restype = wintypes.DWORD
-        kernel32.GetFileInformationByHandleEx.argtypes = [
-            wintypes.HANDLE,
-            ctypes.c_int,
-            wintypes.LPVOID,
-            wintypes.DWORD,
-        ]
-        kernel32.GetFileInformationByHandleEx.restype = wintypes.BOOL
-        kernel32.SetFileInformationByHandle.argtypes = [
-            wintypes.HANDLE,
-            ctypes.c_int,
-            wintypes.LPVOID,
-            wintypes.DWORD,
-        ]
-        kernel32.SetFileInformationByHandle.restype = wintypes.BOOL
-        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-        kernel32.CloseHandle.restype = wintypes.BOOL
-
-        self._ctypes = ctypes
-        self._kernel32 = kernel32
-        self._attribute_info = FileAttributeTagInfo
-        self._disposition_info = FileDispositionInfo
-        self._invalid_handle = ctypes.c_void_p(-1).value
-
-    def _error(self, error_code: int, path=None):
-        message = self._ctypes.FormatError(error_code).strip()
-        return OSError(error_code, message, path)
-
-    def open_path(self, path, delete: bool = False):
-        access = self._FILE_READ_ATTRIBUTES
-        if delete:
-            access |= self._DELETE
-        handle = self._kernel32.CreateFileW(
-            os.fspath(path),
-            access,
-            self._FILE_SHARE_READ_WRITE,
-            None,
-            self._OPEN_EXISTING,
-            self._FILE_FLAG_BACKUP_SEMANTICS
-            | self._FILE_FLAG_OPEN_REPARSE_POINT,
-            None,
-        )
-        if handle == self._invalid_handle:
-            error_code = self._ctypes.get_last_error()
-            if error_code in (2, 3):
-                raise FileNotFoundError(error_code, "path not found", path)
-            raise self._error(error_code, path)
-        return handle
-
-    def final_path(self, handle) -> str:
-        size = 32768
-        buffer = self._ctypes.create_unicode_buffer(size)
-        result = self._kernel32.GetFinalPathNameByHandleW(
-            handle, buffer, size, 0
-        )
-        if result == 0:
-            raise self._error(self._ctypes.get_last_error())
-        if result >= size:
-            size = result + 1
-            buffer = self._ctypes.create_unicode_buffer(size)
-            result = self._kernel32.GetFinalPathNameByHandleW(
-                handle, buffer, size, 0
-            )
-            if result == 0 or result >= size:
-                raise self._error(self._ctypes.get_last_error())
-        return buffer.value
-
-    def attributes(self, handle) -> int:
-        information = self._attribute_info()
-        if not self._kernel32.GetFileInformationByHandleEx(
-            handle,
-            self._FILE_ATTRIBUTE_TAG_INFO_CLASS,
-            self._ctypes.byref(information),
-            self._ctypes.sizeof(information),
-        ):
-            raise self._error(self._ctypes.get_last_error())
-        return information.FileAttributes
-
-    def mark_delete(self, handle) -> None:
-        information = self._disposition_info(True)
-        if not self._kernel32.SetFileInformationByHandle(
-            handle,
-            self._FILE_DISPOSITION_INFO_CLASS,
-            self._ctypes.byref(information),
-            self._ctypes.sizeof(information),
-        ):
-            raise self._error(self._ctypes.get_last_error())
-
-    def close(self, handle) -> None:
-        if not self._kernel32.CloseHandle(handle):
-            raise self._error(self._ctypes.get_last_error())
-
-
-def _normalized_windows_handle_path(path: str) -> str:
-    """Normalize one trusted final Win32 handle path for containment checks."""
-    if (
-        not isinstance(path, str)
-        or not path
-        or any(ord(character) < 32 for character in path)
-    ):
-        raise ValueError("Windows 文件句柄路径无效")
-    return ntpath.normcase(ntpath.normpath(path))
-
-
-def _prune_managed_download_file_windows(
-    local_root, parts, windows_api=None
-) -> bool:
-    """Delete one managed Windows file by verified handle, never by path."""
-    if windows_api is None:
-        windows_api = _WindowsFileAPI()
-    root_handle = windows_api.open_path(local_root)
-    directory_handles = [root_handle]
-    target_handle = None
-    try:
-        root_attributes = windows_api.attributes(root_handle)
-        if (
-            not root_attributes & windows_api.FILE_ATTRIBUTE_DIRECTORY
-            or root_attributes & windows_api.FILE_ATTRIBUTE_REPARSE_POINT
-        ):
-            raise ValueError("下载根目录不是安全的普通目录")
-
-        root_final = _normalized_windows_handle_path(
-            windows_api.final_path(root_handle)
-        )
-        current_path = os.fspath(local_root)
-        for part in parts[:-1]:
-            current_path = ntpath.join(current_path, part)
-            try:
-                directory_handle = windows_api.open_path(current_path)
-            except FileNotFoundError:
-                return False
-            directory_handles.append(directory_handle)
-            attributes = windows_api.attributes(directory_handle)
-            if (
-                not attributes & windows_api.FILE_ATTRIBUTE_DIRECTORY
-                or attributes & windows_api.FILE_ATTRIBUTE_REPARSE_POINT
-            ):
-                raise ValueError("受管理路径包含不安全的父目录")
-            directory_final = _normalized_windows_handle_path(
-                windows_api.final_path(directory_handle)
-            )
-            try:
-                inside_root = (
-                    ntpath.commonpath((root_final, directory_final))
-                    == root_final
-                )
-            except ValueError:
-                inside_root = False
-            if not inside_root:
-                raise ValueError("受管理路径超出下载目录，已拒绝清理")
-
-        target_path = ntpath.join(current_path, parts[-1])
-        try:
-            target_handle = windows_api.open_path(target_path, delete=True)
-        except FileNotFoundError:
-            return False
-
-        target_attributes = windows_api.attributes(target_handle)
-        if target_attributes & (
-            windows_api.FILE_ATTRIBUTE_DIRECTORY
-            | windows_api.FILE_ATTRIBUTE_REPARSE_POINT
-        ):
-            raise ValueError("受管理路径不再是普通文件，已拒绝清理")
-
-        target_final = _normalized_windows_handle_path(
-            windows_api.final_path(target_handle)
-        )
-        try:
-            inside_root = (
-                ntpath.commonpath((root_final, target_final)) == root_final
-                and target_final != root_final
-            )
-        except ValueError:
-            inside_root = False
-        if not inside_root:
-            raise ValueError("受管理路径超出下载目录，已拒绝清理")
-
-        windows_api.mark_delete(target_handle)
-        return True
-    finally:
-        try:
-            if target_handle is not None:
-                windows_api.close(target_handle)
-        finally:
-            close_error = None
-            for directory_handle in reversed(directory_handles):
-                try:
-                    windows_api.close(directory_handle)
-                except Exception as error:
-                    if close_error is None:
-                        close_error = error
-            if close_error is not None:
-                raise close_error
-
-
-def _uses_windows_prune() -> bool:
-    return os.name == "nt"
-
-
-def _prune_managed_download_file(local_root: Path, filename: str) -> bool:
-    """Delete one managed regular file without following directory symlinks."""
-    parts = _repository_filename_parts(filename)
-    if _uses_windows_prune():
-        return _prune_managed_download_file_windows(
-            Path(local_root).resolve(), parts
-        )
-    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
-        raise RuntimeError("当前平台不支持安全的下载文件清理")
-    directory_flags = os.O_RDONLY
-    directory_flags |= os.O_DIRECTORY | os.O_NOFOLLOW
-
-    descriptor = os.open(str(Path(local_root).resolve()), directory_flags)
-    try:
-        for part in parts[:-1]:
-            try:
-                next_descriptor = os.open(
-                    part, directory_flags, dir_fd=descriptor
-                )
-            except FileNotFoundError:
-                return False
-            os.close(descriptor)
-            descriptor = next_descriptor
-        try:
-            file_status = os.stat(
-                parts[-1], dir_fd=descriptor, follow_symlinks=False
-            )
-        except FileNotFoundError:
-            return False
-        if not stat.S_ISREG(file_status.st_mode):
-            raise ValueError(
-                f"受管理路径不再是普通文件，已拒绝清理: {filename!r}"
-            )
-        os.unlink(parts[-1], dir_fd=descriptor)
-        return True
-    finally:
-        os.close(descriptor)
-
-
-def _prune_managed_download_files(local_root: Path, filenames) -> int:
-    """Delete only previously managed regular files and leave directories."""
-    removed = 0
-    for filename in sorted(filenames):
-        if _prune_managed_download_file(local_root, filename):
-            removed += 1
-    return removed
-
-
-def _atomgit_resolve_url_raw(
-    repo_id: str, repo_type: str, filename: str, revision: str = "main"
-) -> str:
-    """Build a resolve URL that keeps the raw UTF-8 filename bytes.
-
-    AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
-    filenames, but serves the same file when the raw UTF-8 bytes are sent in
-    the request target. urllib refuses to send raw non-ASCII paths, so this
-    variant is consumed by _atomgit_download_raw below.
-    """
-    endpoint = _atomgit_hf_endpoint()
-    prefix = "datasets/" if repo_type == "dataset" else ""
-    encoded_revision = quote(revision or "main", safe="")
-    return f"{endpoint}/{prefix}{repo_id}/resolve/{encoded_revision}/{filename}"
-
-
-def _download_url_origin(url: str) -> tuple:
-    """Return a normalized origin after validating a download URL."""
-    try:
-        parts = urlsplit(url)
-        port = parts.port
-    except ValueError as error:
-        raise urllib.error.URLError(f"invalid download URL: {error}") from error
-    scheme = parts.scheme.lower()
-    if scheme not in ("http", "https"):
-        raise urllib.error.URLError(
-            f"unsupported download redirect scheme: {scheme or '(empty)'}"
-        )
-    if not parts.hostname:
-        raise urllib.error.URLError("download redirect has no hostname")
-    if parts.username is not None or parts.password is not None:
-        raise urllib.error.URLError("download redirect must not contain credentials")
-    effective_port = port or (443 if scheme == "https" else 80)
-    return scheme, parts.hostname.rstrip(".").lower(), effective_port
-
-
-def _prepare_download_redirect(current_url: str, location: str, headers) -> tuple:
-    """Validate a redirect and remove credentials when its origin changes."""
-    target_url = urljoin(current_url, location)
-    current_origin = _download_url_origin(current_url)
-    target_origin = _download_url_origin(target_url)
-    if current_origin[0] == "https" and target_origin[0] != "https":
-        raise urllib.error.URLError("refusing HTTPS-to-HTTP download redirect")
-
-    redirected_headers = dict(headers)
-    if current_origin != target_origin:
-        redirected_headers = {
-            key: value
-            for key, value in redirected_headers.items()
-            if key.lower() not in ("authorization", "private-token")
-        }
-    return target_url, redirected_headers
-
-
-class _AtomGitRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Apply AtomGit credential isolation to urllib redirects."""
-
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        target_url, redirected_headers = _prepare_download_redirect(
-            req.full_url, newurl, req.header_items()
-        )
-        redirected = super().redirect_request(
-            req, fp, code, msg, headers, target_url
-        )
-        if redirected is None:
-            return None
-        for header_name in ("Authorization", "Private-token"):
-            if not any(
-                key.lower() == header_name.lower()
-                for key in redirected_headers
-            ):
-                redirected.remove_header(header_name)
-                redirected.unredirected_hdrs.pop(header_name, None)
-        return redirected
-
-
-def _atomgit_open_url(request, timeout=60):
-    """Open a direct download with the credential-safe redirect handler."""
-    opener = urllib.request.build_opener(_AtomGitRedirectHandler())
-    return opener.open(request, timeout=timeout)
-
-
-def _atomgit_raw_http_request(
-    method, host, port, scheme, raw_path, headers, timeout
-):
-    """Send one bounded raw-socket request and return its response streams."""
-    if method not in (b"GET", b"HEAD"):
-        raise ValueError("unsupported raw HTTP method")
-    context = ssl.create_default_context()
-    sock = socket.create_connection((host, port), timeout=timeout)
-    try:
-        if scheme == "https":
-            sock = context.wrap_socket(sock, server_hostname=host)
-        sock.settimeout(timeout)
-        sock.sendall(method + b" " + raw_path + b" HTTP/1.1\r\n")
-        sock.sendall(b"Host: " + host.encode("ascii") + b"\r\n")
-        for key, value in headers.items():
-            if any(character in str(key) for character in "\r\n:"):
-                raise urllib.error.URLError("invalid HTTP request header name")
-            if any(character in str(value) for character in "\r\n"):
-                raise urllib.error.URLError("invalid HTTP request header value")
-            sock.sendall(key.encode("latin-1") + b": " + str(value).encode("utf-8") + b"\r\n")
-        sock.sendall(b"Connection: close\r\n\r\n")
-        body = sock.makefile("rb")
-        status_line = body.readline(65537)
-        if len(status_line) > 65536:
-            raise urllib.error.URLError("HTTP status line is too long")
-        if not status_line:
-            raise urllib.error.URLError("empty response from " + str(host))
-        try:
-            status = int(status_line.decode("latin-1").split(" ", 2)[1])
-        except (IndexError, ValueError) as error:
-            raise urllib.error.URLError("malformed HTTP status line") from error
-        response_headers = {}
-        header_bytes = 0
-        header_count = 0
-        while True:
-            line = body.readline(65537)
-            if len(line) > 65536:
-                raise urllib.error.URLError("HTTP response header line is too long")
-            if line in (b"\r\n", b"\n", b""):
-                break
-            header_bytes += len(line)
-            header_count += 1
-            if header_bytes > 65536 or header_count > 200:
-                raise urllib.error.URLError("HTTP response headers are too large")
-            key, _, value = line.decode("latin-1").partition(":")
-            if not key.strip() or not _:
-                raise urllib.error.URLError("malformed HTTP response header")
-            normalized_key = key.strip().lower()
-            normalized_value = value.strip()
-            if normalized_key in response_headers:
-                response_headers[normalized_key] += "," + normalized_value
-            else:
-                response_headers[normalized_key] = normalized_value
-        return status, response_headers, body, sock
-    except Exception:
-        sock.close()
-        raise
-
-
-def _atomgit_raw_http_get(host, port, scheme, raw_path, headers, timeout):
-    """Send a raw-socket GET and return (status, headers, body, socket)."""
-    return _atomgit_raw_http_request(
-        b"GET", host, port, scheme, raw_path, headers, timeout
-    )
-
-
-def _atomgit_raw_http_head(host, port, scheme, raw_path, headers, timeout):
-    """Send a raw-socket HEAD and return (status, headers, body, socket)."""
-    return _atomgit_raw_http_request(
-        b"HEAD", host, port, scheme, raw_path, headers, timeout
-    )
-
-
-def _raw_metadata_size(response_headers) -> int:
-    """Read one unambiguous nonnegative file size from metadata headers."""
-    values = []
-    for name in ("x-linked-size", "content-length"):
-        value = response_headers.get(name)
-        if value is None:
-            continue
-        if not value or any(
-            character not in "0123456789" for character in value
-        ):
-            raise DownloadChecksumMetadataError(
-                "checksum metadata is unavailable"
-            )
-        values.append(int(value, 10))
-    if not values or len(set(values)) != 1:
-        raise DownloadChecksumMetadataError("checksum metadata is unavailable")
-    return values[0]
-
-
-def _atomgit_file_download_metadata_raw(
-    repo_id: str,
-    repo_type: str,
-    filename: str,
-    token: str,
-    timeout: int = 60,
-    max_redirects: int = 5,
-) -> tuple:
-    """Read strong metadata with a raw UTF-8 request target after a 404."""
-    current_url = _atomgit_resolve_url_raw(repo_id, repo_type, filename)
-    current_headers = {
-        "User-Agent": "atomgit-cli",
-        "Accept": "*/*",
-        "Accept-Encoding": "identity",
-    }
-    if token:
-        current_headers["Authorization"] = f"Bearer {token}"
-
-    for _ in range(max_redirects + 1):
-        parts = urlsplit(current_url)
-        _download_url_origin(current_url)
-        host = parts.hostname
-        port = parts.port or (443 if parts.scheme == "https" else 80)
-        raw_path = (
-            parts.path + (("?" + parts.query) if parts.query else "")
-        ).encode("utf-8")
-        status, response_headers, body, sock = _atomgit_raw_http_head(
-            host,
-            port,
-            parts.scheme,
-            raw_path,
-            current_headers,
-            timeout,
-        )
-        try:
-            if status in (301, 302, 303, 307, 308):
-                location = response_headers.get("location")
-                if not location:
-                    raise urllib.error.HTTPError(
-                        current_url,
-                        status,
-                        "Redirect without Location",
-                        response_headers,
-                        None,
-                    )
-                current_url, current_headers = _prepare_download_redirect(
-                    current_url, location, current_headers
-                )
-                continue
-            if not 200 <= status < 300:
-                raise urllib.error.HTTPError(
-                    current_url,
-                    status,
-                    "HTTP Error",
-                    response_headers,
-                    None,
-                )
-            checksum = _checksum_from_metadata_values(
-                response_headers.get("x-linked-etag")
-                or response_headers.get("etag"),
-                _raw_metadata_size(response_headers),
-            )
-            return checksum, current_url
-        finally:
-            try:
-                body.close()
-            finally:
-                sock.close()
-    raise urllib.error.HTTPError(
-        current_url, 302, "Too many redirects", {}, None
-    )
-
-
-def _copy_exact_http_body(body, output, size: int) -> None:
-    """Copy exactly size bytes or fail without accepting a truncated body."""
-    remaining = size
-    while remaining:
-        chunk = body.read(min(1024 * 1024, remaining))
-        if not chunk:
-            raise urllib.error.URLError(
-                f"truncated HTTP response body: {remaining} bytes missing"
-            )
-        output.write(chunk)
-        remaining -= len(chunk)
-
-
-def _read_chunk_line(body, description: str) -> bytes:
-    line = body.readline(65537)
-    if len(line) > 65536:
-        raise urllib.error.URLError(f"{description} is too long")
-    if not line.endswith(b"\r\n"):
-        raise urllib.error.URLError(f"malformed {description}")
-    return line[:-2]
-
-
-def _copy_chunked_http_body(body, output) -> None:
-    """Decode an HTTP/1.1 chunked response body while streaming to output."""
-    while True:
-        size_line = _read_chunk_line(body, "HTTP chunk-size line")
-        size_token = size_line.split(b";", 1)[0].strip()
-        if not size_token:
-            raise urllib.error.URLError("empty HTTP chunk size")
-        if any(character not in b"0123456789abcdefABCDEF" for character in size_token):
-            raise urllib.error.URLError("invalid HTTP chunk size")
-        try:
-            chunk_size = int(size_token, 16)
-        except ValueError as error:
-            raise urllib.error.URLError("invalid HTTP chunk size") from error
-        if chunk_size < 0:
-            raise urllib.error.URLError("negative HTTP chunk size")
-        if chunk_size == 0:
-            trailer_bytes = 0
-            trailer_count = 0
-            while True:
-                trailer = _read_chunk_line(body, "HTTP chunk trailer")
-                if not trailer:
-                    return
-                trailer_bytes += len(trailer) + 2
-                trailer_count += 1
-                if trailer_bytes > 65536 or trailer_count > 200:
-                    raise urllib.error.URLError("HTTP chunk trailers are too large")
-                if b":" not in trailer:
-                    raise urllib.error.URLError("malformed HTTP chunk trailer")
-        _copy_exact_http_body(body, output, chunk_size)
-        if body.read(2) != b"\r\n":
-            raise urllib.error.URLError("HTTP chunk is missing its terminator")
-
-
-def _copy_framed_http_body(body, response_headers, output) -> None:
-    """Copy a response body according to unambiguous HTTP/1.1 framing."""
-    transfer_encoding = response_headers.get("transfer-encoding")
-    content_length = response_headers.get("content-length")
-    if transfer_encoding and content_length:
-        raise urllib.error.URLError(
-            "ambiguous HTTP response framing: both Transfer-Encoding and Content-Length"
-        )
-    if transfer_encoding:
-        codings = [item.strip().lower() for item in transfer_encoding.split(",")]
-        if codings != ["chunked"]:
-            raise urllib.error.URLError(
-                f"unsupported HTTP transfer coding: {transfer_encoding}"
-            )
-        _copy_chunked_http_body(body, output)
-        return
-    if content_length is not None:
-        values = [item.strip() for item in content_length.split(",")]
-        if not values or len(set(values)) != 1:
-            raise urllib.error.URLError("conflicting HTTP Content-Length values")
-        if not values[0] or any(
-            character not in "0123456789" for character in values[0]
-        ):
-            raise urllib.error.URLError("invalid HTTP Content-Length")
-        try:
-            size = int(values[0], 10)
-        except ValueError as error:
-            raise urllib.error.URLError("invalid HTTP Content-Length") from error
-        if size < 0:
-            raise urllib.error.URLError("negative HTTP Content-Length")
-        _copy_exact_http_body(body, output, size)
-        return
-    shutil.copyfileobj(body, output)
-
-
-def _atomgit_download_raw(
-    url: str,
-    dest: Path,
-    headers,
-    timeout: int = 60,
-    max_redirects: int = 5,
-    checksum: tuple = None,
-) -> None:
-    """Download over HTTPS keeping non-ASCII path bytes raw.
-
-    AtomGit resolve cannot match percent-encoded nested paths with non-ASCII
-    filenames, but serves the same file when the raw UTF-8 bytes are sent in
-    the request target. This helper speaks HTTPS directly, follows redirects
-    within a bounded limit, and streams the body to dest.
-    """
-    current_url = url
-    current_headers = dict(headers)
-    _download_url_origin(current_url)
-    parts = urlsplit(current_url)
-    host = parts.hostname
-    port = parts.port or (443 if parts.scheme == "https" else 80)
-    raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
-    temporary_path = None
-    try:
-        for _ in range(max_redirects + 1):
-            status, response_headers, body, sock = _atomgit_raw_http_get(
-                host, port, parts.scheme, raw_path, current_headers, timeout
-            )
-            try:
-                if status in (301, 302, 303, 307, 308):
-                    location = response_headers.get("location")
-                    if not location:
-                        raise urllib.error.HTTPError(current_url, status, "Redirect without Location", response_headers, None)
-                    current_url, current_headers = _prepare_download_redirect(
-                        current_url, location, current_headers
-                    )
-                    parts = urlsplit(current_url)
-                    host = parts.hostname
-                    port = parts.port or (443 if parts.scheme == "https" else 80)
-                    raw_path = (parts.path + (("?" + parts.query) if parts.query else "")).encode("utf-8")
-                    continue
-                if status == 404:
-                    raise urllib.error.HTTPError(current_url, 404, "Not Found", response_headers, None)
-                if not 200 <= status < 300:
-                    raise urllib.error.HTTPError(current_url, status, "HTTP Error", response_headers, None)
-                with tempfile.NamedTemporaryFile(
-                    mode="wb",
-                    prefix=f".{dest.name}.",
-                    suffix=".part",
-                    dir=dest.parent,
-                    delete=False,
-                ) as out:
-                    temporary_path = Path(out.name)
-                    _copy_framed_http_body(body, response_headers, out)
-                if checksum is not None:
-                    _verify_download_checksum(temporary_path, checksum)
-                temporary_path.replace(dest)
-                temporary_path = None
-                return
-            finally:
-                try:
-                    body.close()
-                finally:
-                    sock.close()
-        raise urllib.error.HTTPError(current_url, 302, "Too many redirects", {}, None)
-    finally:
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
-
-
-def _download_atomgit_file(
-    repo_id: str,
-    repo_type: str,
-    filename: str,
-    dest: Path,
-    token: str,
-    checksum: tuple = None,
-) -> None:
-    """Download one file from the already-selected repository type.
-
-    Standard percent-encoded URLs are tried first (HF Hub compatible). When the
-    filename contains non-ASCII characters, raw UTF-8 byte URLs are tried after
-    a 404, which works around the AtomGit resolve route failing to decode
-    nested paths with non-ASCII filenames.
-    """
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    headers = {"User-Agent": "atomgit-cli", "Accept": "*/*"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    def fetch_once(url: str, raw: bool = False) -> None:
-        if raw:
-            if checksum is None:
-                _atomgit_download_raw(url, dest, headers, timeout=60)
-            else:
-                _atomgit_download_raw(
-                    url, dest, headers, timeout=60, checksum=checksum
-                )
-            return
-        temporary_path = None
-        try:
-            req = urllib.request.Request(url, headers=headers)
-            with _atomgit_open_url(req, timeout=60) as resp:
-                with tempfile.NamedTemporaryFile(
-                    mode="wb",
-                    prefix=f".{dest.name}.",
-                    suffix=".part",
-                    dir=dest.parent,
-                    delete=False,
-                ) as out:
-                    temporary_path = Path(out.name)
-                    shutil.copyfileobj(resp, out)
-            if checksum is not None:
-                _verify_download_checksum(temporary_path, checksum)
-            temporary_path.replace(dest)
-            temporary_path = None
-        finally:
-            if temporary_path is not None:
-                temporary_path.unlink(missing_ok=True)
-
-    url_specs = [
-        (_atomgit_resolve_url(repo_id, repo_type, filename), False),
-    ]
-    if not filename.isascii():
-        url_specs.append((_atomgit_resolve_url_raw(repo_id, repo_type, filename), True))
-    last_error = None
-    for url, raw in url_specs:
-        try:
-            run_download_with_retry(lambda: fetch_once(url, raw))
-            return
-        except Exception as error:
-            if _is_not_found_error(error):
-                last_error = error
-                continue
-            raise
-    raise last_error
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 _RESUMABLE_COMMIT_MAX_ATTEMPTS = 5
@@ -4249,7 +2947,9 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
 
 
-class HuggingFaceAPI(AuthenticationServiceMixin, RepositoryServiceMixin):
+class HuggingFaceAPI(
+    AuthenticationServiceMixin, RepositoryServiceMixin, DownloadServiceMixin
+):
     """AtomGit API client with historical identity and owned service methods."""
 
     def __init__(self):
@@ -4812,216 +3512,145 @@ class HuggingFaceAPI(AuthenticationServiceMixin, RepositoryServiceMixin):
             print(f"💡 建议: {hint}")
             return False
     
-    def download_repo(
-        self,
-        repo_id: str,
-        local_path: Path = None,
-        force_download: bool = False,
-        repo_type: str = None,
-        verify_checksum: bool = False,
-        resume_download: bool = False,
-        prune: bool = False,
-    ) -> bool:
-        """下载仓库到本地目录（公开仓库无需token）。
 
-        绕过 huggingface_hub 的 snapshot_download：AtomGit hub 未实现
-        repo_info 路由（GET /api/models/{repo} 返回 404），SDK 会在任何
-        下载前中止；这里改为 list_repo_files + resolve 逐文件下载。
-        """
-        manifest_locks = ExitStack()
-        try:
-            normalized_repo_id = self._normalize_repo_id(repo_id)
-
-            if local_path is None:
-                local_path = Path.cwd() / repo_id.split('/')[-1]
-
-            local_path.mkdir(parents=True, exist_ok=True)
-
-            credentials = config.get_credentials()
-            token = credentials['token'] if credentials and 'token' in credentials else None
-
-            effective_type, files = _atomgit_list_repo_files(normalized_repo_id, token, repo_type)
-
-            destinations = [
-                (filename, _safe_download_destination(local_path, filename))
-                for filename in files
-            ]
-            remote_files = set(files)
-            manifest_path = None
-            manifest_available = True
-            try:
-                manifest_path = _download_manifest_path(
-                    normalized_repo_id, effective_type, local_path
-                )
-            except Exception:
-                if prune:
-                    raise
-                manifest_available = False
-                manifest_exists, previously_managed = False, set()
-                print(
-                    "⚠ 下载 manifest 不可用；本次下载文件不会纳入后续清理"
-                )
-            else:
-                manifest_locks.enter_context(
-                    _download_manifest_lock(manifest_path)
-                )
-                try:
-                    manifest_exists, previously_managed = (
-                        _load_download_manifest(manifest_path)
-                    )
-                except Exception:
-                    manifest_locks.close()
-                    if prune:
-                        raise
-                    manifest_available = False
-                    manifest_exists, previously_managed = False, set()
-                    print(
-                        "⚠ 下载 manifest 不可用；本次下载文件不会纳入后续清理"
-                    )
-            downloaded_files = set()
-            if not files:
-                print("ℹ 仓库为空，没有可下载的文件；本地目录已创建")
-            for filename, dest in destinations:
-                if dest.exists() and not force_download:
-                    if verify_checksum:
-                        checksum = _atomgit_file_checksum(
-                            normalized_repo_id, effective_type, filename, token
-                        )
-                        _verify_download_checksum(dest, checksum)
-                        print(f"✓ checksum 校验通过: {filename}")
-                        continue
-                    print(f"⏭ 已存在，跳过（未校验内容；--force 可覆盖）: {filename}")
-                    continue
-                if resume_download:
-                    _download_atomgit_file_resumable(
-                        normalized_repo_id, effective_type, filename, dest, token
-                    )
-                    print(f"✓ 可续传下载完成并通过 checksum 校验: {filename}")
-                    downloaded_files.add(filename)
-                    continue
-                checksum = None
-                if verify_checksum:
-                    checksum = _atomgit_file_checksum(
-                        normalized_repo_id, effective_type, filename, token
-                    )
-                if checksum is None:
-                    _download_atomgit_file(
-                        normalized_repo_id, effective_type, filename, dest, token
-                    )
-                    print(f"✓ 已下载: {filename}")
-                else:
-                    _download_atomgit_file(
-                        normalized_repo_id,
-                        effective_type,
-                        filename,
-                        dest,
-                        token,
-                        checksum=checksum,
-                    )
-                    print(f"✓ 已下载并通过 checksum 校验: {filename}")
-                downloaded_files.add(filename)
-            if prune:
-                if not manifest_exists:
-                    print("ℹ 未找到历史下载 manifest；未删除未受管理的本地文件")
-                removed = _prune_managed_download_files(
-                    local_path, previously_managed - remote_files
-                )
-                managed_files = (
-                    (previously_managed & remote_files) | downloaded_files
-                )
-                print(f"✓ 已清理受管理的本地多余文件: {removed}")
-            else:
-                managed_files = previously_managed | downloaded_files
-            if prune:
-                _write_download_manifest(manifest_path, managed_files)
-            elif manifest_available:
-                try:
-                    _write_download_manifest(manifest_path, managed_files)
-                except Exception:
-                    print(
-                        "⚠ 下载 manifest 写入失败；本次下载文件不会纳入后续清理"
-                    )
-            print("✅ 仓库下载成功")
-            return True
-        except Exception as e:
-            print(f"仓库下载失败: {sanitized_download_error(e)}")
-            return False
-        finally:
-            manifest_locks.close()
-
-    def download_file(
-        self,
-        repo_id: str,
-        filename: str,
-        local_path: Path = None,
-        force_download: bool = False,
-        repo_type: str = None,
-        verify_checksum: bool = False,
-        resume_download: bool = False,
-    ) -> bool:
-        """下载单个文件到本地目录（公开仓库无需token）。"""
-        try:
-            normalized_repo_id = self._normalize_repo_id(repo_id)
-
-            if local_path is None:
-                local_path = Path.cwd()
-
-            local_path.mkdir(parents=True, exist_ok=True)
-
-            credentials = config.get_credentials()
-            token = credentials['token'] if credentials and 'token' in credentials else None
-
-            effective_type, files = _atomgit_list_repo_files(normalized_repo_id, token, repo_type)
-            if filename not in files:
-                print(f"✗ 文件不存在: {filename}")
-                return False
-
-            dest = _safe_download_destination(local_path, filename)
-            if dest.exists() and not force_download:
-                if verify_checksum:
-                    checksum = _atomgit_file_checksum(
-                        normalized_repo_id, effective_type, filename, token
-                    )
-                    _verify_download_checksum(dest, checksum)
-                    print(f"✅ 文件 checksum 校验通过: {filename}")
-                    return True
-                print(f"⏭ 文件已存在，跳过: {filename}（未校验内容；--force 可覆盖）")
-                return True
-            if resume_download:
-                _download_atomgit_file_resumable(
-                    normalized_repo_id, effective_type, filename, dest, token
-                )
-                print("✅ 文件可续传下载完成，checksum 校验通过")
-                return True
-            checksum = None
-            if verify_checksum:
-                checksum = _atomgit_file_checksum(
-                    normalized_repo_id, effective_type, filename, token
-                )
-            if checksum is None:
-                _download_atomgit_file(
-                    normalized_repo_id, effective_type, filename, dest, token
-                )
-                print("✅ 文件下载成功")
-            else:
-                _download_atomgit_file(
-                    normalized_repo_id,
-                    effective_type,
-                    filename,
-                    dest,
-                    token,
-                    checksum=checksum,
-                )
-                print("✅ 文件下载成功，checksum 校验通过")
-            return True
-        except Exception as e:
-            print(f"文件下载失败: {sanitized_download_error(e)}")
-            return False
 
 
 _repository_service._atomgit_open_url = _atomgit_open_url
 _repository_service._is_not_found_error = _is_not_found_error
 _authentication_service._sanitized_v5_api_error = _sanitized_v5_api_error
+_download_service._is_not_found_error = _is_not_found_error
+_download_integrity._is_not_found_error = _is_not_found_error
+_download_transport._is_not_found_error = _is_not_found_error
+_download_integrity._atomgit_open_url = _atomgit_open_url
+_download_transport._atomgit_open_url = _atomgit_open_url
+
+_DOWNLOAD_PATCH_TARGETS = {
+    "errno": (_download_manifest,),
+    "hashlib": (_download_integrity, _download_manifest, _download_resume),
+    "json": (_download_manifest,),
+    "ntpath": (_download_prune,),
+    "os": (_download_manifest, _download_prune, _download_resume, _download_transport),
+    "shutil": (_download_resume, _download_transport),
+    "socket": (_download_transport,),
+    "ssl": (_download_transport,),
+    "stat": (_download_manifest, _download_prune),
+    "tempfile": (_download_manifest, _download_resume, _download_transport),
+    "time": (_download_resume,),
+    "urllib": (
+        _download_integrity,
+        _download_manifest,
+        _download_resume,
+        _download_transport,
+    ),
+    "ExitStack": (_download_service,),
+    "contextmanager": (_download_manifest, _download_resume),
+    "Path": (
+        _download_integrity,
+        _download_manifest,
+        _download_prune,
+        _download_resume,
+        _download_service,
+        _download_transport,
+    ),
+    "PurePosixPath": (_download_prune,),
+    "PureWindowsPath": (_download_prune,),
+    "quote": (_download_transport,),
+    "urljoin": (_download_integrity, _download_transport),
+    "urlsplit": (_download_integrity, _download_resume, _download_transport),
+    "config": (_download_service,),
+    "HfApi": (_download_service,),
+    "get_hf_file_metadata": (_download_integrity,),
+    "hf_http_get": (_download_resume,),
+    "is_auth_error": (_download_service,),
+    "run_download_with_retry": (_download_transport,),
+    "sanitized_download_error": (_download_service,),
+    "DownloadChecksumMetadataError": (_download_integrity,),
+    "DownloadChecksumMismatchError": (_download_integrity, _download_resume),
+    "_DOWNLOAD_MANIFEST_VERSION": (_download_manifest,),
+    "_DOWNLOAD_MANIFEST_MAX_BYTES": (_download_manifest,),
+    "_atomgit_hf_endpoint": (
+        _download_integrity,
+        _download_manifest,
+        _download_resume,
+        _download_transport,
+    ),
+    "_atomgit_resolve_url": (_download_integrity, _download_resume, _download_transport),
+    "_atomgit_resolve_url_raw": (
+        _download_integrity,
+        _download_resume,
+        _download_transport,
+    ),
+    "_atomgit_file_checksum": (_download_integrity, _download_service),
+    "_checksum_from_hf_metadata": (_download_integrity,),
+    "_checksum_from_metadata_values": (_download_integrity,),
+    "_atomgit_file_download_metadata": (_download_integrity, _download_resume),
+    "_verify_download_checksum": (
+        _download_integrity,
+        _download_resume,
+        _download_service,
+        _download_transport,
+    ),
+    "_raw_metadata_size": (_download_integrity,),
+    "_atomgit_file_download_metadata_raw": (_download_integrity,),
+    "_set_private_file_mode": (_download_manifest,),
+    "_download_manifest_root": (_download_manifest,),
+    "_download_manifest_path": (_download_manifest, _download_service),
+    "_load_download_manifest": (_download_manifest, _download_service),
+    "_write_download_manifest": (_download_manifest, _download_service),
+    "_windows_file_lock_module": (_download_manifest,),
+    "_try_lock_download_manifest_descriptor_windows": (_download_manifest,),
+    "_unlock_download_manifest_descriptor_windows": (_download_manifest,),
+    "_try_lock_download_manifest_descriptor": (_download_manifest,),
+    "_unlock_download_manifest_descriptor": (_download_manifest,),
+    "_download_manifest_lock": (_download_manifest, _download_service),
+    "_resume_cache_root": (_download_resume,),
+    "_resume_cache_identity": (_download_resume,),
+    "_process_is_running": (_download_resume,),
+    "_resume_download_lock": (_download_resume,),
+    "_copy_resumed_file_to_destination": (_download_resume,),
+    "_parse_content_range": (_download_resume,),
+    "_atomgit_resume_raw": (_download_resume,),
+    "_download_atomgit_file_resumable": (_download_resume, _download_service),
+    "_is_not_found_error": (
+        _download_integrity,
+        _download_service,
+        _download_transport,
+    ),
+    "_atomgit_list_repo_files": (_download_service,),
+    "_repository_filename_parts": (
+        _download_manifest,
+        _download_prune,
+        _download_service,
+    ),
+    "_safe_download_destination": (_download_service,),
+    "_WindowsFileAPI": (_download_prune,),
+    "_normalized_windows_handle_path": (_download_prune,),
+    "_prune_managed_download_file_windows": (_download_prune,),
+    "_uses_windows_prune": (_download_prune,),
+    "_prune_managed_download_file": (_download_prune,),
+    "_prune_managed_download_files": (_download_prune, _download_service),
+    "_download_url_origin": (_download_integrity, _download_transport),
+    "_prepare_download_redirect": (
+        _download_integrity,
+        _download_resume,
+        _download_transport,
+    ),
+    "_AtomGitRedirectHandler": (_download_transport,),
+    "_atomgit_open_url": (_download_integrity, _download_transport),
+    "_atomgit_raw_http_request": (_download_transport,),
+    "_atomgit_raw_http_get": (
+        _download_integrity,
+        _download_resume,
+        _download_transport,
+    ),
+    "_atomgit_raw_http_head": (_download_integrity,),
+    "_copy_exact_http_body": (_download_transport,),
+    "_read_chunk_line": (_download_transport,),
+    "_copy_chunked_http_body": (_download_transport,),
+    "_copy_framed_http_body": (_download_resume, _download_transport),
+    "_atomgit_download_raw": (_download_transport,),
+    "_download_atomgit_file": (_download_service, _download_transport),
+}
 
 # Preserve historical module-object patching while service methods resolve
 # their dependencies in the new owner modules. The API module itself remains a
@@ -5062,6 +3691,18 @@ _PATCH_TARGETS = {
         _repository_service,
     ),
 }
+
+for _patch_name, _download_targets in _DOWNLOAD_PATCH_TARGETS.items():
+    _existing_targets = _PATCH_TARGETS.get(_patch_name, ())
+    _PATCH_TARGETS[_patch_name] = tuple(
+        dict.fromkeys((*_existing_targets, *_download_targets))
+    )
+
+    # Initialize every former resolution point from the historical module
+    # before its forwarding module type becomes active.
+    _patch_value = globals()[_patch_name]
+    for _patch_target in _download_targets:
+        setattr(_patch_target, _patch_name, _patch_value)
 
 _FacadeModule = type(
     "_FacadeModule",
