@@ -16,11 +16,14 @@ Status: completed
 - Worktree state: `clean on yuto after delivery`
 - Task commit: `1a32130` (`refactor(packaging): migrate modules to src layout`)
 - Local yuto merge: `e8b9c54` (`merge: establish src layout migration`)
-- Final remote yuto: `pending finalization push`
-- Last completed action: `merged the reviewed task commit into yuto; the
-  finalization record is being committed before pushing yuto`
-- Next exact action: `commit this completed handoff, push yuto, and verify the
-  remote SHA`
+- Delivery verification before this self-recording commit: `yuto` and
+  `github/yuto` both resolved to `0c4ac04`
+- Final remote yuto: `the current completed handoff commit; local and remote
+  refs must be equal after its push rather than hard-coding a self SHA`
+- Last completed action: `pushed the merged Issue and completed handoff through
+  0c4ac04 and verified github/yuto; this final record is the only later change`
+- Next exact action: `activate the next approved program Issue only after a new
+  explicit maintainer request`
 - Blockers: `none`
 
 ## Predecessor Reconciliation
