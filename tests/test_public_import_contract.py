@@ -72,8 +72,10 @@ def main():
     check(
         "top-level atomgit_hub remains a distinct compatibility module",
         standalone_sdk is not package_sdk
-        and Path(standalone_sdk.__file__).resolve() == REPOSITORY_ROOT / "atomgit_hub.py"
-        and Path(package_sdk.__file__).resolve() == REPOSITORY_ROOT / "atomgit_hub.py",
+        and Path(standalone_sdk.__file__).resolve()
+        == REPOSITORY_ROOT / "src" / "atomgit_hub.py"
+        and Path(package_sdk.__file__).resolve()
+        == REPOSITORY_ROOT / "src" / "atomgit" / "atomgit_hub.py",
     )
 
     signature_errors = []

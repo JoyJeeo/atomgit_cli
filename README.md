@@ -894,18 +894,9 @@ atomgit/
 ├── AGENTS.md           # 仓库级 AI 开发指令
 ├── .ai/                # AI 开发、测试、评审与任务规范
 ├── docs/               # 架构、开发、测试和发布文档
-├── __init__.py          # 包初始化，导出SDK接口
-├── __main__.py          # 主入口
-├── cli.py               # CLI命令定义
-├── api.py               # Hugging Face Hub API客户端
-├── cli_contracts.py     # CLI与运行时共享的轻量常量
-├── completion.py        # Zsh补全生成与安全安装
-├── uninstaller.py       # 环境受控文件和包卸载策略
-├── config.py            # 配置管理
-├── runtime.py           # 共享HF端点和缓存策略
-├── exceptions.py        # SDK异常类型
-├── utils.py             # 工具函数（路径/忽略模式解析等）
-├── atomgit_hub.py       # Python SDK接口
+├── src/
+│   ├── atomgit/         # CLI、SDK实现与现有平面生产模块
+│   └── atomgit_hub.py   # 历史顶层SDK兼容代理
 ├── requirements.txt     # 依赖包
 ├── setup.py             # 包安装配置
 ├── deploy.sh            # 构建/安装/发布脚本

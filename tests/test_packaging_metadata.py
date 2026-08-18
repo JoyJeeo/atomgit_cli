@@ -58,6 +58,11 @@ def main():
         repr(pyproject),
     )
     check(
+        "setuptools receives the same src package and module mapping",
+        pyproject["tool"]["setuptools"] == SETUPTOOLS_LAYOUT,
+        repr(pyproject.get("tool", {}).get("setuptools")),
+    )
+    check(
         "pytest collection remains exact after configuration consolidation",
         pyproject["tool"]["pytest"]["ini_options"] == PYTEST_POLICY
         and not (REPOSITORY_ROOT / "pytest.ini").exists(),
@@ -102,7 +107,9 @@ def main():
         CLEAN_POLICY_FILES
         == {
             "setup.py",
+            "src/atomgit_hub.py",
             "tests/packaging_contract.py",
+            "tests/test_src_layout_migration.py",
             "tests/test_packaging_metadata.py",
         },
         repr(CLEAN_POLICY_FILES),

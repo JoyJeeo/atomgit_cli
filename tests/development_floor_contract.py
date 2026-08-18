@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 88
+BASELINE_INVARIANT_COUNT = 91
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -112,12 +112,18 @@ CAPABILITY_REGISTRY = {
                 "Build and tool metadata plus exact legacy debt remain executable and fail closed when configuration or debt drifts.",
                 "test_packaging_metadata.py",
             ),
+            _invariant(
+                "FLOOR-007",
+                "The src-layout migration fails closed when a production module, compatibility shim, artifact path, or source provenance drifts.",
+                "test_src_layout_migration.py",
+            ),
         ),
         (
             "test_development_floor.py",
             "test_cli_baseline_guard.py",
             "test_cli_feature_baseline.py",
             "test_packaging_metadata.py",
+            "test_src_layout_migration.py",
             "test_structure_guard.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
@@ -952,6 +958,12 @@ CAPABILITY_REGISTRY = {
                 "test_packaging_metadata.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-014",
+                "The declared src layout discovers exactly the package modules and one top-level SDK compatibility shim across source, editable, wheel, and sdist surfaces.",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_deploy_script.py",
@@ -960,6 +972,7 @@ CAPABILITY_REGISTRY = {
             "test_shell_completion.py",
             "test_public_import_contract.py",
             "test_release_workflow.py",
+            "test_src_layout_migration.py",
             "test_structure_guard.py",
             "test_wheel_smoke.py",
             "test_uninstaller.py",
@@ -1008,12 +1021,20 @@ CAPABILITY_REGISTRY = {
                 "Black, isort, Ruff, setuptools, and pytest share the Python 3.9 floor while exact legacy violations cannot grow.",
                 "test_packaging_metadata.py",
             ),
+            _invariant(
+                "PORT-007",
+                "Supported source import orders and completion resolve the same lightweight runtime policy from the src package without root-module fallback.",
+                "test_import_order_contract.py",
+                "test_src_layout_migration.py",
+            ),
         ),
         (
             "test_download_prune.py",
             "test_git_credentials_isolation.py",
             "test_installer.py",
+            "test_import_order_contract.py",
             "test_packaging_metadata.py",
+            "test_src_layout_migration.py",
             "test_uninstaller.py",
             "test_update.py",
             "test_wheel_smoke.py",
@@ -1077,10 +1098,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "88 条可观察行为不变量",
-        "80 个隔离 pytest case",
+        "91 条可观察行为不变量",
+        "81 个隔离 pytest case",
     ),
-    "docs/testing.md": ("80 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("81 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

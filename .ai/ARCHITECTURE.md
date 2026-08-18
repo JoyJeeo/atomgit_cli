@@ -131,15 +131,15 @@ and must not report creation or upload success.
   resumable ambiguous commits verify reconciled paths before marking their HF
   metadata committed. The wrapper is inactive outside AtomGit upload contexts.
 
-## Packaging Metadata Foundation
+## Source And Packaging Layout
 
-`pyproject.toml` explicitly selects `setuptools.build_meta` and declares the
-existing root-to-`atomgit` mapping plus the top-level `atomgit_hub` module. It
-does not describe the approved src tree as current. `setup.py` remains the
-project-metadata authority during migration, reads its inputs relative to its
-own path for PEP 517 backend safety, and must agree with the pyproject layout.
-The next mechanical src migration changes this mapping without combining any
-domain extraction.
+Production modules live in `src/atomgit` with their existing flat module shape.
+The SDK implementation remains `src/atomgit/atomgit_hub.py`; the separately
+packaged `src/atomgit_hub.py` compatibility proxy preserves the historical
+top-level import and forwards private monkeypatch seams to that single
+implementation. `pyproject.toml` and `setup.py` both declare the exact `src`
+package/module mapping. No domain extraction or facade conversion is combined
+with this mechanical migration.
 
 ## Architectural Risks To Preserve In Task Context
 

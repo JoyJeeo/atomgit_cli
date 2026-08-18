@@ -93,7 +93,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 26 capabilities, 88 invariants, and 80
+The current monotonic ledger has 26 capabilities, 91 invariants, and 81
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.
@@ -106,7 +106,7 @@ sdist in isolated temporary locations. Import-order and completion probes run
 in clean subprocesses, and production dependency keyword sets are extracted
 from call sites before binding against the locked real signatures.
 
-Packaging work uses `pyproject.toml` as the explicit build-backend, current
+Packaging work uses `pyproject.toml` as the explicit build-backend, `src`
 package-layout, Python-target, and pytest-policy declaration while `setup.py`
 remains the transition-period project-metadata authority. The pinned Black,
 isort, and Ruff versions produce an exact normalized legacy-debt fingerprint;

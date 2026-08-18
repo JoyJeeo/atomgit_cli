@@ -219,14 +219,14 @@ def main():
     production_contracts = (
         (
             "CLI upload_file production kwargs bind the locked signature",
-            REPOSITORY_ROOT / "api.py",
+            REPOSITORY_ROOT / "src" / "atomgit" / "api.py",
             "upload_folder",
             "file_kwargs",
             upload_file,
         ),
         (
             "SDK upload_folder production kwargs bind the locked signature",
-            REPOSITORY_ROOT / "atomgit_hub.py",
+            REPOSITORY_ROOT / "src" / "atomgit" / "atomgit_hub.py",
             "upload_folder",
             "upload_kwargs",
             upload_folder,
@@ -238,12 +238,12 @@ def main():
         check(name, ok and bool(keys), detail or repr(sorted(keys)))
 
     invalid_source = (
-        (REPOSITORY_ROOT / "api.py").read_text(encoding="utf-8")
+        (REPOSITORY_ROOT / "src" / "atomgit" / "api.py").read_text(encoding="utf-8")
         + "\ndef _invalid_contract():\n"
         + "    file_kwargs = dict(path_or_fileobj=None, path_in_repo=None, "
         + "repo_id=None, token=None, unsupported=None)\n"
     )
-    invalid_path = REPOSITORY_ROOT / "api.py"
+    invalid_path = REPOSITORY_ROOT / "src" / "atomgit" / "api.py"
     invalid_tree = ast.parse(invalid_source, filename=str(invalid_path))
     invalid_function = invalid_tree.body[-1]
     invalid_keys = {
