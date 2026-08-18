@@ -22,6 +22,11 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+try:
+    from .lifecycle.environment import is_source_or_editable_install
+except ImportError:
+    from lifecycle.environment import is_source_or_editable_install
+
 
 PROJECT = "JoyJeeo/atomgit_cli"
 DEFAULT_API_URL = f"https://api.github.com/repos/{PROJECT}/releases"
@@ -256,28 +261,7 @@ def verify_installation(python, expected_version):
     return actual
 
 
-def _is_source_or_editable_install():
-    try:
-        distribution = importlib.metadata.distribution("atomgit")
-    except importlib.metadata.PackageNotFoundError:
-        distribution = None
-    try:
-        import atomgit
-
-        package_path = Path(atomgit.__file__).resolve().parent
-    except (ImportError, AttributeError):
-        package_path = None
-    if package_path and (package_path / "setup.py").exists():
-        return True
-    if distribution is not None:
-        direct_url = distribution.read_text("direct_url.json")
-        if direct_url:
-            try:
-                if json.loads(direct_url).get("dir_info", {}).get("editable"):
-                    return True
-            except json.JSONDecodeError:
-                return True
-    return False
+_is_source_or_editable_install = is_source_or_editable_install
 
 
 def install_release(version=None, *, python=sys.executable, force_reinstall=False, api_url=None, download_base=None):

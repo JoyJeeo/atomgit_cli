@@ -33,6 +33,11 @@ PACKAGE_MODULES = {
     "infrastructure/runtime.py",
     "infrastructure/utils.py",
     "infrastructure/validation.py",
+    "lifecycle/__init__.py",
+    "lifecycle/completion.py",
+    "lifecycle/environment.py",
+    "lifecycle/managed_paths.py",
+    "lifecycle/uninstall.py",
 }
 SHIM_PATH = REPOSITORY_ROOT / "src" / "atomgit_hub.py"
 EXPECTED_ROOT_PYTHON = {"setup.py"}

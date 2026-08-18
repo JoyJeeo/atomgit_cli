@@ -55,8 +55,7 @@ def main():
     )
     check(
         "legacy forbidden dependency debt is explicit and exact",
-        LEGACY_FORBIDDEN_EDGES
-        == {("cli", "api"), ("uninstaller", "release")},
+        LEGACY_FORBIDDEN_EDGES == {("cli", "api")},
         repr(LEGACY_FORBIDDEN_EDGES),
     )
 
@@ -93,14 +92,14 @@ def main():
     )
 
     shrinking_edge = dict(source_texts)
-    shrinking_edge["uninstaller"] = shrinking_edge["uninstaller"].replace(
-        "from .release import _is_source_or_editable_install",
-        "from release import _is_source_or_editable_install",
+    shrinking_edge["cli"] = shrinking_edge["cli"].replace(
+        'api = _LazyObject("api", "api")',
+        'api = _LazyObject("external_api", "api")',
     )
     errors = validate_structure(shrinking_edge)
     check(
         "removed dependency debt requires the contract to tighten immediately",
-        any("removed=[('uninstaller', 'release')]" in error for error in errors),
+        any("removed=[('cli', 'api')]" in error for error in errors),
         repr(errors),
     )
 

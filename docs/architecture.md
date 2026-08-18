@@ -55,18 +55,24 @@ atomgit_cli/
 `import atomgit_hub` 提供读写转发，因此现有 monkeypatch 接缝仍指向同一实现。
 `api.py` 和 `cli.py` 仍保持单体形态。`utils.py`、`config.py` 和 `runtime.py`
 保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
-output、filesystem、cache、git_credentials、config 和 runtime owner；没有提前
-创建后续 lifecycle、service、transfer、LFS、SDK 或 CLI 目标域空包。
+output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
+实现也已下沉到 `atomgit.lifecycle` 的 environment、managed_paths、completion 和
+uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
+patch 接缝。没有提前创建后续 service、transfer、LFS、SDK 或 CLI 目标域空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
 阻断未登记模块、空占位包、新依赖边、环、禁止方向和遗留体量增长；债务减少与
-声明收紧必须在同一变更完成，不能保留可回长的旧上限。现有
-`cli -> api` 与 `uninstaller -> release` 是只能缩小的迁移债务，不是新代码可复用
-的方向。批准的长期目标仍是 facade/CLI/SDK 向 services、transfers、lifecycle、
+声明收紧必须在同一变更完成，不能保留可回长的旧上限。现有 `cli -> api` 是只能
+缩小的迁移债务，不是新代码可复用的方向；`uninstaller -> release` 已通过共享的
+lifecycle 源码/可编辑安装策略移除。批准的长期目标仍是 facade/CLI/SDK 向
+services、transfers、lifecycle、
 distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现迁移前不会创建。
 `tests/test_infrastructure_utils_ownership.py` 另外锁定 owner provenance、共享 config
 对象、runtime 身份、旧 `os.walk`/`subprocess.run` patch 接缝和 facade 不回长。
+`tests/test_environment_lifecycle_ownership.py` 锁定生命周期 owner provenance、历史
+补全/卸载符号与 patch 接缝、精确受控路径，以及包缺失时 POSIX fallback 的安全
+策略等价性。
 
 ## 3. 入口和命令树
 

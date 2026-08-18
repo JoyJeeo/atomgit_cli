@@ -30,6 +30,11 @@ PRODUCTION_MODULE_OWNERS = {
     "infrastructure.runtime": "infrastructure",
     "infrastructure.utils": "infrastructure",
     "infrastructure.validation": "infrastructure",
+    "lifecycle.__init__": "lifecycle",
+    "lifecycle.completion": "lifecycle",
+    "lifecycle.environment": "lifecycle",
+    "lifecycle.managed_paths": "lifecycle",
+    "lifecycle.uninstall": "lifecycle",
 }
 
 DOMAIN_DEPENDENCIES = {
@@ -53,7 +58,6 @@ DOMAIN_DEPENDENCIES = {
 # These edges are existing 1.1.1 debt. They may disappear but must never grow.
 LEGACY_FORBIDDEN_EDGES = {
     ("cli", "api"),
-    ("uninstaller", "release"),
 }
 
 CURRENT_INTERNAL_EDGES = {
@@ -83,8 +87,13 @@ CURRENT_INTERNAL_EDGES = {
     ("cli", "uninstaller"),
     ("cli", "utils"),
     ("cli", "version"),
-    ("completion", "uninstaller"),
-    ("uninstaller", "release"),
+    ("completion", "lifecycle.completion"),
+    ("lifecycle.completion", "lifecycle.environment"),
+    ("lifecycle.completion", "lifecycle.managed_paths"),
+    ("lifecycle.environment", "lifecycle.managed_paths"),
+    ("lifecycle.uninstall", "lifecycle.environment"),
+    ("lifecycle.uninstall", "lifecycle.managed_paths"),
+    ("release", "lifecycle.environment"),
     ("config", "infrastructure.config"),
     ("infrastructure.git_credentials", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.cache"),
@@ -93,6 +102,7 @@ CURRENT_INTERNAL_EDGES = {
     ("infrastructure.utils", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.validation"),
     ("runtime", "infrastructure.runtime"),
+    ("uninstaller", "lifecycle.uninstall"),
     ("utils", "infrastructure.utils"),
 }
 
@@ -100,8 +110,10 @@ LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 5496, "max_functions": 121, "max_classes": 21},
     "atomgit_hub": {"max_lines": 734, "max_functions": 10, "max_classes": 0},
     "cli": {"max_lines": 908, "max_functions": 26, "max_classes": 1},
+    "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
     "runtime": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
+    "uninstaller": {"max_lines": 55, "max_functions": 0, "max_classes": 0},
     "utils": {"max_lines": 130, "max_functions": 0, "max_classes": 0},
 }
 
@@ -109,6 +121,8 @@ PUBLIC_IMPORTS = (
     "atomgit",
     "atomgit.api",
     "atomgit.cli",
+    "atomgit.completion",
+    "atomgit.uninstaller",
     "atomgit.utils",
     "atomgit_hub",
 )
@@ -135,6 +149,21 @@ PUBLIC_SYMBOLS = {
     ),
     "atomgit.api": ("HuggingFaceAPI", "api"),
     "atomgit.cli": ("cli",),
+    "atomgit.completion": (
+        "CompletionConfigError",
+        "completion_script",
+        "install_completion",
+        "legacy_completion_present",
+        "uninstall_completion",
+    ),
+    "atomgit.uninstaller": (
+        "UninstallError",
+        "active_conda_prefix",
+        "build_uninstall_plan",
+        "managed_completion_paths",
+        "remove_managed_completion",
+        "run_uninstall",
+    ),
     "atomgit_hub": (
         "snapshot_download",
         "hub_download_url",
@@ -190,6 +219,11 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/infrastructure/runtime.py",
     "atomgit/infrastructure/utils.py",
     "atomgit/infrastructure/validation.py",
+    "atomgit/lifecycle/__init__.py",
+    "atomgit/lifecycle/completion.py",
+    "atomgit/lifecycle/environment.py",
+    "atomgit/lifecycle/managed_paths.py",
+    "atomgit/lifecycle/uninstall.py",
 }
 
 EXPECTED_SDIST_FILES = {
@@ -218,6 +252,11 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/infrastructure/runtime.py",
     "src/atomgit/infrastructure/utils.py",
     "src/atomgit/infrastructure/validation.py",
+    "src/atomgit/lifecycle/__init__.py",
+    "src/atomgit/lifecycle/completion.py",
+    "src/atomgit/lifecycle/environment.py",
+    "src/atomgit/lifecycle/managed_paths.py",
+    "src/atomgit/lifecycle/uninstall.py",
 }
 
 
