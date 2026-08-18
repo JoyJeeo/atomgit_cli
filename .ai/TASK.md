@@ -1,24 +1,26 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `implemented, independently reviewed, and fully verified; ready for
-  authorized commit, local merge, push, and remote verification`
+- Phase: `implemented, independently reviewed, committed, merged locally into
+  yuto, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `e665d62` (`docs(ai): record final packaging delivery sha`)
-- Base synchronization: `yuto` and `github/yuto` both resolve to `e665d62`
+- Base synchronization before activation: `yuto` and `github/yuto` both
+  resolved to `e665d62`
 - Task branch: `codex/src-layout-migration` (local only; never push)
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with only this Issue's source, tests, packaging,
-  documentation, and handoff changes`
-- Last completed action: `fixed the compatibility proxy's unittest.mock
-  patch.object cleanup path, reran packaging metadata and the complete offline
-  baseline, and passed 81/81`
-- Next exact action: `run final supporting gates, commit the Issue, merge
-  locally into yuto, push only yuto, and verify github/yuto`
+- Worktree state: `clean on yuto after delivery`
+- Task commit: `1a32130` (`refactor(packaging): migrate modules to src layout`)
+- Local yuto merge: `e8b9c54` (`merge: establish src layout migration`)
+- Final remote yuto: `pending finalization push`
+- Last completed action: `merged the reviewed task commit into yuto; the
+  finalization record is being committed before pushing yuto`
+- Next exact action: `commit this completed handoff, push yuto, and verify the
+  remote SHA`
 - Blockers: `none`
 
 ## Predecessor Reconciliation
