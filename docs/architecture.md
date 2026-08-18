@@ -53,12 +53,16 @@ atomgit_cli/
 仓库采用标准 `src/` 布局。SDK 实现只存在于
 `src/atomgit/atomgit_hub.py`；`src/atomgit_hub.py` 只为历史
 `import atomgit_hub` 提供读写转发，因此现有 monkeypatch 接缝仍指向同一实现。
-`api.py` 和 `cli.py` 仍保持单体形态。`utils.py`、`config.py` 和 `runtime.py`
+`api.py` 仍是历史具体客户端和全局单例所在模块，`cli.py` 仍保持单体形态。
+`utils.py`、`config.py` 和 `runtime.py`
 保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
 实现也已下沉到 `atomgit.lifecycle` 的 environment、managed_paths、completion 和
 uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
-patch 接缝。没有提前创建后续 service、transfer、LFS、SDK 或 CLI 目标域空包。
+patch 接缝。认证和仓库 V5 管理实现已下沉到 `atomgit.services` 的 authentication
+与 repositories owner，`HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api`
+身份。下载、上传、resumable 和 LFS 方法仍在 `api.py`，没有提前创建后续 transfer、
+SDK 或 CLI 目标域空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -73,6 +77,9 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 `tests/test_environment_lifecycle_ownership.py` 锁定生命周期 owner provenance、历史
 补全/卸载符号与 patch 接缝、精确受控路径，以及包缺失时 POSIX fallback 的安全
 策略等价性。
+`tests/test_auth_repository_services_ownership.py` 锁定认证/仓库 owner provenance、
+历史 `HuggingFaceAPI` 类和全局 `api` 身份、方法/私有 helper 签名与旧路径 patch
+传播，并明确阻止传输实现提前进入 services。
 
 ## 3. 入口和命令树
 

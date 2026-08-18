@@ -129,6 +129,10 @@ def main():
             "src/atomgit/lifecycle/managed_paths.py",
             "src/atomgit/lifecycle/uninstall.py",
             "tests/test_environment_lifecycle_ownership.py",
+            "src/atomgit/services/__init__.py",
+            "src/atomgit/services/authentication.py",
+            "src/atomgit/services/repositories.py",
+            "tests/test_auth_repository_services_ownership.py",
         },
         repr(CLEAN_POLICY_FILES),
     )

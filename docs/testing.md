@@ -22,14 +22,14 @@
 
 token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
 隔离、URL 重定向、路径穿越、HTTP 响应完整性、临时文件清理和 wheel 安装均有
-隔离离线测试。当前完整矩阵包含 83 个 pytest case（自执行脚本内部可包含多个
+隔离离线测试。当前完整矩阵包含 84 个 pytest case（自执行脚本内部可包含多个
 聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
 验收证据。维护者已授权两个固定测试仓库可直接重跑连线测试；其他仓库或
 操作仍需单独授权。
 
 能力 ID、行为不变量、证据映射和完整阻断规则见
 [开发底线](development_floor.md)。`tests/development_floor_contract.py` 登记
-26 个能力和 96 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
+26 个能力和 98 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
 文档和工作流标记都保持关联。
 
 ## 环境
@@ -78,8 +78,8 @@ git diff --check
 `python tests/test_packaging_metadata.py` 对现有格式、导入和静态检查债务建立精确
 归一化指纹，并要求本 Issue 新增的契约文件立即通过干净策略。清理历史债务时必须
 在同一变更中收紧指纹，不允许以全仓格式化混入其他 Issue。
-嵌套 infrastructure 包还由 ownership、src-layout 和 wheel smoke 三层证据验证，
-包括历史 facade 身份、patch 接缝以及安装后 provenance。
+嵌套 infrastructure、lifecycle 和 services 包还由 ownership、src-layout 和 wheel
+smoke 三层证据验证，包括历史 facade/API 身份、patch 接缝以及安装后 provenance。
 
 ## 测试分层
 

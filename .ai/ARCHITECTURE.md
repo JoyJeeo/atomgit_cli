@@ -44,7 +44,8 @@ or covered by shared contract tests.
 - `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
   generation and atomic conda-environment hook management.
 - `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
-- `api.py`: CLI-facing authentication and repository operations.
+- `api.py`: historical CLI-facing concrete client and singleton; service
+  methods resolve from owned mixins while transfer methods remain local.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
@@ -60,6 +61,8 @@ or covered by shared contract tests.
   aggregation surface.
 - `lifecycle/`: owned environment/origin policy, exact managed paths, completion
   transactions, and safe uninstall implementation.
+- `services/`: owned bounded authentication and repository V5 management,
+  including create/list/visibility/delete/branch final-state verification.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -160,7 +163,8 @@ risks through focused tasks and compatibility tests.
 
 ## Structural Refactor Gate
 
-The flat public modules plus the extracted infrastructure package are the
+The flat public modules plus the extracted infrastructure, lifecycle, and
+services packages are the
 implemented architecture. The approved
 long-term dependency direction is facade/CLI/SDK to services, transfers,
 lifecycle, or distribution, then to infrastructure/LFS, with only the
@@ -171,12 +175,15 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-Infrastructure and lifecycle extraction are fail-closed through exact
+Infrastructure, lifecycle, and authentication/repository service extraction are fail-closed through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
 contracts. The remaining forbidden-direction exception is `cli -> api`; it is
 explicit migration debt, not an approved pattern for new code. Source/editable
 installation detection now has one lifecycle owner shared by update and
 uninstall policy, and the package-absent POSIX uninstall fallback retains
-executable manifest and safety parity. The remaining target tree stays a plan
+executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
+global singleton keep their historical identities while moved methods have
+service provenance and old-path module-object patches reach their former call
+sites. The remaining target tree stays a plan
 until implementation moves, and package/facade conversion remains isolated in
 later Issues.

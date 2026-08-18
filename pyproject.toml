@@ -22,13 +22,13 @@ dynamic = [
 ]
 
 [tool.atomgit.packaging]
-packages = ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle"]
+packages = ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle", "atomgit.services"]
 py-modules = ["atomgit_hub"]
 package-dir = { "" = "src" }
 include-package-data = false
 
 [tool.setuptools]
-packages = ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle"]
+packages = ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle", "atomgit.services"]
 py-modules = ["atomgit_hub"]
 package-dir = { "" = "src" }
 include-package-data = false
