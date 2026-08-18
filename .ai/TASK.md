@@ -1,28 +1,35 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `implementation complete; final self-acceptance and complete offline
-  verification passed; ready for authorized commit, local merge, push, and
-  remote verification`
+- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
+  verified`
 - Base branch: `yuto`
 - Base commit: `a09c38075ff74578acf6255a602cd5ef408d230e`
 - Base synchronization before activation: `yuto`, `github/yuto`, and
   `github/HEAD` resolved to `a09c38075ff74578acf6255a602cd5ef408d230e`
 - Task branch: `codex/environment-lifecycle-ownership` (local only; never push)
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with task-owned lifecycle source, tests, contracts,
-  documentation, packaging metadata, and this handoff; resume in this same
-  worktree`
-- Last completed action: `resolved the review finding by completing and
-  narrowing historical module-object patch forwarding, reran the final full
-  baseline and supporting gates, and completed the clean re-review`
-- Next exact action: `create the cohesive conventional task commit, merge it
-  locally into yuto with --no-ff, push only yuto, and verify github/yuto`
+- Worktree state: `clean on yuto before this final delivery record commit`
+- Task commit: `8e639b5780d785869eb12fa99894a4e82c53ce85`
+- Local yuto merge: `b3f0c812f0e8fbe3789770384b517491f4624961`
+- Verified remote yuto: `b3f0c812f0e8fbe3789770384b517491f4624961`
+- Last completed action: `created the cohesive task commit, merged it into
+  yuto with --no-ff, pushed only yuto, fetched github/yuto, and verified both
+  at b3f0c81`
+- Next exact action: `none for this completed Issue; on the next explicit
+  development request, inspect this handoff and activate approved program step
+  6 separately from the final synchronized yuto HEAD`
 - Blockers: `none`
+
+Delivery evidence: task commit `8e639b5`; local no-ff merge `b3f0c81`; initial
+remote verification resolved `github/yuto` to
+`b3f0c812f0e8fbe3789770384b517491f4624961`. The task branch remained local and
+was never pushed. No remote Issue/PR, tag, Release, publication, live AtomGit
+write, credential mutation, or upstream-main change was performed.
 
 ## Predecessor Reconciliation
 
