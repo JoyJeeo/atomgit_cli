@@ -1,30 +1,29 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-18 +0800`
-- Phase: `implementation, verification, independent review, and human
-  acceptance complete; ready for authorized delivery`
+- Phase: `completed, accepted, locally merged, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `41cdbd76d0ac` (`docs(ai): record src layout delivery`)
 - Base synchronization before activation: `yuto` and `github/yuto` both
   resolved to `41cdbd76d0ac`
-- Task branch: `codex/infrastructure-utils-ownership` (local only; never push)
+- Task branch: `codex/infrastructure-utils-ownership` at `dc32679` (local only;
+  never pushed)
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with task-owned source, tests, packaging/contracts,
-  documentation, and .ai/TASK.md changes; resume in this same worktree`
-- Last completed action: `maintainer authorized self-acceptance and delivery;
-  the acceptance run passed the complete 82-case offline baseline plus focused
-  and supporting gates`
-- Next exact action: `create the cohesive task commit, merge it locally into
-  yuto with --no-ff, push only yuto, and verify github/yuto`
+- Worktree state: `clean on yuto after the final delivery record commit`
+- Last completed action: `merged dc32679 into yuto with --no-ff as a67bb8f,
+  pushed only yuto, and verified github/yuto at the same merge commit`
+- Next exact action: `none for this completed Issue; inspect this handoff and
+  activate exactly one approved Issue on the next explicit development request`
 - Blockers: `none`
 
-The task branch was created locally from synchronized `yuto`; it has no task
-commit yet. Required continuation worktree while changes are uncommitted:
-`/Users/yutaozhang/yuto/codes/atomgit_cli`.
+Delivery evidence: task commit `dc32679`; local no-ff merge `a67bb8f`; initial
+remote verification resolved `github/yuto` to
+`a67bb8f72a051fa3dd0758ca43376813072169f1`. No task branch, tag, release, or
+publication was pushed, and no live AtomGit write was performed.
 
 ## Predecessor Reconciliation
 
