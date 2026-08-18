@@ -380,6 +380,8 @@ CLI 直连 resolve 下载在目标目录使用唯一临时文件，完整成功�
 - 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
 - 包名为 `atomgit`，版本由 `version.py` 单一来源提供；
+- `pyproject.toml` 显式选择 setuptools 构建后端并登记当前根目录到 `atomgit`
+  的包映射；`setup.py` 在迁移期继续提供项目元数据，二者的发现声明必须一致；
 - `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；
 - `deploy.sh` 只执行本地 build/install/checksum；GitHub Release workflow 才是唯一
   发布入口，仓库不包含 PyPI/twine 写路径。
