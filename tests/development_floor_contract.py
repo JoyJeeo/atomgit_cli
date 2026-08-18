@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 78
+BASELINE_INVARIANT_COUNT = 85
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -102,11 +102,17 @@ CAPABILITY_REGISTRY = {
                 "test_development_floor.py",
                 "test_cli_feature_baseline.py",
             ),
+            _invariant(
+                "FLOOR-005",
+                "Structural refactors preserve registered behavior while legacy ownership and dependency debt may shrink but never grow.",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_development_floor.py",
             "test_cli_baseline_guard.py",
             "test_cli_feature_baseline.py",
+            "test_structure_guard.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
     ),
@@ -145,9 +151,15 @@ CAPABILITY_REGISTRY = {
                 "test_uninstaller.py",
                 "test_cli_feature_baseline.py",
             ),
+            _invariant(
+                "CLI-006",
+                "Representative deterministic CLI scenarios preserve exact stdout, stderr, exit status, Click exception category, prompts, and redaction.",
+                "test_refactor_behavior_guard.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
+            "test_refactor_behavior_guard.py",
             "test_cli_baseline_guard.py",
             "test_cli_surface.py",
             "test_shell_completion.py",
@@ -186,9 +198,15 @@ CAPABILITY_REGISTRY = {
                 "test_uninstaller.py",
                 "test_cli_feature_baseline.py",
             ),
+            _invariant(
+                "DISPATCH-005",
+                "Covered refactor-sensitive leaves preserve their exact target, arguments, call count, and ordering.",
+                "test_refactor_behavior_guard.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
+            "test_refactor_behavior_guard.py",
             "test_cli_surface.py",
             "test_cli_baseline_guard.py",
             "test_update.py",
@@ -773,6 +791,7 @@ CAPABILITY_REGISTRY = {
             _invariant(
                 "RUNTIME-002",
                 "Process-global timeout and progress state is restored after success and every failure path.",
+                "test_global_state_contract.py",
                 "test_sdk_upload_timeout.py",
                 "test_upload_progress.py",
             ),
@@ -781,8 +800,15 @@ CAPABILITY_REGISTRY = {
                 "Completion does not load HF or dataset runtimes, read credentials, access the network, or create configuration state.",
                 "test_shell_completion.py",
             ),
+            _invariant(
+                "RUNTIME-004",
+                "Fresh supported import permutations and completion converge on the same light, idempotent Hugging Face policy.",
+                "test_import_order_contract.py",
+            ),
         ),
         (
+            "test_global_state_contract.py",
+            "test_import_order_contract.py",
             "test_runtime_policy.py",
             "test_sdk_upload_timeout.py",
             "test_shell_completion.py",
@@ -827,6 +853,11 @@ CAPABILITY_REGISTRY = {
                 "Deprecated or removed SDK arguments are handled deliberately instead of being accepted by permissive fakes.",
                 "test_sdk_upload_parameters.py",
                 "test_load_dataset.py",
+            ),
+            _invariant(
+                "DEP-003",
+                "Representative production dependency call sites bind their extracted arguments against the real locked signatures.",
+                "test_hf_api_contract.py",
             ),
         ),
         (
@@ -902,12 +933,21 @@ CAPABILITY_REGISTRY = {
                 "An activation hook left after direct pip removal emits the exact recovery warning without filesystem mutation.",
                 "test_shell_completion.py",
             ),
+            _invariant(
+                "PKG-012",
+                "Source, PEP 660 editable, wheel, and sdist surfaces preserve public imports and every intended runtime module without repository leakage.",
+                "test_public_import_contract.py",
+                "test_structure_guard.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_deploy_script.py",
             "test_installer.py",
             "test_shell_completion.py",
+            "test_public_import_contract.py",
             "test_release_workflow.py",
+            "test_structure_guard.py",
             "test_wheel_smoke.py",
             "test_uninstaller.py",
         ),
@@ -944,11 +984,18 @@ CAPABILITY_REGISTRY = {
                 "Non-conda installation remains supported and skips conda-only completion with accurate guidance.",
                 "test_installer.py",
             ),
+            _invariant(
+                "PORT-005",
+                "Official installer and uninstaller entrypoints remain POSIX syntax valid and package-present/fallback decisions stay aligned with Python policy.",
+                "test_installer.py",
+                "test_uninstaller.py",
+            ),
         ),
         (
             "test_download_prune.py",
             "test_git_credentials_isolation.py",
             "test_installer.py",
+            "test_uninstaller.py",
             "test_update.py",
             "test_wheel_smoke.py",
             "test_windows_compatibility.py",
@@ -967,6 +1014,7 @@ CAPABILITY_REGISTRY = {
                 "CLI errors never expose tokens, signed URLs, response bodies, or sensitive remote exception text.",
                 "test_cli_error_redaction.py",
                 "test_login_error_semantics.py",
+                "test_refactor_behavior_guard.py",
             ),
             _invariant(
                 "REDACT-002",
@@ -980,6 +1028,7 @@ CAPABILITY_REGISTRY = {
             "test_cli_error_redaction.py",
             "test_download_redirect_security.py",
             "test_login_error_semantics.py",
+            "test_refactor_behavior_guard.py",
             "test_sdk_exceptions.py",
             "test_upload_error_classify.py",
         ),
@@ -1009,10 +1058,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "78 条可观察行为不变量",
-        "74 个隔离 pytest case",
+        "85 条可观察行为不变量",
+        "79 个隔离 pytest case",
     ),
-    "docs/testing.md": ("74 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("79 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

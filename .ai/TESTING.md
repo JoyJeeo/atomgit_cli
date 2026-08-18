@@ -93,10 +93,18 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 26 capabilities, 72 invariants, and 73
+The current monotonic ledger has 26 capabilities, 85 invariants, and 79
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.
+
+Structural work additionally uses `tests/structure_contract.py` and
+`tests/test_structure_guard.py` for ownership, dependency direction, legacy
+debt, public surfaces, and artifact expectations. Public import and packaging
+evidence covers source, explicit PEP 660 editable installation, wheel, and
+sdist in isolated temporary locations. Import-order and completion probes run
+in clean subprocesses, and production dependency keyword sets are extracted
+from call sites before binding against the locked real signatures.
 
 Every Issue records `Affected Capability IDs`, `Protected Existing Invariants`,
 `New Or Changed Invariants`, focused evidence, full-baseline evidence, and

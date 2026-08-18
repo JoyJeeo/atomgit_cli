@@ -21,8 +21,8 @@ compatibility migration.
 - `docs/development_floor.md` is the human-facing explanation of the same
   contract.
 
-The current ledger contains 26 capability IDs, 72 observable invariants, and
-73 isolated offline pytest cases. Counts are monotonic ledgers: an authorized
+The current ledger contains 26 capability IDs, 85 observable invariants, and
+79 isolated offline pytest cases. Counts are monotonic ledgers: an authorized
 migration may replace evidence, but it must not silently remove a capability,
 invariant, or regression.
 
@@ -57,6 +57,22 @@ baseline inventory and mapped to at least one capability. A capability may use
 multiple tests, and one cross-cutting test may support multiple capabilities.
 An invariant may reference only executable tests already assigned to its
 capability.
+
+## Structure Refactor Contract
+
+`tests/structure_contract.py` declares current module ownership, approved
+dependency directions, stable public imports and symbols, artifact contents,
+and exact legacy facade and dependency debt. `tests/test_structure_guard.py`
+fails when a production module has no owner, an empty placeholder appears, a
+new dependency edge is introduced, a forbidden direction grows, or a legacy
+facade grows before its behavior is extracted.
+
+The contract requires current edges and debt ceilings to match exactly, so a
+structural Issue must tighten the declaration in the same change that removes
+debt. This prevents removed debt from silently returning below an obsolete
+upper bound. The contract does not treat the approved target tree as current
+source and does not authorize placeholder packages, source moves, or public
+behavior changes.
 
 ## Issue Impact Contract
 

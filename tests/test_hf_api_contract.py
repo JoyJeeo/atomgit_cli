@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Bind AtomGit's representative calls to the locked dependency signatures."""
 
+import ast
 import inspect
+from pathlib import Path
 
 import datasets
 import huggingface_hub
@@ -19,6 +21,7 @@ from huggingface_hub.utils import filter_repo_objects
 
 
 results = []
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
 
 def check(name, condition, detail=""):
@@ -33,6 +36,40 @@ def binds(callable_obj, *args, **kwargs):
     except TypeError as error:
         return False, str(error)
     return True, ""
+
+
+def mapping_keys_in_function(path, function_name, variable_name):
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    function = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == function_name
+    )
+    keys = set()
+    for node in ast.walk(function):
+        if (
+            isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == variable_name
+                for target in node.targets
+            )
+            and isinstance(node.value, ast.Call)
+            and isinstance(node.value.func, ast.Name)
+            and node.value.func.id == "dict"
+        ):
+            keys.update(keyword.arg for keyword in node.value.keywords if keyword.arg)
+        if (
+            isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Subscript)
+            and isinstance(node.targets[0].value, ast.Name)
+            and node.targets[0].value.id == variable_name
+            and isinstance(node.targets[0].slice, ast.Constant)
+            and isinstance(node.targets[0].slice.value, str)
+        ):
+            keys.add(node.targets[0].slice.value)
+    return keys
 
 
 def main():
@@ -176,6 +213,50 @@ def main():
     check(
         "upload_large_folder rejects method token",
         not ok and "token" in detail,
+        detail,
+    )
+
+    production_contracts = (
+        (
+            "CLI upload_file production kwargs bind the locked signature",
+            REPOSITORY_ROOT / "api.py",
+            "upload_folder",
+            "file_kwargs",
+            upload_file,
+        ),
+        (
+            "SDK upload_folder production kwargs bind the locked signature",
+            REPOSITORY_ROOT / "atomgit_hub.py",
+            "upload_folder",
+            "upload_kwargs",
+            upload_folder,
+        ),
+    )
+    for name, path, function_name, variable_name, callable_obj in production_contracts:
+        keys = mapping_keys_in_function(path, function_name, variable_name)
+        ok, detail = binds(callable_obj, **{key: None for key in keys})
+        check(name, ok and bool(keys), detail or repr(sorted(keys)))
+
+    invalid_source = (
+        (REPOSITORY_ROOT / "api.py").read_text(encoding="utf-8")
+        + "\ndef _invalid_contract():\n"
+        + "    file_kwargs = dict(path_or_fileobj=None, path_in_repo=None, "
+        + "repo_id=None, token=None, unsupported=None)\n"
+    )
+    invalid_path = REPOSITORY_ROOT / "api.py"
+    invalid_tree = ast.parse(invalid_source, filename=str(invalid_path))
+    invalid_function = invalid_tree.body[-1]
+    invalid_keys = {
+        keyword.arg
+        for node in ast.walk(invalid_function)
+        if isinstance(node, ast.Call)
+        for keyword in node.keywords
+        if keyword.arg
+    }
+    ok, detail = binds(upload_file, **{key: None for key in invalid_keys})
+    check(
+        "an unsupported production dependency kwarg fails closed",
+        not ok and "unsupported" in detail,
         detail,
     )
 

@@ -448,11 +448,13 @@ LEAF_DISPATCH_PATHS = (
 BASELINE_TEST_GROUPS = {
     "development-floor": (
         "test_development_floor.py",
+        "test_structure_guard.py",
     ),
     "cli-interface-and-redaction": (
         "test_cli_baseline_guard.py",
         "test_cli_error_redaction.py",
         "test_cli_feature_baseline.py",
+        "test_refactor_behavior_guard.py",
         "test_cli_surface.py",
         "test_shell_completion.py",
         "test_update.py",
@@ -525,8 +527,11 @@ BASELINE_TEST_GROUPS = {
         "test_download_unicode_metadata.py",
     ),
     "sdk-dependency-and-runtime": (
+        "test_global_state_contract.py",
         "test_hf_api_contract.py",
+        "test_import_order_contract.py",
         "test_load_dataset.py",
+        "test_public_import_contract.py",
         "test_runtime_policy.py",
         "test_sdk_create_contract.py",
         "test_sdk_exceptions.py",
@@ -544,7 +549,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 23
 BASELINE_PUBLIC_PARAMETER_COUNT = 48
 BASELINE_LEAF_COMMAND_COUNT = 18
-BASELINE_TEST_SCRIPT_COUNT = 74
+BASELINE_TEST_SCRIPT_COUNT = 79
 
 
 def _normalize_default(value):

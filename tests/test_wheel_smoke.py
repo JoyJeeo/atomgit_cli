@@ -6,6 +6,8 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
+import tarfile
 import tempfile
 import zipfile
 from email.parser import BytesParser
@@ -14,6 +16,12 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+TESTS_DIRECTORY = Path(__file__).resolve().parent
+if str(TESTS_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIRECTORY))
+
+from structure_contract import EXPECTED_SDIST_FILES, EXPECTED_WHEEL_FILES  # noqa: E402
+
 VERSION_TEXT = (REPOSITORY_ROOT / "version.py").read_text(encoding="utf-8")
 EXPECTED_VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', VERSION_TEXT).group(1)
 SOURCE_FILES = (
@@ -27,6 +35,8 @@ SOURCE_FILES = (
     "uninstaller.py",
     "config.py",
     "exceptions.py",
+    "lfs_pointer.py",
+    "release.py",
     "utils.py",
     "setup.py",
     "requirements.txt",
@@ -82,29 +92,52 @@ def main():
         source = root / "source"
         dist = root / "dist"
         venv = root / "venv"
+        editable_venv = root / "editable-venv"
         source.mkdir()
         dist.mkdir()
         for relative_name in SOURCE_FILES:
             shutil.copy2(REPOSITORY_ROOT / relative_name, source / relative_name)
 
         build_result = run(
-            [sys.executable, "-m", "build", "--wheel", "--no-isolation", "--outdir", dist],
+            [sys.executable, "-m", "build", "--wheel", "--sdist", "--no-isolation", "--outdir", dist],
             source,
         )
         check("temporary wheel build succeeds", build_result.returncode == 0, build_result.stderr[-500:])
         wheels = list(dist.glob("*.whl"))
         check("exactly one wheel produced", len(wheels) == 1)
+        sdists = list(dist.glob("*.tar.gz"))
+        check("exactly one sdist produced", len(sdists) == 1)
         if not wheels:
             return 1
 
         with zipfile.ZipFile(wheels[0]) as wheel_archive:
+            wheel_names = set(wheel_archive.namelist())
             metadata_names = [
-                name for name in wheel_archive.namelist()
+                name for name in wheel_names
                 if name.endswith(".dist-info/METADATA")
             ]
             check("wheel contains one METADATA file", len(metadata_names) == 1)
+            missing_wheel_files = EXPECTED_WHEEL_FILES - wheel_names
+            check(
+                "wheel contains every intended package and compatibility module",
+                not missing_wheel_files,
+                repr(sorted(missing_wheel_files)),
+            )
             wheel_metadata = BytesParser().parsebytes(
                 wheel_archive.read(metadata_names[0])
+            )
+        if sdists:
+            with tarfile.open(sdists[0], "r:gz") as sdist_archive:
+                sdist_names = {
+                    name.split("/", 1)[1]
+                    for name in sdist_archive.getnames()
+                    if "/" in name
+                }
+            missing_sdist_files = EXPECTED_SDIST_FILES - sdist_names
+            check(
+                "sdist contains every intended runtime source module",
+                not missing_sdist_files,
+                repr(sorted(missing_sdist_files)),
             )
         classifiers = wheel_metadata.get_all("Classifier", [])
         check(
@@ -166,10 +199,13 @@ def main():
                     venv_python,
                     "-c",
                     (
-                        "import pathlib, sys, atomgit, atomgit_hub; "
+                        "import importlib, pathlib, sys, atomgit, atomgit_hub; "
                         "prefix = str(pathlib.Path(sys.prefix).resolve()); "
-                        "assert str(pathlib.Path(atomgit.__file__).resolve()).startswith(prefix); "
-                        "assert str(pathlib.Path(atomgit_hub.__file__).resolve()).startswith(prefix); "
+                        "modules=(atomgit, atomgit_hub) + tuple(importlib.import_module(n) "
+                        "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.utils', "
+                        "'atomgit.release', 'atomgit.lfs_pointer')); "
+                        "assert all(str(pathlib.Path(m.__file__).resolve()).startswith(prefix) "
+                        "for m in modules); "
                         "print('installed-wheel', atomgit.__version__)"
                     ),
                 ],
@@ -207,6 +243,73 @@ def main():
                 result.returncode == 0 and marker in result.stdout,
                 (result.stdout + result.stderr)[-500:],
             )
+
+        uninstall_result = run(
+            [venv_python, "-m", "pip", "uninstall", "--yes", "atomgit"],
+            root,
+        )
+        check(
+            "temporary wheel uninstall succeeds before editable smoke",
+            uninstall_result.returncode == 0,
+            uninstall_result.stderr[-500:],
+        )
+        editable_venv_result = run(
+            [sys.executable, "-m", "venv", editable_venv],
+            root,
+        )
+        check(
+            "isolated editable venv creation succeeds",
+            editable_venv_result.returncode == 0,
+            editable_venv_result.stderr[-500:],
+        )
+        editable_bin = editable_venv / ("Scripts" if os.name == "nt" else "bin")
+        editable_python = editable_bin / ("python.exe" if os.name == "nt" else "python")
+        editable_environment = environment.copy()
+        editable_environment["PYTHONPATH"] = sysconfig.get_paths()["purelib"]
+        editable_result = run(
+            [
+                editable_python,
+                "-m",
+                "pip",
+                "install",
+                "--no-deps",
+                "--no-build-isolation",
+                "--use-pep517",
+                "--editable",
+                source,
+            ],
+            root,
+            editable_environment,
+        )
+        check(
+            "isolated editable installation succeeds",
+            editable_result.returncode == 0,
+            editable_result.stderr[-500:],
+        )
+        editable_probe = run(
+            [
+                editable_python,
+                "-c",
+                (
+                    "import importlib, pathlib; import atomgit, atomgit_hub; "
+                    "root=pathlib.Path(%r).resolve(); "
+                    "modules=(atomgit, atomgit_hub, importlib.import_module('atomgit.release'), "
+                    "importlib.import_module('atomgit.lfs_pointer')); "
+                    "invalid=[str(pathlib.Path(m.__file__).resolve()) for m in modules "
+                    "if root not in pathlib.Path(m.__file__).resolve().parents]; "
+                    "assert not invalid, invalid; print('installed-editable', atomgit.__version__)"
+                    % str(source)
+                ),
+            ],
+            root,
+            editable_environment,
+        )
+        check(
+            "editable imports resolve only from the isolated source tree",
+            editable_probe.returncode == 0
+            and "installed-editable " + EXPECTED_VERSION in editable_probe.stdout,
+            (editable_probe.stdout + editable_probe.stderr)[-500:],
+        )
 
     check(
         "repository build artifacts remain unchanged",

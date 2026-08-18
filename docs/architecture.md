@@ -58,6 +58,14 @@ atomgit_cli/
 仓库当前采用根目录包映射，不是 `src/` 布局。除非单独设计并验证打包迁移，不应
 为了目录美观创建空的 `src/` 模块树。
 
+当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
+公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
+阻断未登记模块、空占位包、新依赖边、环、禁止方向和遗留体量增长；债务减少与
+声明收紧必须在同一变更完成，不能保留可回长的旧上限。现有
+`cli -> api` 与 `uninstaller -> release` 是只能缩小的迁移债务，不是新代码可复用
+的方向。批准的长期目标仍是 facade/CLI/SDK 向 services、transfers、lifecycle、
+distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现迁移前不会创建。
+
 ## 3. 入口和命令树
 
 `setup.py` 注册：
