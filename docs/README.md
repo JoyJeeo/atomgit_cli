@@ -28,6 +28,6 @@
 
 ## 发布状态
 
-- `yuto` 版本源来自 `version.py`，稳定 Release 使用无 `v` 的 `X.Y.Z` tag。
+- `yuto` 版本源来自 `src/atomgit/version.py`，稳定 Release 使用无 `v` 的 `X.Y.Z` tag。
 - GitHub Release 提供 wheel、源码包和 `SHA256SUMS`；AtomGit CLI 不发布到 PyPI。
 - 项目由 JoyJeeo 以 Apache License 2.0 授权。

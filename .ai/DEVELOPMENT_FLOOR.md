@@ -21,8 +21,8 @@ compatibility migration.
 - `docs/development_floor.md` is the human-facing explanation of the same
   contract.
 
-The current ledger contains 26 capability IDs, 88 observable invariants, and
-80 isolated offline pytest cases. Counts are monotonic ledgers: an authorized
+The current ledger contains 26 capability IDs, 91 observable invariants, and
+81 isolated offline pytest cases. Counts are monotonic ledgers: an authorized
 migration may replace evidence, but it must not silently remove a capability,
 invariant, or regression.
 
@@ -70,17 +70,17 @@ facade grows before its behavior is extracted.
 The contract requires current edges and debt ceilings to match exactly, so a
 structural Issue must tighten the declaration in the same change that removes
 debt. This prevents removed debt from silently returning below an obsolete
-upper bound. The contract does not treat the approved target tree as current
-source and does not authorize placeholder packages, source moves, or public
-behavior changes.
+upper bound. The contract reads production modules from `src/atomgit` and
+separately checks the top-level SDK compatibility proxy. It does not authorize
+placeholder domain packages or public behavior changes.
 
 ## Packaging And Tooling Contract
 
-`pyproject.toml` declares the setuptools build backend, the current explicit
-root-to-`atomgit` package mapping, the top-level `atomgit_hub` module, the
+`pyproject.toml` declares the setuptools build backend, the explicit `src`
+package mapping, the top-level `atomgit_hub` compatibility module, the
 Python 3.9 tool target, and pytest collection policy. `setup.py` remains the
 transition-period project-metadata authority and must agree with the declared
-package layout until the separately approved src migration changes both.
+package layout and must remain exact with `setup.py`.
 
 `tests/packaging_contract.py` records the exact normalized Black, isort, and
 Ruff debt produced by the pinned development-tool versions.

@@ -36,27 +36,25 @@ atomgit_cli/
 ├── AGENTS.md             # 仓库级 AI 指令
 ├── .ai/                  # AI 开发、测试、评审和任务规范
 ├── docs/                 # 面向维护者和用户的设计文档
-├── __init__.py           # 包元数据和公开导出
-├── __main__.py           # python -m atomgit 入口
-├── cli.py                # Click 命令树和用户交互
-├── cli_contracts.py      # CLI schema 与上传运行时共享的轻量常量
-├── completion.py         # Zsh completion adapter 与受控安装/卸载
-├── uninstaller.py        # 当前环境受控状态与包卸载计划
-├── api.py                # CLI 使用的 AtomGit/HF 包装层
-├── atomgit_hub.py        # 对外 Python SDK
-├── config.py             # ~/.atomgit/config.json 配置
-├── runtime.py            # 共享 HF endpoint/XET/cache 运行时策略
-├── exceptions.py         # 稳定 SDK 异常层次
-├── utils.py              # 校验、格式化和 Git helper
+├── src/
+│   ├── atomgit/          # atomgit 包；保留现有平面模块形态
+│   │   ├── __init__.py   # 包元数据和公开导出
+│   │   ├── __main__.py   # python -m atomgit 入口
+│   │   ├── cli.py        # Click 命令树和用户交互
+│   │   ├── api.py        # CLI 使用的 AtomGit/HF 包装层
+│   │   └── ...           # 其余已登记生产模块
+│   └── atomgit_hub.py    # 顶层 SDK 兼容代理
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
 ├── requirements.txt      # 运行依赖
-├── release.py            # Release 解析、校验、安装和 update 核心
 └── deploy.sh             # 本地构建、安装和 checksum 脚本
 ```
 
-仓库当前采用根目录包映射，不是 `src/` 布局。除非单独设计并验证打包迁移，不应
-为了目录美观创建空的 `src/` 模块树。
+仓库采用标准 `src/` 布局。SDK 实现只存在于
+`src/atomgit/atomgit_hub.py`；`src/atomgit_hub.py` 只为历史
+`import atomgit_hub` 提供读写转发，因此现有 monkeypatch 接缝仍指向同一实现。
+本次目录迁移没有拆分 `api.py`、`cli.py` 或 `utils.py`，也没有提前创建目标域的
+空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -379,10 +377,10 @@ CLI 直连 resolve 下载在目标目录使用唯一临时文件，完整成功�
 - 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；
 - 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
-- 包名为 `atomgit`，版本由 `version.py` 单一来源提供；
-- `pyproject.toml` 显式选择 setuptools 构建后端并登记当前根目录到 `atomgit`
-  的包映射；`setup.py` 在迁移期继续提供项目元数据，二者的发现声明必须一致；
-- `py_modules=['atomgit_hub']` 同时保留顶层兼容导入；
+- 包名为 `atomgit`，版本由 `src/atomgit/version.py` 单一来源提供；
+- `pyproject.toml` 显式选择 setuptools 构建后端并登记 `src/` 包映射；
+  `setup.py` 在迁移期继续提供项目元数据，二者的发现声明必须一致；
+- `py_modules=['atomgit_hub']` 打包 `src/atomgit_hub.py`，保留顶层兼容导入；
 - `deploy.sh` 只执行本地 build/install/checksum；GitHub Release workflow 才是唯一
   发布入口，仓库不包含 PyPI/twine 写路径。
 

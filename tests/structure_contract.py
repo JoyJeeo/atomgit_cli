@@ -164,21 +164,22 @@ EXPECTED_WHEEL_FILES = {
 }
 
 EXPECTED_SDIST_FILES = {
-    "__init__.py",
-    "__main__.py",
-    "api.py",
-    "atomgit_hub.py",
-    "cli.py",
-    "cli_contracts.py",
-    "completion.py",
-    "config.py",
-    "exceptions.py",
-    "lfs_pointer.py",
-    "release.py",
-    "runtime.py",
-    "uninstaller.py",
-    "utils.py",
-    "version.py",
+    "src/atomgit/__init__.py",
+    "src/atomgit/__main__.py",
+    "src/atomgit/api.py",
+    "src/atomgit/atomgit_hub.py",
+    "src/atomgit/cli.py",
+    "src/atomgit/cli_contracts.py",
+    "src/atomgit/completion.py",
+    "src/atomgit/config.py",
+    "src/atomgit/exceptions.py",
+    "src/atomgit/lfs_pointer.py",
+    "src/atomgit/release.py",
+    "src/atomgit/runtime.py",
+    "src/atomgit/uninstaller.py",
+    "src/atomgit/utils.py",
+    "src/atomgit/version.py",
+    "src/atomgit_hub.py",
 }
 
 
@@ -187,10 +188,10 @@ def _module_name(path):
 
 
 def discover_source_texts(repository_root):
+    package_root = Path(repository_root) / "src" / "atomgit"
     return {
         _module_name(path): path.read_text(encoding="utf-8")
-        for path in sorted(Path(repository_root).glob("*.py"))
-        if path.name != "setup.py"
+        for path in sorted(package_root.glob("*.py"))
     }
 
 
@@ -284,7 +285,8 @@ def validate_artifact_contract(module_owners=None, wheel_files=None, sdist_files
     sdist = EXPECTED_SDIST_FILES if sdist_files is None else sdist_files
     expected_package_files = {f"atomgit/{module}.py" for module in owners}
     expected_wheel = expected_package_files | {"atomgit_hub.py"}
-    expected_sdist = {f"{module}.py" for module in owners}
+    expected_sdist = {f"src/atomgit/{module}.py" for module in owners}
+    expected_sdist.add("src/atomgit_hub.py")
     errors = []
     if set(wheel) != expected_wheel:
         errors.append(

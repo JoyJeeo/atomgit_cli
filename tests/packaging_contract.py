@@ -39,7 +39,7 @@ PROJECT_METADATA = {
 SETUPTOOLS_LAYOUT = {
     "packages": ["atomgit"],
     "py-modules": ["atomgit_hub"],
-    "package-dir": {"atomgit": "."},
+    "package-dir": {"": "src"},
     "include-package-data": False,
 }
 
@@ -65,25 +65,27 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 87,
-        "changes": 647,
-        "digest": "a32946d30855386b7172ebe96648c822d20ffd104c30a159679b85c31d972ea8",
+        "files": 88,
+        "changes": 648,
+        "digest": "315c528c5fc0a7d93a3b5545c7cab19b26c8722d64d81fbd735a3f64d52989fd",
     },
     "isort": {
         "files": 89,
         "changes": 110,
-        "digest": "a4f45d9ff64d6d3eb81c98908d5f6c23c1e65e2c4eba72daf44aa71b439a1c5b",
+        "digest": "53f098da404539124cddd7d2ba732ca3e1ddf45fe6c4c9a7592cadd1a464e04f",
     },
     "ruff": {
         "files": 19,
         "changes": 205,
-        "digest": "949397abbf4a08397958b27f54b89a29d02e89e5768a91b3b58fecd74d0ecf47",
+        "digest": "ba8269eedcf674468e62bc02884f7c15e4ac5099dfd4433680978821a6992e64",
     },
 }
 
 CLEAN_POLICY_FILES = {
     "setup.py",
+    "src/atomgit_hub.py",
     "tests/packaging_contract.py",
+    "tests/test_src_layout_migration.py",
     "tests/test_packaging_metadata.py",
 }
 
@@ -95,7 +97,16 @@ def load_pyproject(path):
 
 def discover_python_files(repository_root):
     root = Path(repository_root)
-    return tuple(sorted((*root.glob("*.py"), *root.joinpath("tests").glob("*.py"))))
+    return tuple(
+        sorted(
+            (
+                *root.glob("*.py"),
+                *root.joinpath("src").glob("*.py"),
+                *root.joinpath("src", "atomgit").glob("*.py"),
+                *root.joinpath("tests").glob("*.py"),
+            )
+        )
+    )
 
 
 def legacy_python_files(repository_root):
@@ -241,6 +252,9 @@ def validate_metadata(pyproject, setup_mapping):
     packaging_policy = pyproject.get("tool", {}).get("atomgit", {}).get("packaging", {})
     if packaging_policy != SETUPTOOLS_LAYOUT:
         errors.append("package discovery contract mismatch")
+    setuptools_policy = pyproject.get("tool", {}).get("setuptools", {})
+    if setuptools_policy != SETUPTOOLS_LAYOUT:
+        errors.append("setuptools package discovery contract mismatch")
     if setup_mapping != SETUPTOOLS_LAYOUT:
         errors.append("setup.py and pyproject layout mismatch")
     pytest_policy = pyproject.get("tool", {}).get("pytest", {}).get("ini_options")

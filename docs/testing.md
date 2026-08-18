@@ -22,14 +22,14 @@
 
 token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
 隔离、URL 重定向、路径穿越、HTTP 响应完整性、临时文件清理和 wheel 安装均有
-隔离离线测试。当前完整矩阵包含 80 个 pytest case（自执行脚本内部可包含多个
+隔离离线测试。当前完整矩阵包含 81 个 pytest case（自执行脚本内部可包含多个
 聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
 验收证据。维护者已授权两个固定测试仓库可直接重跑连线测试；其他仓库或
 操作仍需单独授权。
 
 能力 ID、行为不变量、证据映射和完整阻断规则见
 [开发底线](development_floor.md)。`tests/development_floor_contract.py` 登记
-26 个能力和 88 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
+26 个能力和 91 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
 文档和工作流标记都保持关联。
 
 ## 环境
@@ -73,7 +73,7 @@ python -m compileall -q .
 git diff --check
 ```
 
-`pyproject.toml` 统一声明 setuptools 构建后端、当前根目录包映射、Python 3.9
+`pyproject.toml` 统一声明 setuptools 构建后端、当前 `src/` 包映射、Python 3.9
 目标和 pytest 收集策略。`requirements-dev.txt` 固定 Black、isort、Ruff 版本；
 `python tests/test_packaging_metadata.py` 对现有格式、导入和静态检查债务建立精确
 归一化指纹，并要求本 Issue 新增的契约文件立即通过干净策略。清理历史债务时必须
@@ -132,9 +132,9 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 `python tests/test_wheel_smoke.py` 会从临时源码副本离线构建 wheel/sdist，核对
 每个预期运行模块，并分别安装到不继承仓库路径的临时 venv；安装后会逐一运行全部
 顶层命令及 `repo create` 的帮助入口。该脚本也包含在标准 pytest 矩阵中，不会在
-工作树生成构建产物。当前根目录包映射由 `pyproject.toml` 显式声明，editable
-隔离验证直接使用默认 setuptools PEP 517/660；下一项机械 src 迁移必须同步更新
-该映射和同一组 source/editable/wheel/sdist 契约。
+工作树生成构建产物。当前 `src/` 包映射由 `pyproject.toml` 与 `setup.py` 一致
+声明，editable 隔离验证直接使用默认 setuptools PEP 517/660；同一组合同精确
+核对 source、顶层 SDK 兼容代理、editable、wheel 和 sdist 的来源与模块集合。
 
 ### AtomGit 远程测试
 

@@ -21,25 +21,27 @@ if str(TESTS_DIRECTORY) not in sys.path:
 
 from structure_contract import EXPECTED_SDIST_FILES, EXPECTED_WHEEL_FILES  # noqa: E402
 
-VERSION_TEXT = (REPOSITORY_ROOT / "version.py").read_text(encoding="utf-8")
+VERSION_TEXT = (REPOSITORY_ROOT / "src" / "atomgit" / "version.py").read_text(encoding="utf-8")
 EXPECTED_VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', VERSION_TEXT).group(1)
 SOURCE_FILES = (
-    "__init__.py",
-    "__main__.py",
-    "api.py",
-    "atomgit_hub.py",
-    "cli.py",
-    "cli_contracts.py",
-    "completion.py",
-    "uninstaller.py",
-    "config.py",
-    "exceptions.py",
-    "lfs_pointer.py",
-    "release.py",
-    "utils.py",
+    "src/atomgit/__init__.py",
+    "src/atomgit/__main__.py",
+    "src/atomgit/api.py",
+    "src/atomgit/atomgit_hub.py",
+    "src/atomgit/cli.py",
+    "src/atomgit/cli_contracts.py",
+    "src/atomgit/completion.py",
+    "src/atomgit/uninstaller.py",
+    "src/atomgit/config.py",
+    "src/atomgit/exceptions.py",
+    "src/atomgit/lfs_pointer.py",
+    "src/atomgit/release.py",
+    "src/atomgit/utils.py",
+    "src/atomgit/runtime.py",
+    "src/atomgit/version.py",
+    "src/atomgit_hub.py",
     "setup.py",
     "requirements.txt",
-    "runtime.py",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
@@ -47,7 +49,6 @@ SOURCE_FILES = (
     "pyproject.toml",
     "install.sh",
     "uninstall.sh",
-    "version.py",
 )
 results = []
 
@@ -100,7 +101,9 @@ def main():
         source.mkdir()
         dist.mkdir()
         for relative_name in SOURCE_FILES:
-            shutil.copy2(REPOSITORY_ROOT / relative_name, source / relative_name)
+            destination = source / relative_name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(REPOSITORY_ROOT / relative_name, destination)
 
         build_result = run(
             [
@@ -159,9 +162,7 @@ def main():
                     if "/" in name
                 }
             actual_sdist_files = {
-                name
-                for name in sdist_names
-                if name.endswith(".py") and "/" not in name and name != "setup.py"
+                name for name in sdist_names if name.endswith(".py") and name != "setup.py"
             }
             check(
                 "sdist contains exactly the intended runtime source modules",
