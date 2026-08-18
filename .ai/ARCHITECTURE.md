@@ -39,14 +39,14 @@ or covered by shared contract tests.
   eager business and SDK exports while retaining runtime environment policy.
 - `cli.py`: Click command tree, argument validation, user-facing output, and
   exit codes; API and utility dependencies resolve only when callbacks run.
-- `cli_contracts.py`: lightweight constants shared by Click metadata and the
-  upload runtime.
+- `cli_contracts.py`: historical path for lightweight upload constants owned by
+  `upload.contracts`, preserving the completion-safe CLI import surface.
 - `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
   generation and atomic conda-environment hook management.
 - `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
-- `api.py`: historical CLI-facing concrete client and singleton; service and
-  CLI API download methods resolve from owned mixins while upload/LFS methods
-  remain local.
+- `api.py`: historical CLI-facing concrete client and singleton; service,
+  download, and upload methods resolve from owned mixins while LFS policy and
+  transfer remain local for the later LFS Domain step.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
@@ -66,6 +66,9 @@ or covered by shared contract tests.
   including create/list/visibility/delete/branch final-state verification.
 - `download/`: owned CLI API download service, transport, integrity, manifest,
   resume, and prune implementation; SDK downloads remain outside this package.
+- `upload/`: owned CLI API upload service, ordinary transfer, resumable
+  orchestration, projection, error policy, and lightweight contracts; LFS
+  transfer/policy and SDK upload remain outside this package.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -178,8 +181,8 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-Infrastructure, lifecycle, authentication/repository service, and CLI API
-download extraction are fail-closed through exact
+Infrastructure, lifecycle, authentication/repository service, CLI API download
+extraction, and CLI API upload extraction are fail-closed through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
 contracts. The remaining forbidden-direction exception is `cli -> api`; it is
 explicit migration debt, not an approved pattern for new code. Source/editable
@@ -188,8 +191,6 @@ uninstall policy, and the package-absent POSIX uninstall fallback retains
 executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
 global singleton keep their historical identities while moved methods have
 service provenance and old-path module-object patches reach their former call
-sites. Download methods and helpers likewise retain old-path identities and
-patch propagation while SDK download and upload/LFS ownership remains pending.
-The remaining target tree stays a plan
-until implementation moves, and package/facade conversion remains isolated in
-later Issues.
+sites. Download and upload methods and helpers likewise retain old-path
+identities and patch propagation while SDK download/upload and LFS ownership
+remain pending. API and CLI facade conversion remains isolated in later Issues.

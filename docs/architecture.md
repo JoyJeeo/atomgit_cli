@@ -63,8 +63,10 @@ patch 接缝。认证和仓库 V5 管理实现已下沉到 `atomgit.services` �
 与 repositories owner，`HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api`
 身份。CLI API 下载实现已下沉到 `atomgit.download` 的 service、transport、integrity、
 manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 接缝仍位于
-`atomgit.api`。SDK 下载仍由 `atomgit_hub.py` 持有，上传、resumable-upload 和 LFS
-仍在 `api.py`，没有提前创建后续 SDK、upload/LFS 或 CLI 目标域空包。
+`atomgit.api`。CLI API upload 的 service、ordinary、resumable、projection、errors
+和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
+`atomgit.api`。SDK 下载/upload 仍由 `atomgit_hub.py` 持有，LFS policy/transfer
+仍在 `api.py`，没有提前创建后续 SDK、LFS 或 CLI 目标域空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -85,6 +87,8 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 `tests/test_download_domain_ownership.py` 锁定 CLI API 下载 owner provenance、历史类/
 单例/方法/helper 身份和旧路径赋值/删除传播，并明确阻止 SDK 下载及上传 LFS helper
 提前进入 download 包。
+`tests/test_upload_domain_ownership.py` 锁定 CLI API upload owner provenance、历史类/
+单例/方法/helper 身份、完整旧路径赋值/删除传播、LFS/SDK 非迁移边界和构件注册。
 
 ## 3. 入口和命令树
 

@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 100
+BASELINE_INVARIANT_COUNT = 102
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -141,6 +141,12 @@ CAPABILITY_REGISTRY = {
                 "test_download_domain_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-012",
+                "CLI API upload implementations have exact transfer owners while historical API symbols, methods, signatures, patch seams, LFS boundaries, and structural debt remain stable.",
+                "test_upload_domain_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -153,6 +159,7 @@ CAPABILITY_REGISTRY = {
             "test_src_layout_migration.py",
             "test_infrastructure_utils_ownership.py",
             "test_structure_guard.py",
+            "test_upload_domain_ownership.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
     ),
@@ -1024,6 +1031,13 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-019",
+                "Source, editable, wheel, and sdist surfaces include the exact nested upload package and historical API surface without repository leakage.",
+                "test_upload_domain_ownership.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -1040,6 +1054,7 @@ CAPABILITY_REGISTRY = {
             "test_structure_guard.py",
             "test_wheel_smoke.py",
             "test_uninstaller.py",
+            "test_upload_domain_ownership.py",
         ),
         ("docs/release.md", "docs/testing.md"),
         ("offline-contract", "packaging-smoke"),
@@ -1170,10 +1185,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "100 条可观察行为不变量",
-        "85 个隔离 pytest case",
+        "102 条可观察行为不变量",
+        "86 个隔离 pytest case",
     ),
-    "docs/testing.md": ("85 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("86 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

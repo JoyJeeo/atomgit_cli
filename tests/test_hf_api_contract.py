@@ -19,7 +19,6 @@ from huggingface_hub import (
 from huggingface_hub.file_download import http_get
 from huggingface_hub.utils import filter_repo_objects
 
-
 results = []
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -219,7 +218,7 @@ def main():
     production_contracts = (
         (
             "CLI upload_file production kwargs bind the locked signature",
-            REPOSITORY_ROOT / "src" / "atomgit" / "api.py",
+            REPOSITORY_ROOT / "src" / "atomgit" / "upload" / "service.py",
             "upload_folder",
             "file_kwargs",
             upload_file,
@@ -238,12 +237,14 @@ def main():
         check(name, ok and bool(keys), detail or repr(sorted(keys)))
 
     invalid_source = (
-        (REPOSITORY_ROOT / "src" / "atomgit" / "api.py").read_text(encoding="utf-8")
+        (REPOSITORY_ROOT / "src" / "atomgit" / "upload" / "service.py").read_text(
+            encoding="utf-8"
+        )
         + "\ndef _invalid_contract():\n"
         + "    file_kwargs = dict(path_or_fileobj=None, path_in_repo=None, "
         + "repo_id=None, token=None, unsupported=None)\n"
     )
-    invalid_path = REPOSITORY_ROOT / "src" / "atomgit" / "api.py"
+    invalid_path = REPOSITORY_ROOT / "src" / "atomgit" / "upload" / "service.py"
     invalid_tree = ast.parse(invalid_source, filename=str(invalid_path))
     invalid_function = invalid_tree.body[-1]
     invalid_keys = {

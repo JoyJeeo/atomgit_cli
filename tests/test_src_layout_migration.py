@@ -48,6 +48,13 @@ PACKAGE_MODULES = {
     "services/__init__.py",
     "services/authentication.py",
     "services/repositories.py",
+    "upload/__init__.py",
+    "upload/contracts.py",
+    "upload/errors.py",
+    "upload/ordinary.py",
+    "upload/projection.py",
+    "upload/resumable.py",
+    "upload/service.py",
 }
 SHIM_PATH = REPOSITORY_ROOT / "src" / "atomgit_hub.py"
 EXPECTED_ROOT_PYTHON = {"setup.py"}
