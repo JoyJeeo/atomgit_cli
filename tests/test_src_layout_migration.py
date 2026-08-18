@@ -38,6 +38,9 @@ PACKAGE_MODULES = {
     "lifecycle/environment.py",
     "lifecycle/managed_paths.py",
     "lifecycle/uninstall.py",
+    "services/__init__.py",
+    "services/authentication.py",
+    "services/repositories.py",
 }
 SHIM_PATH = REPOSITORY_ROOT / "src" / "atomgit_hub.py"
 EXPECTED_ROOT_PYTHON = {"setup.py"}

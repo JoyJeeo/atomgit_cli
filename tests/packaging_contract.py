@@ -37,7 +37,12 @@ PROJECT_METADATA = {
 }
 
 SETUPTOOLS_LAYOUT = {
-    "packages": ["atomgit", "atomgit.infrastructure", "atomgit.lifecycle"],
+    "packages": [
+        "atomgit",
+        "atomgit.infrastructure",
+        "atomgit.lifecycle",
+        "atomgit.services",
+    ],
     "py-modules": ["atomgit_hub"],
     "package-dir": {"": "src"},
     "include-package-data": False,
@@ -66,18 +71,18 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 85,
-        "changes": 627,
-        "digest": "683a66342475958e29826ec52f368726cdea03f07b4fe9f98a0080c6f9129420",
+        "changes": 608,
+        "digest": "abfefdffb1886b6ecac36ea20b8cc86265b0a13db3d57fe511281f7ce1093107",
     },
     "isort": {
         "files": 88,
-        "changes": 109,
-        "digest": "7b14e35ac08ea1ce9a87a5d55f5ee8569eab214736da6a70e874248ec0f26901",
+        "changes": 108,
+        "digest": "7ed6cc5b7e3e652a519ebb22234a0506471267b73c9c0197a6690fe9c1de97fa",
     },
     "ruff": {
         "files": 19,
-        "changes": 205,
-        "digest": "b25d7a3cb4130a462083c66143bfe3cc47013550b6c8f3f9e05709066d614f60",
+        "changes": 197,
+        "digest": "aaedfaf1cbfbb03685f27f5e06ec86e3d7a4f653f882b8e5b85e4f9767105c1b",
     },
 }
 
@@ -95,6 +100,9 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/lifecycle/environment.py",
     "src/atomgit/lifecycle/managed_paths.py",
     "src/atomgit/lifecycle/uninstall.py",
+    "src/atomgit/services/__init__.py",
+    "src/atomgit/services/authentication.py",
+    "src/atomgit/services/repositories.py",
     "src/atomgit/runtime.py",
     "src/atomgit/uninstaller.py",
     "src/atomgit/utils.py",
@@ -105,6 +113,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_packaging_metadata.py",
     "tests/test_infrastructure_utils_ownership.py",
     "tests/test_environment_lifecycle_ownership.py",
+    "tests/test_auth_repository_services_ownership.py",
 }
 
 

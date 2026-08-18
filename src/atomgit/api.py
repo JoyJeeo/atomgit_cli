@@ -1,35 +1,32 @@
-from typing import Optional, Dict, Any, List, Set
-from pathlib import Path, PurePosixPath, PureWindowsPath
-from urllib.parse import quote, urljoin, urlsplit
-from contextlib import ExitStack, contextmanager
-from dataclasses import dataclass, field
-from email.utils import parsedate_to_datetime
-from datetime import datetime, timezone
 import errno
 import hashlib
+import json
 import math
+import multiprocessing
 import ntpath
 import os
 import random
 import shutil
-import json
 import socket
 import ssl
 import stat
-import urllib.request
-import urllib.error
-import multiprocessing
+import sys
 import tempfile
 import threading
 import time
+import types
+import urllib.error
+import urllib.request
+from contextlib import ExitStack, contextmanager
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from statistics import median
+from typing import List, Optional, Set
+from urllib.parse import quote, urljoin, urlsplit
 
 import httpx
-
-
-_ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
-_ATOMGIT_V5_MAX_JSON_BYTES = 10 * 1024 * 1024
-_ATOMGIT_IDENTITY_MAX_JSON_BYTES = 1024 * 1024
 
 try:
     from .runtime import configure_hf_environment
@@ -38,6 +35,7 @@ except ImportError:
 
 configure_hf_environment()
 
+# isort: off -- runtime policy must precede all Hugging Face imports.
 try:
     from .cli_contracts import (
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
@@ -49,18 +47,18 @@ except ImportError:
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
 
-
-import huggingface_hub._upload_large_folder as hf_large_folder
-import huggingface_hub.lfs as hf_lfs
-from huggingface_hub import (
-    get_hf_file_metadata, hf_hub_download, upload_folder, create_repo, snapshot_download,
-    constants as hf_constants, HfApi, close_session as close_hf_session,
+import huggingface_hub._upload_large_folder as hf_large_folder  # noqa: E402
+import huggingface_hub.lfs as hf_lfs  # noqa: E402
+from huggingface_hub import (  # noqa: E402,F401
+    HfApi, close_session as close_hf_session, constants as hf_constants,
+    create_repo, get_hf_file_metadata, hf_hub_download, snapshot_download,
+    upload_folder,
 )
-from huggingface_hub.file_download import http_get as hf_http_get
-from huggingface_hub._local_folder import (
+from huggingface_hub._local_folder import (  # noqa: E402
     get_local_upload_paths,
     read_upload_metadata,
 )
+from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402
 
 try:
     from .config import config
@@ -70,12 +68,26 @@ try:
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
-    from .utils import (
+    from .services import _delete_legacy_patch, _forward_legacy_patch
+    from .services import authentication as _authentication_service
+    from .services import repositories as _repository_service
+    from .services.authentication import (  # noqa: F401
+        AuthenticationServiceMixin, _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+    )
+    from .services.repositories import (  # noqa: F401
+        RepositoryServiceMixin, _ATOMGIT_V5_API_BASE,
+        _ATOMGIT_V5_MAX_JSON_BYTES, _atomgit_repo_exists, _atomgit_repo_type,
+        _atomgit_v5_branch_commit_id, _atomgit_v5_commit_sha,
+        _atomgit_v5_get_json, _atomgit_v5_repo_path, _atomgit_v5_request_json,
+        _classify_create_repo_error, _is_definitive_v5_write_error,
+        _repo_private_state, _sanitized_v5_api_error,
+    )
+    from .utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
-        normalize_repo_id,
         normalize_path_in_repo,
+        normalize_repo_id,
         parse_ignore_patterns,
         run_download_with_retry,
         sanitized_download_error,
@@ -89,17 +101,32 @@ except ImportError:
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
-    from utils import (
+    from services import _delete_legacy_patch, _forward_legacy_patch
+    from services import authentication as _authentication_service
+    from services import repositories as _repository_service
+    from services.authentication import (  # noqa: F401
+        AuthenticationServiceMixin, _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+    )
+    from services.repositories import (  # noqa: F401
+        RepositoryServiceMixin, _ATOMGIT_V5_API_BASE,
+        _ATOMGIT_V5_MAX_JSON_BYTES, _atomgit_repo_exists, _atomgit_repo_type,
+        _atomgit_v5_branch_commit_id, _atomgit_v5_commit_sha,
+        _atomgit_v5_get_json, _atomgit_v5_repo_path, _atomgit_v5_request_json,
+        _classify_create_repo_error, _is_definitive_v5_write_error,
+        _repo_private_state, _sanitized_v5_api_error,
+    )
+    from utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
-        normalize_repo_id,
         normalize_path_in_repo,
+        normalize_repo_id,
         parse_ignore_patterns,
         run_download_with_retry,
         sanitized_download_error,
         validate_upload_path_no_symlinks,
     )
+# isort: on
 
 try:
     # 单文件上传专用：直接以 path_or_fileobj 上传，避免本地拷贝
@@ -167,11 +194,6 @@ def _restore_progress_bar_state(state) -> None:
         progress_bar_states.update(state)
         return
     _set_progress_bar(not state)
-
-
-def _atomgit_repo_type(repo_type: str = None) -> str:
-    """Map dataset create/transfer calls to AtomGit's shared model route."""
-    return "model" if repo_type == "dataset" else repo_type
 
 
 def _atomgit_hf_endpoint() -> str:
@@ -760,130 +782,6 @@ def _is_not_found_error(error: Exception) -> bool:
     return "404" in message or "not found" in message
 
 
-def _atomgit_v5_request_json(
-    method: str, path: str, token: str, body=None, timeout: int = 15
-):
-    """Exchange one bounded JSON document with AtomGit's V5 API."""
-    if not token:
-        raise ValueError("missing AtomGit credential")
-    if not path.startswith("/") or "?" in path or "#" in path:
-        raise ValueError("invalid AtomGit API path")
-    method = method.upper()
-    if method not in ("GET", "POST", "PATCH", "DELETE"):
-        raise ValueError("unsupported AtomGit API method")
-    if method == "DELETE" and body is not None:
-        raise ValueError("DELETE request body is unsupported")
-
-    data = None
-    headers = {
-        "PRIVATE-TOKEN": token,
-        "Accept": "application/json",
-        "User-Agent": "atomgit-cli",
-    }
-    if body is not None:
-        data = json.dumps(body, separators=(",", ":")).encode("utf-8")
-        headers["Content-Type"] = "application/json"
-
-    request = urllib.request.Request(
-        _ATOMGIT_V5_API_BASE + path,
-        data=data,
-        headers=headers,
-        method=method,
-    )
-    with _atomgit_open_url(request, timeout=timeout) as response:
-        payload = response.read(_ATOMGIT_V5_MAX_JSON_BYTES + 1)
-    if len(payload) > _ATOMGIT_V5_MAX_JSON_BYTES:
-        raise ValueError("AtomGit API response is too large")
-    if not payload:
-        return None
-    return json.loads(payload.decode("utf-8"))
-
-
-def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15):
-    """Read one bounded JSON document from AtomGit's authenticated V5 API."""
-    return _atomgit_v5_request_json("GET", path, token, timeout=timeout)
-
-
-def _atomgit_v5_repo_path(repo_id: str) -> str:
-    """Build one encoded V5 repository path from the shared logical ID."""
-    normalized_repo_id = normalize_repo_id(repo_id)
-    owner, separator, repository = normalized_repo_id.partition("/")
-    if not separator or not owner or not repository:
-        raise ValueError("invalid repository ID")
-    return "/repos/{}/{}".format(
-        quote(owner, safe=""), quote(repository, safe="")
-    )
-
-
-def _repo_private_state(payload):
-    """Read a public/private state from one V5 repository response."""
-    if not isinstance(payload, dict):
-        return None
-    private = payload.get("private")
-    if isinstance(private, bool):
-        return private
-    visibility = payload.get("visibility")
-    if isinstance(visibility, str):
-        normalized = visibility.strip().lower()
-        if normalized == "private":
-            return True
-        if normalized == "public":
-            return False
-    return None
-
-
-def _sanitized_v5_api_error(error: Exception) -> str:
-    """Return a credential-safe V5 API error category."""
-    if isinstance(error, urllib.error.HTTPError):
-        if error.code == 401:
-            return "认证失败，请重新登录"
-        if error.code == 403:
-            return "权限不足"
-        if error.code == 404:
-            return "接口或资源不存在"
-        if error.code == 429:
-            return "请求过于频繁，请稍后重试"
-        if error.code >= 500:
-            return "AtomGit 服务暂时不可用"
-        return f"AtomGit API 请求失败（HTTP {error.code}）"
-    if isinstance(error, (urllib.error.URLError, socket.timeout, TimeoutError)):
-        return "无法连接 AtomGit API，请检查网络后重试"
-    if isinstance(error, (json.JSONDecodeError, UnicodeDecodeError, ValueError)):
-        return "AtomGit API 响应格式无效"
-    return f"AtomGit API 请求失败（{type(error).__name__}）"
-
-
-def _is_definitive_v5_write_error(error: Exception) -> bool:
-    """Return whether a V5 write was definitively rejected by the server."""
-    return (
-        isinstance(error, urllib.error.HTTPError)
-        and 400 <= error.code < 500
-    )
-
-
-def _atomgit_v5_commit_sha(payload: object) -> Optional[str]:
-    """Extract the immutable SHA from one V5 commit response."""
-    if not isinstance(payload, dict):
-        return None
-    sha = payload.get("sha")
-    if isinstance(sha, str) and sha.strip():
-        return sha.strip()
-    return None
-
-
-def _atomgit_v5_branch_commit_id(payload: object) -> Optional[str]:
-    """Extract the immutable commit ID from one V5 branch response."""
-    if not isinstance(payload, dict):
-        return None
-    commit = payload.get("commit")
-    if not isinstance(commit, dict):
-        return None
-    commit_id = commit.get("id")
-    if isinstance(commit_id, str) and commit_id.strip():
-        return commit_id.strip()
-    return None
-
-
 def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) -> tuple:
     """List repo files without calling repo_info.
 
@@ -944,17 +842,6 @@ def _atomgit_list_repo_files(repo_id: str, token: str, repo_type: str = None) ->
     if errors:
         raise errors[-1]
     return "model", []
-
-
-def _atomgit_repo_exists(repo_id: str, token: str) -> bool:
-    """Probe AtomGit's shared repository tree before non-idempotent create."""
-    try:
-        HfApi(token=token).list_repo_files(repo_id, repo_type=None)
-        return True
-    except Exception as error:
-        if _is_not_found_error(error):
-            return False
-        raise
 
 
 def _repository_filename_parts(filename: str) -> tuple:
@@ -4362,366 +4249,12 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
     return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
 
 
-def _classify_create_repo_error(e: Exception) -> tuple:
-    """把 HF Hub 建仓异常归类为 (error_type, hint) 二元组，供上层给出语义化提示。
+class HuggingFaceAPI(AuthenticationServiceMixin, RepositoryServiceMixin):
+    """AtomGit API client with historical identity and owned service methods."""
 
-    覆盖以下典型情形（基于 huggingface_hub 错误类型与文本特征）：
-      - 认证失败 (401/403, 无效 token 或权限不足)
-      - 请求参数错误 (BadRequestError / 400)
-      - 超时 / 网络连接
-      - 其他未知错误
-
-    返回 (error_type, hint)，其中 hint 是给用户的可执行建议。
-    """
-    msg = str(e)
-    ename = type(e).__name__
-
-    credential_error = auth_error_kind(e)
-    if credential_error == "authentication":
-        return (
-            "认证失败",
-            "登录凭证无效或已过期。请使用 'atomgit login' 重新登录获取有效 token，再重试创建。",
-        )
-    if credential_error == "permission":
-        return (
-            "权限不足",
-            "当前登录凭证缺少目标命名空间的仓库创建权限。请检查组织或命名空间权限。",
-        )
-
-    # 请求参数错误
-    if ename == "BadRequestError" or "400" in msg and "client error" in msg.lower():
-        return (
-            "请求参数错误",
-            "仓库参数不合法。请检查 repo_name 格式（username/repo-name）与 --type 取值。",
-        )
-
-    # 超时
-    if "timeout" in msg.lower() or "timed out" in msg.lower() or ename == "TimeoutError":
-        return "请求超时", "请求超时。请检查网络后重试。"
-
-    # 网络连接
-    if "connection" in msg.lower() or "connectionerror" in ename.lower() or "resolve" in msg.lower():
-        return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
-
-    # 其他
-    return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
-
-
-class HuggingFaceAPI:
-    """AtomGit API 客户端，完全基于Hugging Face Hub SDK"""
-    
     def __init__(self):
         pass
-    
-    def _normalize_repo_id(self, repo_id: str) -> str:
-        """标准化仓库 ID，兼容保留原有内部方法。"""
-        return normalize_repo_id(repo_id)
-    
-    def login(self, token: str) -> bool:
-        """登录验证"""
-        if not token or len(token) < 10:
-            print("❌ Token格式不正确")
-            return False
-        try:
-            user_info = self._get_login_user_by_token(token)
-        except Exception as error:
-            print(f"❌ 登录验证失败: {_sanitized_v5_api_error(error)}")
-            return False
-        if not user_info:
-            print("❌ 登录验证失败: AtomGit API 响应格式无效")
-            return False
-        try:
-            config.set_credentials(token, username=user_info['login'])
-        except Exception:
-            print("❌ 登录凭证保存失败，请检查配置目录权限后重试")
-            return False
-        print("✅ Token已保存")
-        return True
-    
-    def _get_login_user_by_token(self, token: str) -> Optional[Dict[str, Any]]:
-        if not token:
-            print("❌ 未找到登录凭证")
-            return None
-        api_url = 'https://atomgit.com/api/v5/user'
-        req = urllib.request.Request(
-            api_url,
-            headers={
-                'Authorization': token,
-                'User-Agent': 'atomgit-cli',
-                'Accept': 'application/json'
-            }
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            if response.status != 200:
-                raise urllib.error.HTTPError(
-                    api_url,
-                    response.status,
-                    "unexpected AtomGit identity response",
-                    getattr(response, "headers", {}),
-                    None,
-                )
-            payload = response.read(_ATOMGIT_IDENTITY_MAX_JSON_BYTES + 1)
-        if len(payload) > _ATOMGIT_IDENTITY_MAX_JSON_BYTES:
-            raise ValueError("identity response is too large")
-        data = json.loads(payload.decode('utf-8'))
-        if not isinstance(data, dict):
-            raise ValueError("identity response is malformed")
-        login = data.get('login')
-        if not isinstance(login, str) or not login.strip():
-            raise ValueError("identity response is missing login")
-        return {
-            'login': login,
-            'name': data.get('name'),
-            'email': data.get('email')
-        }
 
-    def get_login_user(self):
-        try:
-            credentials = config.get_credentials()
-        except Exception:
-            print("❌ 登录凭证读取失败，请检查配置文件和目录权限")
-            return None
-        if not credentials:
-            print("❌ 未找到登录凭证")
-            return None
-        try:
-            user_info = self._get_login_user_by_token(credentials['token'])
-        except Exception as error:
-            print(f"❌ 获取用户信息失败: {_sanitized_v5_api_error(error)}")
-            return None
-        if not user_info:
-            print("❌ 获取用户信息失败: AtomGit API 响应格式无效")
-            return None
-        return user_info
-
-    def list_repos(self):
-        """List repositories available to the stored AtomGit credential."""
-        try:
-            credentials = config.get_credentials()
-            if not credentials or not credentials.get('token'):
-                print("❌ 未找到登录凭证")
-                return None
-            payload = _atomgit_v5_get_json(
-                "/user/repos", credentials['token']
-            )
-            if isinstance(payload, dict):
-                for key in ("data", "repositories"):
-                    if isinstance(payload.get(key), list):
-                        payload = payload[key]
-                        break
-            if not isinstance(payload, list) or not all(
-                isinstance(repository, dict) for repository in payload
-            ):
-                raise ValueError("repository collection is malformed")
-            return payload
-        except Exception as error:
-            print(f"获取仓库列表失败: {_sanitized_v5_api_error(error)}")
-            return None
-
-    def set_repo_visibility(self, repo_id: str, private: bool) -> bool:
-        """Update and verify one repository's public/private state."""
-        try:
-            credentials = config.get_credentials()
-            if not credentials or not credentials.get('token'):
-                print("❌ 未找到登录凭证")
-                return False
-            if not isinstance(private, bool):
-                raise ValueError("private must be a boolean")
-            path = _atomgit_v5_repo_path(repo_id)
-            write_error = None
-            try:
-                _atomgit_v5_request_json(
-                    "PATCH", path, credentials['token'], {"private": private}
-                )
-            except Exception as error:
-                if _is_definitive_v5_write_error(error):
-                    print(
-                        "修改仓库可见性失败: "
-                        + _sanitized_v5_api_error(error)
-                    )
-                    return False
-                write_error = error
-            try:
-                repository = _atomgit_v5_get_json(
-                    path, credentials['token']
-                )
-            except Exception:
-                print("仓库可见性修改状态未知：无法验证远端状态")
-                return False
-            if _repo_private_state(repository) is not private:
-                if write_error is None:
-                    print("仓库可见性验证失败：远端状态与请求不一致")
-                else:
-                    print(
-                        "仓库可见性写请求状态未知："
-                        "远端当前状态与请求不一致"
-                    )
-                return False
-            return True
-        except Exception as error:
-            print(f"修改仓库可见性失败: {_sanitized_v5_api_error(error)}")
-            return False
-
-    def delete_repo(self, repo_id: str, confirmation: str) -> bool:
-        """Delete one V5 repository and require verified remote absence."""
-        try:
-            if confirmation != repo_id:
-                print("删除仓库失败: 确认仓库 ID 与目标不一致")
-                return False
-            credentials = config.get_credentials()
-            if not credentials or not credentials.get('token'):
-                print("❌ 未找到登录凭证")
-                return False
-            token = credentials['token']
-            path = _atomgit_v5_repo_path(repo_id)
-            repository = _atomgit_v5_get_json(path, token)
-            if not isinstance(repository, dict):
-                raise ValueError("repository response is malformed")
-
-            delete_error = None
-            try:
-                _atomgit_v5_request_json("DELETE", path, token)
-            except urllib.error.HTTPError as error:
-                if 400 <= error.code < 500:
-                    print(
-                        f"删除仓库失败: {_sanitized_v5_api_error(error)}"
-                    )
-                    return False
-                delete_error = error
-            except Exception as error:
-                delete_error = error
-
-            try:
-                _atomgit_v5_get_json(path, token)
-            except urllib.error.HTTPError as error:
-                if error.code == 404:
-                    return True
-                print("仓库删除请求状态未知：无法验证远端仓库是否仍存在")
-                return False
-            except Exception:
-                print("仓库删除请求状态未知：无法验证远端仓库是否仍存在")
-                return False
-
-            if delete_error is not None:
-                print(
-                    f"删除仓库失败: {_sanitized_v5_api_error(delete_error)}"
-                )
-            else:
-                print("仓库删除验证失败：远端仓库仍存在")
-            return False
-        except Exception as error:
-            print(f"删除仓库失败: {_sanitized_v5_api_error(error)}")
-            return False
-
-    def create_branch(
-        self, repo_id: str, branch_name: str, source: str = "main"
-    ) -> bool:
-        """Create one explicit branch and verify it through AtomGit V5."""
-        try:
-            credentials = config.get_credentials()
-            if not credentials or not credentials.get('token'):
-                print("❌ 未找到登录凭证")
-                return False
-            if not branch_name or not is_supported_upload_revision(branch_name):
-                raise ValueError("invalid branch name")
-            if not source or not is_supported_upload_revision(source):
-                raise ValueError("invalid source revision")
-            repo_path = _atomgit_v5_repo_path(repo_id)
-            source_path = repo_path + "/commits/" + quote(source, safe="")
-            source_payload = _atomgit_v5_get_json(
-                source_path, credentials['token']
-            )
-            source_commit = _atomgit_v5_commit_sha(source_payload)
-            if source_commit is None:
-                print("创建分支失败: 无法解析来源 revision 的提交")
-                return False
-            base_path = repo_path + "/branches"
-            write_error = None
-            try:
-                _atomgit_v5_request_json(
-                    "POST",
-                    base_path,
-                    credentials['token'],
-                    {"branch_name": branch_name, "refs": source},
-                )
-            except Exception as error:
-                if _is_definitive_v5_write_error(error):
-                    print(
-                        "创建分支失败: " + _sanitized_v5_api_error(error)
-                    )
-                    return False
-                write_error = error
-            branch_path = base_path + "/" + quote(branch_name, safe="")
-            try:
-                payload = _atomgit_v5_get_json(
-                    branch_path, credentials['token']
-                )
-            except Exception:
-                print("分支创建状态未知：无法验证远端状态")
-                return False
-            name = payload.get("name") if isinstance(payload, dict) else None
-            target_commit = _atomgit_v5_branch_commit_id(payload)
-            if name != branch_name or target_commit != source_commit:
-                if write_error is None:
-                    print(
-                        "分支创建验证失败：远端分支名称或来源提交"
-                        "与请求不一致"
-                    )
-                else:
-                    print(
-                        "分支创建写请求状态未知：远端分支名称或"
-                        "来源提交与请求不一致"
-                    )
-                return False
-            return True
-        except Exception as error:
-            print(f"创建分支失败: {_sanitized_v5_api_error(error)}")
-            return False
-    
-    def create_repo(self, 
-                    repo_name: str,
-                    repo_type: str = "model", 
-                    private: bool = False,
-                    exist_ok: bool = False) -> bool:
-        """创建仓库；dataset 通过 AtomGit 的共享 model 兼容路由创建。"""
-        try:
-            credentials = config.get_credentials()
-            if not credentials:
-                print("❌ 未找到登录凭证")
-                return False
-            normalized_repo_id = self._normalize_repo_id(repo_name)
-            if not exist_ok and _atomgit_repo_exists(
-                normalized_repo_id, credentials['token']
-            ):
-                print("创建仓库失败[仓库已存在]")
-                print("💡 建议: 如需幂等创建，请显式使用 --exist-ok")
-                return False
-            # 使用Hugging Face Hub SDK创建仓库
-            # HF public creation can report success while AtomGit keeps the
-            # repository private. Always create safely as private, then use the
-            # V5 settings API and verify the explicitly requested visibility.
-            create_repo(
-                repo_id=normalized_repo_id,
-                token=credentials['token'],
-                repo_type=_atomgit_repo_type(repo_type),
-                private=True,
-                exist_ok=exist_ok,
-            )
-            if not self.set_repo_visibility(repo_name, private=private):
-                requested_visibility = "私有" if private else "公开"
-                print(
-                    f"{requested_visibility}仓库创建未验证完成；"
-                    "远端可能未达到目标可见性，"
-                    "请立即使用 repo visibility 检查并设置目标状态"
-                )
-                return False
-            return True
-        except Exception as e:
-            err_type, hint = _classify_create_repo_error(e)
-            print(f"创建仓库失败[{err_type}]")
-            print(f"💡 建议: {hint}")
-            return False
-    
     def upload_folder(self, file_path: Path, repo_id: str,
                    remote_path: str = None, message: str = None,
                    upload_timeout: Optional[float] = None,
@@ -5486,11 +5019,56 @@ class HuggingFaceAPI:
             return False
 
 
-    def get_repo_info(self, repo_id: str) -> Optional[Dict[str, Any]]:
-        """Report the unsupported detail lookup without fabricating data."""
-        print("获取仓库信息失败: 当前版本暂不支持仓库信息查询")
-        return None
+_repository_service._atomgit_open_url = _atomgit_open_url
+_repository_service._is_not_found_error = _is_not_found_error
+_authentication_service._sanitized_v5_api_error = _sanitized_v5_api_error
 
+# Preserve historical module-object patching while service methods resolve
+# their dependencies in the new owner modules. The API module itself remains a
+# partial implementation until the later transfer and facade program steps.
+_PATCH_TARGETS = {
+    "urllib": (_authentication_service, _repository_service),
+    "json": (_authentication_service, _repository_service),
+    "socket": (_repository_service,),
+    "config": (_authentication_service, _repository_service),
+    "create_repo": (_repository_service,),
+    "HfApi": (_repository_service,),
+    "quote": (_repository_service,),
+    "auth_error_kind": (_repository_service,),
+    "is_supported_upload_revision": (_repository_service,),
+    "normalize_repo_id": (_repository_service,),
+    "_atomgit_open_url": (_repository_service,),
+    "_is_not_found_error": (_repository_service,),
+    "_ATOMGIT_IDENTITY_MAX_JSON_BYTES": (_authentication_service,),
+    "_ATOMGIT_V5_API_BASE": (_repository_service,),
+    "_ATOMGIT_V5_MAX_JSON_BYTES": (_repository_service,),
+    **{
+        name: (_repository_service,)
+        for name in (
+            "_atomgit_repo_type",
+            "_atomgit_repo_exists",
+            "_atomgit_v5_branch_commit_id",
+            "_atomgit_v5_commit_sha",
+            "_atomgit_v5_get_json",
+            "_atomgit_v5_repo_path",
+            "_atomgit_v5_request_json",
+            "_classify_create_repo_error",
+            "_is_definitive_v5_write_error",
+            "_repo_private_state",
+        )
+    },
+    "_sanitized_v5_api_error": (
+        _authentication_service,
+        _repository_service,
+    ),
+}
+
+_FacadeModule = type(
+    "_FacadeModule",
+    (types.ModuleType,),
+    {"__setattr__": _forward_legacy_patch, "__delattr__": _delete_legacy_patch},
+)
+sys.modules[__name__].__class__ = _FacadeModule
 
 # 全局API实例
 api = HuggingFaceAPI()

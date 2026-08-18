@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 96
+BASELINE_INVARIANT_COUNT = 98
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -129,8 +129,15 @@ CAPABILITY_REGISTRY = {
                 "test_environment_lifecycle_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-010",
+                "Authentication and repository implementations have exact service owners while the historical API class, singleton, methods, helpers, signatures, and patch seams remain stable.",
+                "test_auth_repository_services_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_development_floor.py",
             "test_environment_lifecycle_ownership.py",
             "test_cli_baseline_guard.py",
@@ -267,6 +274,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_auth_status_semantics.py",
             "test_config_permissions.py",
             "test_login_config.py",
@@ -331,6 +339,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_create_contract.py",
             "test_create_visibility.py",
             "test_repo_delete.py",
@@ -362,6 +371,7 @@ CAPABILITY_REGISTRY = {
         ),
         (
             "test_api_revision_guard.py",
+            "test_auth_repository_services_ownership.py",
             "test_branch_create.py",
             "test_revision_rejection.py",
         ),
@@ -794,6 +804,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_create_contract.py",
             "test_load_dataset.py",
             "test_repo_id_contract.py",
@@ -992,8 +1003,16 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-017",
+                "Source, editable, wheel, and sdist surfaces include the exact nested services package and historical API surface without repository leakage.",
+                "test_auth_repository_services_ownership.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_deploy_script.py",
             "test_environment_lifecycle_ownership.py",
             "test_installer.py",
@@ -1065,6 +1084,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_auth_repository_services_ownership.py",
             "test_download_prune.py",
             "test_environment_lifecycle_ownership.py",
             "test_git_credentials_isolation.py",
@@ -1135,10 +1155,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "96 条可观察行为不变量",
-        "83 个隔离 pytest case",
+        "98 条可观察行为不变量",
+        "84 个隔离 pytest case",
     ),
-    "docs/testing.md": ("83 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("84 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

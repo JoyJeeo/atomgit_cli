@@ -35,6 +35,9 @@ PRODUCTION_MODULE_OWNERS = {
     "lifecycle.environment": "lifecycle",
     "lifecycle.managed_paths": "lifecycle",
     "lifecycle.uninstall": "lifecycle",
+    "services.__init__": "services",
+    "services.authentication": "services",
+    "services.repositories": "services",
 }
 
 DOMAIN_DEPENDENCIES = {
@@ -72,6 +75,8 @@ CURRENT_INTERNAL_EDGES = {
     ("api", "config"),
     ("api", "lfs_pointer"),
     ("api", "runtime"),
+    ("api", "services.authentication"),
+    ("api", "services.repositories"),
     ("api", "utils"),
     ("atomgit_hub", "config"),
     ("atomgit_hub", "exceptions"),
@@ -94,6 +99,10 @@ CURRENT_INTERNAL_EDGES = {
     ("lifecycle.uninstall", "lifecycle.environment"),
     ("lifecycle.uninstall", "lifecycle.managed_paths"),
     ("release", "lifecycle.environment"),
+    ("services.authentication", "infrastructure.config"),
+    ("services.authentication", "services.repositories"),
+    ("services.repositories", "infrastructure.config"),
+    ("services.repositories", "infrastructure.validation"),
     ("config", "infrastructure.config"),
     ("infrastructure.git_credentials", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.cache"),
@@ -107,7 +116,7 @@ CURRENT_INTERNAL_EDGES = {
 }
 
 LEGACY_FACADE_DEBT = {
-    "api": {"max_lines": 5496, "max_functions": 121, "max_classes": 21},
+    "api": {"max_lines": 5074, "max_functions": 110, "max_classes": 21},
     "atomgit_hub": {"max_lines": 734, "max_functions": 10, "max_classes": 0},
     "cli": {"max_lines": 908, "max_functions": 26, "max_classes": 1},
     "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
@@ -224,6 +233,9 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/lifecycle/environment.py",
     "atomgit/lifecycle/managed_paths.py",
     "atomgit/lifecycle/uninstall.py",
+    "atomgit/services/__init__.py",
+    "atomgit/services/authentication.py",
+    "atomgit/services/repositories.py",
 }
 
 EXPECTED_SDIST_FILES = {
@@ -257,6 +269,9 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/lifecycle/environment.py",
     "src/atomgit/lifecycle/managed_paths.py",
     "src/atomgit/lifecycle/uninstall.py",
+    "src/atomgit/services/__init__.py",
+    "src/atomgit/services/authentication.py",
+    "src/atomgit/services/repositories.py",
 }
 
 
