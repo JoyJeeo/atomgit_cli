@@ -24,6 +24,15 @@ PACKAGE_MODULES = {
     "uninstaller.py",
     "utils.py",
     "version.py",
+    "infrastructure/__init__.py",
+    "infrastructure/cache.py",
+    "infrastructure/config.py",
+    "infrastructure/filesystem.py",
+    "infrastructure/git_credentials.py",
+    "infrastructure/output.py",
+    "infrastructure/runtime.py",
+    "infrastructure/utils.py",
+    "infrastructure/validation.py",
 }
 SHIM_PATH = REPOSITORY_ROOT / "src" / "atomgit_hub.py"
 EXPECTED_ROOT_PYTHON = {"setup.py"}
@@ -75,7 +84,10 @@ def shim_errors():
 def main():
     root_python = {path.name for path in REPOSITORY_ROOT.glob("*.py")}
     package_python = (
-        {path.name for path in PACKAGE_ROOT.glob("*.py")}
+        {
+            path.relative_to(PACKAGE_ROOT).as_posix()
+            for path in PACKAGE_ROOT.rglob("*.py")
+        }
         if PACKAGE_ROOT.is_dir()
         else set()
     )
@@ -126,7 +138,7 @@ def main():
     )
     check(
         "source layout does not create placeholder production modules",
-        all(path.stat().st_size > 0 for path in PACKAGE_ROOT.glob("*.py")),
+        all(path.stat().st_size > 0 for path in PACKAGE_ROOT.rglob("*.py")),
     )
     passed = sum(condition for _, condition, _ in results)
     print(f"summary: {passed}/{len(results)} passed")

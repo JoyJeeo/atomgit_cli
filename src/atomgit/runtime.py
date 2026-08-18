@@ -1,17 +1,6 @@
-"""Shared Hugging Face runtime policy for AtomGit entry points."""
+"""Historical runtime-policy import facade."""
 
-import os
-from pathlib import Path
+from .infrastructure import runtime as _implementation
+from .infrastructure.runtime import *  # noqa: F401,F403
 
-
-ATOMGIT_HF_ENDPOINT = "https://hub.atomgit.com"
-ATOMGIT_DISABLE_XET = "1"
-
-
-def configure_hf_environment() -> Path:
-    """Apply AtomGit's idempotent environment without import-time writes."""
-    cache_dir = Path.home() / ".cache" / "atomgit"
-    os.environ["HF_ENDPOINT"] = ATOMGIT_HF_ENDPOINT
-    os.environ["HF_HUB_DISABLE_XET"] = ATOMGIT_DISABLE_XET
-    os.environ["HF_HOME"] = str(cache_dir)
-    return cache_dir
+_FACADE_TARGET = _implementation

@@ -13,7 +13,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   +-- atomgit 命令 ----------> cli.py ----------> api.py
   |                               |                  |
   |                               v                  v
-  |                          config.py/utils.py  huggingface_hub
+  |                          compatibility facades  huggingface_hub
   |
   +-- python -m atomgit -----> __main__.py -----> cli.py
   |
@@ -53,8 +53,10 @@ atomgit_cli/
 仓库采用标准 `src/` 布局。SDK 实现只存在于
 `src/atomgit/atomgit_hub.py`；`src/atomgit_hub.py` 只为历史
 `import atomgit_hub` 提供读写转发，因此现有 monkeypatch 接缝仍指向同一实现。
-本次目录迁移没有拆分 `api.py`、`cli.py` 或 `utils.py`，也没有提前创建目标域的
-空包。
+`api.py` 和 `cli.py` 仍保持单体形态。`utils.py`、`config.py` 和 `runtime.py`
+保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
+output、filesystem、cache、git_credentials、config 和 runtime owner；没有提前
+创建后续 lifecycle、service、transfer、LFS、SDK 或 CLI 目标域空包。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -63,6 +65,8 @@ atomgit_cli/
 `cli -> api` 与 `uninstaller -> release` 是只能缩小的迁移债务，不是新代码可复用
 的方向。批准的长期目标仍是 facade/CLI/SDK 向 services、transfers、lifecycle、
 distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现迁移前不会创建。
+`tests/test_infrastructure_utils_ownership.py` 另外锁定 owner provenance、共享 config
+对象、runtime 身份、旧 `os.walk`/`subprocess.run` patch 接缝和 facade 不回长。
 
 ## 3. 入口和命令树
 

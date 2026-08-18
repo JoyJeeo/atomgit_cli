@@ -21,6 +21,15 @@ PRODUCTION_MODULE_OWNERS = {
     "uninstaller": "lifecycle",
     "utils": "infrastructure",
     "version": "infrastructure",
+    "infrastructure.__init__": "infrastructure",
+    "infrastructure.cache": "infrastructure",
+    "infrastructure.config": "infrastructure",
+    "infrastructure.filesystem": "infrastructure",
+    "infrastructure.git_credentials": "infrastructure",
+    "infrastructure.output": "infrastructure",
+    "infrastructure.runtime": "infrastructure",
+    "infrastructure.utils": "infrastructure",
+    "infrastructure.validation": "infrastructure",
 }
 
 DOMAIN_DEPENDENCIES = {
@@ -76,13 +85,24 @@ CURRENT_INTERNAL_EDGES = {
     ("cli", "version"),
     ("completion", "uninstaller"),
     ("uninstaller", "release"),
+    ("config", "infrastructure.config"),
+    ("infrastructure.git_credentials", "infrastructure.output"),
+    ("infrastructure.utils", "infrastructure.cache"),
+    ("infrastructure.utils", "infrastructure.filesystem"),
+    ("infrastructure.utils", "infrastructure.git_credentials"),
+    ("infrastructure.utils", "infrastructure.output"),
+    ("infrastructure.utils", "infrastructure.validation"),
+    ("runtime", "infrastructure.runtime"),
+    ("utils", "infrastructure.utils"),
 }
 
 LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 5496, "max_functions": 121, "max_classes": 21},
     "atomgit_hub": {"max_lines": 734, "max_functions": 10, "max_classes": 0},
     "cli": {"max_lines": 908, "max_functions": 26, "max_classes": 1},
-    "utils": {"max_lines": 861, "max_functions": 45, "max_classes": 0},
+    "config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
+    "runtime": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
+    "utils": {"max_lines": 130, "max_functions": 0, "max_classes": 0},
 }
 
 PUBLIC_IMPORTS = (
@@ -161,6 +181,15 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/utils.py",
     "atomgit/version.py",
     "atomgit_hub.py",
+    "atomgit/infrastructure/__init__.py",
+    "atomgit/infrastructure/cache.py",
+    "atomgit/infrastructure/config.py",
+    "atomgit/infrastructure/filesystem.py",
+    "atomgit/infrastructure/git_credentials.py",
+    "atomgit/infrastructure/output.py",
+    "atomgit/infrastructure/runtime.py",
+    "atomgit/infrastructure/utils.py",
+    "atomgit/infrastructure/validation.py",
 }
 
 EXPECTED_SDIST_FILES = {
@@ -180,18 +209,27 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/utils.py",
     "src/atomgit/version.py",
     "src/atomgit_hub.py",
+    "src/atomgit/infrastructure/__init__.py",
+    "src/atomgit/infrastructure/cache.py",
+    "src/atomgit/infrastructure/config.py",
+    "src/atomgit/infrastructure/filesystem.py",
+    "src/atomgit/infrastructure/git_credentials.py",
+    "src/atomgit/infrastructure/output.py",
+    "src/atomgit/infrastructure/runtime.py",
+    "src/atomgit/infrastructure/utils.py",
+    "src/atomgit/infrastructure/validation.py",
 }
 
 
 def _module_name(path):
-    return path.stem
+    return path.with_suffix("").as_posix().replace("/", ".")
 
 
 def discover_source_texts(repository_root):
     package_root = Path(repository_root) / "src" / "atomgit"
     return {
-        _module_name(path): path.read_text(encoding="utf-8")
-        for path in sorted(package_root.glob("*.py"))
+        _module_name(path.relative_to(package_root)): path.read_text(encoding="utf-8")
+        for path in sorted(package_root.rglob("*.py"))
     }
 
 
@@ -202,11 +240,15 @@ def discover_internal_edges(source_texts):
         tree = ast.parse(source, filename=f"{module_name}.py")
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.level:
-                candidates = (
-                    [node.module.split(".")[0]]
-                    if node.module
-                    else [alias.name.split(".")[0] for alias in node.names]
-                )
+                package = module_name.rsplit(".", 1)[0] if "." in module_name else ""
+                base_parts = package.split(".") if package else []
+                if node.level > 1:
+                    base_parts = base_parts[: -(node.level - 1)]
+                base = ".".join(base_parts)
+                imported = f"{base}.{node.module}".strip(".") if node.module else base
+                candidates = [imported] if node.module else [
+                    f"{base}.{alias.name}".strip(".") for alias in node.names
+                ]
                 edges.update(
                     (module_name, candidate)
                     for candidate in candidates
@@ -283,9 +325,13 @@ def validate_artifact_contract(module_owners=None, wheel_files=None, sdist_files
     owners = PRODUCTION_MODULE_OWNERS if module_owners is None else module_owners
     wheel = EXPECTED_WHEEL_FILES if wheel_files is None else wheel_files
     sdist = EXPECTED_SDIST_FILES if sdist_files is None else sdist_files
-    expected_package_files = {f"atomgit/{module}.py" for module in owners}
+    expected_package_files = {
+        "atomgit/" + module.replace(".", "/") + ".py" for module in owners
+    }
     expected_wheel = expected_package_files | {"atomgit_hub.py"}
-    expected_sdist = {f"src/atomgit/{module}.py" for module in owners}
+    expected_sdist = {
+        "src/atomgit/" + module.replace(".", "/") + ".py" for module in owners
+    }
     expected_sdist.add("src/atomgit_hub.py")
     errors = []
     if set(wheel) != expected_wheel:

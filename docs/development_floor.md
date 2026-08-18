@@ -13,8 +13,8 @@
 当前完整离线基线包含：
 
 - 26 个稳定能力 ID；
-- 91 条可观察行为不变量；
-- 81 个隔离 pytest case，每个 case 对应一个可直接执行的
+- 93 条可观察行为不变量；
+- 82 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
 
@@ -32,8 +32,9 @@ python tests/run_cli_baseline.py
 `tests/test_structure_guard.py` 阻断：当前每个生产模块必须有唯一能力所有者，新增
 依赖边和禁止方向会失败，现存 facade 体量与两条反向依赖减少时必须在同一变更中
 收紧声明，防止之后回长；空占位包禁止进入源码。公共导入、函数签名以及 source、PEP 660 editable、wheel、
-sdist 的模块内容也属于同一永久合同。批准的目标目录不是当前实现，不能据此提前
-创建空包或宣称迁移已经完成。
+sdist 的模块内容也属于同一永久合同。已交付的 infrastructure owner 与历史
+utils/config/runtime facade 还锁定实现来源、对象身份和 patch 接缝；其他批准的目标
+目录不是当前实现，不能据此提前创建空包或宣称迁移已经完成。
 
 ## 能力登记册
 

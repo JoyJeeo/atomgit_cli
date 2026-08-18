@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 91
+BASELINE_INVARIANT_COUNT = 93
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -117,6 +117,12 @@ CAPABILITY_REGISTRY = {
                 "The src-layout migration fails closed when a production module, compatibility shim, artifact path, or source provenance drifts.",
                 "test_src_layout_migration.py",
             ),
+            _invariant(
+                "FLOOR-008",
+                "Infrastructure implementations have exact owners while historical utility, config, and runtime facades preserve symbols, identities, patch seams, and monotonic debt.",
+                "test_infrastructure_utils_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_development_floor.py",
@@ -124,6 +130,7 @@ CAPABILITY_REGISTRY = {
             "test_cli_feature_baseline.py",
             "test_packaging_metadata.py",
             "test_src_layout_migration.py",
+            "test_infrastructure_utils_ownership.py",
             "test_structure_guard.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
@@ -964,10 +971,18 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-015",
+                "Source, editable, wheel, and sdist surfaces include the exact nested infrastructure package and historical facades without repository leakage.",
+                "test_infrastructure_utils_ownership.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_deploy_script.py",
             "test_installer.py",
+            "test_infrastructure_utils_ownership.py",
             "test_packaging_metadata.py",
             "test_shell_completion.py",
             "test_public_import_contract.py",
@@ -1098,10 +1113,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "91 条可观察行为不变量",
-        "81 个隔离 pytest case",
+        "93 条可观察行为不变量",
+        "82 个隔离 pytest case",
     ),
-    "docs/testing.md": ("81 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("82 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 
