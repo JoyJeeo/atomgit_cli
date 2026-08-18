@@ -1,28 +1,35 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `maintainer acceptance and final self-verification complete; ready for
-  the authorized cohesive task commit and local delivery`
+- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
+  verified`
 - Base branch: `yuto`
 - Base commit: `ddab1dbb0a7657db395e966a8aaf8f5ed4d8cf73`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to the base commit before branch creation`
 - Task branch: `codex/upload-domain-ownership` (local only; never push)
-- Current HEAD: `ddab1dbb0a7657db395e966a8aaf8f5ed4d8cf73`
+- Current HEAD: `6fa4673e913f1ccf40a132d801709337316dbd94`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with this Issue's uncommitted implementation,
-  tests, contracts, and documentation; continuation must use this worktree`
-- Last completed action: `recorded the maintainer's explicit acceptance and
-  delivery authorization after a fresh final self-verification; the complete
-  baseline passed 86/86 in 75.89s and every supporting gate passed`
-- Next exact action: `create the cohesive local task commit, merge it into yuto
-  with --no-ff, push only yuto, and verify github/yuto; never push the task
-  branch`
+- Worktree state: `clean on yuto before this final delivery record commit`
+- Task commit: `ba451e31e4f1396486ea7db5eef39b84d3f08aef`
+- Local yuto merge: `6fa4673e913f1ccf40a132d801709337316dbd94`
+- Verified remote yuto: `6fa4673e913f1ccf40a132d801709337316dbd94`
+- Last completed action: `created the cohesive task commit, merged it into
+  yuto with --no-ff, pushed only yuto, fetched github/yuto, and verified local
+  and remote yuto at 6fa4673`
+- Next exact action: `none for this completed Issue; wait for an explicit new
+  development request before activating another Issue`
 - Blockers: `none`
+
+Delivery evidence: task commit `ba451e3`; local no-ff merge `6fa4673`; remote
+verification resolved `github/yuto` and `github/HEAD` to
+`6fa4673e913f1ccf40a132d801709337316dbd94`. The task branch remained local and
+was never pushed. No remote Issue/PR, tag, Release, publication, live AtomGit
+write, credential mutation, deletion, or upstream-main change was performed.
 
 The predecessor Download Domain Issue is complete, accepted, committed, locally
 merged, pushed, and remotely verified. Its task commit is `25e145d`, local
