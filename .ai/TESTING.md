@@ -93,7 +93,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 26 capabilities, 85 invariants, and 79
+The current monotonic ledger has 26 capabilities, 88 invariants, and 80
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.
@@ -105,6 +105,14 @@ evidence covers source, explicit PEP 660 editable installation, wheel, and
 sdist in isolated temporary locations. Import-order and completion probes run
 in clean subprocesses, and production dependency keyword sets are extracted
 from call sites before binding against the locked real signatures.
+
+Packaging work uses `pyproject.toml` as the explicit build-backend, current
+package-layout, Python-target, and pytest-policy declaration while `setup.py`
+remains the transition-period project-metadata authority. The pinned Black,
+isort, and Ruff versions produce an exact normalized legacy-debt fingerprint;
+new Issue-owned files must be clean and debt removal must tighten the contract
+in the same change. The wheel smoke uses the default declared PEP 517/660
+editable path rather than passing a legacy opt-in flag.
 
 Every Issue records `Affected Capability IDs`, `Protected Existing Invariants`,
 `New Or Changed Invariants`, focused evidence, full-baseline evidence, and

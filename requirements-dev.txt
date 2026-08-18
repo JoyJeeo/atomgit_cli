@@ -1,5 +1,10 @@
 -r requirements.txt
 build>=1.2,<2
+black==24.10.0
+isort==5.13.2
 pytest>=7.4,<8.4
+ruff==0.12.12
+setuptools==81.0.0
 tomli>=1.1; python_version < "3.11"
-wheel
+platformdirs>=4,<5
+wheel>=0.43,<0.48

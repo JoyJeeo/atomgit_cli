@@ -1,0 +1,50 @@
+[build-system]
+requires = [
+    "setuptools>=77,<82",
+    "wheel>=0.43,<0.48",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atomgit"
+dynamic = [
+    "authors",
+    "classifiers",
+    "dependencies",
+    "description",
+    "keywords",
+    "license",
+    "readme",
+    "requires-python",
+    "scripts",
+    "urls",
+    "version",
+]
+
+[tool.atomgit.packaging]
+packages = ["atomgit"]
+py-modules = ["atomgit_hub"]
+package-dir = { atomgit = "." }
+include-package-data = false
+
+[tool.black]
+line-length = 88
+target-version = ["py39"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+py_version = 39
+known_first_party = ["atomgit", "atomgit_hub"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["pytest_*.py"]
+addopts = "-ra"

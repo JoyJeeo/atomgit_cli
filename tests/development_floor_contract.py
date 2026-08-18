@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 85
+BASELINE_INVARIANT_COUNT = 88
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -107,11 +107,17 @@ CAPABILITY_REGISTRY = {
                 "Structural refactors preserve registered behavior while legacy ownership and dependency debt may shrink but never grow.",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-006",
+                "Build and tool metadata plus exact legacy debt remain executable and fail closed when configuration or debt drifts.",
+                "test_packaging_metadata.py",
+            ),
         ),
         (
             "test_development_floor.py",
             "test_cli_baseline_guard.py",
             "test_cli_feature_baseline.py",
+            "test_packaging_metadata.py",
             "test_structure_guard.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
@@ -940,10 +946,17 @@ CAPABILITY_REGISTRY = {
                 "test_structure_guard.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-013",
+                "The declared setuptools backend and explicit package selection preserve default editable, wheel, and sdist surfaces without repository leakage.",
+                "test_packaging_metadata.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_deploy_script.py",
             "test_installer.py",
+            "test_packaging_metadata.py",
             "test_shell_completion.py",
             "test_public_import_contract.py",
             "test_release_workflow.py",
@@ -990,11 +1003,17 @@ CAPABILITY_REGISTRY = {
                 "test_installer.py",
                 "test_uninstaller.py",
             ),
+            _invariant(
+                "PORT-006",
+                "Black, isort, Ruff, setuptools, and pytest share the Python 3.9 floor while exact legacy violations cannot grow.",
+                "test_packaging_metadata.py",
+            ),
         ),
         (
             "test_download_prune.py",
             "test_git_credentials_isolation.py",
             "test_installer.py",
+            "test_packaging_metadata.py",
             "test_uninstaller.py",
             "test_update.py",
             "test_wheel_smoke.py",
@@ -1058,10 +1077,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "85 条可观察行为不变量",
-        "79 个隔离 pytest case",
+        "88 条可观察行为不变量",
+        "80 个隔离 pytest case",
     ),
-    "docs/testing.md": ("79 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("80 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

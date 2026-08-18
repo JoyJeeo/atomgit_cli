@@ -14,7 +14,6 @@ from email.parser import BytesParser
 from importlib.metadata import metadata, version
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 TESTS_DIRECTORY = Path(__file__).resolve().parent
 if str(TESTS_DIRECTORY) not in sys.path:
@@ -45,6 +44,7 @@ SOURCE_FILES = (
     "LICENSE",
     "CHANGELOG.md",
     "MANIFEST.in",
+    "pyproject.toml",
     "install.sh",
     "uninstall.sh",
     "version.py",
@@ -80,7 +80,11 @@ def repository_artifact_state():
             for path in paths:
                 stat = path.stat()
                 state.append(
-                    (str(path.relative_to(REPOSITORY_ROOT)), stat.st_size, stat.st_mtime_ns)
+                    (
+                        str(path.relative_to(REPOSITORY_ROOT)),
+                        stat.st_size,
+                        stat.st_mtime_ns,
+                    )
                 )
     return sorted(state)
 
@@ -99,10 +103,23 @@ def main():
             shutil.copy2(REPOSITORY_ROOT / relative_name, source / relative_name)
 
         build_result = run(
-            [sys.executable, "-m", "build", "--wheel", "--sdist", "--no-isolation", "--outdir", dist],
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--sdist",
+                "--no-isolation",
+                "--outdir",
+                dist,
+            ],
             source,
         )
-        check("temporary wheel build succeeds", build_result.returncode == 0, build_result.stderr[-500:])
+        check(
+            "temporary wheel build succeeds",
+            build_result.returncode == 0,
+            build_result.stderr[-500:],
+        )
         wheels = list(dist.glob("*.whl"))
         check("exactly one wheel produced", len(wheels) == 1)
         sdists = list(dist.glob("*.tar.gz"))
@@ -113,15 +130,23 @@ def main():
         with zipfile.ZipFile(wheels[0]) as wheel_archive:
             wheel_names = set(wheel_archive.namelist())
             metadata_names = [
-                name for name in wheel_names
-                if name.endswith(".dist-info/METADATA")
+                name for name in wheel_names if name.endswith(".dist-info/METADATA")
             ]
             check("wheel contains one METADATA file", len(metadata_names) == 1)
-            missing_wheel_files = EXPECTED_WHEEL_FILES - wheel_names
+            actual_wheel_files = {
+                name
+                for name in wheel_names
+                if name.endswith(".py") and ".dist-info/" not in name
+            }
             check(
-                "wheel contains every intended package and compatibility module",
-                not missing_wheel_files,
-                repr(sorted(missing_wheel_files)),
+                "wheel contains exactly the intended runtime Python modules",
+                actual_wheel_files == EXPECTED_WHEEL_FILES,
+                repr(
+                    {
+                        "missing": sorted(EXPECTED_WHEEL_FILES - actual_wheel_files),
+                        "extra": sorted(actual_wheel_files - EXPECTED_WHEEL_FILES),
+                    }
+                ),
             )
             wheel_metadata = BytesParser().parsebytes(
                 wheel_archive.read(metadata_names[0])
@@ -133,11 +158,26 @@ def main():
                     for name in sdist_archive.getnames()
                     if "/" in name
                 }
-            missing_sdist_files = EXPECTED_SDIST_FILES - sdist_names
+            actual_sdist_files = {
+                name
+                for name in sdist_names
+                if name.endswith(".py") and "/" not in name and name != "setup.py"
+            }
             check(
-                "sdist contains every intended runtime source module",
-                not missing_sdist_files,
-                repr(sorted(missing_sdist_files)),
+                "sdist contains exactly the intended runtime source modules",
+                actual_sdist_files == EXPECTED_SDIST_FILES,
+                repr(
+                    {
+                        "missing": sorted(EXPECTED_SDIST_FILES - actual_sdist_files),
+                        "extra": sorted(actual_sdist_files - EXPECTED_SDIST_FILES),
+                    }
+                ),
+            )
+            required_sdist_metadata = {"MANIFEST.in", "pyproject.toml", "setup.py"}
+            check(
+                "sdist preserves build metadata and legacy entrypoint",
+                required_sdist_metadata <= sdist_names,
+                repr(sorted(required_sdist_metadata - sdist_names)),
             )
         classifiers = wheel_metadata.get_all("Classifier", [])
         check(
@@ -174,7 +214,11 @@ def main():
             [sys.executable, "-m", "venv", "--system-site-packages", venv],
             root,
         )
-        check("temporary venv creation succeeds", venv_result.returncode == 0, venv_result.stderr[-500:])
+        check(
+            "temporary venv creation succeeds",
+            venv_result.returncode == 0,
+            venv_result.stderr[-500:],
+        )
         bin_dir = venv / ("Scripts" if os.name == "nt" else "bin")
         venv_python = bin_dir / ("python.exe" if os.name == "nt" else "python")
         atomgit_command = bin_dir / ("atomgit.exe" if os.name == "nt" else "atomgit")
@@ -183,7 +227,11 @@ def main():
             [venv_python, "-m", "pip", "install", "--no-deps", wheels[0]],
             root,
         )
-        check("wheel installation succeeds", install_result.returncode == 0, install_result.stderr[-500:])
+        check(
+            "wheel installation succeeds",
+            install_result.returncode == 0,
+            install_result.stderr[-500:],
+        )
 
         environment = os.environ.copy()
         smoke_home = root / "home"
@@ -274,7 +322,6 @@ def main():
                 "install",
                 "--no-deps",
                 "--no-build-isolation",
-                "--use-pep517",
                 "--editable",
                 source,
             ],
