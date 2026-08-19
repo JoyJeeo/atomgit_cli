@@ -1,29 +1,26 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-19 13:23 +0800`
-- Phase: `self-tested and accepted by maintainer; preparing cohesive task
-  commit`
+- Updated: `2026-08-19 13:27 +0800`
+- Phase: `completed, accepted, committed, merged, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `2c1ef67579bd759ffff6f4c05aeff588a701caab`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to `2c1ef67` before branch creation
-- Task branch: `codex/cli-facade-conversion` (local only; never push)
-- Current HEAD: `2c1ef67 on codex/cli-facade-conversion; no task commit yet`
+- Task branch: `codex/cli-facade-conversion` (local only; never pushed)
+- Current HEAD: `4808a44 on yuto before this final delivery-record commit`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with this active Issue implementation, tests,
-  contracts, packaging declarations, and documentation; continuation must use
-  this worktree`
-- Last completed action: `maintainer explicitly requested self-test acceptance,
-  commit, and push; the final 91/91 baseline, supporting gates, installed
-  artifact evidence, and corrected source identity/entry-path acceptance probe
-  all pass`
-- Next exact action: `create one cohesive conventional task commit, merge it
-  locally into yuto with --no-ff, push only yuto, fetch github, and verify all
-  yuto pointers`
+- Worktree state: `clean after task commit, local no-ff merge, and yuto-only
+  push; this final delivery record is the only pending update`
+- Last completed action: `created task commit 9d00e50, merged it locally into
+  yuto as 4808a44, pushed only yuto, fetched github, and verified local yuto,
+  github/yuto, and github/HEAD all resolve to 4808a44`
+- Next exact action: `commit and push this final delivery record on yuto, verify
+  remote equality, then await an explicit maintainer request before activating
+  another Issue`
 - Blockers: `none`
 - Tests run: `focused CLI facade 7/7; command ownership 13/13; API facade 8/8;
   structure 13/13; src layout 6/6; public imports 8/8; import order 5/5;
@@ -276,4 +273,8 @@ remote `yuto` resolved to `2c1ef67` before this Issue was activated.
   the current Python 3.10 conda environment.
 - Human acceptance: `accepted on 2026-08-19 after the final self-test; the
   maintainer explicitly authorized commit and push`.
-- Delivery evidence: `pending`.
+- Delivery evidence: `task commit 9d00e50 (refactor(cli): convert historical
+  module to facade package) was merged locally into yuto with --no-ff as
+  4808a44 (merge: convert cli to facade package); only yuto was pushed. After
+  fetch, local yuto, github/yuto, and github/HEAD all resolved to 4808a44. The
+  task branch was never pushed`.
