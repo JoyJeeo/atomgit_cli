@@ -1,27 +1,25 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `implementation, independent review, maintainer acceptance, and final
-  offline verification complete; ready for delivery`
+- Phase: `completed, accepted, merged, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `7fa7c84`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to `7fa7c84` before branch creation
 - Task branch: `codex/cli-command-ownership` (local only; never push)
-- Current HEAD: `7fa7c84 on the local task branch; no task commit yet`
+- Current HEAD: `bf0f8f2 on yuto before this final delivery-record commit`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty only with this Issue's uncommitted source, tests,
-  packaging/contracts, architecture/testing documents, and handoff changes;
-  continuation must use this worktree`
-- Last completed action: `received explicit maintainer acceptance, reran the
-  final complete 89-case baseline and every supporting gate, and confirmed all
-  checks pass after the approved read-only review`
-- Next exact action: `create the cohesive conventional task commit, merge
-  locally into yuto with --no-ff, push only yuto, and verify github/yuto`
+- Worktree state: `clean after the task commit, local no-ff merge, and first
+  yuto-only push; this handoff update is the final delivery record`
+- Last completed action: `created task commit 6d98b92, merged it locally into
+  yuto as bf0f8f2, pushed only yuto, fetched github, and verified local yuto,
+  github/yuto, and github/HEAD all resolved to bf0f8f2`
+- Next exact action: `none; await an explicit maintainer request before
+  activating another Issue`
 - Blockers: `none`
 
 The predecessor SDK Domain Issue is complete, accepted, committed, locally
@@ -29,7 +27,7 @@ merged, pushed, and remotely verified. Its task commit is `ec3476b`, local
 merge is `5469383`, final delivery record is `7fa7c84`, and local and remote
 `yuto` resolved to `7fa7c84` before this Issue was activated.
 
-## Active Issue
+## Completed Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-REFACTOR-CLI-COMMAND-OWNERSHIP`
@@ -69,16 +67,15 @@ merge is `5469383`, final delivery record is `7fa7c84`, and local and remote
   tests, registries, packaging contracts, and AI/human architecture documents;
   inspect locked dependencies; build temporary artifacts; run offline checks;
   perform an independent review`
-- Delivery after human acceptance: `under the standing maintainer delivery
-  rules, create one cohesive conventional commit, merge the local task branch
-  into yuto with --no-ff, push only yuto, and verify github/yuto; never push the
-  task branch`
+- Delivery after human acceptance: `completed under the standing maintainer
+  delivery rules: one cohesive conventional task commit, local --no-ff merge
+  into yuto, and yuto-only push; the task branch was not pushed`
 - Unauthorized actions: `remote Issue/PR creation or transition, task-branch
   push, tag or Release mutation, publication, live AtomGit writes, credential
   mutation, deletion, or upstream main changes`
-- Delivery mode: `local task branch -> focused and complete offline verification
-  -> independent review -> human acceptance -> cohesive commit -> local no-ff
-  merge into yuto -> push only yuto -> verify github/yuto`
+- Delivery mode: `completed: local task branch -> focused and complete offline
+  verification -> independent review -> human acceptance -> cohesive commit ->
+  local no-ff merge into yuto -> push only yuto -> verify github/yuto`
 
 ### Evidence And Current Behavior
 
@@ -244,4 +241,9 @@ merge is `5469383`, final delivery record is `7fa7c84`, and local and remote
   the current Python 3.10 conda environment.
 - Human acceptance: `the maintainer explicitly authorized self-testing,
   acceptance, commit, and push on 2026-08-19; final acceptance gates passed`.
-- Delivery evidence: `pending`.
+- Delivery evidence: `task commit 6d98b92 (refactor(cli): extract command
+  ownership) was merged locally into yuto with --no-ff as bf0f8f2 (merge:
+  extract cli command ownership); only yuto was pushed. After fetch, local
+  yuto, github/yuto, and github/HEAD all resolved to
+  bf0f8f211a407bf9abb1f4130c33cc00e594241c. The local task branch was never
+  pushed`.
