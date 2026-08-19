@@ -1,27 +1,26 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `human acceptance received; final verification and delivery`
+- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
+  verified`
 - Base branch: `yuto`
 - Base commit: `d6c692d`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to the base commit before branch creation`
 - Task branch: `codex/lfs-domain-ownership` (local only; never push)
-- Current HEAD: `codex/lfs-domain-ownership at d6c692d`
+- Current HEAD: `yuto merge a2275c6; final delivery record is included in this
+  handoff update`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with the complete LFS Domain implementation and
-  contract changes; continuation remains in this worktree`
-- Last completed action: `extracted LFS policy, transfer recovery, attributes,
-  and event/error ownership into atomgit.lfs.service; added ownership,
-  structure, artifact, packaging, src-layout, and development-floor contracts;
-  complete baseline and review passed`
-- Next exact action: `run the final complete baseline, commit the task branch,
-  merge locally into yuto, push only yuto, fetch and verify github/yuto, then
-  record the final delivery`
+- Worktree state: `clean on yuto before the final delivery record commit`
+- Last completed action: `created task commit 7f7074d, merged it into yuto as
+  a2275c6 with --no-ff, pushed only yuto through the configured github remote,
+  fetched, and verified local yuto, github/yuto, and github/HEAD`
+- Next exact action: `none for this completed Issue; wait for an explicit new
+  development request before activating another Issue`
 - Blockers: `none`
 
 The predecessor Upload Domain Issue is complete, accepted, committed, locally
@@ -299,7 +298,7 @@ both resolved to `ddab1db` before this task branch was created.
   delete, publish, or perform unrelated remote writes; keep credentials out of
   logs and commits`
 
-## Active Issue
+## Completed Issue Record
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-REFACTOR-LFS-DOMAIN-OWNERSHIP`
@@ -344,7 +343,8 @@ both resolved to `ddab1db` before this task branch was created.
   mutation, deletion, or upstream main changes`
 - Delivery mode: `local task branch -> focused and complete offline
   verification -> independent review -> human acceptance -> cohesive
-  conventional commit; merge/push require explicit delivery authorization`
+  conventional commit -> local no-ff merge into yuto -> push only yuto ->
+  remote verification`
 
 ### Scope And Compatibility
 
@@ -401,3 +401,13 @@ both resolved to `ddab1db` before this task branch was created.
   removed duplicate API definitions, exact patch seams, no SDK or upload
   ownership regression, registered dependency/artifact surfaces, and no open
   P0/P1/P2/P3 finding; verdict APPROVED`
+
+### Delivery Evidence
+
+- Task commit: `7f7074d refactor(lfs): extract lfs domain ownership`
+- Local merge: `a2275c6 merge: extract lfs domain ownership`
+- Push remote: `github` remote, branch `yuto`; task branch was never pushed
+- Remote verification before this final record: `local yuto`, `github/yuto`,
+  and `github/HEAD` all resolved to `a2275c6`
+- No remote Issue/PR, tag, Release, publication, live AtomGit write,
+  credential mutation, deletion, or upstream-main change was performed
