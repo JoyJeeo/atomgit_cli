@@ -106,6 +106,7 @@ def main():
         "clean policy coverage names only immediate Issue-owned files",
         CLEAN_POLICY_FILES
         == {
+            "src/atomgit/api/__init__.py",
             "setup.py",
             "src/atomgit/completion.py",
             "src/atomgit/commands/__init__.py",
@@ -167,6 +168,7 @@ def main():
             "tests/test_lfs_domain_ownership.py",
             "tests/test_sdk_domain_ownership.py",
             "tests/test_cli_command_ownership.py",
+            "tests/test_api_facade_conversion.py",
         },
         repr(CLEAN_POLICY_FILES),
     )

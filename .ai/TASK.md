@@ -1,249 +1,260 @@
 # Current Issue Contract
 
-Status: inactive
+Status: active
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `completed, accepted, merged, pushed, and remotely verified`
+- Phase: `self-tested and accepted by maintainer; preparing cohesive task commit`
 - Base branch: `yuto`
-- Base commit: `7fa7c84`
+- Base commit: `7338c99`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
-  to `7fa7c84` before branch creation
-- Task branch: `codex/cli-command-ownership` (local only; never push)
-- Current HEAD: `bf0f8f2 on yuto before this final delivery-record commit`
+  to `7338c99` before branch creation
+- Task branch: `codex/api-facade-conversion` (local only; never push)
+- Current HEAD: `7338c99 on codex/api-facade-conversion; no task commit yet`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after the task commit, local no-ff merge, and first
-  yuto-only push; this handoff update is the final delivery record`
-- Last completed action: `created task commit 6d98b92, merged it locally into
-  yuto as bf0f8f2, pushed only yuto, fetched github, and verified local yuto,
-  github/yuto, and github/HEAD all resolved to bf0f8f2`
-- Next exact action: `none; await an explicit maintainer request before
-  activating another Issue`
+- Worktree state: `dirty with this active Issue implementation, tests,
+  contracts, packaging declarations, and documentation; continuation must use
+  this worktree`
+- Last completed action: `recovered the approved sequential architecture
+  program, confirmed API Facade Conversion is step 12 after the delivered CLI
+  Command Ownership step, created the local task branch, and inspected the
+  current API facade, structural contracts, affected tests, documentation, and
+  locked dependency versions`
+- Next exact action: `create the cohesive conventional task commit, merge it
+  locally into yuto with --no-ff, push only yuto, fetch github, and verify all
+  yuto pointers`
 - Blockers: `none`
+- Tests run: `focused API facade 8/8; ownership/structure/src-layout/public
+  import/import-order/packaging/artifact gates passed; complete
+  python tests/run_cli_baseline.py -> 90 passed in 86.77s (0:01:26); compileall,
+  pip check, Black, isort, Ruff, and git diff --check passed`
 
-The predecessor SDK Domain Issue is complete, accepted, committed, locally
-merged, pushed, and remotely verified. Its task commit is `ec3476b`, local
-merge is `5469383`, final delivery record is `7fa7c84`, and local and remote
-`yuto` resolved to `7fa7c84` before this Issue was activated.
+The predecessor CLI Command Ownership Issue is complete, accepted, committed,
+locally merged, pushed, and remotely verified. Its task commit is `6d98b92`,
+local merge is `bf0f8f2`, final delivery record is `7338c99`, and local and
+remote `yuto` resolved to `7338c99` before this Issue was activated.
 
-## Completed Issue
+## Active Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
-- ID: `LOCAL-REFACTOR-CLI-COMMAND-OWNERSHIP`
-- Title: `Extract CLI command ownership behind the historical Click module`
+- ID: `LOCAL-REFACTOR-API-FACADE-CONVERSION`
+- Title: `Convert the historical API module into a compatibility facade package`
 - Primary type: `refactoring`
-- Secondary types: `cli`, `compatibility`, `testing`, `security`,
+- Secondary types: `compatibility`, `cli`, `sdk`, `testing`, `security`,
   `distribution`, `documentation`
 - Priority: `P2`
-- Approved program step: `11. CLI Command Ownership`
-- Observable objective: `move authentication, repository, transfer, cache,
-  completion, update, uninstall, and configuration command implementations
-  into real CLI-command owner modules while preserving the atomgit.cli module,
-  exact Click tree/schema/help/output/prompts/exits, lazy imports, completion,
-  old-path patch seams, API calls, and all observable behavior`
-- User impact: `none by design; internal ownership migration only`
+- Approved program step: `12. API Facade Conversion`
+- Observable objective: `replace src/atomgit/api.py with
+  src/atomgit/api/__init__.py as the historical atomgit.api compatibility
+  facade after all API business implementations have moved to their owners,
+  while preserving every public/private symbol, HuggingFaceAPI and global api
+  identity, signature, import order, dependency patch seam, executable entry
+  path, artifact surface, and observable CLI/API behavior`
+- User impact: `none by design; historical imports and behavior remain stable`
 
 ### Authorization And Delivery
 
 - User authorization: `the maintainer approved the complete sequential
-  capability-oriented structure program on 2026-08-18; the persisted sequence
-  identifies CLI Command Ownership as step 11 after the completed SDK Domain;
-  on 2026-08-19 the maintainer explicitly requested continued development and,
-  after reviewing the implementation status, authorized self-testing,
-  acceptance, commit, and push`
-- Accepted conditions:
-  1. `command modules are created only as their real implementation moves`
-  2. `atomgit.cli remains the historical module and owns Click schema,
-     prompts, output, exit conversion, and service-call wiring`
-  3. `the exact command/group objects, callback signatures, help, dispatch,
-     import order, completion, and lazy behavior remain stable`
-  4. `old-path assignment, deletion, and patch.object seams reach every former
-     command implementation resolution site and restore exact identities`
-  5. `API facade conversion, CLI package/facade conversion, API behavior,
-     transfer/service implementation, distribution/Shell extraction, test
-     layout, and public behavior changes are excluded`
-- Authorized local actions: `create a local task branch; edit task-owned source,
-  tests, registries, packaging contracts, and AI/human architecture documents;
-  inspect locked dependencies; build temporary artifacts; run offline checks;
-  perform an independent review`
-- Delivery after human acceptance: `completed under the standing maintainer
-  delivery rules: one cohesive conventional task commit, local --no-ff merge
-  into yuto, and yuto-only push; the task branch was not pushed`
+  capability-oriented structure program on 2026-08-18; that persisted program
+  names API Facade Conversion as step 12 after CLI Command Ownership; on
+  2026-08-19 the maintainer explicitly requested continued development`
+- Accepted program conditions:
+  1. `api.py becomes api/__init__.py only after domain extraction`
+  2. `symbols, objects, signatures, runtime behavior, module identity, and old
+     patch seams remain stable`
+  3. `the facade contains no network, filesystem, retry, transfer, or mutable
+     state business implementation`
+  4. `CLI facade conversion remains a separate later Issue`
+- Authorized local actions: `create a local task branch; edit task-owned
+  source, tests, exact registries, packaging contracts, and AI/human
+  architecture/testing documents; inspect locked dependencies; build temporary
+  artifacts; run offline checks; perform an independent review`
+- Standing delivery after completion and acceptance: `one cohesive conventional
+  task commit, local --no-ff merge into yuto, and push only yuto; never push
+  the task branch`
 - Unauthorized actions: `remote Issue/PR creation or transition, task-branch
   push, tag or Release mutation, publication, live AtomGit writes, credential
   mutation, deletion, or upstream main changes`
-- Delivery mode: `completed: local task branch -> focused and complete offline
+- Delivery mode: `local task branch -> focused and complete offline
   verification -> independent review -> human acceptance -> cohesive commit ->
   local no-ff merge into yuto -> push only yuto -> verify github/yuto`
 
 ### Evidence And Current Behavior
 
-- `src/atomgit/cli.py` is a 908-line historical module containing the Click
-  root/group/option schema and the implementations of 18 leaf commands.
-- The module dispatches through a lazy `atomgit.api.api` object and lazy
-  historical utility functions, while importing completion, lifecycle,
-  distribution, configuration, and version objects before command execution.
-- Tests patch historical `atomgit.cli` names including `api`, `config`, Git
-  helpers, utility functions, `run_update`, `build_uninstall_plan`, and
-  `run_uninstall`; completion derives candidates from the live Click tree.
-- `tests/cli_baseline_contract.py` records the exact public tree, parameters,
-  and leaf dispatch inventory; focused regressions cover deterministic stdout,
-  stderr, exits, exception categories, prompts, redaction, auth, repository,
-  upload, download, completion, update, uninstall, cache, configuration,
-  import-order, packaging, and portability behavior.
+- `src/atomgit/api.py` is an 853-line historical module. Its one concrete
+  `HuggingFaceAPI` class is already composed only from authentication,
+  repository, download, and upload owner mixins; the global `api` singleton
+  retains the historical concrete type and identity.
+- Authentication/repository, download, upload, and LFS implementations already
+  live in `atomgit.services`, `atomgit.download`, `atomgit.upload`, and
+  `atomgit.lfs`. The remaining API module code is compatibility import/export,
+  dependency initialization, owner aliasing, and assignment/deletion forwarding.
+- Tests patch many historical `atomgit.api` names through direct assignment,
+  deletion, and `patch.object`; owner methods must continue resolving those
+  exact module-object seams and restoring exact identities.
+- `src/atomgit/cli.py` lazily resolves `atomgit.api.api`; `atomgit.__init__`
+  exports the same singleton. Completion import lightness and import-order
+  behavior are protected.
+- `tests/structure_contract.py` currently registers flat `api`, exact
+  `atomgit/api.py` wheel/sdist paths, an 853-line facade ceiling, and the
+  existing `cli -> api` compatibility edge. These declarations must migrate
+  atomically to the package facade and cannot retain stale regrowth room.
 - Locked contracts inspected in `atomgit_cli`: Click `8.4.2`,
   `huggingface-hub==1.1.7`, and `datasets==4.4.1`.
-- Pre-edit complete evidence: `python tests/run_cli_baseline.py -> 88 passed in
-  82.65s (0:01:22)`.
 
 ### Expected Behavior
 
-- Real, non-placeholder CLI command owner modules contain the command
-  implementations now embedded in the historical module.
-- `atomgit.cli` continues to construct and export the same root/group/leaf
-  Click objects with the same schema, callback signatures, help, prompt,
-  output, exit, import-order, and completion behavior.
-- Direct assignment, deletion, and `patch.object` at the historical module path
-  propagate to every former runtime lookup site without leaking to unrelated
-  owners.
-- Source, default PEP 660 editable, wheel, and sdist discovery include exactly
-  the delivered command package while preserving the historical `atomgit.cli`
-  module and both CLI entry paths.
+- `import atomgit.api`, `from atomgit.api import HuggingFaceAPI, api`, package
+  exports, CLI lazy resolution, and clean import permutations resolve the same
+  historical module name and exact stable objects.
+- `HuggingFaceAPI` remains declared at `atomgit.api`, keeps its exact bases,
+  method signatures, behavior, and concrete singleton type; global `api`
+  remains the one shared object exported by `atomgit` and used by the CLI.
+- Every registered public and private historical symbol remains available with
+  the same identity, and assignment/deletion/`patch.object` propagation reaches
+  every former owner resolution site and restores exact values.
+- Source, default PEP 660 editable, wheel, and sdist discovery contain exactly
+  `atomgit/api/__init__.py` and no stale `atomgit/api.py`.
+- The API package facade contains only compatibility imports, aliases,
+  forwarding metadata/module behavior, the historical class composition, and
+  singleton construction; no domain business implementation is introduced.
 
 ### Scope
 
 #### In Scope
 
-- Add only command-owner modules receiving real implementation in this Issue.
-- Move the implementations of update/uninstall/completion, authentication,
-  cache, repository, upload/download, and configuration display commands.
-- Preserve the exact Click schema in `cli.py`, including decorators, command
-  registration order, command/group names, parameter types/defaults/help,
-  docstrings, callback signatures, root object identity, and module entrypoint.
-- Preserve all historical dependency/helper patch seams, configuration and Git
-  state safety, token redaction, temporary/resource behavior, output strings,
-  prompts, exception categories, exit status, and API arguments/results.
-- Tighten exact owner, dependency, facade debt, artifact, src-layout,
-  public-import, test-inventory, development-floor, architecture, and testing
-  contracts.
+- Replace the flat API module with the historical API package facade.
+- Add focused executable evidence for exact path/provenance, class/singleton
+  identity and signatures, symbol inventory, imports, patch propagation,
+  facade-only content, artifact discovery, and non-migration boundaries.
+- Migrate exact module-owner, dependency-edge, facade-debt, source-layout,
+  wheel/sdist, public-import, test-inventory, and development-floor contracts.
+- Update the smallest authoritative AI and human architecture/testing
+  documentation to describe the delivered package facade.
 
 #### Out Of Scope
 
-- Convert `cli.py` into `cli/__init__.py` or `cli/root.py`, or change public
-  commands, options, help, prompts, output, errors, exits, or completion.
-- Convert `api.py`, remove `cli -> api`, change `HuggingFaceAPI` or its global
-  singleton, or move API/service/transfer/LFS/SDK business behavior.
-- Change locked dependencies, release/update/uninstall semantics, Shell entry
-  points, distribution policy, test layout, or source layout.
-- Live AtomGit writes, credential changes, publication, remote Issue/PR work,
-  broad formatting, or unrelated cleanup.
+- Convert `cli.py`, remove or redesign the CLI's historical `atomgit.api.api`
+  dispatch, or change Click schema, commands, callbacks, completion, output,
+  prompts, exits, errors, or lazy behavior.
+- Move or redesign authentication/repository, download, upload, LFS, SDK,
+  infrastructure, lifecycle, distribution, or Shell implementations.
+- Change public/private API symbols, method signatures, singleton semantics,
+  dependency versions, remote behavior, tokens, Git state, release policy, or
+  test layout.
+- Add placeholder packages, generic compatibility layers, formatter sweeps,
+  live writes, publication, remote Issue/PR work, or upstream changes.
 
 ### Affected Capability IDs
 
 - `FLOOR-REGISTRY`, `CLI-SURFACE`, `CLI-DISPATCH`, `AUTH-CONFIG`,
-  `REPO-MANAGEMENT`, `REVISION`, `CACHE`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
+  `REPO-MANAGEMENT`, `REVISION`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
   `UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`,
   `DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`, `DOWNLOAD-INTEGRITY`,
-  `DOWNLOAD-SECURITY`, `GIT-CREDENTIAL`, `REPO-ID`, `RUNTIME`,
-  `ERROR-REDACTION`, `PACKAGING`, and `PORTABILITY`
+  `DOWNLOAD-SECURITY`, `REPO-ID`, `RUNTIME`, `CACHE`,
+  `DEPENDENCY-CONTRACT`, `PACKAGING`, `PORTABILITY`, and `ERROR-REDACTION`
 
 ### Protected Existing Invariants
 
-- All existing `105` invariants remain protected, especially `FLOOR-005..014`,
-  `CLI-001..006`, `DISPATCH-001..005`, authentication, repository, upload,
-  download, repository-ID, global-state, redaction, packaging, and portability
-  invariants registered by the affected capabilities.
-- Exact command and parameter schema, Click object/function signatures,
-  registration order, help text, deterministic output, prompts, exits,
-  exception categories, redaction, old-path patches, completion, import order,
-  lazy API loading, and downstream call arguments remain unchanged.
-- API, service, transfer, LFS, SDK, lifecycle, infrastructure, and distribution
-  observable behavior remains protected and structurally outside this Issue.
+- All existing `110` invariants remain protected, especially `FLOOR-005..016`,
+  `CLI-001..007`, `DISPATCH-001..005`, authentication, repository, revision,
+  upload, LFS, download, repository-ID, runtime/global-state, dependency,
+  packaging, portability, and redaction invariants.
+- Exact imports, symbols, object identities, method/helper signatures, CLI
+  dispatch, deterministic interaction, lazy completion, runtime initialization,
+  old-path patches, API arguments/results, temporary/state safety, exception
+  categories, output, and exit behavior remain unchanged.
+- CLI, SDK, service, transfer, LFS, lifecycle, infrastructure, distribution,
+  and Shell ownership and observable behavior remain structurally outside this
+  Issue.
 
 ### New Or Changed Invariants
 
-- `FLOOR-015`: CLI command implementations have exact command-domain owners
-  while the historical module, Click tree/schema, callback signatures,
-  completion/lazy behavior, deterministic interaction, and registered old-path
-  patch seams remain stable; ownership drift, placeholders, duplicates, facade
-  regrowth, or forbidden dependency directions fail closed.
-- `PKG-021`: source, default PEP 660 editable, wheel, and sdist surfaces include
-  exactly the delivered CLI command owner modules and historical `cli.py`
-  without repository leakage.
+- `FLOOR-016`: the historical `atomgit.api` path is a package facade with exact
+  class, singleton, symbols, signatures, import behavior, owner aliases, and
+  assignment/deletion/patch propagation; it contains no business implementation
+  and its structure/artifact debt cannot regress to the flat module.
+- `PKG-022`: source, default PEP 660 editable, wheel, and sdist surfaces include
+  exactly `atomgit/api/__init__.py`, exclude stale `atomgit/api.py`, and retain
+  installed-only provenance and both CLI/import entry paths.
 
 ### Focused Tests And Evidence
 
-- Add `tests/test_cli_command_ownership.py` for exact owner modules,
-  implementation provenance, Click root/group/leaf identity and callback
-  signatures, complete assignment/deletion/`patch.object` propagation,
-  non-owner negative cases, placeholder rejection, facade-debt tightening, and
-  API/CLI-facade non-migration.
-- Rerun exact CLI schema/dispatch/feature/surface, completion, update,
-  uninstall, authentication, repository, upload, download, configuration,
-  cache, global-state, redaction, import-order, structure, src-layout,
-  packaging, development-floor, public-import, and portability scripts.
+- Add `tests/test_api_facade_conversion.py` for package path/provenance,
+  facade-only AST content, exact class/singleton identity and signatures,
+  historical symbol inventory, representative assignment/deletion/patch
+  propagation across services/download/upload/LFS, CLI lazy use, and CLI facade
+  non-migration.
+- Update the prior ownership contracts only where their explicit
+  `api.py`-must-remain assertions become the newly authorized package facade.
+- Rerun exact ownership, structure, source-layout, public-import, import-order,
+  CLI schema/dispatch/behavior, packaging, artifact, development-floor,
+  dependency, security, global-state, and portability evidence.
 - Run final `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
-  `python -m pip check`, changed/new-file Black, isort, Ruff, and
-  `git diff --check`.
+  `python -m pip check`, changed/new-file Black, isort, Ruff, credential scan,
+  artifact audit, and `git diff --check`.
 - Controlled-remote evidence: `not applicable; observable remote behavior is
-  unchanged and live writes are not authorized for this ownership refactor`.
+  unchanged and live writes are not authorized for this structural migration`.
 
 ### Acceptance Criteria
 
-1. Every moved command implementation has one real command-domain owner; no
-   placeholder, duplicate implementation, or unowned production module remains.
-2. `atomgit.cli`, both executable entry paths, and the live Click command tree
-   preserve exact objects, schema, signatures, registration, help, completion,
-   lazy import, prompt, output, exception, redaction, and exit behavior.
-3. Historical dependency/helper assignment, deletion, and `patch.object` seams
-   reach all former runtime lookup sites and restore exact identities.
-4. Downstream API/service/utility/lifecycle/distribution calls retain exact
-   arguments and results, and API/CLI facade conversion remains excluded.
-5. Structure, source/editable/wheel/sdist, public import, test inventory, and
-   development-floor contracts discover the command owners and reject drift.
-6. The ledger remains monotonic at `26 capabilities`, at least `108 invariants`,
-   and at least `89 isolated pytest cases`.
+1. The flat `src/atomgit/api.py` is absent and the real
+   `src/atomgit/api/__init__.py` compatibility facade is the sole historical
+   `atomgit.api` implementation.
+2. Historical imports, module/class/singleton identities, public/private
+   symbols, method/helper signatures, and package/CLI references remain exact.
+3. Direct assignment, deletion, and `patch.object` at `atomgit.api` propagate
+   to representative and complete registered owner consumers and restore exact
+   identities.
+4. The facade contains no network/filesystem/retry/transfer/state business
+   implementation; all domain owners and the separate flat CLI module remain
+   unchanged except for required compatibility declarations.
+5. Structure, source/editable/wheel/sdist, public import, import order,
+   completion, exact inventory, and development-floor contracts fail closed on
+   stale flat paths, missing package artifacts, regrowth, or seam drift.
+6. The ledger remains monotonic at `26 capabilities`, at least `110 invariants`,
+   and at least `90 isolated pytest cases`.
 7. Focused tests, the complete offline baseline, supporting gates, and an
    independent review pass with no open P0/P1/P2/P3 finding before acceptance.
 
 ### Verification Evidence
 
-- Pre-edit complete baseline: `python tests/run_cli_baseline.py -> 88 passed in
-  82.65s (0:01:22)`.
-- Ownership regression on old implementation:
-  `tests/test_cli_command_ownership.py failed as expected because the
-  atomgit.commands owner package and all four owner modules were absent`.
-- Implementation and focused tests: `CLI ownership 13/13, CLI baseline guard
-  14/14, CLI feature/schema/dispatch 69/69, CLI surface 54/54, deterministic
-  refactor behavior 6/6, structure 13/13, packaging 13/13, src layout 6/6,
-  development floor 15/15, and wheel/source/editable/sdist smoke 36/36 passed.
-  Focused authentication, repository, upload, download, completion, update,
-  uninstall, and cache regressions also passed`.
-- Complete baseline: `after the initial implementation run passed 89/89 in
-  80.29s, the review-fix run passed 89/89 in 85.22s (0:01:25), and the final
-  pre-delivery acceptance run passed 89/89 in 81.76s (0:01:21)`.
-- Supporting gates: `python -m compileall -q ., python -m pip check,
-  changed/new-file Black --check, isort --check-only, Ruff, git diff --check,
-  credential-pattern scan, and artifact/status audit passed; no tracked build
-  artifact or credential was found`.
-- Independent review: `the first read-only review requested changes for two P2
-  evidence findings: incomplete affected-capability declarations and dynamic
-  historical patch propagation evidence that did not yet cover each command
-  owner category. Both were fixed; a fresh read-only re-review found no open
-  P0/P1/P2/P3 finding and returned APPROVED`.
+- Pre-edit complete baseline: `not rerun for this Issue yet; predecessor final
+  evidence is 89/89 and this Issue must produce a fresh post-change run`.
+- Failing pre-implementation contract: `tests/test_api_facade_conversion.py`
+  failed as expected because the flat `api.py` path and package facade were
+  absent; the failure established the migration boundary before edits.
+- Implementation and focused tests: `API facade 8/8; auth/repository 20/20;
+  download 15/15; upload 16/16; LFS 13/13; SDK 18/18; CLI ownership 13/13;
+  structure 13/13; src layout 6/6; public imports 8/8; import order 5/5;
+  packaging metadata 13/13; wheel/source/editable/sdist smoke 36/36`.
+- Complete baseline: `python tests/run_cli_baseline.py -> 90 passed in 86.77s
+  (0:01:26) after the final tooling-debt contract fix`.
+- Supporting gates: `python -m compileall -q ., python -m pip check, focused
+  Black --check, isort --check-only, Ruff, and git diff --check passed; wheel
+  and sdist contain the exact API package; no credential or tracked artifact
+  found`.
+- Independent review: `APPROVED after read-only review of the complete diff,
+  package/import/artifact contracts, historical symbol and patch seams,
+  locked dependencies, source and human documentation, and final 90-case
+  baseline. Review requested stale api.py/108-count documentation corrections;
+  those were fixed and the final 90/90 baseline reran successfully. No open
+  P0/P1/P2/P3 finding remains`.
 
 ### Residual Risks
 
-- Live AtomGit behavior will not be retested because this is an ownership-only
-  refactor and remote writes are not authorized.
+- Import-system differences between a module and package can affect
+  `__spec__`, `__path__`, relative imports, source provenance, and monkeypatch
+  behavior even when ordinary imports pass; focused source and installed
+  subprocess evidence is required.
+- The large historical private-symbol/patch surface is intentional compatibility
+  debt; this Issue preserves and makes it fail-closed rather than removing it.
+- Live AtomGit behavior will not be retested because the task is a
+  behavior-preserving facade migration and remote writes are not authorized.
 - Python 3.9 is represented by declared tooling and portability contracts in
   the current Python 3.10 conda environment.
-- Human acceptance: `the maintainer explicitly authorized self-testing,
-  acceptance, commit, and push on 2026-08-19; final acceptance gates passed`.
-- Delivery evidence: `task commit 6d98b92 (refactor(cli): extract command
-  ownership) was merged locally into yuto with --no-ff as bf0f8f2 (merge:
-  extract cli command ownership); only yuto was pushed. After fetch, local
-  yuto, github/yuto, and github/HEAD all resolved to
-  bf0f8f211a407bf9abb1f4130c33cc00e594241c. The local task branch was never
-  pushed`.
+- Human acceptance: `accepted on 2026-08-19 after the final self-test; the
+  complete 90-case baseline and all supporting gates passed, authorizing task
+  commit, local merge, and yuto-only push`.
+- Delivery evidence: `pending`.

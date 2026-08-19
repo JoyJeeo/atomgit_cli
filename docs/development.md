@@ -92,7 +92,7 @@ python tests/run_cli_baseline.py
 `.ai/TASK.md` 中激活一个 Issue。
 
 任务可以修改完成同一行为所必需的多个模块。例如一个 CLI 上传缺陷可能同时
-需要修改 `cli.py`、`api.py` 和对应测试；禁止的是无关重构，而不是跨越真实
+需要修改 `cli.py`、`api/__init__.py` 和对应测试；禁止的是无关重构，而不是跨越真实
 调用边界。
 
 ### Issue 分类

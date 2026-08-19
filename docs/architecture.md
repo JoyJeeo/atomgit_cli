@@ -10,7 +10,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 ```text
 安装入口
   |
-  +-- atomgit 命令 ----------> cli.py schema -----> commands/ -----> api.py
+  +-- atomgit 命令 ----------> cli.py schema -----> commands/ -> api/__init__.py
   |                               |                    |               |
   |                               v                    v               v
   |                          compatibility facades  command owners  huggingface_hub
@@ -24,7 +24,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 
 CLI 和 SDK 共享本地凭证，但不是同一业务实现：
 
-- CLI：`cli.py -> api.py`；
+- CLI：`cli.py -> api/__init__.py`；
 - SDK：历史 `atomgit_hub.py` facade 调用 `atomgit.sdk` 所有者函数。
 
 因此两侧上传、下载、repo ID 转换和异常行为可能发生漂移。
@@ -42,7 +42,7 @@ atomgit_cli/
 │   │   ├── __main__.py   # python -m atomgit 入口
 │   │   ├── cli.py        # 历史 Click schema、交互边界和兼容装配
 │   │   ├── commands/     # CLI 命令实现 owner
-│   │   ├── api.py        # CLI 使用的 AtomGit/HF 包装层
+│   │   ├── api/__init__.py # CLI 使用的 AtomGit/HF 兼容 facade
 │   │   └── ...           # 其余已登记生产模块
 │   └── atomgit_hub.py    # 顶层 SDK 兼容代理
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
@@ -55,7 +55,7 @@ atomgit_cli/
 downloads、uploads、repositories 和 datasets owner；
 `src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
 facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
-`api.py` 仍是历史具体客户端和全局单例所在模块；`cli.py` 仍是平面历史模块，
+`api/__init__.py` 是历史具体客户端和全局单例所在的兼容 facade；`cli.py` 仍是平面历史模块，
 保留 Click decorators、命令树、提示、输出、退出转换和懒加载装配。认证/配置、
 仓库/缓存、上传下载、更新/卸载及补全命令实现已迁入 `atomgit.commands`；
 owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
@@ -72,7 +72,7 @@ manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 
 和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
 `atomgit.api`。SDK 下载、上传、仓库、数据集、共享策略和异常转换已迁入
 `atomgit.sdk`，历史 `atomgit_hub` 模块只保留兼容导出和补丁传播；LFS
-policy/transfer 由 `atomgit.lfs.service` 持有，`api.py` 仅保留历史兼容导出和补丁传播。
+policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留历史兼容导出和补丁传播。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -182,7 +182,7 @@ GET 目标、在 DELETE 后再次 GET；只有后置请求返回 404 才成功�
 
 ## 4. 导入时全局配置
 
-`cli.py`、`api.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
+`cli.py`、`api/__init__.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
 `runtime.configure_hf_environment()`，统一设置：
 
 ```text

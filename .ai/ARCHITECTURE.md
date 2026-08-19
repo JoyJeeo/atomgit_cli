@@ -12,7 +12,7 @@ console script / python -m atomgit
         commands/ callbacks
                 |
                 v
-             api.py --------------------+
+             api/__init__.py -----------+
                 |                       |
                 v                       v
         huggingface_hub          config.py / utils.py
@@ -32,7 +32,7 @@ lightweight cli.py schema -> live Click candidates
 ```
 
 The CLI and SDK are parallel wrappers. `atomgit_hub.py` does not call
-`api.py`, so shared behavior can drift unless it is deliberately centralized
+`api/__init__.py`, so shared behavior can drift unless it is deliberately centralized
 or covered by shared contract tests.
 
 ## Modules
@@ -50,7 +50,8 @@ or covered by shared contract tests.
 - `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
   generation and atomic conda-environment hook management.
 - `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
-- `api.py`: historical CLI-facing concrete client and singleton; service,
+- `api/__init__.py`: historical CLI-facing concrete client and singleton facade;
+  service,
   download, upload, and LFS methods resolve from owned compatibility modules
   while the concrete class and patch facade remain historical.
 - `atomgit_hub.py`: historical facade for public HF-like Python SDK functions.
@@ -213,4 +214,6 @@ CLI authentication/configuration, repository/cache, transfer, update/uninstall,
 and completion implementations now live in `atomgit.commands`; `cli.py`
 retains the exact Click tree and resolves former runtime dependencies through
 its historical module object.
-API and CLI facade conversion remains isolated in later Issues.
+The API facade conversion is complete: `atomgit.api` is the package
+`api/__init__.py`, while CLI facade conversion remains isolated in a later
+Issue.

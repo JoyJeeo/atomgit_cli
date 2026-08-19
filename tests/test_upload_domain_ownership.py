@@ -223,7 +223,7 @@ def main():
     check(
         "the historical API class contains no moved upload method definitions",
         not (
-            _class_methods(source_texts["api"], "HuggingFaceAPI")
+            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
             & {"upload_folder", "upload_directory"}
         ),
     )
@@ -233,9 +233,9 @@ def main():
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api"]["max_lines"] < 3715
-        and LEGACY_FACADE_DEBT["api"]["max_functions"] < 60
-        and LEGACY_FACADE_DEBT["api"]["max_classes"] < 17,
+        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 3715
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 60
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] < 17,
     )
 
     placeholder = dict(source_texts)

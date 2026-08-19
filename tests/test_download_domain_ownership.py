@@ -176,7 +176,7 @@ def main():
     check(
         "the historical API class contains no moved download method definitions",
         not (
-            _class_methods(source_texts["api"], "HuggingFaceAPI")
+            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
             & {"download_repo", "download_file"}
         ),
     )
@@ -186,9 +186,9 @@ def main():
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api"]["max_lines"] < 5074
-        and LEGACY_FACADE_DEBT["api"]["max_functions"] < 110
-        and LEGACY_FACADE_DEBT["api"]["max_classes"] < 21,
+        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 5074
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 110
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] < 21,
     )
 
     placeholder = dict(source_texts)

@@ -1,3 +1,4 @@
+# ruff: noqa: F401 -- historical dependency and monkeypatch surface
 import errno  # noqa: F401 -- historical upload patch surface
 import hashlib  # noqa: F401 -- historical transfer patch surface
 import json
@@ -29,7 +30,7 @@ from urllib.parse import quote, urljoin, urlsplit  # noqa: F401
 import httpx
 
 try:
-    from .runtime import configure_hf_environment
+    from ..runtime import configure_hf_environment
 except ImportError:
     from runtime import configure_hf_environment
 
@@ -37,7 +38,7 @@ configure_hf_environment()
 
 # isort: off -- runtime policy must precede all Hugging Face imports.
 try:
-    from .cli_contracts import (  # noqa: F401
+    from ..cli_contracts import (  # noqa: F401
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
@@ -66,30 +67,30 @@ from huggingface_hub._local_folder import (  # noqa: E402
 from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402,F401
 
 try:
-    from .config import config  # noqa: F401
-    from .download import integrity as _download_integrity
-    from .download import manifest as _download_manifest
-    from .download import prune as _download_prune
-    from .download import resume as _download_resume
-    from .download import service as _download_service
-    from .download import transport as _download_transport
-    from .download.service import DownloadServiceMixin
-    from .lfs_pointer import (  # noqa: F401
+    from ..config import config  # noqa: F401
+    from ..download import integrity as _download_integrity
+    from ..download import manifest as _download_manifest
+    from ..download import prune as _download_prune
+    from ..download import resume as _download_resume
+    from ..download import service as _download_service
+    from ..download import transport as _download_transport
+    from ..download.service import DownloadServiceMixin
+    from ..lfs import service as _lfs_service
+    from ..lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
+    from ..lfs_pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
-    from .lfs import service as _lfs_service
-    from .lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
-    from .services import _delete_legacy_patch, _forward_legacy_patch
-    from .services import authentication as _authentication_service
-    from .services import repositories as _repository_service
-    from .services.authentication import (  # noqa: F401
+    from ..services import _delete_legacy_patch, _forward_legacy_patch
+    from ..services import authentication as _authentication_service
+    from ..services import repositories as _repository_service
+    from ..services.authentication import (  # noqa: F401
         _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
         AuthenticationServiceMixin,
     )
-    from .services.repositories import (  # noqa: F401
+    from ..services.repositories import (  # noqa: F401
         _ATOMGIT_V5_API_BASE,
         _ATOMGIT_V5_MAX_JSON_BYTES,
         RepositoryServiceMixin,
@@ -105,7 +106,7 @@ try:
         _repo_private_state,
         _sanitized_v5_api_error,
     )
-    from .utils import (  # noqa: F401
+    from ..utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
@@ -125,14 +126,14 @@ except ImportError:
     from download import service as _download_service
     from download import transport as _download_transport
     from download.service import DownloadServiceMixin
+    from lfs import service as _lfs_service
+    from lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
     from lfs_pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
-    from lfs import service as _lfs_service
-    from lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
     from services import _delete_legacy_patch, _forward_legacy_patch
     from services import authentication as _authentication_service
     from services import repositories as _repository_service
@@ -253,6 +254,7 @@ try:
         enable_progress_bars,
         filter_repo_objects,
     )
+
     try:
         from huggingface_hub.utils.tqdm import progress_bar_states
     except ImportError:
@@ -273,97 +275,13 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
         return items
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 try:
-    from .upload import errors as _upload_errors
-    from .upload import ordinary as _upload_ordinary
-    from .upload import projection as _upload_projection
-    from .upload import resumable as _upload_resumable
-    from .upload import service as _upload_service
-    from .upload.service import UploadServiceMixin
+    from ..upload import errors as _upload_errors
+    from ..upload import ordinary as _upload_ordinary
+    from ..upload import projection as _upload_projection
+    from ..upload import resumable as _upload_resumable
+    from ..upload import service as _upload_service
+    from ..upload.service import UploadServiceMixin
 except ImportError:
     from upload import errors as _upload_errors
     from upload import ordinary as _upload_ordinary
@@ -518,6 +436,7 @@ _LFS_PATCH_TARGETS = {
     for name in _LFS_OWNER_EXPORTS
 }
 
+
 class HuggingFaceAPI(
     AuthenticationServiceMixin,
     RepositoryServiceMixin,
@@ -528,10 +447,6 @@ class HuggingFaceAPI(
 
     def __init__(self):
         pass
-
-
-    
-
 
 
 _repository_service._atomgit_open_url = _atomgit_open_url
@@ -660,7 +575,11 @@ _DOWNLOAD_PATCH_TARGETS = {
         _download_resume,
         _download_transport,
     ),
-    "_atomgit_resolve_url": (_download_integrity, _download_resume, _download_transport),
+    "_atomgit_resolve_url": (
+        _download_integrity,
+        _download_resume,
+        _download_transport,
+    ),
     "_atomgit_resolve_url_raw": (
         _download_integrity,
         _download_resume,
@@ -792,7 +711,9 @@ for _patch_name, _download_targets in _DOWNLOAD_PATCH_TARGETS.items():
 
 for _patch_name, _upload_targets in _UPLOAD_PATCH_TARGETS.items():
     _existing_targets = _PATCH_TARGETS.get(_patch_name, ())
-    _PATCH_TARGETS[_patch_name] = tuple(dict.fromkeys((*_existing_targets, *_upload_targets)))
+    _PATCH_TARGETS[_patch_name] = tuple(
+        dict.fromkeys((*_existing_targets, *_upload_targets))
+    )
     _patch_value = globals()[_patch_name]
     for _patch_target in _upload_targets:
         setattr(_patch_target, _patch_name, _patch_value)

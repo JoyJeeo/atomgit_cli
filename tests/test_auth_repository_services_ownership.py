@@ -179,7 +179,10 @@ def main():
     moved_methods = set(AUTHENTICATION_METHODS) | set(REPOSITORY_METHODS)
     check(
         "the historical API class contains no moved method definitions",
-        not (_class_methods(source_texts["api"], "HuggingFaceAPI") & moved_methods),
+        not (
+            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            & moved_methods
+        ),
     )
     check(
         "every nested services module has exact services ownership",
@@ -187,9 +190,9 @@ def main():
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api"]["max_lines"] < 5496
-        and LEGACY_FACADE_DEBT["api"]["max_functions"] < 121
-        and LEGACY_FACADE_DEBT["api"]["max_classes"] <= 21,
+        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 5496
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 121
+        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] <= 21,
     )
 
     placeholder = dict(source_texts)
@@ -213,7 +216,8 @@ def main():
     check(
         "upload methods remain outside repository service ownership",
         not (
-            _class_methods(source_texts["api"], "HuggingFaceAPI") & transfer_definitions
+            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            & transfer_definitions
         )
         and transfer_definitions
         <= _class_methods(source_texts["upload.service"], "UploadServiceMixin")

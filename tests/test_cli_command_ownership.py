@@ -387,9 +387,8 @@ def main():
     cli_source = inspect.getsource(cli_module)
     check(
         "API and CLI facade conversion remain later work",
-        (SRC_DIRECTORY / "atomgit" / "api.py").is_file()
+        (SRC_DIRECTORY / "atomgit" / "api" / "__init__.py").is_file()
         and (SRC_DIRECTORY / "atomgit" / "cli.py").is_file()
-        and not (SRC_DIRECTORY / "atomgit" / "api").exists()
         and not (SRC_DIRECTORY / "atomgit" / "cli").exists()
         and 'api = _LazyObject("api", "api")' in cli_source,
     )

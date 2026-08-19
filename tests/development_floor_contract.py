@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 108
+BASELINE_INVARIANT_COUNT = 110
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -165,6 +165,12 @@ CAPABILITY_REGISTRY = {
                 "test_cli_command_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-016",
+                "The historical API path is a package facade with exact identities, signatures, import behavior, patch seams, and no business implementation.",
+                "test_api_facade_conversion.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -173,6 +179,7 @@ CAPABILITY_REGISTRY = {
             "test_environment_lifecycle_ownership.py",
             "test_cli_baseline_guard.py",
             "test_cli_command_ownership.py",
+            "test_api_facade_conversion.py",
             "test_cli_feature_baseline.py",
             "test_packaging_metadata.py",
             "test_src_layout_migration.py",
@@ -1080,9 +1087,17 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-022",
+                "Source, editable, wheel, and sdist surfaces include exactly the API package facade and exclude the stale flat API module without repository leakage.",
+                "test_api_facade_conversion.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
+            "test_api_facade_conversion.py",
             "test_cli_command_ownership.py",
             "test_deploy_script.py",
             "test_download_domain_ownership.py",
@@ -1229,10 +1244,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "108 条可观察行为不变量",
-        "89 个隔离 pytest case",
+        "110 条可观察行为不变量",
+        "90 个隔离 pytest case",
     ),
-    "docs/testing.md": ("89 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("90 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 
