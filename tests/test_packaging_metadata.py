@@ -108,6 +108,11 @@ def main():
         == {
             "setup.py",
             "src/atomgit/completion.py",
+            "src/atomgit/commands/__init__.py",
+            "src/atomgit/commands/authentication.py",
+            "src/atomgit/commands/lifecycle.py",
+            "src/atomgit/commands/repositories.py",
+            "src/atomgit/commands/transfers.py",
             "src/atomgit/cli_contracts.py",
             "src/atomgit/config.py",
             "src/atomgit/download/__init__.py",
@@ -161,6 +166,7 @@ def main():
             "tests/test_upload_domain_ownership.py",
             "tests/test_lfs_domain_ownership.py",
             "tests/test_sdk_domain_ownership.py",
+            "tests/test_cli_command_ownership.py",
         },
         repr(CLEAN_POLICY_FILES),
     )

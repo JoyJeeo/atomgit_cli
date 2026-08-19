@@ -448,6 +448,7 @@ LEAF_DISPATCH_PATHS = (
 BASELINE_TEST_GROUPS = {
     "development-floor": (
         "test_auth_repository_services_ownership.py",
+        "test_cli_command_ownership.py",
         "test_development_floor.py",
         "test_environment_lifecycle_ownership.py",
         "test_infrastructure_utils_ownership.py",
@@ -558,7 +559,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 23
 BASELINE_PUBLIC_PARAMETER_COUNT = 48
 BASELINE_LEAF_COMMAND_COUNT = 18
-BASELINE_TEST_SCRIPT_COUNT = 88
+BASELINE_TEST_SCRIPT_COUNT = 89
 
 
 def _normalize_default(value):

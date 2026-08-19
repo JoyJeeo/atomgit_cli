@@ -10,10 +10,10 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 ```text
 安装入口
   |
-  +-- atomgit 命令 ----------> cli.py ----------> api.py
-  |                               |                  |
-  |                               v                  v
-  |                          compatibility facades  huggingface_hub
+  +-- atomgit 命令 ----------> cli.py schema -----> commands/ -----> api.py
+  |                               |                    |               |
+  |                               v                    v               v
+  |                          compatibility facades  command owners  huggingface_hub
   |
   +-- python -m atomgit -----> __main__.py -----> cli.py
   |
@@ -40,7 +40,8 @@ atomgit_cli/
 │   ├── atomgit/          # atomgit 包；保留现有平面模块形态
 │   │   ├── __init__.py   # 包元数据和公开导出
 │   │   ├── __main__.py   # python -m atomgit 入口
-│   │   ├── cli.py        # Click 命令树和用户交互
+│   │   ├── cli.py        # 历史 Click schema、交互边界和兼容装配
+│   │   ├── commands/     # CLI 命令实现 owner
 │   │   ├── api.py        # CLI 使用的 AtomGit/HF 包装层
 │   │   └── ...           # 其余已登记生产模块
 │   └── atomgit_hub.py    # 顶层 SDK 兼容代理
@@ -54,7 +55,10 @@ atomgit_cli/
 downloads、uploads、repositories 和 datasets owner；
 `src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
 facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
-`api.py` 仍是历史具体客户端和全局单例所在模块，`cli.py` 仍保持单体形态。
+`api.py` 仍是历史具体客户端和全局单例所在模块；`cli.py` 仍是平面历史模块，
+保留 Click decorators、命令树、提示、输出、退出转换和懒加载装配。认证/配置、
+仓库/缓存、上传下载、更新/卸载及补全命令实现已迁入 `atomgit.commands`；
+owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
 `utils.py`、`config.py` 和 `runtime.py`
 保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
@@ -86,6 +90,9 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 `tests/test_auth_repository_services_ownership.py` 锁定认证/仓库 owner provenance、
 历史 `HuggingFaceAPI` 类和全局 `api` 身份、方法/私有 helper 签名与旧路径 patch
 传播，并明确阻止传输实现进入 services。
+`tests/test_cli_command_ownership.py` 锁定四个 CLI command owner、18 个叶命令的
+精确 callback 签名和 Click schema、历史上下文委派，以及 API/CLI facade 不提前
+转换。
 `tests/test_download_domain_ownership.py` 锁定 CLI API 下载 owner provenance、历史类/
 单例/方法/helper 身份和旧路径赋值/删除传播，并明确阻止 SDK 下载及上传 LFS helper
 提前进入 download 包。
