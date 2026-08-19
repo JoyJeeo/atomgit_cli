@@ -225,7 +225,7 @@ def main():
         ),
         (
             "SDK upload_folder production kwargs bind the locked signature",
-            REPOSITORY_ROOT / "src" / "atomgit" / "atomgit_hub.py",
+            REPOSITORY_ROOT / "src" / "atomgit" / "sdk" / "uploads.py",
             "upload_folder",
             "upload_kwargs",
             upload_folder,

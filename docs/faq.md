@@ -28,7 +28,8 @@ conda activate atomgit_cli
 
 ## CLI 和 SDK 是同一套实现吗？
 
-不是。CLI 主要走 `cli.py -> api.py`，Python SDK 走 `atomgit_hub.py`。它们
+不是。CLI 主要走 `cli.py -> api.py`，Python SDK 通过历史 `atomgit_hub.py`
+facade 进入 `atomgit.sdk`。它们
 共享配置，但上传、下载和错误处理存在平行实现，因此修改公共能力时必须检查
 两侧是否产生行为漂移。
 

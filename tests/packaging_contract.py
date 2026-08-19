@@ -43,6 +43,7 @@ SETUPTOOLS_LAYOUT = {
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.lfs",
+        "atomgit.sdk",
         "atomgit.services",
         "atomgit.upload",
     ],
@@ -73,19 +74,19 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 84,
-        "changes": 502,
-        "digest": "3a4bfd9762a74f50ba3af67570749974d94965287eee7d3070065a445dba677c",
+        "files": 82,
+        "changes": 473,
+        "digest": "fe1c09575560ea6bad1e0c00883e8a212ae1169530e9a58c50c4cacc3b6a4990",
     },
     "isort": {
-        "files": 87,
-        "changes": 106,
-        "digest": "c34bb5ffd816b0b6a0a9ad683a3ac69d4d751c6cd57c456a8d5a1b9a4750aa85",
+        "files": 85,
+        "changes": 96,
+        "digest": "eeb8eaeaad74dfaeccf1383031537804a56ed7a97305bbb7a2c368dd0dcaee88",
     },
     "ruff": {
-        "files": 19,
-        "changes": 216,
-        "digest": "c10ae1ddde06109b2eb3d3dcd1b9aa9ba5248706fadec2e477a96c1762a7b57b",
+        "files": 18,
+        "changes": 214,
+        "digest": "0bd119f6a0c70442d0489d09443ae36ef5e83fc5b97a73150d4306a379af53f9",
     },
 }
 
@@ -123,6 +124,13 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/upload/service.py",
     "src/atomgit/lfs/__init__.py",
     "src/atomgit/lfs/service.py",
+    "src/atomgit/sdk/__init__.py",
+    "src/atomgit/sdk/common.py",
+    "src/atomgit/sdk/datasets.py",
+    "src/atomgit/sdk/downloads.py",
+    "src/atomgit/sdk/errors.py",
+    "src/atomgit/sdk/repositories.py",
+    "src/atomgit/sdk/uploads.py",
     "src/atomgit/runtime.py",
     "src/atomgit/uninstaller.py",
     "src/atomgit/utils.py",
@@ -136,6 +144,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_download_domain_ownership.py",
     "tests/test_upload_domain_ownership.py",
     "tests/test_lfs_domain_ownership.py",
+    "tests/test_sdk_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
 }
 

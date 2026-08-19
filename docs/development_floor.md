@@ -13,8 +13,8 @@
 当前完整离线基线包含：
 
 - 26 个稳定能力 ID；
-- 103 条可观察行为不变量；
-- 87 个隔离 pytest case，每个 case 对应一个可直接执行的
+- 105 条可观察行为不变量；
+- 88 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
 
@@ -35,6 +35,8 @@ python tests/run_cli_baseline.py
 sdist 的模块内容也属于同一永久合同。已交付的 infrastructure owner 与历史
 utils/config/runtime facade 还锁定实现来源、对象身份和 patch 接缝；其他批准的目标
 目录不是当前实现，不能据此提前创建空包或宣称迁移已经完成。
+SDK owner 与两个历史 `atomgit_hub` facade 还锁定公开/私有函数身份、签名、
+依赖补丁传播以及 source、editable、wheel、sdist 的精确模块集合。
 
 ## 能力登记册
 

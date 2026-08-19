@@ -895,7 +895,7 @@ atomgit/
 ├── .ai/                # AI 开发、测试、评审与任务规范
 ├── docs/               # 架构、开发、测试和发布文档
 ├── src/
-│   ├── atomgit/         # CLI、SDK实现与现有平面生产模块
+│   ├── atomgit/         # CLI、SDK domain 与兼容 facade
 │   └── atomgit_hub.py   # 历史顶层SDK兼容代理
 ├── requirements.txt     # 依赖包
 ├── setup.py             # 包安装配置

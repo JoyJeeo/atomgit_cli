@@ -17,7 +17,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   |
   +-- python -m atomgit -----> __main__.py -----> cli.py
   |
-  +-- import atomgit_hub ----> atomgit_hub.py ---> huggingface_hub/datasets
+  +-- import atomgit_hub ----> atomgit_hub.py ---> sdk/ ---> huggingface_hub/datasets
   |
   +-- Zsh Tab ---------------> 轻量 cli schema -> completion.py
 ```
@@ -25,7 +25,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 CLI 和 SDK 共享本地凭证，但不是同一业务实现：
 
 - CLI：`cli.py -> api.py`；
-- SDK：直接调用 `atomgit_hub.py` 中的函数。
+- SDK：历史 `atomgit_hub.py` facade 调用 `atomgit.sdk` 所有者函数。
 
 因此两侧上传、下载、repo ID 转换和异常行为可能发生漂移。
 
@@ -50,9 +50,10 @@ atomgit_cli/
 └── deploy.sh             # 本地构建、安装和 checksum 脚本
 ```
 
-仓库采用标准 `src/` 布局。SDK 实现只存在于
-`src/atomgit/atomgit_hub.py`；`src/atomgit_hub.py` 只为历史
-`import atomgit_hub` 提供读写转发，因此现有 monkeypatch 接缝仍指向同一实现。
+仓库采用标准 `src/` 布局。SDK 实现位于 `src/atomgit/sdk/` 的 common、errors、
+downloads、uploads、repositories 和 datasets owner；
+`src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
+facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
 `api.py` 仍是历史具体客户端和全局单例所在模块，`cli.py` 仍保持单体形态。
 `utils.py`、`config.py` 和 `runtime.py`
 保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
@@ -65,8 +66,9 @@ patch 接缝。认证和仓库 V5 管理实现已下沉到 `atomgit.services` �
 manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 接缝仍位于
 `atomgit.api`。CLI API upload 的 service、ordinary、resumable、projection、errors
 和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
-`atomgit.api`。SDK 下载/upload 仍由 `atomgit_hub.py` 持有，LFS policy/transfer
-现在由 `atomgit.lfs.service` 持有，`api.py` 仅保留历史兼容导出和补丁传播。
+`atomgit.api`。SDK 下载、上传、仓库、数据集、共享策略和异常转换已迁入
+`atomgit.sdk`，历史 `atomgit_hub` 模块只保留兼容导出和补丁传播；LFS
+policy/transfer 由 `atomgit.lfs.service` 持有，`api.py` 仅保留历史兼容导出和补丁传播。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -89,6 +91,9 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 提前进入 download 包。
 `tests/test_upload_domain_ownership.py` 锁定 CLI API upload owner provenance、历史类/
 单例/方法/helper 身份、完整旧路径赋值/删除传播、LFS/SDK 非迁移边界和构件注册。
+`tests/test_sdk_domain_ownership.py` 锁定 SDK owner provenance、两个历史
+`atomgit_hub` 路径及 `atomgit` 导出的函数身份/签名、旧路径依赖赋值与删除传播，
+并明确阻止 CLI API、CLI 命令和 LFS 实现迁入 SDK 包。
 
 ## 3. 入口和命令树
 

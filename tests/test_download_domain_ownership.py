@@ -68,6 +68,14 @@ def _class_methods(source, class_name):
     return set()
 
 
+def _top_level_definitions(source):
+    return {
+        node.name
+        for node in ast.parse(source).body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+
+
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
@@ -200,14 +208,16 @@ def main():
         repr(errors),
     )
 
-    sdk_source = source_texts["atomgit_hub"]
+    sdk_download_source = source_texts["sdk.downloads"]
+    download_definitions = set().union(
+        *(_top_level_definitions(source_texts[name]) for name in DOWNLOAD_MODULES)
+    )
     lfs_source = source_texts["lfs.service"]
     check(
         "SDK download and LFS helpers remain outside the download package",
-        all(
-            marker in sdk_source
-            for marker in ("def snapshot_download(", "def download_file(")
-        )
+        {"snapshot_download", "download_file"}
+        <= _top_level_definitions(sdk_download_source)
+        and not ({"snapshot_download", "download_file"} & download_definitions)
         and "def _download_remote_gitattributes(" in lfs_source,
     )
 

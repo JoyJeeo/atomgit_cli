@@ -259,12 +259,13 @@ def main():
     upload_definitions = set().union(
         *(_top_level_definitions(source_texts[name]) for name in UPLOAD_MODULES)
     )
-    sdk_source = source_texts["atomgit_hub"]
+    sdk_upload_definitions = _top_level_definitions(source_texts["sdk.uploads"])
     check(
         "LFS and SDK ownership remain outside the upload package",
         LFS_BOUNDARY_DEFINITIONS <= lfs_definitions
         and not (LFS_BOUNDARY_DEFINITIONS & upload_definitions)
-        and "def upload_folder(" in sdk_source,
+        and "upload_folder" in sdk_upload_definitions
+        and "upload_folder" not in upload_definitions,
     )
 
     passed = sum(condition for _, condition, _ in results)
