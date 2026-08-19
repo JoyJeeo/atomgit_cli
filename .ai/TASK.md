@@ -12,8 +12,8 @@ Status: inactive
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to the base commit before branch creation`
 - Task branch: `codex/lfs-domain-ownership` (local only; never push)
-- Current HEAD: `yuto merge a2275c6; final delivery record is included in this
-  handoff update`
+- Current HEAD: `yuto final delivery line; merge and final delivery commits are
+  recorded below`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `clean on yuto before the final delivery record commit`
 - Last completed action: `created task commit 7f7074d, merged it into yuto as
