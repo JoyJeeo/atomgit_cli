@@ -136,6 +136,8 @@ def main():
             "src/atomgit/lifecycle/environment.py",
             "src/atomgit/lifecycle/managed_paths.py",
             "src/atomgit/lifecycle/uninstall.py",
+            "src/atomgit/lfs/__init__.py",
+            "src/atomgit/lfs/service.py",
             "tests/test_environment_lifecycle_ownership.py",
             "tests/test_download_domain_ownership.py",
             "src/atomgit/services/__init__.py",
@@ -150,6 +152,7 @@ def main():
             "src/atomgit/upload/resumable.py",
             "src/atomgit/upload/service.py",
             "tests/test_upload_domain_ownership.py",
+            "tests/test_lfs_domain_ownership.py",
         },
         repr(CLEAN_POLICY_FILES),
     )

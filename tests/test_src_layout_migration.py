@@ -55,6 +55,8 @@ PACKAGE_MODULES = {
     "upload/projection.py",
     "upload/resumable.py",
     "upload/service.py",
+    "lfs/__init__.py",
+    "lfs/service.py",
 }
 SHIM_PATH = REPOSITORY_ROOT / "src" / "atomgit_hub.py"
 EXPECTED_ROOT_PYTHON = {"setup.py"}

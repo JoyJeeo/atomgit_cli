@@ -201,14 +201,14 @@ def main():
     )
 
     sdk_source = source_texts["atomgit_hub"]
-    api_source = source_texts["api"]
+    lfs_source = source_texts["lfs.service"]
     check(
-        "SDK download and upload LFS helpers remain outside the download package",
+        "SDK download and LFS helpers remain outside the download package",
         all(
             marker in sdk_source
             for marker in ("def snapshot_download(", "def download_file(")
         )
-        and "def _download_remote_gitattributes(" in api_source,
+        and "def _download_remote_gitattributes(" in lfs_source,
     )
 
     passed = sum(condition for _, condition, _ in results)

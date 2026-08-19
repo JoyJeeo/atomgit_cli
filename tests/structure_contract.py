@@ -49,6 +49,8 @@ PRODUCTION_MODULE_OWNERS = {
     "lifecycle.environment": "lifecycle",
     "lifecycle.managed_paths": "lifecycle",
     "lifecycle.uninstall": "lifecycle",
+    "lfs.__init__": "lfs",
+    "lfs.service": "lfs",
     "services.__init__": "services",
     "services.authentication": "services",
     "services.repositories": "services",
@@ -88,6 +90,7 @@ CURRENT_INTERNAL_EDGES = {
     ("api", "cli_contracts"),
     ("api", "config"),
     ("api", "download.service"),
+    ("api", "lfs.service"),
     ("api", "lfs_pointer"),
     ("api", "runtime"),
     ("api", "services.authentication"),
@@ -163,7 +166,7 @@ CURRENT_INTERNAL_EDGES = {
 }
 
 LEGACY_FACADE_DEBT = {
-    "api": {"max_lines": 2086, "max_functions": 26, "max_classes": 12},
+    "api": {"max_lines": 853, "max_functions": 0, "max_classes": 1},
     "atomgit_hub": {"max_lines": 734, "max_functions": 10, "max_classes": 0},
     "cli": {"max_lines": 908, "max_functions": 26, "max_classes": 1},
     "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
@@ -272,6 +275,8 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/upload/projection.py",
     "atomgit/upload/resumable.py",
     "atomgit/upload/service.py",
+    "atomgit/lfs/__init__.py",
+    "atomgit/lfs/service.py",
     "atomgit/exceptions.py",
     "atomgit/lfs_pointer.py",
     "atomgit/release.py",
@@ -322,6 +327,8 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/upload/projection.py",
     "src/atomgit/upload/resumable.py",
     "src/atomgit/upload/service.py",
+    "src/atomgit/lfs/__init__.py",
+    "src/atomgit/lfs/service.py",
     "src/atomgit/exceptions.py",
     "src/atomgit/lfs_pointer.py",
     "src/atomgit/release.py",

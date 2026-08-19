@@ -1,42 +1,39 @@
 # Current Issue Contract
 
-Status: inactive
+Status: active
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
-  verified`
+- Phase: `human acceptance received; final verification and delivery`
 - Base branch: `yuto`
-- Base commit: `ddab1dbb0a7657db395e966a8aaf8f5ed4d8cf73`
+- Base commit: `d6c692d`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to the base commit before branch creation`
-- Task branch: `codex/upload-domain-ownership` (local only; never push)
-- Current HEAD: `6fa4673e913f1ccf40a132d801709337316dbd94`
+- Task branch: `codex/lfs-domain-ownership` (local only; never push)
+- Current HEAD: `codex/lfs-domain-ownership at d6c692d`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean on yuto before this final delivery record commit`
-- Task commit: `ba451e31e4f1396486ea7db5eef39b84d3f08aef`
-- Local yuto merge: `6fa4673e913f1ccf40a132d801709337316dbd94`
-- Verified remote yuto: `6fa4673e913f1ccf40a132d801709337316dbd94`
-- Last completed action: `created the cohesive task commit, merged it into
-  yuto with --no-ff, pushed only yuto, fetched github/yuto, and verified local
-  and remote yuto at 6fa4673`
-- Next exact action: `none for this completed Issue; wait for an explicit new
-  development request before activating another Issue`
+- Worktree state: `dirty with the complete LFS Domain implementation and
+  contract changes; continuation remains in this worktree`
+- Last completed action: `extracted LFS policy, transfer recovery, attributes,
+  and event/error ownership into atomgit.lfs.service; added ownership,
+  structure, artifact, packaging, src-layout, and development-floor contracts;
+  complete baseline and review passed`
+- Next exact action: `run the final complete baseline, commit the task branch,
+  merge locally into yuto, push only yuto, fetch and verify github/yuto, then
+  record the final delivery`
 - Blockers: `none`
 
-Delivery evidence: task commit `ba451e3`; local no-ff merge `6fa4673`; remote
-verification resolved `github/yuto` and `github/HEAD` to
-`6fa4673e913f1ccf40a132d801709337316dbd94`. The task branch remained local and
-was never pushed. No remote Issue/PR, tag, Release, publication, live AtomGit
-write, credential mutation, deletion, or upstream-main change was performed.
+The predecessor Upload Domain Issue is complete, accepted, committed, locally
+merged, pushed, and remotely verified at `d6c692d`. Its task branch remained
+local and was never pushed.
 
 The predecessor Download Domain Issue is complete, accepted, committed, locally
 merged, pushed, and remotely verified. Its task commit is `25e145d`, local
 merge is `22de896`, final delivery record is `ddab1db`, and local/remote `yuto`
 both resolved to `ddab1db` before this task branch was created.
 
-## Active Issue
+## Previous Completed Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-REFACTOR-UPLOAD-DOMAIN-OWNERSHIP`
@@ -102,7 +99,9 @@ both resolved to `ddab1db` before this task branch was created.
   LFS-flow replacement. Those definitions are approved program step 9 and
   remain structurally in `atomgit.api` during this Issue; moved upload code may
   consume them only through explicit compatibility seams.
-- `src/atomgit/lfs_pointer.py` remains the current canonical pointer owner.
+- `src/atomgit/lfs/service.py` now owns LFS policy, transfer recovery,
+  attributes, and error/event orchestration; `src/atomgit/lfs_pointer.py`
+  remains the canonical pointer owner.
   `src/atomgit/atomgit_hub.py` owns SDK upload/download/repository/dataset
   behavior and is approved program step 10.
 - Existing tests assign old-path dependencies and helpers on `atomgit.api`,
@@ -299,3 +298,106 @@ both resolved to `ddab1db` before this task branch was created.
 - Boundary: `do not use any other repository for development testing; do not
   delete, publish, or perform unrelated remote writes; keep credentials out of
   logs and commits`
+
+## Active Issue
+
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-REFACTOR-LFS-DOMAIN-OWNERSHIP`
+- Title: `Extract LFS ownership behind the historical API and upload paths`
+- Primary type: `refactoring`
+- Secondary types: `compatibility`, `testing`, `security`, `distribution`,
+  `documentation`
+- Priority: `P2`
+- Observable objective: `move LFS transfer/recovery, preupload policy, safe
+  pattern validation, remote .gitattributes transaction, canonical pointer,
+  and LFS error/event policy into real lfs-domain modules while preserving
+  historical atomgit.api symbols, concrete class and singleton surfaces,
+  method behavior, module-object patch seams, CLI outcomes, SDK boundary, and
+  locked huggingface-hub behavior`
+- User impact: `none by design; internal ownership migration only`
+
+### Authorization And Delivery
+
+- User authorization: `the maintainer explicitly requested continued
+  development after the accepted Upload Domain delivery; the persisted
+  approved capability sequence names LFS Domain as step 9; on 2026-08-19 the
+  maintainer explicitly requested self-testing, acceptance, commit, and push`
+- Approved program step: `9. LFS Domain`
+- Accepted conditions:
+  1. `LFS modules are created only as their real implementation moves`
+  2. `atomgit.api.HuggingFaceAPI and atomgit.api.api remain the historical
+     concrete class and singleton surfaces`
+  3. `old-path direct, private, dependency-module, assignment, deletion, and
+     patch.object seams reach the same former LFS resolution sites`
+  4. `LFS mode selection, bounded preupload retry, attributes safety and
+     concurrency, slow-flow recovery, canonical pointer bytes, reconciliation,
+     cleanup, timeout/progress state, error redaction, and CLI/SDK outcomes
+     remain unchanged`
+  5. `SDK upload implementation, CLI command ownership, API/CLI facade
+     conversion, lifecycle, distribution, and unrelated upload/download
+     behavior remain outside this Issue`
+- Authorized local actions: `edit task-owned source, packaging metadata,
+  tests, registries, AI and human documentation; inspect locked dependencies;
+  build temporary artifacts; run offline checks; perform independent review`
+- Unauthorized actions: `remote Issue/PR creation or transition, task branch
+  push, tag or Release mutation, publication, live AtomGit writes, credential
+  mutation, deletion, or upstream main changes`
+- Delivery mode: `local task branch -> focused and complete offline
+  verification -> independent review -> human acceptance -> cohesive
+  conventional commit; merge/push require explicit delivery authorization`
+
+### Scope And Compatibility
+
+- In scope: `extract every LFS definition currently owned by api.py or
+  lfs_pointer.py into non-placeholder lfs modules; preserve exact historical
+  names, signatures, identities, imports, dependency signatures, child-process
+  isolation, global-state restoration, pointer verification, and error
+  redaction; update structure, artifact, public-import, development-floor, and
+  architecture/testing contracts`
+- Out of scope: `move SDK upload/download, change HF or AtomGit dependency
+  versions, redesign LFS behavior, perform live writes, convert api.py or cli.py
+  into packages, or remove the cli -> api compatibility edge`
+- Affected Capability IDs: `FLOOR-REGISTRY`, `UPLOAD-LFS`,
+  `UPLOAD-LFS-RECOVERY`, `UPLOAD-RESUMABLE`, `UPLOAD-FOLDER`, `UPLOAD-FILE`,
+  `GLOBAL-STATE`, `ERROR-REDACTION`, `DEPENDENCY-CONTRACT`, `PACKAGING`,
+  `PORTABILITY`
+- Protected Existing Invariants: `all existing 103 invariants, especially
+  FLOOR-005..012, LFS-001..003, LFSREC-001..002, resumable commit/recovery,
+  dependency, global-state, redaction, packaging, portability, and historical
+  API/upload patch-surface invariants`
+- New Or Changed Invariants: `FLOOR-013: LFS implementations have exact
+  domain owners while historical API, pointer, upload, SDK, dependency-module,
+  assignment, deletion, and patch seams remain stable; ownership drift,
+  placeholders, duplicate implementations, forbidden dependency directions,
+  or facade regrowth fail closed`
+- Focused tests and evidence: `add test_lfs_domain_ownership.py covering
+  exact owner modules, implementation provenance, historical symbols and
+  signatures, full assignment/deletion/module-object patch seams, negative
+  ownership cases, LFS/SDK non-migration, structure and artifact discovery;
+  rerun all registered LFS, resumable, upload-boundary, global-state,
+  redaction, dependency, portability, packaging, and development-floor tests`
+- Complete-baseline evidence: `python tests/run_cli_baseline.py is mandatory
+  after implementation and every fix; also run compileall, pip check,
+  git diff --check, changed-file Black/isort/Ruff, and source/editable/wheel/
+  sdist smoke checks`
+- Residual risks: `live AtomGit behavior remains unchanged and is not required
+  for this ownership-only migration; Python 3.9 portability remains covered
+  by declared/tooling contracts in the current Python 3.10 environment`
+
+### Verification Evidence
+
+- Focused LFS regressions: `test_auto_configure_lfs.py 41/41,
+  test_lfs_preupload_policy.py 89/89, test_lfs_slow_flow_recovery.py 28/28,
+  test_canonical_lfs_pointer.py 24/24, test_resumable_commit_policy.py 51/51,
+  test_lfs_domain_ownership.py 13/13`
+- Ownership and supporting contracts: `download ownership 15/15, upload
+  ownership 16/16, structure 13/13, src layout 6/6, packaging 13/13,
+  development floor 15/15, CLI baseline guard 14/14`
+- Complete baseline: `python tests/run_cli_baseline.py -> 87 passed in
+  78.13s (0:01:18)`
+- Supporting gates: `python -m compileall -q ., python -m pip check, changed
+  file Black/isort/Ruff, and git diff --check passed`
+- Independent review: `read-only review confirmed one real LFS owner,
+  removed duplicate API definitions, exact patch seams, no SDK or upload
+  ownership regression, registered dependency/artifact surfaces, and no open
+  P0/P1/P2/P3 finding; verdict APPROVED`
