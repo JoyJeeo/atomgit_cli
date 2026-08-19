@@ -281,7 +281,7 @@ def main():
         "CLI API and LFS implementation remain outside the SDK package",
         "class HuggingFaceAPI(" in source_texts["api.__init__"]
         and "def _configure_remote_lfs_attributes(" in source_texts["lfs.service"]
-        and "def cli(" in source_texts["cli"],
+        and "def cli(" in source_texts["cli.__init__"],
     )
 
     passed = sum(condition for _, condition, _ in results)

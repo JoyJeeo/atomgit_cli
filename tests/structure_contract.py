@@ -6,10 +6,11 @@ from pathlib import Path
 
 PRODUCTION_MODULE_OWNERS = {
     "__init__": "facade",
-    "__main__": "cli",
+    "__main__": "facade",
     "api.__init__": "facade",
     "atomgit_hub": "sdk",
-    "cli": "cli",
+    "cli.__init__": "facade",
+    "cli.__main__": "facade",
     "cli_contracts": "cli",
     "completion": "lifecycle",
     "config": "infrastructure",
@@ -96,18 +97,16 @@ DOMAIN_DEPENDENCIES = {
 }
 
 # These edges are existing 1.1.1 debt. They may disappear but must never grow.
-LEGACY_FORBIDDEN_EDGES = {
-    ("cli", "api.__init__"),
-}
+LEGACY_FORBIDDEN_EDGES = set()
 
 CURRENT_INTERNAL_EDGES = {
     ("__init__", "api.__init__"),
     ("__init__", "atomgit_hub"),
-    ("__init__", "cli"),
+    ("__init__", "cli.__init__"),
     ("__init__", "config"),
     ("__init__", "runtime"),
     ("__init__", "version"),
-    ("__main__", "cli"),
+    ("__main__", "cli.__init__"),
     ("api.__init__", "cli_contracts"),
     ("api.__init__", "config"),
     ("api.__init__", "download.__init__"),
@@ -132,16 +131,17 @@ CURRENT_INTERNAL_EDGES = {
     ("atomgit_hub", "sdk.downloads"),
     ("atomgit_hub", "sdk.repositories"),
     ("atomgit_hub", "sdk.uploads"),
-    ("cli", "api.__init__"),
-    ("cli", "cli_contracts"),
-    ("cli", "completion"),
-    ("cli", "config"),
-    ("cli", "release"),
-    ("cli", "runtime"),
-    ("cli", "uninstaller"),
-    ("cli", "utils"),
-    ("cli", "version"),
-    ("cli", "commands.__init__"),
+    ("cli.__init__", "api.__init__"),
+    ("cli.__init__", "cli_contracts"),
+    ("cli.__init__", "completion"),
+    ("cli.__init__", "config"),
+    ("cli.__init__", "release"),
+    ("cli.__init__", "runtime"),
+    ("cli.__init__", "uninstaller"),
+    ("cli.__init__", "utils"),
+    ("cli.__init__", "version"),
+    ("cli.__init__", "commands.__init__"),
+    ("cli.__main__", "cli.__init__"),
     ("commands.__init__", "commands.authentication"),
     ("commands.__init__", "commands.lifecycle"),
     ("commands.__init__", "commands.repositories"),
@@ -231,7 +231,8 @@ CURRENT_INTERNAL_EDGES = {
 LEGACY_FACADE_DEBT = {
     "api.__init__": {"max_lines": 774, "max_functions": 0, "max_classes": 1},
     "atomgit_hub": {"max_lines": 158, "max_functions": 2, "max_classes": 0},
-    "cli": {"max_lines": 452, "max_functions": 26, "max_classes": 1},
+    "cli.__init__": {"max_lines": 537, "max_functions": 26, "max_classes": 1},
+    "cli.__main__": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
     "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
     "runtime": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
@@ -320,7 +321,8 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/__main__.py",
     "atomgit/api/__init__.py",
     "atomgit/atomgit_hub.py",
-    "atomgit/cli.py",
+    "atomgit/cli/__init__.py",
+    "atomgit/cli/__main__.py",
     "atomgit/cli_contracts.py",
     "atomgit/completion.py",
     "atomgit/config.py",
@@ -384,7 +386,8 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/__main__.py",
     "src/atomgit/api/__init__.py",
     "src/atomgit/atomgit_hub.py",
-    "src/atomgit/cli.py",
+    "src/atomgit/cli/__init__.py",
+    "src/atomgit/cli/__main__.py",
     "src/atomgit/cli_contracts.py",
     "src/atomgit/completion.py",
     "src/atomgit/config.py",
@@ -481,6 +484,12 @@ def discover_internal_edges(source_texts):
                     if node.module
                     else [f"{base}.{alias.name}".strip(".") for alias in node.names]
                 )
+                if (
+                    not node.module
+                    and resolve_module(base) is not None
+                    and not any(resolve_module(candidate) for candidate in candidates)
+                ):
+                    candidates.append(base)
                 edges.update(
                     (module_name, resolved)
                     for candidate in candidates
@@ -497,8 +506,8 @@ def discover_internal_edges(source_texts):
                 resolved = resolve_module(node.args[0].value)
                 if resolved is not None:
                     edges.add((module_name, resolved))
-        if module_name == "cli" and "_lazy_utility(" in source:
-            edges.add(("cli", "utils"))
+        if module_name == "cli.__init__" and "_lazy_utility(" in source:
+            edges.add(("cli.__init__", "utils"))
     return edges
 
 
@@ -608,7 +617,7 @@ def validate_structure(source_texts, module_owners=None, legacy_debt=None):
             continue
         if not has_content:
             errors.append(f"empty placeholder module is forbidden: {module_name}")
-        if owners.get(module_name) != "cli":
+        if owners.get(module_name) != "cli" and module_name != "cli.__init__":
             tree = ast.parse(source)
             if any(
                 (

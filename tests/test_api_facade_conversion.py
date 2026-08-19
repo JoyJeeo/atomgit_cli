@@ -200,9 +200,9 @@ def main():
     )
 
     check(
-        "the separate CLI facade conversion remains later work",
-        (PACKAGE_DIRECTORY / "cli.py").is_file()
-        and not (PACKAGE_DIRECTORY / "cli").exists()
+        "the separate CLI facade remains compatible after its own conversion",
+        (PACKAGE_DIRECTORY / "cli" / "__init__.py").is_file()
+        and not (PACKAGE_DIRECTORY / "cli.py").exists()
         and cli_module.api._module_name == "api"
         and cli_module.api._attribute_name == "api",
     )

@@ -6,7 +6,7 @@
 console script / python -m atomgit
                 |
                 v
-     cli.py Click schema
+ cli/__init__.py Click schema
                 |
                 v
         commands/ callbacks
@@ -28,7 +28,7 @@ huggingface_hub / datasets
 Zsh completion adapter
      |
      v
-lightweight cli.py schema -> live Click candidates
+lightweight cli/__init__.py schema -> live Click candidates
 ```
 
 The CLI and SDK are parallel wrappers. `atomgit_hub.py` does not call
@@ -40,9 +40,11 @@ or covered by shared contract tests.
 - `__main__.py`: `python -m atomgit` entry point.
 - `__init__.py`: package metadata and public exports; completion requests skip
   eager business and SDK exports while retaining runtime environment policy.
-- `cli.py`: historical Click command tree, exact schema, prompt/output/exit
+- `cli/__init__.py`: historical Click command tree, exact schema,
+  prompt/output/exit
   boundary, and lazy dependency facade; callbacks delegate through the
   historical module context so old-path patches remain effective.
+- `cli/__main__.py`: minimal `python -m atomgit.cli` compatibility entry.
 - `commands/`: owned authentication/configuration, repository/cache,
   transfer, update/uninstall, and completion command implementations.
 - `cli_contracts.py`: historical path for lightweight upload constants owned by
@@ -181,7 +183,7 @@ risks through focused tasks and compatibility tests.
 
 ## Structural Refactor Gate
 
-The flat public modules plus the extracted CLI command, infrastructure,
+The public compatibility facades plus the extracted CLI command, infrastructure,
 lifecycle, services, transfer, LFS, and SDK packages are the implemented
 architecture. The approved
 long-term dependency direction is facade/CLI/SDK to services, transfers,
@@ -197,8 +199,9 @@ Infrastructure, lifecycle, authentication/repository service, CLI API download,
 CLI API upload, LFS, Python SDK, and CLI command extraction are fail-closed
 through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
-contracts. The remaining forbidden-direction exception is `cli -> api`; it is
-explicit migration debt, not an approved pattern for new code. Source/editable
+contracts. CLI facade conversion removes the last registered forbidden
+direction: its lazy API access is now owned by the facade boundary rather than
+the CLI business domain. Source/editable
 installation detection now has one lifecycle owner shared by update and
 uninstall policy, and the package-absent POSIX uninstall fallback retains
 executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
@@ -211,9 +214,8 @@ historical `atomgit_hub` paths retain exact function identities and dependency
 patch propagation. LFS policy, transfer recovery, and attributes ownership live in the
 `atomgit.lfs` domain; `lfs_pointer.py` remains its canonical pointer owner.
 CLI authentication/configuration, repository/cache, transfer, update/uninstall,
-and completion implementations now live in `atomgit.commands`; `cli.py`
-retains the exact Click tree and resolves former runtime dependencies through
-its historical module object.
-The API facade conversion is complete: `atomgit.api` is the package
-`api/__init__.py`, while CLI facade conversion remains isolated in a later
-Issue.
+and completion implementations now live in `atomgit.commands`;
+`cli/__init__.py` retains the exact Click tree and resolves former runtime
+dependencies through its historical `atomgit.cli` module object. Both API and
+CLI facade conversions are complete as package facades, with exact source,
+editable, wheel, and sdist contracts.

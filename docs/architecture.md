@@ -10,21 +10,21 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 ```text
 安装入口
   |
-  +-- atomgit 命令 ----------> cli.py schema -----> commands/ -> api/__init__.py
+  +-- atomgit 命令 -----> cli/__init__.py schema -> commands/ -> api/__init__.py
   |                               |                    |               |
   |                               v                    v               v
   |                          compatibility facades  command owners  huggingface_hub
   |
-  +-- python -m atomgit -----> __main__.py -----> cli.py
+  +-- python -m atomgit -----> __main__.py -----> cli/__init__.py
   |
   +-- import atomgit_hub ----> atomgit_hub.py ---> sdk/ ---> huggingface_hub/datasets
   |
-  +-- Zsh Tab ---------------> 轻量 cli schema -> completion.py
+  +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
 ```
 
 CLI 和 SDK 共享本地凭证，但不是同一业务实现：
 
-- CLI：`cli.py -> api/__init__.py`；
+- CLI：`cli/__init__.py -> api/__init__.py`；
 - SDK：历史 `atomgit_hub.py` facade 调用 `atomgit.sdk` 所有者函数。
 
 因此两侧上传、下载、repo ID 转换和异常行为可能发生漂移。
@@ -37,10 +37,10 @@ atomgit_cli/
 ├── .ai/                  # AI 开发、测试、评审和任务规范
 ├── docs/                 # 面向维护者和用户的设计文档
 ├── src/
-│   ├── atomgit/          # atomgit 包；保留现有平面模块形态
+│   ├── atomgit/          # atomgit 包及历史兼容 facade
 │   │   ├── __init__.py   # 包元数据和公开导出
 │   │   ├── __main__.py   # python -m atomgit 入口
-│   │   ├── cli.py        # 历史 Click schema、交互边界和兼容装配
+│   │   ├── cli/          # 历史 Click schema、交互边界和兼容装配
 │   │   ├── commands/     # CLI 命令实现 owner
 │   │   ├── api/__init__.py # CLI 使用的 AtomGit/HF 兼容 facade
 │   │   └── ...           # 其余已登记生产模块
@@ -55,7 +55,8 @@ atomgit_cli/
 downloads、uploads、repositories 和 datasets owner；
 `src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
 facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
-`api/__init__.py` 是历史具体客户端和全局单例所在的兼容 facade；`cli.py` 仍是平面历史模块，
+`api/__init__.py` 是历史具体客户端和全局单例所在的兼容 facade；
+`cli/__init__.py` 是历史 `atomgit.cli` package facade，
 保留 Click decorators、命令树、提示、输出、退出转换和懒加载装配。认证/配置、
 仓库/缓存、上传下载、更新/卸载及补全命令实现已迁入 `atomgit.commands`；
 owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
@@ -77,8 +78,9 @@ policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留�
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
 阻断未登记模块、空占位包、新依赖边、环、禁止方向和遗留体量增长；债务减少与
-声明收紧必须在同一变更完成，不能保留可回长的旧上限。现有 `cli -> api` 是只能
-缩小的迁移债务，不是新代码可复用的方向；`uninstaller -> release` 已通过共享的
+声明收紧必须在同一变更完成，不能保留可回长的旧上限。CLI facade 转换已移除
+最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
+`uninstaller -> release` 已通过共享的
 lifecycle 源码/可编辑安装策略移除。批准的长期目标仍是 facade/CLI/SDK 向
 services、transfers、lifecycle、
 distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现迁移前不会创建。
@@ -91,8 +93,8 @@ distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现
 历史 `HuggingFaceAPI` 类和全局 `api` 身份、方法/私有 helper 签名与旧路径 patch
 传播，并明确阻止传输实现进入 services。
 `tests/test_cli_command_ownership.py` 锁定四个 CLI command owner、18 个叶命令的
-精确 callback 签名和 Click schema、历史上下文委派，以及 API/CLI facade 不提前
-转换。
+精确 callback 签名和 Click schema、历史上下文委派，以及 API/CLI package facade
+边界。
 `tests/test_download_domain_ownership.py` 锁定 CLI API 下载 owner provenance、历史类/
 单例/方法/helper 身份和旧路径赋值/删除传播，并明确阻止 SDK 下载及上传 LFS helper
 提前进入 download 包。
@@ -135,7 +137,7 @@ atomgit = atomgit.cli:cli
 注意：命令名是 `config-show`，不是旧文档中的 `config`。
 
 Click 每次补全都会启动新的 `atomgit` 进程。`_ATOMGIT_COMPLETE` 存在时，包入口
-只配置共享 HF 环境并加载轻量 CLI schema；`cli.py` 的 API 对象和工具函数按命令
+只配置共享 HF 环境并加载轻量 CLI schema；`cli/__init__.py` 的 API 对象和工具函数按命令
 执行惰性解析，因此补全不会导入 HF Hub、datasets、Torch、PyArrow 或 Pandas。
 生成的 Zsh adapter 每次查询当前 Click 树，所以新增命令无需同步补全清单。
 
@@ -182,7 +184,7 @@ GET 目标、在 DELETE 后再次 GET；只有后置请求返回 404 才成功�
 
 ## 4. 导入时全局配置
 
-`cli.py`、`api/__init__.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
+`cli/__init__.py`、`api/__init__.py` 和 `atomgit_hub.py` 都会在导入 HF 前调用共享的
 `runtime.configure_hf_environment()`，统一设置：
 
 ```text
