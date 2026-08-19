@@ -6,7 +6,10 @@
 console script / python -m atomgit
                 |
                 v
-             cli.py
+     cli.py Click schema
+                |
+                v
+        commands/ callbacks
                 |
                 v
              api.py --------------------+
@@ -37,8 +40,11 @@ or covered by shared contract tests.
 - `__main__.py`: `python -m atomgit` entry point.
 - `__init__.py`: package metadata and public exports; completion requests skip
   eager business and SDK exports while retaining runtime environment policy.
-- `cli.py`: Click command tree, argument validation, user-facing output, and
-  exit codes; API and utility dependencies resolve only when callbacks run.
+- `cli.py`: historical Click command tree, exact schema, prompt/output/exit
+  boundary, and lazy dependency facade; callbacks delegate through the
+  historical module context so old-path patches remain effective.
+- `commands/`: owned authentication/configuration, repository/cache,
+  transfer, update/uninstall, and completion command implementations.
 - `cli_contracts.py`: historical path for lightweight upload constants owned by
   `upload.contracts`, preserving the completion-safe CLI import surface.
 - `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
@@ -174,9 +180,9 @@ risks through focused tasks and compatibility tests.
 
 ## Structural Refactor Gate
 
-The flat public modules plus the extracted infrastructure, lifecycle, services,
-and download packages are the
-implemented architecture. The approved
+The flat public modules plus the extracted CLI command, infrastructure,
+lifecycle, services, transfer, LFS, and SDK packages are the implemented
+architecture. The approved
 long-term dependency direction is facade/CLI/SDK to services, transfers,
 lifecycle, or distribution, then to infrastructure/LFS, with only the
 registered special directions. `tests/structure_contract.py` assigns every
@@ -187,7 +193,8 @@ rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
 Infrastructure, lifecycle, authentication/repository service, CLI API download,
-CLI API upload, LFS, and Python SDK extraction are fail-closed through exact
+CLI API upload, LFS, Python SDK, and CLI command extraction are fail-closed
+through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
 contracts. The remaining forbidden-direction exception is `cli -> api`; it is
 explicit migration debt, not an approved pattern for new code. Source/editable
@@ -202,4 +209,8 @@ shared policy, and error implementations now live in `atomgit.sdk`, while both
 historical `atomgit_hub` paths retain exact function identities and dependency
 patch propagation. LFS policy, transfer recovery, and attributes ownership live in the
 `atomgit.lfs` domain; `lfs_pointer.py` remains its canonical pointer owner.
+CLI authentication/configuration, repository/cache, transfer, update/uninstall,
+and completion implementations now live in `atomgit.commands`; `cli.py`
+retains the exact Click tree and resolves former runtime dependencies through
+its historical module object.
 API and CLI facade conversion remains isolated in later Issues.

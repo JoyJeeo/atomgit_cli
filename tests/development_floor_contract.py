@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 105
+BASELINE_INVARIANT_COUNT = 108
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -159,6 +159,12 @@ CAPABILITY_REGISTRY = {
                 "test_sdk_domain_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-015",
+                "CLI command implementations have exact command owners while the historical module, Click tree, callbacks, lazy behavior, deterministic interaction, and patch seams remain stable.",
+                "test_cli_command_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -166,6 +172,7 @@ CAPABILITY_REGISTRY = {
             "test_download_domain_ownership.py",
             "test_environment_lifecycle_ownership.py",
             "test_cli_baseline_guard.py",
+            "test_cli_command_ownership.py",
             "test_cli_feature_baseline.py",
             "test_packaging_metadata.py",
             "test_src_layout_migration.py",
@@ -217,11 +224,18 @@ CAPABILITY_REGISTRY = {
                 "Representative deterministic CLI scenarios preserve exact stdout, stderr, exit status, Click exception category, prompts, and redaction.",
                 "test_refactor_behavior_guard.py",
             ),
+            _invariant(
+                "CLI-007",
+                "The historical Click module delegates every leaf callback to one command owner while preserving exact schema, signatures, help, completion, and old-path runtime patch seams.",
+                "test_cli_command_ownership.py",
+                "test_cli_feature_baseline.py",
+            ),
         ),
         (
             "test_cli_feature_baseline.py",
             "test_refactor_behavior_guard.py",
             "test_cli_baseline_guard.py",
+            "test_cli_command_ownership.py",
             "test_cli_surface.py",
             "test_shell_completion.py",
             "test_wheel_smoke.py",
@@ -1059,9 +1073,17 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-021",
+                "Source, editable, wheel, and sdist surfaces include the exact nested CLI command package and historical Click module without repository leakage.",
+                "test_cli_command_ownership.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
+            "test_cli_command_ownership.py",
             "test_deploy_script.py",
             "test_download_domain_ownership.py",
             "test_environment_lifecycle_ownership.py",
@@ -1207,10 +1229,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "105 条可观察行为不变量",
-        "88 个隔离 pytest case",
+        "108 条可观察行为不变量",
+        "89 个隔离 pytest case",
     ),
-    "docs/testing.md": ("88 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("89 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

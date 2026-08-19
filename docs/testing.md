@@ -22,14 +22,14 @@
 
 token 校验、持久化、损坏配置恢复、logout、配置权限、Git credential helper
 隔离、URL 重定向、路径穿越、HTTP 响应完整性、临时文件清理和 wheel 安装均有
-隔离离线测试。当前完整矩阵包含 88 个 pytest case（自执行脚本内部可包含多个
+隔离离线测试。当前完整矩阵包含 89 个 pytest case（自执行脚本内部可包含多个
 聚合断言）。建仓、ignore、下载权限矩阵等远程路径已有一次受控
 验收证据。维护者已授权两个固定测试仓库可直接重跑连线测试；其他仓库或
 操作仍需单独授权。
 
 能力 ID、行为不变量、证据映射和完整阻断规则见
 [开发底线](development_floor.md)。`tests/development_floor_contract.py` 登记
-26 个能力和 105 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
+26 个能力和 108 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
 文档和工作流标记都保持关联。
 
 ## 环境

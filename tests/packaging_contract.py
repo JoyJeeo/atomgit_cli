@@ -39,6 +39,7 @@ PROJECT_METADATA = {
 SETUPTOOLS_LAYOUT = {
     "packages": [
         "atomgit",
+        "atomgit.commands",
         "atomgit.download",
         "atomgit.infrastructure",
         "atomgit.lifecycle",
@@ -75,22 +76,27 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 82,
-        "changes": 473,
-        "digest": "fe1c09575560ea6bad1e0c00883e8a212ae1169530e9a58c50c4cacc3b6a4990",
+        "changes": 458,
+        "digest": "3dd4d18da624787d933687ea2dcabee60905a10f35e2d9eed07066f0751b2be5",
     },
     "isort": {
         "files": 85,
-        "changes": 96,
-        "digest": "eeb8eaeaad74dfaeccf1383031537804a56ed7a97305bbb7a2c368dd0dcaee88",
+        "changes": 97,
+        "digest": "5789033c5a6a91236823a45de2782de50170b6b69fc03602223fbdd5e6b4740a",
     },
     "ruff": {
         "files": 18,
-        "changes": 214,
-        "digest": "0bd119f6a0c70442d0489d09443ae36ef5e83fc5b97a73150d4306a379af53f9",
+        "changes": 82,
+        "digest": "27e73a0958d721d9da2b24a05a4efe443d71f7ab423670742e7d4ea002fb3f2f",
     },
 }
 
 CLEAN_POLICY_FILES = {
+    "src/atomgit/commands/__init__.py",
+    "src/atomgit/commands/authentication.py",
+    "src/atomgit/commands/lifecycle.py",
+    "src/atomgit/commands/repositories.py",
+    "src/atomgit/commands/transfers.py",
     "src/atomgit/completion.py",
     "src/atomgit/cli_contracts.py",
     "src/atomgit/config.py",
@@ -146,6 +152,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_lfs_domain_ownership.py",
     "tests/test_sdk_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
+    "tests/test_cli_command_ownership.py",
 }
 
 

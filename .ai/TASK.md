@@ -1,55 +1,70 @@
 # Current Issue Contract
 
-Status: inactive
+Status: active
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
-  verified`
+- Phase: `implementation, independent review, maintainer acceptance, and final
+  offline verification complete; ready for delivery`
 - Base branch: `yuto`
-- Base commit: `138e1a9`
-- Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved to
-  `138e1a9` before branch creation
-- Task branch: `codex/sdk-domain-ownership` (local only; never push)
-- Current HEAD: `yuto merge 5469383; final delivery record commit follows`
+- Base commit: `7fa7c84`
+- Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
+  to `7fa7c84` before branch creation
+- Task branch: `codex/cli-command-ownership` (local only; never push)
+- Current HEAD: `7fa7c84 on the local task branch; no task commit yet`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean on yuto before this final delivery record`
-- Last completed action: `created task commit ec3476b, merged it into yuto as
-  5469383 with --no-ff, pushed only yuto, fetched, and verified local yuto,
-  github/yuto, and github/HEAD all resolved to 5469383`
-- Next exact action: `none for this completed Issue; wait for an explicit new
-  development request before activating another Issue`
+- Worktree state: `dirty only with this Issue's uncommitted source, tests,
+  packaging/contracts, architecture/testing documents, and handoff changes;
+  continuation must use this worktree`
+- Last completed action: `received explicit maintainer acceptance, reran the
+  final complete 89-case baseline and every supporting gate, and confirmed all
+  checks pass after the approved read-only review`
+- Next exact action: `create the cohesive conventional task commit, merge
+  locally into yuto with --no-ff, push only yuto, and verify github/yuto`
 - Blockers: `none`
 
-The predecessor LFS Domain Issue is complete, accepted, committed, locally
-merged, pushed, and remotely verified. Its task commit is `7f7074d`, local merge
-is `a2275c6`, final delivery records are `79d6685` and `138e1a9`, and local and
-remote `yuto` resolve to `138e1a9`.
+The predecessor SDK Domain Issue is complete, accepted, committed, locally
+merged, pushed, and remotely verified. Its task commit is `ec3476b`, local
+merge is `5469383`, final delivery record is `7fa7c84`, and local and remote
+`yuto` resolved to `7fa7c84` before this Issue was activated.
 
-## Completed Issue Record
+## Active Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
-- ID: `LOCAL-REFACTOR-SDK-DOMAIN-OWNERSHIP`
-- Title: `Extract Python SDK ownership behind historical import paths`
+- ID: `LOCAL-REFACTOR-CLI-COMMAND-OWNERSHIP`
+- Title: `Extract CLI command ownership behind the historical Click module`
 - Primary type: `refactoring`
-- Secondary types: `sdk`, `compatibility`, `testing`, `security`,
+- Secondary types: `cli`, `compatibility`, `testing`, `security`,
   `distribution`, `documentation`
 - Priority: `P2`
-- Approved program step: `10. SDK Domain`
-- Observable objective: `move Python SDK snapshot/file/URL/dataset download,
-  folder upload, repository creation, token lookup, and stable error policy
-  into real SDK-domain modules while preserving atomgit_hub,
-  atomgit.atomgit_hub, and atomgit public objects, signatures, old-path module
-  patch seams, locked dependency calls, state restoration, temporary lifetime,
-  error redaction, artifacts, and all observable SDK behavior`
+- Approved program step: `11. CLI Command Ownership`
+- Observable objective: `move authentication, repository, transfer, cache,
+  completion, update, uninstall, and configuration command implementations
+  into real CLI-command owner modules while preserving the atomgit.cli module,
+  exact Click tree/schema/help/output/prompts/exits, lazy imports, completion,
+  old-path patch seams, API calls, and all observable behavior`
 - User impact: `none by design; internal ownership migration only`
 
 ### Authorization And Delivery
 
-- User authorization: `the maintainer approved the sequential capability-owned
-  structural program, the persisted predecessor contract identifies SDK Domain
-  as step 10, and on 2026-08-19 explicitly requested continued development`
+- User authorization: `the maintainer approved the complete sequential
+  capability-oriented structure program on 2026-08-18; the persisted sequence
+  identifies CLI Command Ownership as step 11 after the completed SDK Domain;
+  on 2026-08-19 the maintainer explicitly requested continued development and,
+  after reviewing the implementation status, authorized self-testing,
+  acceptance, commit, and push`
+- Accepted conditions:
+  1. `command modules are created only as their real implementation moves`
+  2. `atomgit.cli remains the historical module and owns Click schema,
+     prompts, output, exit conversion, and service-call wiring`
+  3. `the exact command/group objects, callback signatures, help, dispatch,
+     import order, completion, and lazy behavior remain stable`
+  4. `old-path assignment, deletion, and patch.object seams reach every former
+     command implementation resolution site and restore exact identities`
+  5. `API facade conversion, CLI package/facade conversion, API behavior,
+     transfer/service implementation, distribution/Shell extraction, test
+     layout, and public behavior changes are excluded`
 - Authorized local actions: `create a local task branch; edit task-owned source,
   tests, registries, packaging contracts, and AI/human architecture documents;
   inspect locked dependencies; build temporary artifacts; run offline checks;
@@ -59,182 +74,174 @@ remote `yuto` resolve to `138e1a9`.
   into yuto with --no-ff, push only yuto, and verify github/yuto; never push the
   task branch`
 - Unauthorized actions: `remote Issue/PR creation or transition, task-branch
-  push, tag or Release mutation, publication, live AtomGit repository writes,
-  credential mutation, deletion, or upstream main changes`
+  push, tag or Release mutation, publication, live AtomGit writes, credential
+  mutation, deletion, or upstream main changes`
 - Delivery mode: `local task branch -> focused and complete offline verification
   -> independent review -> human acceptance -> cohesive commit -> local no-ff
   merge into yuto -> push only yuto -> verify github/yuto`
 
 ### Evidence And Current Behavior
 
-- `src/atomgit/atomgit_hub.py` is a 734-line module that directly owns SDK token
-  lookup, error classification, ID/type mapping, snapshot/file/URL/dataset
-  download, folder upload, and repository creation.
-- `src/atomgit_hub.py` is the historical top-level compatibility proxy and
-  forwards assignment/deletion patches to `atomgit.atomgit_hub`.
-- `atomgit.__init__` eagerly or lazily exports the same SDK function and
-  exception objects. Existing users and tests patch dependency names on the
-  historical top-level module, including `_get_token`, `hf_snapshot_download`,
-  `hf_hub_download`, `hf_upload_folder`, `create_repo`, and `ds_load_dataset`.
-- Existing SDK regressions cover strict dependency calls, ID normalization,
-  stable exceptions, error redaction, retry behavior, dataset loading, upload
-  path lifetime, timeout restoration, canonical LFS handling, repository
-  creation semantics, import order, public imports, src layout, wheel/sdist
-  contents, and Python/Windows portability.
-- Locked contracts inspected in the `atomgit_cli` conda environment:
-  `huggingface-hub==1.1.7`, `datasets==4.4.1`, Click `8.4.2`; real HfApi,
-  create_repo, upload_folder, snapshot_download, and hf_hub_download signatures
-  accept the current production keyword sets.
+- `src/atomgit/cli.py` is a 908-line historical module containing the Click
+  root/group/option schema and the implementations of 18 leaf commands.
+- The module dispatches through a lazy `atomgit.api.api` object and lazy
+  historical utility functions, while importing completion, lifecycle,
+  distribution, configuration, and version objects before command execution.
+- Tests patch historical `atomgit.cli` names including `api`, `config`, Git
+  helpers, utility functions, `run_update`, `build_uninstall_plan`, and
+  `run_uninstall`; completion derives candidates from the live Click tree.
+- `tests/cli_baseline_contract.py` records the exact public tree, parameters,
+  and leaf dispatch inventory; focused regressions cover deterministic stdout,
+  stderr, exits, exception categories, prompts, redaction, auth, repository,
+  upload, download, completion, update, uninstall, cache, configuration,
+  import-order, packaging, and portability behavior.
+- Locked contracts inspected in `atomgit_cli`: Click `8.4.2`,
+  `huggingface-hub==1.1.7`, and `datasets==4.4.1`.
+- Pre-edit complete evidence: `python tests/run_cli_baseline.py -> 88 passed in
+  82.65s (0:01:22)`.
 
 ### Expected Behavior
 
-- Non-placeholder `atomgit.sdk` modules have one exact implementation owner for
-  shared policy, errors, download, upload, repository, and dataset behavior.
-- `atomgit.atomgit_hub` becomes a historical facade whose public and private
-  SDK function objects are exact aliases of their owners.
-- The separately packaged `atomgit_hub` proxy, package facade, and `atomgit`
-  exports retain imports, `__all__`, function identities, signatures, return
-  values, warnings, exceptions, and cause chaining.
+- Real, non-placeholder CLI command owner modules contain the command
+  implementations now embedded in the historical module.
+- `atomgit.cli` continues to construct and export the same root/group/leaf
+  Click objects with the same schema, callback signatures, help, prompt,
+  output, exit, import-order, and completion behavior.
 - Direct assignment, deletion, and `patch.object` at the historical module path
-  reach every former runtime resolution site and restore exact identities.
+  propagate to every former runtime lookup site without leaking to unrelated
+  owners.
 - Source, default PEP 660 editable, wheel, and sdist discovery include exactly
-  the delivered SDK package and the historical compatibility modules without
-  repository leakage.
+  the delivered command package while preserving the historical `atomgit.cli`
+  module and both CLI entry paths.
 
 ### Scope
 
 #### In Scope
 
-- Add only SDK-domain modules receiving real implementation now.
-- Move SDK shared normalization/token/type policy, error conversion, snapshot,
-  file, URL and dataset download, folder upload, and repository creation.
-- Preserve exact public signatures, symbols, exceptions, aliases, import order,
-  package laziness, old-path dependency/helper patching, stored/explicit token
-  selection, retry policy, cache and dataset options, model/dataset route
-  mapping, main-only upload, private-only creation, upload projection lifetime,
-  symlink rejection, canonical LFS verification, timeout restoration, safe
-  error output, and return outcomes.
-- Tighten exact facade debt, dependency edges, module ownership, artifact, src
-  layout, public import, test inventory, and development-floor contracts.
+- Add only command-owner modules receiving real implementation in this Issue.
+- Move the implementations of update/uninstall/completion, authentication,
+  cache, repository, upload/download, and configuration display commands.
+- Preserve the exact Click schema in `cli.py`, including decorators, command
+  registration order, command/group names, parameter types/defaults/help,
+  docstrings, callback signatures, root object identity, and module entrypoint.
+- Preserve all historical dependency/helper patch seams, configuration and Git
+  state safety, token redaction, temporary/resource behavior, output strings,
+  prompts, exception categories, exit status, and API arguments/results.
+- Tighten exact owner, dependency, facade debt, artifact, src-layout,
+  public-import, test-inventory, development-floor, architecture, and testing
+  contracts.
 
 #### Out Of Scope
 
-- Change SDK behavior, signatures, exceptions, supported revisions, public
-  creation limitations, dependency versions, endpoint semantics, or remote
-  evidence claims.
-- Share CLI-specific output/service implementations with the SDK, migrate CLI
-  commands, convert `api.py` or `cli.py`, or remove the `cli -> api` edge.
-- Redesign LFS, upload, download, repository, infrastructure, lifecycle,
-  distribution, configuration, or release behavior.
-- Live AtomGit writes, credential changes, publication, broad formatting,
-  unrelated cleanup, or future facade/CLI Issues.
+- Convert `cli.py` into `cli/__init__.py` or `cli/root.py`, or change public
+  commands, options, help, prompts, output, errors, exits, or completion.
+- Convert `api.py`, remove `cli -> api`, change `HuggingFaceAPI` or its global
+  singleton, or move API/service/transfer/LFS/SDK business behavior.
+- Change locked dependencies, release/update/uninstall semantics, Shell entry
+  points, distribution policy, test layout, or source layout.
+- Live AtomGit writes, credential changes, publication, remote Issue/PR work,
+  broad formatting, or unrelated cleanup.
 
 ### Affected Capability IDs
 
-- `FLOOR-REGISTRY`, `SDK-DOWNLOAD`, `SDK-UPLOAD`, `SDK-REPO`, `REPO-ID`,
-  `RUNTIME`, `DEPENDENCY-CONTRACT`, `GLOBAL-STATE`, `ERROR-REDACTION`,
-  `UPLOAD-LFS`, `PACKAGING`, and `PORTABILITY`
+- `FLOOR-REGISTRY`, `CLI-SURFACE`, `CLI-DISPATCH`, `AUTH-CONFIG`,
+  `REPO-MANAGEMENT`, `REVISION`, `CACHE`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
+  `UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`,
+  `DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`, `DOWNLOAD-INTEGRITY`,
+  `DOWNLOAD-SECURITY`, `GIT-CREDENTIAL`, `REPO-ID`, `RUNTIME`,
+  `ERROR-REDACTION`, `PACKAGING`, and `PORTABILITY`
 
 ### Protected Existing Invariants
 
-- All existing `103` invariants remain protected, especially `SDKDL-001..002`,
-  `SDKUP-001..002`, `SDKREPO-001..002`, repository-ID, locked-dependency,
-  runtime/import-order, global-state, LFS pointer, redaction, packaging, and
-  portability invariants.
-- Historical public imports, exact callable identities and signatures, old-path
-  dependency patches, authentication selection, download retry, dataset
-  projection, upload lifetime/cleanup, timeout restoration, main-only upload,
-  private-only creation, stable exception classes/messages, and redacted causes
-  remain unchanged.
+- All existing `105` invariants remain protected, especially `FLOOR-005..014`,
+  `CLI-001..006`, `DISPATCH-001..005`, authentication, repository, upload,
+  download, repository-ID, global-state, redaction, packaging, and portability
+  invariants registered by the affected capabilities.
+- Exact command and parameter schema, Click object/function signatures,
+  registration order, help text, deterministic output, prompts, exits,
+  exception categories, redaction, old-path patches, completion, import order,
+  lazy API loading, and downstream call arguments remain unchanged.
+- API, service, transfer, LFS, SDK, lifecycle, infrastructure, and distribution
+  observable behavior remains protected and structurally outside this Issue.
 
 ### New Or Changed Invariants
 
-- `FLOOR-014`: Python SDK implementations have exact SDK-domain owners while
-  historical top-level/package/public symbols, signatures, identities,
-  assignment/deletion/module-object patch seams, locked calls, and later-owned
-  CLI/API/LFS boundaries remain stable; ownership drift, placeholders, duplicate
-  implementations, facade regrowth, or forbidden dependency directions fail
-  closed.
-- `PKG-020`: source, default PEP 660 editable, wheel, and sdist surfaces include
-  exactly the delivered SDK package plus historical package/top-level facades
+- `FLOOR-015`: CLI command implementations have exact command-domain owners
+  while the historical module, Click tree/schema, callback signatures,
+  completion/lazy behavior, deterministic interaction, and registered old-path
+  patch seams remain stable; ownership drift, placeholders, duplicates, facade
+  regrowth, or forbidden dependency directions fail closed.
+- `PKG-021`: source, default PEP 660 editable, wheel, and sdist surfaces include
+  exactly the delivered CLI command owner modules and historical `cli.py`
   without repository leakage.
 
 ### Focused Tests And Evidence
 
-- Add `tests/test_sdk_domain_ownership.py` for exact owner modules,
-  implementation provenance, historical public/private identities and
+- Add `tests/test_cli_command_ownership.py` for exact owner modules,
+  implementation provenance, Click root/group/leaf identity and callback
   signatures, complete assignment/deletion/`patch.object` propagation,
   non-owner negative cases, placeholder rejection, facade-debt tightening, and
-  CLI API/LFS non-migration.
-- Rerun SDK create/download/upload/dataset/exception/recovery/global-state/HF
-  contract/import-order/public-import, repository-ID, canonical-LFS, structure,
-  src-layout, packaging, development-floor, and portability scripts.
-- Bind representative production keyword sets against the installed locked
-  libraries; run changed/new-file Black, isort, Ruff, compileall, pip check,
-  source/editable/wheel/sdist smoke checks, and `git diff --check`.
+  API/CLI-facade non-migration.
+- Rerun exact CLI schema/dispatch/feature/surface, completion, update,
+  uninstall, authentication, repository, upload, download, configuration,
+  cache, global-state, redaction, import-order, structure, src-layout,
+  packaging, development-floor, public-import, and portability scripts.
+- Run final `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
+  `python -m pip check`, changed/new-file Black, isort, Ruff, and
+  `git diff --check`.
 - Controlled-remote evidence: `not applicable; observable remote behavior is
   unchanged and live writes are not authorized for this ownership refactor`.
 
 ### Acceptance Criteria
 
-1. Every moved SDK definition has one real SDK-domain owner; no placeholder,
-   duplicate implementation, or unowned production module remains.
-2. `atomgit_hub`, `atomgit.atomgit_hub`, and `atomgit` preserve exact public
-   objects, `__all__`, signatures, warnings, errors, results, and registered
-   old-path helper/dependency patch behavior.
-3. Download retry/auth/cache/parameter behavior, dataset local-snapshot loading,
-   repository normalization/type/privacy behavior, and upload validation,
-   temporary lifetime, timeout restoration, main-only policy, canonical LFS,
-   error redaction, and cause preservation retain exact offline evidence.
-4. SDK owners depend only in approved directions; CLI API, CLI command, LFS,
-   lifecycle, and distribution ownership remains outside the SDK package.
-5. Source/editable/wheel/sdist contracts discover every delivered SDK module,
-   preserve both historical import paths, reject placeholders/unowned modules,
-   and tighten the historical SDK facade debt to its exact new size.
-6. The ledger remains monotonic at `26 capabilities`, at least `104 invariants`,
-   and at least `88 isolated pytest cases`.
-7. Focused tests, the complete offline baseline, supporting gates, and
+1. Every moved command implementation has one real command-domain owner; no
+   placeholder, duplicate implementation, or unowned production module remains.
+2. `atomgit.cli`, both executable entry paths, and the live Click command tree
+   preserve exact objects, schema, signatures, registration, help, completion,
+   lazy import, prompt, output, exception, redaction, and exit behavior.
+3. Historical dependency/helper assignment, deletion, and `patch.object` seams
+   reach all former runtime lookup sites and restore exact identities.
+4. Downstream API/service/utility/lifecycle/distribution calls retain exact
+   arguments and results, and API/CLI facade conversion remains excluded.
+5. Structure, source/editable/wheel/sdist, public import, test inventory, and
+   development-floor contracts discover the command owners and reject drift.
+6. The ledger remains monotonic at `26 capabilities`, at least `108 invariants`,
+   and at least `89 isolated pytest cases`.
+7. Focused tests, the complete offline baseline, supporting gates, and an
    independent review pass with no open P0/P1/P2/P3 finding before acceptance.
 
 ### Verification Evidence
 
-- Pre-edit focused baseline: `19 selected SDK, dependency, structure, packaging,
-  development-floor, LFS, and portability scripts passed`.
-- Ownership regression on old implementation: `test_sdk_domain_ownership.py
-  failed as expected because all seven real atomgit.sdk owner modules were
-  absent`.
-- Implementation and focused tests: `SDK ownership 18/18, structure 13/13,
-  packaging 13/13, development floor 15/15, HF signature 16/16, public import
-  8/8, src layout 6/6, predecessor download 15/15, upload 16/16, and LFS 13/13;
-  SDK behavior regressions for create, exceptions, upload lifetime/parameters/
-  timeout, dataset, download/recovery, repository IDs, and global state passed`.
-- Complete baseline: `python tests/run_cli_baseline.py -> 88 passed in 88.80s
-  (0:01:28) after the review fix; an earlier final run passed in 78.96s and
-  another run
-  passed 88/88 before that expansion, and the first run correctly failed three
-  stale predecessor ownership assertions that still required SDK definitions
-  in the historical facade; final maintainer-requested self-test -> 88 passed
-  in 78.98s (0:01:18)`.
-- Supporting gates: `python -m compileall -q ., python -m pip check, changed/new
-  file Black --check, isort --check-only, Ruff, and git diff --check passed;
-  wheel/source/editable/sdist coverage passed inside the complete baseline`.
-- Independent review: `the first read-only review requested changes for one P2
-  compatibility finding: atomgit_hub.Path assignment/deletion no longer reached
-  the three former SDK path-conversion resolution sites. The implementation
-  added the exhaustive seam and regression, reran all gates, and a fresh
-  read-only review found no open P0/P1/P2/P3 finding; verdict APPROVED`.
+- Pre-edit complete baseline: `python tests/run_cli_baseline.py -> 88 passed in
+  82.65s (0:01:22)`.
+- Ownership regression on old implementation:
+  `tests/test_cli_command_ownership.py failed as expected because the
+  atomgit.commands owner package and all four owner modules were absent`.
+- Implementation and focused tests: `CLI ownership 13/13, CLI baseline guard
+  14/14, CLI feature/schema/dispatch 69/69, CLI surface 54/54, deterministic
+  refactor behavior 6/6, structure 13/13, packaging 13/13, src layout 6/6,
+  development floor 15/15, and wheel/source/editable/sdist smoke 36/36 passed.
+  Focused authentication, repository, upload, download, completion, update,
+  uninstall, and cache regressions also passed`.
+- Complete baseline: `after the initial implementation run passed 89/89 in
+  80.29s, the review-fix run passed 89/89 in 85.22s (0:01:25), and the final
+  pre-delivery acceptance run passed 89/89 in 81.76s (0:01:21)`.
+- Supporting gates: `python -m compileall -q ., python -m pip check,
+  changed/new-file Black --check, isort --check-only, Ruff, git diff --check,
+  credential-pattern scan, and artifact/status audit passed; no tracked build
+  artifact or credential was found`.
+- Independent review: `the first read-only review requested changes for two P2
+  evidence findings: incomplete affected-capability declarations and dynamic
+  historical patch propagation evidence that did not yet cover each command
+  owner category. Both were fixed; a fresh read-only re-review found no open
+  P0/P1/P2/P3 finding and returned APPROVED`.
 
 ### Residual Risks
 
-- Live AtomGit behavior is intentionally unchanged and will not be retested for
-  this ownership-only migration.
+- Live AtomGit behavior will not be retested because this is an ownership-only
+  refactor and remote writes are not authorized.
 - Python 3.9 is represented by declared tooling and portability contracts in
   the current Python 3.10 conda environment.
-- Human acceptance: `accepted on 2026-08-19 when the maintainer explicitly
-  requested self-testing and acceptance followed by commit and push`.
-- Delivery evidence: `task commit ec3476b refactor(sdk): extract domain
-  ownership; local no-ff merge 5469383 merge: extract sdk domain ownership;
-  pushed only yuto through github; task branch remained local; post-fetch local
-  yuto, github/yuto, and github/HEAD all resolved to 5469383`.
-- No remote Issue/PR, task-branch push, tag, Release, publication, live AtomGit
-  write, credential mutation, deletion, or upstream-main change was performed.
+- Human acceptance: `the maintainer explicitly authorized self-testing,
+  acceptance, commit, and push on 2026-08-19; final acceptance gates passed`.
+- Delivery evidence: `pending`.
