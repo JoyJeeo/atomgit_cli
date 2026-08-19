@@ -11,7 +11,7 @@ PACKAGE_ROOT = REPOSITORY_ROOT / "src" / "atomgit"
 PACKAGE_MODULES = {
     "__init__.py",
     "__main__.py",
-    "api.py",
+    "api/__init__.py",
     "atomgit_hub.py",
     "cli.py",
     "cli_contracts.py",

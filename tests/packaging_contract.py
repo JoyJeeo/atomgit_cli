@@ -39,6 +39,7 @@ PROJECT_METADATA = {
 SETUPTOOLS_LAYOUT = {
     "packages": [
         "atomgit",
+        "atomgit.api",
         "atomgit.commands",
         "atomgit.download",
         "atomgit.infrastructure",
@@ -75,23 +76,24 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 82,
-        "changes": 458,
-        "digest": "3dd4d18da624787d933687ea2dcabee60905a10f35e2d9eed07066f0751b2be5",
+        "files": 81,
+        "changes": 452,
+        "digest": "ea19073e168a16ebc9a2b80422477db6bee94137ec7346e47666b82d0791acd6",
     },
     "isort": {
-        "files": 85,
-        "changes": 97,
-        "digest": "5789033c5a6a91236823a45de2782de50170b6b69fc03602223fbdd5e6b4740a",
+        "files": 83,
+        "changes": 93,
+        "digest": "6fd78e42c7477ec9327c7a69e22a2b34b28e0dc9fd625115f98d6495add4bff9",
     },
     "ruff": {
-        "files": 18,
-        "changes": 82,
-        "digest": "27e73a0958d721d9da2b24a05a4efe443d71f7ab423670742e7d4ea002fb3f2f",
+        "files": 17,
+        "changes": 61,
+        "digest": "52772b6834c8238f2c3a8b6c619b4091ad703dadfb2a8236876c762d24499bad",
     },
 }
 
 CLEAN_POLICY_FILES = {
+    "src/atomgit/api/__init__.py",
     "src/atomgit/commands/__init__.py",
     "src/atomgit/commands/authentication.py",
     "src/atomgit/commands/lifecycle.py",
@@ -153,6 +155,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_sdk_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
     "tests/test_cli_command_ownership.py",
+    "tests/test_api_facade_conversion.py",
 }
 
 

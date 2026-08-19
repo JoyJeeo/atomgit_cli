@@ -160,7 +160,7 @@ def main():
         repr(restoration_mismatches),
     )
 
-    api_definitions = _top_level_definitions(source_texts["api"])
+    api_definitions = _top_level_definitions(source_texts["api.__init__"])
     lfs_definitions = _top_level_definitions(source_texts["lfs.service"])
     upload_definitions = set().union(
         *(

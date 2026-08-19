@@ -7,7 +7,7 @@ from pathlib import Path
 PRODUCTION_MODULE_OWNERS = {
     "__init__": "facade",
     "__main__": "cli",
-    "api": "facade",
+    "api.__init__": "facade",
     "atomgit_hub": "sdk",
     "cli": "cli",
     "cli_contracts": "cli",
@@ -97,27 +97,31 @@ DOMAIN_DEPENDENCIES = {
 
 # These edges are existing 1.1.1 debt. They may disappear but must never grow.
 LEGACY_FORBIDDEN_EDGES = {
-    ("cli", "api"),
+    ("cli", "api.__init__"),
 }
 
 CURRENT_INTERNAL_EDGES = {
-    ("__init__", "api"),
+    ("__init__", "api.__init__"),
     ("__init__", "atomgit_hub"),
     ("__init__", "cli"),
     ("__init__", "config"),
     ("__init__", "runtime"),
     ("__init__", "version"),
     ("__main__", "cli"),
-    ("api", "cli_contracts"),
-    ("api", "config"),
-    ("api", "download.service"),
-    ("api", "lfs.service"),
-    ("api", "lfs_pointer"),
-    ("api", "runtime"),
-    ("api", "services.authentication"),
-    ("api", "services.repositories"),
-    ("api", "upload.service"),
-    ("api", "utils"),
+    ("api.__init__", "cli_contracts"),
+    ("api.__init__", "config"),
+    ("api.__init__", "download.__init__"),
+    ("api.__init__", "download.service"),
+    ("api.__init__", "lfs.service"),
+    ("api.__init__", "lfs.__init__"),
+    ("api.__init__", "lfs_pointer"),
+    ("api.__init__", "runtime"),
+    ("api.__init__", "services.authentication"),
+    ("api.__init__", "services.__init__"),
+    ("api.__init__", "services.repositories"),
+    ("api.__init__", "upload.service"),
+    ("api.__init__", "upload.__init__"),
+    ("api.__init__", "utils"),
     ("atomgit_hub", "exceptions"),
     ("atomgit_hub", "runtime"),
     ("atomgit_hub", "sdk.datasets"),
@@ -128,7 +132,7 @@ CURRENT_INTERNAL_EDGES = {
     ("atomgit_hub", "sdk.downloads"),
     ("atomgit_hub", "sdk.repositories"),
     ("atomgit_hub", "sdk.uploads"),
-    ("cli", "api"),
+    ("cli", "api.__init__"),
     ("cli", "cli_contracts"),
     ("cli", "completion"),
     ("cli", "config"),
@@ -137,11 +141,13 @@ CURRENT_INTERNAL_EDGES = {
     ("cli", "uninstaller"),
     ("cli", "utils"),
     ("cli", "version"),
+    ("cli", "commands.__init__"),
     ("commands.__init__", "commands.authentication"),
     ("commands.__init__", "commands.lifecycle"),
     ("commands.__init__", "commands.repositories"),
     ("commands.__init__", "commands.transfers"),
     ("completion", "lifecycle.completion"),
+    ("completion", "lifecycle.__init__"),
     ("lifecycle.completion", "lifecycle.environment"),
     ("lifecycle.completion", "lifecycle.managed_paths"),
     ("lifecycle.environment", "lifecycle.managed_paths"),
@@ -153,6 +159,7 @@ CURRENT_INTERNAL_EDGES = {
     ("services.repositories", "infrastructure.config"),
     ("services.repositories", "infrastructure.validation"),
     ("config", "infrastructure.config"),
+    ("config", "infrastructure.__init__"),
     ("download.__init__", "download.service"),
     ("download.integrity", "download.transport"),
     ("download.manifest", "download.prune"),
@@ -190,6 +197,7 @@ CURRENT_INTERNAL_EDGES = {
     ("infrastructure.utils", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.validation"),
     ("runtime", "infrastructure.runtime"),
+    ("runtime", "infrastructure.__init__"),
     ("sdk.__init__", "sdk.datasets"),
     ("sdk.__init__", "sdk.downloads"),
     ("sdk.__init__", "sdk.repositories"),
@@ -214,12 +222,14 @@ CURRENT_INTERNAL_EDGES = {
     ("sdk.uploads", "sdk.common"),
     ("sdk.uploads", "sdk.errors"),
     ("uninstaller", "lifecycle.uninstall"),
+    ("uninstaller", "lifecycle.__init__"),
     ("utils", "infrastructure.utils"),
+    ("utils", "infrastructure.__init__"),
     ("cli_contracts", "upload.contracts"),
 }
 
 LEGACY_FACADE_DEBT = {
-    "api": {"max_lines": 853, "max_functions": 0, "max_classes": 1},
+    "api.__init__": {"max_lines": 774, "max_functions": 0, "max_classes": 1},
     "atomgit_hub": {"max_lines": 158, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 452, "max_functions": 26, "max_classes": 1},
     "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
@@ -308,7 +318,7 @@ PUBLIC_SIGNATURES = {
 EXPECTED_WHEEL_FILES = {
     "atomgit/__init__.py",
     "atomgit/__main__.py",
-    "atomgit/api.py",
+    "atomgit/api/__init__.py",
     "atomgit/atomgit_hub.py",
     "atomgit/cli.py",
     "atomgit/cli_contracts.py",
@@ -372,7 +382,7 @@ EXPECTED_WHEEL_FILES = {
 EXPECTED_SDIST_FILES = {
     "src/atomgit/__init__.py",
     "src/atomgit/__main__.py",
-    "src/atomgit/api.py",
+    "src/atomgit/api/__init__.py",
     "src/atomgit/atomgit_hub.py",
     "src/atomgit/cli.py",
     "src/atomgit/cli_contracts.py",
@@ -448,6 +458,13 @@ def discover_source_texts(repository_root):
 
 def discover_internal_edges(source_texts):
     module_names = set(source_texts)
+
+    def resolve_module(candidate):
+        if candidate in module_names:
+            return candidate
+        package_candidate = f"{candidate}.__init__"
+        return package_candidate if package_candidate in module_names else None
+
     edges = set()
     for module_name, source in source_texts.items():
         tree = ast.parse(source, filename=f"{module_name}.py")
@@ -465,9 +482,9 @@ def discover_internal_edges(source_texts):
                     else [f"{base}.{alias.name}".strip(".") for alias in node.names]
                 )
                 edges.update(
-                    (module_name, candidate)
+                    (module_name, resolved)
                     for candidate in candidates
-                    if candidate in module_names
+                    if (resolved := resolve_module(candidate)) is not None
                 )
             if (
                 isinstance(node, ast.Call)
@@ -475,9 +492,11 @@ def discover_internal_edges(source_texts):
                 and node.func.id in {"_LazyObject", "_import_runtime_module"}
                 and node.args
                 and isinstance(node.args[0], ast.Constant)
-                and node.args[0].value in module_names
+                and resolve_module(node.args[0].value) is not None
             ):
-                edges.add((module_name, node.args[0].value))
+                resolved = resolve_module(node.args[0].value)
+                if resolved is not None:
+                    edges.add((module_name, resolved))
         if module_name == "cli" and "_lazy_utility(" in source:
             edges.add(("cli", "utils"))
     return edges

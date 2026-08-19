@@ -5,7 +5,6 @@ import copy
 import sys
 from pathlib import Path
 
-
 TESTS_DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY_ROOT = TESTS_DIRECTORY.parent
 if str(TESTS_DIRECTORY) not in sys.path:
@@ -22,7 +21,6 @@ from structure_contract import (  # noqa: E402
     validate_artifact_contract,
     validate_structure,
 )
-
 
 results = []
 
@@ -55,7 +53,7 @@ def main():
     )
     check(
         "legacy forbidden dependency debt is explicit and exact",
-        LEGACY_FORBIDDEN_EDGES == {("cli", "api")},
+        LEGACY_FORBIDDEN_EDGES == {("cli", "api.__init__")},
         repr(LEGACY_FORBIDDEN_EDGES),
     )
 
@@ -83,11 +81,14 @@ def main():
     )
 
     growing = dict(source_texts)
-    growing["api"] += "\n\ndef future_unowned_behavior():\n    return None\n"
+    growing["api.__init__"] += "\n\ndef future_unowned_behavior():\n    return None\n"
     errors = validate_structure(growing)
     check(
         "legacy facade function or line growth fails closed",
-        any("legacy facade debt contract is stale in api" in error for error in errors),
+        any(
+            "legacy facade debt contract is stale in api.__init__" in error
+            for error in errors
+        ),
         repr(errors),
     )
 
@@ -99,16 +100,21 @@ def main():
     errors = validate_structure(shrinking_edge)
     check(
         "removed dependency debt requires the contract to tighten immediately",
-        any("removed=[('cli', 'api')]" in error for error in errors),
+        any("removed=[('cli', 'api.__init__')]" in error for error in errors),
         repr(errors),
     )
 
     shrinking_facade = dict(source_texts)
-    shrinking_facade["api"] = shrinking_facade["api"].replace("\n\n", "\n", 1)
+    shrinking_facade["api.__init__"] = shrinking_facade["api.__init__"].replace(
+        "\n\n", "\n", 1
+    )
     errors = validate_structure(shrinking_facade)
     check(
         "reduced facade debt requires its exact ceiling to tighten immediately",
-        any("legacy facade debt contract is stale in api" in error for error in errors),
+        any(
+            "legacy facade debt contract is stale in api.__init__" in error
+            for error in errors
+        ),
         repr(errors),
     )
 
@@ -122,8 +128,8 @@ def main():
     )
 
     weakened_debt = copy.deepcopy(LEGACY_FACADE_DEBT)
-    weakened_debt["api"]["max_functions"] += 1
-    weakened_debt["api"]["max_lines"] += 4
+    weakened_debt["api.__init__"]["max_functions"] += 1
+    weakened_debt["api.__init__"]["max_lines"] += 4
     check(
         "the test fixture demonstrates that relaxing debt would hide growth",
         not validate_structure(growing, legacy_debt=weakened_debt),
