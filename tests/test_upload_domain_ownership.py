@@ -255,14 +255,14 @@ def main():
         repr(errors),
     )
 
-    api_definitions = _top_level_definitions(source_texts["api"])
+    lfs_definitions = _top_level_definitions(source_texts["lfs.service"])
     upload_definitions = set().union(
         *(_top_level_definitions(source_texts[name]) for name in UPLOAD_MODULES)
     )
     sdk_source = source_texts["atomgit_hub"]
     check(
         "LFS and SDK ownership remain outside the upload package",
-        LFS_BOUNDARY_DEFINITIONS <= api_definitions
+        LFS_BOUNDARY_DEFINITIONS <= lfs_definitions
         and not (LFS_BOUNDARY_DEFINITIONS & upload_definitions)
         and "def upload_folder(" in sdk_source,
     )

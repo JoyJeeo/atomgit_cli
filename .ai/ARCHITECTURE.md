@@ -45,8 +45,8 @@ or covered by shared contract tests.
   generation and atomic conda-environment hook management.
 - `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
 - `api.py`: historical CLI-facing concrete client and singleton; service,
-  download, and upload methods resolve from owned mixins while LFS policy and
-  transfer remain local for the later LFS Domain step.
+  download, upload, and LFS methods resolve from owned compatibility modules
+  while the concrete class and patch facade remain historical.
 - `atomgit_hub.py`: public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
@@ -69,6 +69,9 @@ or covered by shared contract tests.
 - `upload/`: owned CLI API upload service, ordinary transfer, resumable
   orchestration, projection, error policy, and lightweight contracts; LFS
   transfer/policy and SDK upload remain outside this package.
+- `lfs/`: owned CLI API LFS policy, preupload classification/retry, attributes
+  transaction, slow-flow recovery, and transfer hooks; canonical pointer
+  serialization remains in the historical `lfs_pointer.py` owner.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -192,5 +195,7 @@ executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
 global singleton keep their historical identities while moved methods have
 service provenance and old-path module-object patches reach their former call
 sites. Download and upload methods and helpers likewise retain old-path
-identities and patch propagation while SDK download/upload and LFS ownership
-remain pending. API and CLI facade conversion remains isolated in later Issues.
+identities and patch propagation while SDK download/upload remain pending. LFS
+policy, transfer recovery, and attributes ownership now live in the
+`atomgit.lfs` domain; `lfs_pointer.py` remains its canonical pointer owner.
+API and CLI facade conversion remains isolated in later Issues.

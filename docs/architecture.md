@@ -66,7 +66,7 @@ manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 
 `atomgit.api`。CLI API upload 的 service、ordinary、resumable、projection、errors
 和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
 `atomgit.api`。SDK 下载/upload 仍由 `atomgit_hub.py` 持有，LFS policy/transfer
-仍在 `api.py`，没有提前创建后续 SDK、LFS 或 CLI 目标域空包。
+现在由 `atomgit.lfs.service` 持有，`api.py` 仅保留历史兼容导出和补丁传播。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -352,7 +352,8 @@ URL 或其查询参数。
 校验安全目标路径，再直连 resolve。SDK `download_file` 使用 HF
 `hf_hub_download`，因此缓存路径和异常类型与 CLI API 不同。
 这些 CLI API 下载职责现在由 `atomgit.download` 内的真实 owner 模块实现；
-`atomgit.api` 仅保留历史符号和 mixin 组合，不改变上述行为。
+LFS 职责由 `atomgit.lfs` 内的真实 owner 模块实现。`atomgit.api` 仅保留历史
+符号和 mixin 组合，不改变上述行为。
 
 ## 8. Python SDK
 

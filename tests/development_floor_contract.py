@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 102
+BASELINE_INVARIANT_COUNT = 103
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -147,6 +147,12 @@ CAPABILITY_REGISTRY = {
                 "test_upload_domain_ownership.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-013",
+                "LFS implementations have exact domain owners while historical API, pointer, upload, dependency-module, assignment, deletion, and patch seams remain stable.",
+                "test_lfs_domain_ownership.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -158,6 +164,7 @@ CAPABILITY_REGISTRY = {
             "test_packaging_metadata.py",
             "test_src_layout_migration.py",
             "test_infrastructure_utils_ownership.py",
+            "test_lfs_domain_ownership.py",
             "test_structure_guard.py",
             "test_upload_domain_ownership.py",
         ),
@@ -1185,10 +1192,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "102 条可观察行为不变量",
-        "86 个隔离 pytest case",
+        "103 条可观察行为不变量",
+        "87 个隔离 pytest case",
     ),
-    "docs/testing.md": ("86 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("87 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

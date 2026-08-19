@@ -42,6 +42,7 @@ SETUPTOOLS_LAYOUT = {
         "atomgit.download",
         "atomgit.infrastructure",
         "atomgit.lifecycle",
+        "atomgit.lfs",
         "atomgit.services",
         "atomgit.upload",
     ],
@@ -73,18 +74,18 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 84,
-        "changes": 532,
-        "digest": "a5be5a27460780fdf37bfd76d85fb5ddd41ebaa877cd56357ba2ee4bff9e40f1",
+        "changes": 502,
+        "digest": "3a4bfd9762a74f50ba3af67570749974d94965287eee7d3070065a445dba677c",
     },
     "isort": {
-        "files": 86,
-        "changes": 104,
-        "digest": "8d2e171782a9b2d062821af269c72a60cccb1cce2713bd84ed6dc0f055b6f7a7",
+        "files": 87,
+        "changes": 106,
+        "digest": "c34bb5ffd816b0b6a0a9ad683a3ac69d4d751c6cd57c456a8d5a1b9a4750aa85",
     },
     "ruff": {
-        "files": 18,
-        "changes": 195,
-        "digest": "d0cf5b9e44cfff2b71abcf73936c513a189d907035a1b61c1edd768bbd3c9482",
+        "files": 19,
+        "changes": 216,
+        "digest": "c10ae1ddde06109b2eb3d3dcd1b9aa9ba5248706fadec2e477a96c1762a7b57b",
     },
 }
 
@@ -120,6 +121,8 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/upload/projection.py",
     "src/atomgit/upload/resumable.py",
     "src/atomgit/upload/service.py",
+    "src/atomgit/lfs/__init__.py",
+    "src/atomgit/lfs/service.py",
     "src/atomgit/runtime.py",
     "src/atomgit/uninstaller.py",
     "src/atomgit/utils.py",
@@ -132,6 +135,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_environment_lifecycle_ownership.py",
     "tests/test_download_domain_ownership.py",
     "tests/test_upload_domain_ownership.py",
+    "tests/test_lfs_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
 }
 

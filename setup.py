@@ -60,6 +60,7 @@ setup(
         "atomgit.download",
         "atomgit.infrastructure",
         "atomgit.lifecycle",
+        "atomgit.lfs",
         "atomgit.services",
         "atomgit.upload",
     ],
