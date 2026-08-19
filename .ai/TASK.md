@@ -1,29 +1,25 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `self-tested and accepted by maintainer; preparing cohesive task commit`
+- Phase: `completed, accepted, committed, merged, pushed, and remotely verified`
 - Base branch: `yuto`
 - Base commit: `7338c99`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
   to `7338c99` before branch creation
-- Task branch: `codex/api-facade-conversion` (local only; never push)
-- Current HEAD: `7338c99 on codex/api-facade-conversion; no task commit yet`
+- Task branch: `codex/api-facade-conversion` (local only; never pushed)
+- Current HEAD: `78e6bc9 on yuto before this final delivery-record commit`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with this active Issue implementation, tests,
-  contracts, packaging declarations, and documentation; continuation must use
-  this worktree`
-- Last completed action: `recovered the approved sequential architecture
-  program, confirmed API Facade Conversion is step 12 after the delivered CLI
-  Command Ownership step, created the local task branch, and inspected the
-  current API facade, structural contracts, affected tests, documentation, and
-  locked dependency versions`
-- Next exact action: `create the cohesive conventional task commit, merge it
-  locally into yuto with --no-ff, push only yuto, fetch github, and verify all
-  yuto pointers`
+- Worktree state: `clean after task commit, local no-ff merge, yuto-only pushes,
+  and this final delivery-record update`
+- Last completed action: `created task commit 4044fdc, merged it locally into
+  yuto as 78e6bc9, pushed only yuto, fetched github, and verified local yuto,
+  github/yuto, and github/HEAD all resolved to 78e6bc9`
+- Next exact action: `none; await an explicit maintainer request before
+  activating another Issue`
 - Blockers: `none`
 - Tests run: `focused API facade 8/8; ownership/structure/src-layout/public
   import/import-order/packaging/artifact gates passed; complete
@@ -257,4 +253,8 @@ remote `yuto` resolved to `7338c99` before this Issue was activated.
 - Human acceptance: `accepted on 2026-08-19 after the final self-test; the
   complete 90-case baseline and all supporting gates passed, authorizing task
   commit, local merge, and yuto-only push`.
-- Delivery evidence: `pending`.
+- Delivery evidence: `task commit 4044fdc (refactor(api): convert historical
+  module to facade package) was merged locally into yuto with --no-ff as
+  78e6bc9 (merge: convert api to facade package); only yuto was pushed. After
+  fetch, local yuto, github/yuto, and github/HEAD all resolved to 78e6bc9. The
+  task branch was never pushed`.
