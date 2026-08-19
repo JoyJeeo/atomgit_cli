@@ -1,26 +1,25 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-19 +0800`
-- Phase: `self-tested, independently reviewed, and maintainer-accepted; task
-  commit next`
+- Phase: `completed, accepted, committed, locally merged, pushed, and remotely
+  verified`
 - Base branch: `yuto`
 - Base commit: `138e1a9`
 - Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved to
   `138e1a9` before branch creation
 - Task branch: `codex/sdk-domain-ownership` (local only; never push)
-- Current HEAD: `138e1a9`
+- Current HEAD: `yuto merge 5469383; final delivery record commit follows`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with only active-Issue source, tests, contracts, and
-  documentation`
-- Last completed action: `the maintainer explicitly requested self-test and
-  acceptance followed by commit and push; the final acceptance run passed all
-  focused gates, supporting checks, and the complete baseline`
-- Next exact action: `create the cohesive task commit, merge it locally into
-  yuto with --no-ff, push only yuto, and verify github/yuto`
+- Worktree state: `clean on yuto before this final delivery record`
+- Last completed action: `created task commit ec3476b, merged it into yuto as
+  5469383 with --no-ff, pushed only yuto, fetched, and verified local yuto,
+  github/yuto, and github/HEAD all resolved to 5469383`
+- Next exact action: `none for this completed Issue; wait for an explicit new
+  development request before activating another Issue`
 - Blockers: `none`
 
 The predecessor LFS Domain Issue is complete, accepted, committed, locally
@@ -28,7 +27,7 @@ merged, pushed, and remotely verified. Its task commit is `7f7074d`, local merge
 is `a2275c6`, final delivery records are `79d6685` and `138e1a9`, and local and
 remote `yuto` resolve to `138e1a9`.
 
-## Active Issue
+## Completed Issue Record
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-REFACTOR-SDK-DOMAIN-OWNERSHIP`
@@ -233,6 +232,9 @@ remote `yuto` resolve to `138e1a9`.
   the current Python 3.10 conda environment.
 - Human acceptance: `accepted on 2026-08-19 when the maintainer explicitly
   requested self-testing and acceptance followed by commit and push`.
-- Delivery operations: `task commit, local merge, and yuto-only push are now
-  authorized and pending; no remote Issue/PR, tag, release, live write,
-  credential mutation, or deletion is authorized`.
+- Delivery evidence: `task commit ec3476b refactor(sdk): extract domain
+  ownership; local no-ff merge 5469383 merge: extract sdk domain ownership;
+  pushed only yuto through github; task branch remained local; post-fetch local
+  yuto, github/yuto, and github/HEAD all resolved to 5469383`.
+- No remote Issue/PR, task-branch push, tag, Release, publication, live AtomGit
+  write, credential mutation, deletion, or upstream-main change was performed.
