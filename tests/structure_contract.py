@@ -4,7 +4,6 @@ import ast
 from collections import defaultdict
 from pathlib import Path
 
-
 PRODUCTION_MODULE_OWNERS = {
     "__init__": "facade",
     "__main__": "cli",
@@ -51,6 +50,13 @@ PRODUCTION_MODULE_OWNERS = {
     "lifecycle.uninstall": "lifecycle",
     "lfs.__init__": "lfs",
     "lfs.service": "lfs",
+    "sdk.__init__": "sdk",
+    "sdk.common": "sdk",
+    "sdk.datasets": "sdk",
+    "sdk.downloads": "sdk",
+    "sdk.errors": "sdk",
+    "sdk.repositories": "sdk",
+    "sdk.uploads": "sdk",
     "services.__init__": "services",
     "services.authentication": "services",
     "services.repositories": "services",
@@ -58,12 +64,22 @@ PRODUCTION_MODULE_OWNERS = {
 
 DOMAIN_DEPENDENCIES = {
     "facade": {
-        "cli", "sdk", "services", "transfers", "lifecycle", "distribution",
-        "infrastructure", "lfs",
+        "cli",
+        "sdk",
+        "services",
+        "transfers",
+        "lifecycle",
+        "distribution",
+        "infrastructure",
+        "lfs",
     },
     "cli": {
-        "services", "transfers", "lifecycle", "distribution",
-        "infrastructure", "lfs",
+        "services",
+        "transfers",
+        "lifecycle",
+        "distribution",
+        "infrastructure",
+        "lfs",
     },
     "sdk": {"services", "transfers", "infrastructure", "lfs"},
     "services": {"infrastructure"},
@@ -97,11 +113,16 @@ CURRENT_INTERNAL_EDGES = {
     ("api", "services.repositories"),
     ("api", "upload.service"),
     ("api", "utils"),
-    ("atomgit_hub", "config"),
     ("atomgit_hub", "exceptions"),
-    ("atomgit_hub", "lfs_pointer"),
     ("atomgit_hub", "runtime"),
-    ("atomgit_hub", "utils"),
+    ("atomgit_hub", "sdk.datasets"),
+    ("atomgit_hub", "sdk.downloads"),
+    ("atomgit_hub", "sdk.repositories"),
+    ("atomgit_hub", "sdk.uploads"),
+    ("atomgit_hub", "sdk.datasets"),
+    ("atomgit_hub", "sdk.downloads"),
+    ("atomgit_hub", "sdk.repositories"),
+    ("atomgit_hub", "sdk.uploads"),
     ("cli", "api"),
     ("cli", "cli_contracts"),
     ("cli", "completion"),
@@ -160,6 +181,29 @@ CURRENT_INTERNAL_EDGES = {
     ("infrastructure.utils", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.validation"),
     ("runtime", "infrastructure.runtime"),
+    ("sdk.__init__", "sdk.datasets"),
+    ("sdk.__init__", "sdk.downloads"),
+    ("sdk.__init__", "sdk.repositories"),
+    ("sdk.__init__", "sdk.uploads"),
+    ("sdk.common", "infrastructure.config"),
+    ("sdk.common", "infrastructure.validation"),
+    ("sdk.datasets", "infrastructure.utils"),
+    ("sdk.datasets", "sdk.common"),
+    ("sdk.datasets", "sdk.errors"),
+    ("sdk.downloads", "infrastructure.utils"),
+    ("sdk.downloads", "sdk.common"),
+    ("sdk.downloads", "sdk.errors"),
+    ("sdk.errors", "exceptions"),
+    ("sdk.errors", "infrastructure.utils"),
+    ("sdk.errors", "lfs_pointer"),
+    ("sdk.repositories", "exceptions"),
+    ("sdk.repositories", "sdk.common"),
+    ("sdk.repositories", "sdk.errors"),
+    ("sdk.uploads", "exceptions"),
+    ("sdk.uploads", "infrastructure.validation"),
+    ("sdk.uploads", "lfs_pointer"),
+    ("sdk.uploads", "sdk.common"),
+    ("sdk.uploads", "sdk.errors"),
     ("uninstaller", "lifecycle.uninstall"),
     ("utils", "infrastructure.utils"),
     ("cli_contracts", "upload.contracts"),
@@ -167,7 +211,7 @@ CURRENT_INTERNAL_EDGES = {
 
 LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 853, "max_functions": 0, "max_classes": 1},
-    "atomgit_hub": {"max_lines": 734, "max_functions": 10, "max_classes": 0},
+    "atomgit_hub": {"max_lines": 158, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 908, "max_functions": 26, "max_classes": 1},
     "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
@@ -277,6 +321,13 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/upload/service.py",
     "atomgit/lfs/__init__.py",
     "atomgit/lfs/service.py",
+    "atomgit/sdk/__init__.py",
+    "atomgit/sdk/common.py",
+    "atomgit/sdk/datasets.py",
+    "atomgit/sdk/downloads.py",
+    "atomgit/sdk/errors.py",
+    "atomgit/sdk/repositories.py",
+    "atomgit/sdk/uploads.py",
     "atomgit/exceptions.py",
     "atomgit/lfs_pointer.py",
     "atomgit/release.py",
@@ -329,6 +380,13 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/upload/service.py",
     "src/atomgit/lfs/__init__.py",
     "src/atomgit/lfs/service.py",
+    "src/atomgit/sdk/__init__.py",
+    "src/atomgit/sdk/common.py",
+    "src/atomgit/sdk/datasets.py",
+    "src/atomgit/sdk/downloads.py",
+    "src/atomgit/sdk/errors.py",
+    "src/atomgit/sdk/repositories.py",
+    "src/atomgit/sdk/uploads.py",
     "src/atomgit/exceptions.py",
     "src/atomgit/lfs_pointer.py",
     "src/atomgit/release.py",
@@ -382,9 +440,11 @@ def discover_internal_edges(source_texts):
                     base_parts = base_parts[: -(node.level - 1)]
                 base = ".".join(base_parts)
                 imported = f"{base}.{node.module}".strip(".") if node.module else base
-                candidates = [imported] if node.module else [
-                    f"{base}.{alias.name}".strip(".") for alias in node.names
-                ]
+                candidates = (
+                    [imported]
+                    if node.module
+                    else [f"{base}.{alias.name}".strip(".") for alias in node.names]
+                )
                 edges.update(
                     (module_name, candidate)
                     for candidate in candidates
@@ -513,7 +573,10 @@ def validate_structure(source_texts, module_owners=None, legacy_debt=None):
         if owners.get(module_name) != "cli":
             tree = ast.parse(source)
             if any(
-                (isinstance(node, ast.Import) and any(a.name == "click" for a in node.names))
+                (
+                    isinstance(node, ast.Import)
+                    and any(a.name == "click" for a in node.names)
+                )
                 or (isinstance(node, ast.ImportFrom) and node.module == "click")
                 for node in ast.walk(tree)
             ):
@@ -530,7 +593,11 @@ def validate_structure(source_texts, module_owners=None, legacy_debt=None):
     for source, target in edges:
         source_domain = owners.get(source)
         target_domain = owners.get(target)
-        if source_domain is None or target_domain is None or source_domain == target_domain:
+        if (
+            source_domain is None
+            or target_domain is None
+            or source_domain == target_domain
+        ):
             continue
         if target_domain not in DOMAIN_DEPENDENCIES[source_domain]:
             forbidden_edges.add((source, target))

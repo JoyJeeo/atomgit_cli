@@ -61,6 +61,7 @@ setup(
         "atomgit.infrastructure",
         "atomgit.lifecycle",
         "atomgit.lfs",
+        "atomgit.sdk",
         "atomgit.services",
         "atomgit.upload",
     ],

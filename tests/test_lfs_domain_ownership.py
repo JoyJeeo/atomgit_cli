@@ -188,8 +188,8 @@ def main():
     check("structure contract accepts the LFS domain", not errors, repr(errors))
     check(
         "SDK implementation remains outside the LFS domain",
-        "def upload_folder(" in source_texts["atomgit_hub"]
-        and "atomgit.lfs.service" not in source_texts["atomgit_hub"],
+        "upload_folder" in _top_level_definitions(source_texts["sdk.uploads"])
+        and "upload_folder" not in lfs_definitions,
     )
 
     passed = sum(results)

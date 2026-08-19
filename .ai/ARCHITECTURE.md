@@ -17,7 +17,7 @@ console script / python -m atomgit
 Python users
      |
      v
-atomgit_hub.py -------------------------+
+atomgit_hub.py -> sdk/ -----------------+
      |
      v
 huggingface_hub / datasets
@@ -47,7 +47,7 @@ or covered by shared contract tests.
 - `api.py`: historical CLI-facing concrete client and singleton; service,
   download, upload, and LFS methods resolve from owned compatibility modules
   while the concrete class and patch facade remain historical.
-- `atomgit_hub.py`: public HF-like Python SDK functions.
+- `atomgit_hub.py`: historical facade for public HF-like Python SDK functions.
 - `runtime.py`: historical facade for the owned infrastructure runtime policy.
 - `version.py`: the single authoritative stable distribution version source.
 - `release.py`: standard-library Release resolver, asset/checksum/wheel metadata
@@ -72,6 +72,9 @@ or covered by shared contract tests.
 - `lfs/`: owned CLI API LFS policy, preupload classification/retry, attributes
   transaction, slow-flow recovery, and transfer hooks; canonical pointer
   serialization remains in the historical `lfs_pointer.py` owner.
+- `sdk/`: owned Python SDK shared policy, errors, downloads, uploads,
+  repository creation, and dataset loading; historical package and top-level
+  `atomgit_hub` imports preserve identities and patch seams.
 - `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
 
 ## External Boundaries
@@ -148,13 +151,12 @@ and must not report creation or upload success.
 
 ## Source And Packaging Layout
 
-Production modules live in `src/atomgit` with their existing flat module shape.
-The SDK implementation remains `src/atomgit/atomgit_hub.py`; the separately
-packaged `src/atomgit_hub.py` compatibility proxy preserves the historical
-top-level import and forwards private monkeypatch seams to that single
-implementation. `pyproject.toml` and `setup.py` both declare the exact `src`
-package/module mapping. No domain extraction or facade conversion is combined
-with this mechanical migration.
+Production modules live in `src/atomgit` with registered domain packages.
+SDK implementations live in `src/atomgit/sdk`; package-level
+`src/atomgit/atomgit_hub.py` and separately packaged `src/atomgit_hub.py`
+preserve the historical imports and forward private monkeypatch seams to the
+same owners. `pyproject.toml` and `setup.py` both declare the exact `src`
+package/module mapping.
 
 ## Architectural Risks To Preserve In Task Context
 
@@ -184,8 +186,8 @@ requires debt removal and declaration tightening in the same change, and
 rejects new edges, new forbidden directions, facade growth, cycles, unowned
 modules, and empty placeholders.
 
-Infrastructure, lifecycle, authentication/repository service, CLI API download
-extraction, and CLI API upload extraction are fail-closed through exact
+Infrastructure, lifecycle, authentication/repository service, CLI API download,
+CLI API upload, LFS, and Python SDK extraction are fail-closed through exact
 nested-module, artifact, facade-debt, identity, and old-path patch-seam
 contracts. The remaining forbidden-direction exception is `cli -> api`; it is
 explicit migration debt, not an approved pattern for new code. Source/editable
@@ -195,7 +197,9 @@ executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
 global singleton keep their historical identities while moved methods have
 service provenance and old-path module-object patches reach their former call
 sites. Download and upload methods and helpers likewise retain old-path
-identities and patch propagation while SDK download/upload remain pending. LFS
-policy, transfer recovery, and attributes ownership now live in the
+identities and patch propagation. SDK download, upload, repository, dataset,
+shared policy, and error implementations now live in `atomgit.sdk`, while both
+historical `atomgit_hub` paths retain exact function identities and dependency
+patch propagation. LFS policy, transfer recovery, and attributes ownership live in the
 `atomgit.lfs` domain; `lfs_pointer.py` remains its canonical pointer owner.
 API and CLI facade conversion remains isolated in later Issues.
