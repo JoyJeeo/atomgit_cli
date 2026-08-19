@@ -47,13 +47,18 @@ def main():
         repr(sorted(current_edges ^ CURRENT_INTERNAL_EDGES)),
     )
     check(
+        "package execution adapters register their package-facade dependency",
+        ("cli.__main__", "cli.__init__") in current_edges,
+        repr(sorted(current_edges)),
+    )
+    check(
         "the current structure satisfies its monotonic contract",
         not current_errors,
         repr(current_errors),
     )
     check(
         "legacy forbidden dependency debt is explicit and exact",
-        LEGACY_FORBIDDEN_EDGES == {("cli", "api.__init__")},
+        LEGACY_FORBIDDEN_EDGES == set(),
         repr(LEGACY_FORBIDDEN_EDGES),
     )
 
@@ -92,15 +97,15 @@ def main():
         repr(errors),
     )
 
-    shrinking_edge = dict(source_texts)
-    shrinking_edge["cli"] = shrinking_edge["cli"].replace(
+    growing_edge = dict(source_texts)
+    growing_edge["cli.__init__"] = growing_edge["cli.__init__"].replace(
         'api = _LazyObject("api", "api")',
-        'api = _LazyObject("external_api", "api")',
+        'api = _LazyObject("api", "api")\n_import_runtime_module("atomgit_hub")',
     )
-    errors = validate_structure(shrinking_edge)
+    errors = validate_structure(growing_edge)
     check(
-        "removed dependency debt requires the contract to tighten immediately",
-        any("removed=[('cli', 'api.__init__')]" in error for error in errors),
+        "new facade dependency edges fail closed after legacy debt removal",
+        any("internal dependency contract is stale" in error for error in errors),
         repr(errors),
     )
 

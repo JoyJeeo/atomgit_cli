@@ -13,6 +13,7 @@ atomgit = atomgit.cli:cli
 
 - `atomgit` 命令；
 - `python -m atomgit`；
+- `python -m atomgit.cli`；
 - `import atomgit`；
 - `import atomgit_hub`。
 

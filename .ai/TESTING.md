@@ -45,7 +45,7 @@ configuration access with clearly fake values.
 - Build a wheel in isolation.
 - Install it into an isolated environment.
 - Verify `atomgit --version`, `atomgit --help`, `python -m atomgit --help`,
-  `import atomgit`, and `import atomgit_hub`.
+  `python -m atomgit.cli --help`, `import atomgit`, and `import atomgit_hub`.
 
 ### Live AtomGit Tests
 
@@ -93,7 +93,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 26 capabilities, 110 invariants, and 90
+The current monotonic ledger has 26 capabilities, 112 invariants, and 91
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.

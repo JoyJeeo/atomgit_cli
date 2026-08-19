@@ -227,6 +227,11 @@ def main():
             ("console help", [atomgit_command, "--help"], "Commands:"),
             ("module help", [venv_python, "-m", "atomgit", "--help"], "Commands:"),
             (
+                "CLI package module help",
+                [venv_python, "-m", "atomgit.cli", "--help"],
+                "Commands:",
+            ),
+            (
                 "installed imports",
                 [
                     venv_python,
@@ -235,7 +240,7 @@ def main():
                         "import importlib, pathlib, sys, atomgit, atomgit_hub; "
                         "prefix = str(pathlib.Path(sys.prefix).resolve()); "
                         "modules=(atomgit, atomgit_hub) + tuple(importlib.import_module(n) "
-                        "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.utils', "
+                        "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.cli.__main__', 'atomgit.utils', "
                         "'atomgit.completion', 'atomgit.uninstaller', "
                         "'atomgit.release', 'atomgit.lfs_pointer', "
                         "'atomgit.infrastructure.validation', "

@@ -107,6 +107,8 @@ def main():
         CLEAN_POLICY_FILES
         == {
             "src/atomgit/api/__init__.py",
+            "src/atomgit/cli/__init__.py",
+            "src/atomgit/cli/__main__.py",
             "setup.py",
             "src/atomgit/completion.py",
             "src/atomgit/commands/__init__.py",
@@ -169,6 +171,7 @@ def main():
             "tests/test_sdk_domain_ownership.py",
             "tests/test_cli_command_ownership.py",
             "tests/test_api_facade_conversion.py",
+            "tests/test_cli_facade_conversion.py",
         },
         repr(CLEAN_POLICY_FILES),
     )

@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 110
+BASELINE_INVARIANT_COUNT = 112
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -171,6 +171,12 @@ CAPABILITY_REGISTRY = {
                 "test_api_facade_conversion.py",
                 "test_structure_guard.py",
             ),
+            _invariant(
+                "FLOOR-017",
+                "The historical CLI path is a package facade with exact Click identities, signatures, import behavior, lazy parent resolution, patch seams, executable entry paths, and no command business implementation.",
+                "test_cli_facade_conversion.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -180,6 +186,7 @@ CAPABILITY_REGISTRY = {
             "test_cli_baseline_guard.py",
             "test_cli_command_ownership.py",
             "test_api_facade_conversion.py",
+            "test_cli_facade_conversion.py",
             "test_cli_feature_baseline.py",
             "test_packaging_metadata.py",
             "test_src_layout_migration.py",
@@ -256,7 +263,7 @@ CAPABILITY_REGISTRY = {
         "CLI-DISPATCH",
         "CLI leaf-command dispatch and exit semantics",
         "high",
-        ("cli.py:cli",),
+        ("atomgit.cli:cli",),
         (
             _invariant(
                 "DISPATCH-001",
@@ -1094,10 +1101,18 @@ CAPABILITY_REGISTRY = {
                 "test_src_layout_migration.py",
                 "test_wheel_smoke.py",
             ),
+            _invariant(
+                "PKG-023",
+                "Source, editable, wheel, and sdist surfaces include exactly the CLI package facade and executable adapter, exclude the stale flat CLI module, and preserve console plus Python module entry paths.",
+                "test_cli_facade_conversion.py",
+                "test_src_layout_migration.py",
+                "test_wheel_smoke.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
             "test_api_facade_conversion.py",
+            "test_cli_facade_conversion.py",
             "test_cli_command_ownership.py",
             "test_deploy_script.py",
             "test_download_domain_ownership.py",
@@ -1244,10 +1259,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "26 个稳定能力 ID",
-        "110 条可观察行为不变量",
-        "90 个隔离 pytest case",
+        "112 条可观察行为不变量",
+        "91 个隔离 pytest case",
     ),
-    "docs/testing.md": ("90 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("91 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 
