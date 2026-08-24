@@ -36,10 +36,15 @@ def _resume_cache_root() -> Path:
     return root
 
 
-def _resume_cache_identity(repo_id: str, repo_type: str, filename: str) -> str:
-    identity = "\0".join((_atomgit_hf_endpoint(), repo_id, repo_type, filename)).encode(
-        "utf-8"
-    )
+def _resume_cache_identity(
+    repo_id: str,
+    repo_type: str,
+    filename: str,
+    revision: str = "main",
+) -> str:
+    identity = "\0".join(
+        (_atomgit_hf_endpoint(), repo_id, repo_type, revision or "main", filename)
+    ).encode("utf-8")
     return hashlib.sha256(identity).hexdigest()
 
 
@@ -215,16 +220,19 @@ def _download_atomgit_file_resumable(
     filename: str,
     destination: Path,
     token: str,
+    revision: str = "main",
 ) -> None:
     """Persist an interrupted range download and atomically install it."""
-    checksum, _ = _atomgit_file_download_metadata(repo_id, repo_type, filename, token)
+    checksum, _ = _atomgit_file_download_metadata(
+        repo_id, repo_type, filename, token, revision
+    )
     _, expected_digest, expected_size = checksum
     cache_root = _resume_cache_root()
-    identity = _resume_cache_identity(repo_id, repo_type, filename)
+    identity = _resume_cache_identity(repo_id, repo_type, filename, revision)
     partial_path = cache_root / f"{identity}.{expected_digest}.part"
     lock_path = cache_root / f"{identity}.lock"
     headers = {"User-Agent": "atomgit-cli", "Accept": "*/*"}
-    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename)
+    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename, revision)
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
@@ -254,7 +262,9 @@ def _download_atomgit_file_resumable(
                             )
                         else:
                             _atomgit_resume_raw(
-                                _atomgit_resolve_url_raw(repo_id, repo_type, filename),
+                                _atomgit_resolve_url_raw(
+                                    repo_id, repo_type, filename, revision
+                                ),
                                 partial_stream,
                                 headers,
                                 resume_size,

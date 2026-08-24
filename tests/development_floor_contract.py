@@ -12,8 +12,8 @@ FORMAL_DEFINITION = (
     "未通过开发底线的变更，不得进入 Issue 完成、合并、发布或继续扩展开发阶段。"
 )
 
-BASELINE_CAPABILITY_COUNT = 26
-BASELINE_INVARIANT_COUNT = 112
+BASELINE_CAPABILITY_COUNT = 27
+BASELINE_INVARIANT_COUNT = 115
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -1204,6 +1204,50 @@ CAPABILITY_REGISTRY = {
         ("docs/testing.md", "docs/architecture.md"),
         ("offline-contract", "portability-contract", "packaging-smoke"),
     ),
+    "ARCHITECTURE": _capability(
+        "ARCHITECTURE",
+        "Seven-directory architecture and CLI/native SDK parity registry",
+        "critical",
+        (
+            "atomgit.core",
+            "atomgit.domain",
+            "atomgit.usecases",
+            "atomgit.interfaces.sdk.AtomGitClient",
+        ),
+        (
+            _invariant(
+                "ARCH-001",
+                "Every new general remote capability is registered as parity-required or an explicit CLI-only exception.",
+                "test_architecture_parity.py",
+            ),
+            _invariant(
+                "ARCH-002",
+                "Core contracts and domain rules do not import Click or concrete network/dependency clients.",
+                "test_architecture_parity.py",
+                "test_structure_guard.py",
+            ),
+            _invariant(
+                "ARCH-003",
+                "Native SDK requests use shared usecases and return redacted structured results without changing historical HF-style signatures.",
+                "test_architecture_parity.py",
+                "test_sdk_domain_ownership.py",
+            ),
+        ),
+        (
+            "test_architecture_parity.py",
+            "test_sdk_domain_ownership.py",
+            "test_structure_guard.py",
+        ),
+        ("docs/architecture.md", "docs/development_floor.md", ".ai/TASK.md"),
+        (
+            "offline-contract",
+            "dependency-contract",
+            "security-contract",
+            "packaging-smoke",
+            "controlled-remote",
+        ),
+        "partial",
+    ),
     "ERROR-REDACTION": _capability(
         "ERROR-REDACTION",
         "Credential-safe CLI and SDK errors",
@@ -1258,11 +1302,11 @@ WORKFLOW_DOCUMENT_MARKERS = {
     ),
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
-        "26 个稳定能力 ID",
-        "112 条可观察行为不变量",
-        "91 个隔离 pytest case",
+        "27 个稳定能力 ID",
+        "115 条可观察行为不变量",
+        "92 个隔离 pytest case",
     ),
-    "docs/testing.md": ("91 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("92 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 
