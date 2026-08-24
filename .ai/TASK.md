@@ -9,10 +9,11 @@ Status: completed
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity-rebuild` (local historical branch; merged into `yuto`)
-- Current HEAD: `398beb1 docs(ai): close delivered architecture task`
+- Closure source HEAD: `398beb1 docs(ai): close delivered architecture task`
+- Delivery merge: `bc7b9ed merge: close architecture development plan` (pushed; local and `github/yuto` equal)
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `clean after normal push; no credentials or generated artifacts`
-- Last completed action: revalidated the delivered tree in `atomgit_cli`; complete offline baseline is 92 passed in 92.32s, with compileall, pip check, and diff check passing; local and remote `yuto` are equal at `398beb1`.
+- Last completed action: merged the closure documentation into `yuto`, pushed normally, and verified local/remote equality at `bc7b9ed`; final offline baseline and required checks passed.
 - Next exact action: `none for this Issue; await the next authorized task; never force-push`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
