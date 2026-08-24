@@ -1,22 +1,33 @@
 """Hugging Face 1.1.7 boundary used by the shared transfer usecases.
 
-The default adapter delegates to the already verified SDK owners.  Keeping
-that bridge in an outbound adapter means new interfaces share request/result
-contracts while historical functions retain their exact signatures and patch
-seams during the migration.
+Uploads retain their existing migration bridge. Downloads delegate directly
+to the canonical download adapter, so constructing the native client no longer
+imports the historical API facade.
 """
 
 from pathlib import Path
 
 
 class HuggingFaceAdapter:
-    def __init__(self, *, sdk_module=None, api_module=None):
+    def __init__(self, *, sdk_module=None, api_module=None, download_adapter=None):
         if sdk_module is None:
             from .. import sdk as sdk_module
         self.sdk = sdk_module
-        if api_module is None:
-            from ..api import api as api_module
-        self.api = api_module
+        self._api = api_module
+        if download_adapter is None:
+            from .download import AtomGitDownloadAdapter
+
+            download_adapter = AtomGitDownloadAdapter()
+        self.downloads = download_adapter
+
+    @property
+    def api(self):
+        """Load the historical upload bridge only when an upload needs it."""
+        if self._api is None:
+            from ..api import api
+
+            self._api = api
+        return self._api
 
     def create_repository(self, repo_id, repo_type, private, exist_ok):
         return self.sdk.create_repository(
@@ -35,6 +46,8 @@ class HuggingFaceAdapter:
         ignore_patterns,
         timeout,
         progress,
+        message=None,
+        num_workers=5,
     ):
         from huggingface_hub import upload_file
 
@@ -50,7 +63,7 @@ class HuggingFaceAdapter:
             "path_in_repo": remote_path,
             "repo_id": repo_id,
             "token": token,
-            "commit_message": f"Upload file {Path(source).name}",
+            "commit_message": message or f"Upload file {Path(source).name}",
         }
         if repo_type:
             kwargs["repo_type"] = "model" if repo_type == "dataset" else repo_type
@@ -78,6 +91,7 @@ class HuggingFaceAdapter:
         resumable,
         num_workers,
         batch_size,
+        message=None,
         auto_configure_lfs=False,
     ):
         if resumable:
@@ -94,6 +108,7 @@ class HuggingFaceAdapter:
                     revision=revision,
                     path_in_repo=path_in_repo,
                     ignore_patterns=ignore_patterns,
+                    message=message,
                     upload_timeout=timeout,
                     progress_bar=progress,
                     resumable=True,
@@ -109,6 +124,7 @@ class HuggingFaceAdapter:
             revision=revision,
             path_in_repo=path_in_repo,
             ignore_patterns=ignore_patterns,
+            commit_message=message,
             upload_timeout=timeout,
         )
 
@@ -127,24 +143,22 @@ class HuggingFaceAdapter:
         allow_patterns,
         ignore_patterns,
     ):
-        from ..download.service import (
-            scoped_download_filters,
-            scoped_download_revision,
-            scoped_download_token,
+        value = self.downloads.download_snapshot(
+            repo_id=repo_id,
+            repo_type=repo_type,
+            revision=revision,
+            token=token,
+            local_dir=local_dir,
+            force=force,
+            checksum=checksum,
+            resume=resume,
+            prune=prune,
+            allow_patterns=allow_patterns,
+            ignore_patterns=ignore_patterns,
         )
-
-        with scoped_download_token(token):
-            with scoped_download_revision(revision):
-                with scoped_download_filters(allow_patterns, ignore_patterns):
-                    return self.api.download_repo(
-                        repo_id,
-                        local_path=Path(local_dir) if local_dir else None,
-                        force_download=force,
-                        repo_type=repo_type,
-                        verify_checksum=checksum,
-                        resume_download=resume,
-                        prune=prune,
-                    )
+        if not value:
+            raise RuntimeError("仓库下载失败")
+        return value
 
     def download_file(
         self,
@@ -159,18 +173,20 @@ class HuggingFaceAdapter:
         checksum,
         resume,
     ):
-        from ..download.service import scoped_download_revision, scoped_download_token
-
-        with scoped_download_token(token), scoped_download_revision(revision):
-            return self.api.download_file(
-                repo_id,
-                filename,
-                local_path=Path(local_dir) if local_dir else None,
-                force_download=force,
-                repo_type=repo_type,
-                verify_checksum=checksum,
-                resume_download=resume,
-            )
+        value = self.downloads.download_file(
+            repo_id=repo_id,
+            filename=filename,
+            repo_type=repo_type,
+            revision=revision,
+            token=token,
+            local_dir=local_dir,
+            force=force,
+            checksum=checksum,
+            resume=resume,
+        )
+        if not value:
+            raise RuntimeError("文件下载失败")
+        return value
 
 
 __all__ = ["HuggingFaceAdapter"]

@@ -20,8 +20,8 @@ from huggingface_hub import close_session as close_hf_session
 from huggingface_hub import constants as hf_constants
 from huggingface_hub._local_folder import get_local_upload_paths, read_upload_metadata
 
-from ..download.integrity import _atomgit_file_checksum
-from ..download.transport import _atomgit_hf_endpoint
+from ..adapters.download.integrity import _atomgit_file_checksum
+from ..adapters.download.transport import _atomgit_hf_endpoint
 from ..lfs_pointer import canonical_lfs_payloads, verify_canonical_lfs_pointers
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 from .errors import (

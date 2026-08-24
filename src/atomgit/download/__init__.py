@@ -1,4 +1,4 @@
-"""Owned CLI API download-domain implementation."""
+"""Historical download compatibility exports."""
 
 from .service import DownloadServiceMixin
 

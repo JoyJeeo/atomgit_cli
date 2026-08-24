@@ -1,13 +1,20 @@
-"""Bounded AtomGit authentication and stored-identity service."""
+"""Historical authentication compatibility methods.
 
-import json
-import urllib.error
-import urllib.request
+The transport and identity parsing live in ``adapters.atomgit_v5``. This
+module keeps the old API method signatures, output, and patchable names.
+"""
+
+import json  # noqa: F401 -- historical API patch surface
+import urllib.error  # noqa: F401 -- historical API patch surface
+import urllib.request  # noqa: F401 -- historical API patch surface
 from typing import Any, Dict, Optional
 
+from ..adapters.atomgit_v5 import (
+    _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
+    AtomGitV5Adapter,
+    _sanitized_v5_api_error,
+)
 from ..infrastructure.config import config
-
-_ATOMGIT_IDENTITY_MAX_JSON_BYTES = 1024 * 1024
 
 
 class AuthenticationServiceMixin:
@@ -38,38 +45,7 @@ class AuthenticationServiceMixin:
         if not token:
             print("❌ 未找到登录凭证")
             return None
-        api_url = "https://atomgit.com/api/v5/user"
-        request = urllib.request.Request(
-            api_url,
-            headers={
-                "Authorization": token,
-                "User-Agent": "atomgit-cli",
-                "Accept": "application/json",
-            },
-        )
-        with urllib.request.urlopen(request, timeout=10) as response:
-            if response.status != 200:
-                raise urllib.error.HTTPError(
-                    api_url,
-                    response.status,
-                    "unexpected AtomGit identity response",
-                    getattr(response, "headers", {}),
-                    None,
-                )
-            payload = response.read(_ATOMGIT_IDENTITY_MAX_JSON_BYTES + 1)
-        if len(payload) > _ATOMGIT_IDENTITY_MAX_JSON_BYTES:
-            raise ValueError("identity response is too large")
-        data = json.loads(payload.decode("utf-8"))
-        if not isinstance(data, dict):
-            raise ValueError("identity response is malformed")
-        login = data.get("login")
-        if not isinstance(login, str) or not login.strip():
-            raise ValueError("identity response is missing login")
-        return {
-            "login": login,
-            "name": data.get("name"),
-            "email": data.get("email"),
-        }
+        return AtomGitV5Adapter().authenticate(token)
 
     def get_login_user(self):
         try:
@@ -91,9 +67,8 @@ class AuthenticationServiceMixin:
         return user_info
 
 
-# Wired to the repository owner by atomgit.api after both owners load. Keeping
-# this as a module global preserves the former direct old-path patch seam.
-def _sanitized_v5_api_error(error: Exception) -> str:
-    from .repositories import _sanitized_v5_api_error as implementation
-
-    return implementation(error)
+__all__ = [
+    "AuthenticationServiceMixin",
+    "_ATOMGIT_IDENTITY_MAX_JSON_BYTES",
+    "_sanitized_v5_api_error",
+]

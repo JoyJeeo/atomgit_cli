@@ -21,7 +21,14 @@ def create(context, repo_name, repo_type, private, public_repo, exist_ok):
         context.sys.exit(1)
 
     context.print_info(f"正在创建{repo_type}仓库: {repo_name}")
-    if context.api.create_repo(repo_name, repo_type, private, exist_ok=exist_ok):
+    result = context.run_usecase(
+        "create_repository",
+        repo_name,
+        repo_type=repo_type,
+        private=private,
+        exist_ok=exist_ok,
+    )
+    if result.ok:
         if exist_ok:
             context.print_success(f"仓库 {repo_name} 已存在或已创建")
         else:
@@ -36,7 +43,8 @@ def list_repositories(context):
         context.print_error("请先登录：atomgit login")
         context.sys.exit(1)
 
-    repositories = context.api.list_repos()
+    result = context.run_usecase("list_repositories")
+    repositories = result.value if result.ok else None
     if repositories is None:
         context.print_error("获取仓库列表失败")
         context.sys.exit(1)
@@ -74,7 +82,8 @@ def set_repository_visibility(context, repo_id, visibility):
         context.sys.exit(1)
 
     private = visibility == "private"
-    if context.api.set_repo_visibility(repo_id, private=private):
+    result = context.run_usecase("set_repository_visibility", repo_id, private=private)
+    if result.ok:
         context.print_success(f"仓库 {repo_id} 已设置为 {visibility}")
     else:
         context.print_error(f"仓库 {repo_id} 可见性修改失败")
@@ -92,7 +101,8 @@ def delete_repository(context, repo_id, confirm):
         raise context.click.UsageError("--confirm 必须与仓库 ID 完全一致")
 
     context.print_warning(f"正在永久删除仓库: {repo_id}")
-    if context.api.delete_repo(repo_id, confirmation=confirm):
+    result = context.run_usecase("delete_repository", repo_id, confirmation=confirm)
+    if result.ok:
         context.print_success(f"仓库 {repo_id} 已删除并验证不存在")
     else:
         context.print_error(f"仓库 {repo_id} 删除失败或远端状态未知")
@@ -110,7 +120,8 @@ def create_branch(context, repo_id, branch_name, source):
         raise context.click.UsageError("分支名称不合法")
     if not source or not context.is_supported_upload_revision(source):
         raise context.click.UsageError("来源 revision 不合法")
-    if context.api.create_branch(repo_id, branch_name, source=source):
+    result = context.run_usecase("create_branch", repo_id, branch_name, source=source)
+    if result.ok:
         context.print_success(f"分支 {branch_name} 创建成功")
     else:
         context.print_error(f"分支 {branch_name} 创建失败")

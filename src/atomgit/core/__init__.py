@@ -12,12 +12,21 @@ from .contracts import (
     UploadRequest,
     Visibility,
 )
-from .parity import CAPABILITY_REGISTRY, CapabilityClass, validate_parity_registry
+from .parity import (
+    CAPABILITY_REGISTRY,
+    RUNTIME_ROUTE_REGISTRY,
+    CapabilityClass,
+    RuntimeRoute,
+    validate_parity_registry,
+    validate_runtime_routes,
+)
 from .policies import normalize_repo_id, normalize_repo_type, normalize_revision
 
 __all__ = [
     "CapabilityClass",
+    "RuntimeRoute",
     "CAPABILITY_REGISTRY",
+    "RUNTIME_ROUTE_REGISTRY",
     "DownloadRequest",
     "OperationResult",
     "RepositoryRequest",
@@ -27,4 +36,5 @@ __all__ = [
     "normalize_repo_type",
     "normalize_revision",
     "validate_parity_registry",
+    "validate_runtime_routes",
 ]

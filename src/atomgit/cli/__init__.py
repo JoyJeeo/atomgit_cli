@@ -70,9 +70,10 @@ def _import_runtime_module(name):
 class _LazyObject:
     """Preserve patchable CLI globals without importing their runtime module."""
 
-    def __init__(self, module_name, attribute_name):
+    def __init__(self, module_name, attribute_name, prepend_context=False):
         object.__setattr__(self, "_module_name", module_name)
         object.__setattr__(self, "_attribute_name", attribute_name)
+        object.__setattr__(self, "_prepend_context", prepend_context)
 
     def _resolve(self):
         module = _import_runtime_module(object.__getattribute__(self, "_module_name"))
@@ -87,8 +88,14 @@ class _LazyObject:
     def __delattr__(self, name):
         delattr(self._resolve(), name)
 
+    def __call__(self, *args, **kwargs):
+        if object.__getattribute__(self, "_prepend_context"):
+            args = (sys.modules[__name__],) + args
+        return self._resolve()(*args, **kwargs)
+
 
 api = _LazyObject("api", "api")
+run_usecase = _LazyObject("interfaces.cli", "run", prepend_context=True)
 
 
 def _lazy_utility(name):

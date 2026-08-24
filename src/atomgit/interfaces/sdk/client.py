@@ -148,10 +148,12 @@ class AtomGitClient:
         token=None,
         repo_type: str = "model",
         revision: Optional[str] = None,
+        message: Optional[str] = None,
         path_in_repo: str = "./",
         ignore_patterns=None,
         timeout: float = 300.0,
         progress: bool = True,
+        num_workers: int = 5,
     ):
         request = UploadRequest(
             source=source,
@@ -161,8 +163,10 @@ class AtomGitClient:
             token=token,
             path_in_repo=path_in_repo,
             ignore_patterns=tuple(ignore_patterns or ()),
+            message=message,
             timeout=timeout,
             progress=progress,
+            num_workers=num_workers,
         )
         return self._execute("上传文件", lambda: self._uploads.file(request), repo_id)
 
@@ -174,6 +178,7 @@ class AtomGitClient:
         token=None,
         repo_type: str = "model",
         revision: Optional[str] = None,
+        message: Optional[str] = None,
         path_in_repo: str = "./",
         ignore_patterns=None,
         resumable: bool = False,
@@ -191,6 +196,7 @@ class AtomGitClient:
             token=token,
             path_in_repo=path_in_repo,
             ignore_patterns=tuple(ignore_patterns or ()),
+            message=message,
             resumable=resumable,
             num_workers=num_workers,
             batch_size=batch_size,

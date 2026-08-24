@@ -10,7 +10,7 @@ from typing import Optional, Set
 from huggingface_hub._local_folder import read_upload_metadata
 from huggingface_hub.utils import filter_repo_objects
 
-from ..download.transport import _atomgit_hf_endpoint
+from ..adapters.download.transport import _atomgit_hf_endpoint
 
 
 class ResumableProjectionError(ValueError):

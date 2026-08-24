@@ -40,6 +40,7 @@ SETUPTOOLS_LAYOUT = {
     "packages": [
         "atomgit",
         "atomgit.adapters",
+        "atomgit.adapters.download",
         "atomgit.api",
         "atomgit.cli",
         "atomgit.commands",
@@ -85,9 +86,9 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 81,
-        "changes": 443,
-        "digest": "ff220e252cb665e97dfa05a4d2337d2f9a02730a8926ca09911a7a01cb17c518",
+        "files": 80,
+        "changes": 442,
+        "digest": "f1b5300ee6f2cfb488560296d21a220a9fdd29c5cbc64ae3cfec8ae04fcfcadf",
     },
     "isort": {
         "files": 82,
@@ -105,6 +106,13 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/adapters/__init__.py",
     "src/atomgit/adapters/atomgit_v5.py",
     "src/atomgit/adapters/config.py",
+    "src/atomgit/adapters/download/__init__.py",
+    "src/atomgit/adapters/download/integrity.py",
+    "src/atomgit/adapters/download/manifest.py",
+    "src/atomgit/adapters/download/prune.py",
+    "src/atomgit/adapters/download/resume.py",
+    "src/atomgit/adapters/download/service.py",
+    "src/atomgit/adapters/download/transport.py",
     "src/atomgit/adapters/huggingface.py",
     "src/atomgit/api/__init__.py",
     "src/atomgit/cli/__init__.py",

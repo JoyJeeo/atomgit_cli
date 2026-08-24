@@ -166,7 +166,7 @@ def main():
 
     patch_cases = {
         "service": ("config", "atomgit.services.authentication"),
-        "download": ("hf_http_get", "atomgit.download.resume"),
+        "download": ("hf_http_get", "atomgit.adapters.download.resume"),
         "upload": ("hf_upload_file", "atomgit.upload.service"),
         "lfs": ("math", "atomgit.lfs.service"),
     }

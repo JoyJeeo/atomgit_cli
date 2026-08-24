@@ -3,10 +3,19 @@
 
 import ast
 import tempfile
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 from atomgit.adapters import HuggingFaceAdapter
-from atomgit.core import CAPABILITY_REGISTRY, validate_parity_registry
+from atomgit.adapters.download.service import RemoteDownloadFileNotFoundError
+from atomgit.core import (
+    CAPABILITY_REGISTRY,
+    RUNTIME_ROUTE_REGISTRY,
+    RuntimeRoute,
+    validate_parity_registry,
+    validate_runtime_routes,
+)
 from atomgit.core.contracts import OperationResult
 from atomgit.interfaces.sdk import AtomGitClient
 
@@ -93,13 +102,11 @@ class DownloadContextFake:
     def __init__(self):
         self.observed = None
 
-    def download_repo(self, *args, **kwargs):
-        from atomgit.download import service as download_service
-
+    def download_snapshot(self, **kwargs):
         self.observed = (
-            download_service._DOWNLOAD_TOKEN_OVERRIDE.get(),
-            download_service._DOWNLOAD_REVISION_OVERRIDE.get(),
-            download_service._DOWNLOAD_FILTER_OVERRIDE.get(),
+            kwargs["token"],
+            kwargs["revision"],
+            (kwargs["allow_patterns"], kwargs["ignore_patterns"]),
         )
         return True
 
@@ -107,8 +114,58 @@ class DownloadContextFake:
         return True
 
 
+class DefaultDownloadAdapterFake:
+    def __init__(self):
+        self.calls = []
+
+    def download_snapshot(self, **kwargs):
+        self.calls.append(kwargs)
+        return True
+
+
 def main():
     check("parity registry is fail-closed", not validate_parity_registry())
+    check(
+        "runtime route registry resolves every parity surface",
+        not validate_runtime_routes(),
+    )
+    missing_route = dict(RUNTIME_ROUTE_REGISTRY)
+    missing_route.pop("UPLOAD")
+    check(
+        "missing runtime route fails closed",
+        any(
+            "UPLOAD is missing runtime route" in error
+            for error in validate_runtime_routes(routes=missing_route)
+        ),
+    )
+    broken_route = dict(RUNTIME_ROUTE_REGISTRY)
+    broken_route["DOWNLOAD"] = broken_route["DOWNLOAD"].__class__(
+        usecase=broken_route["DOWNLOAD"].usecase,
+        usecase_methods=broken_route["DOWNLOAD"].usecase_methods,
+        cli_entries=("atomgit.commands.transfers.missing",),
+        sdk_entries=broken_route["DOWNLOAD"].sdk_entries,
+    )
+    check(
+        "non-importable runtime route fails closed",
+        any(
+            "DOWNLOAD CLI route cannot be resolved" in error
+            for error in validate_runtime_routes(routes=broken_route)
+        ),
+    )
+    bypassed_route = dict(RUNTIME_ROUTE_REGISTRY)
+    bypassed_route["AUTHENTICATION"] = RuntimeRoute(
+        usecase=bypassed_route["AUTHENTICATION"].usecase,
+        usecase_methods=bypassed_route["AUTHENTICATION"].usecase_methods,
+        cli_entries=("atomgit.api.HuggingFaceAPI.login",),
+        sdk_entries=bypassed_route["AUTHENTICATION"].sdk_entries,
+    )
+    check(
+        "legacy CLI owner bypass fails closed",
+        any(
+            "AUTHENTICATION CLI route has no operation contract" in error
+            for error in validate_runtime_routes(routes=bypassed_route)
+        ),
+    )
     check(
         "registry covers parity and explicit CLI-only classes",
         {spec.classification.value for spec in CAPABILITY_REGISTRY.values()}
@@ -211,7 +268,7 @@ def main():
         check("main cannot be treated as an unverified upload branch", False)
 
     context_api = DownloadContextFake()
-    context_adapter = HuggingFaceAdapter(api_module=context_api)
+    context_adapter = HuggingFaceAdapter(download_adapter=context_api)
     context_adapter.download_snapshot(
         repo_id="user/repo",
         repo_type="model",
@@ -228,6 +285,49 @@ def main():
     check(
         "native SDK anonymous download does not fall back to saved token",
         context_api.observed == (False, "feature", (("*.bin",), ("*.tmp",))),
+    )
+    quiet_adapter = type(
+        "QuietDownloadAdapter",
+        (),
+        {
+            "download_file": lambda self, **kwargs: (_ for _ in ()).throw(
+                RemoteDownloadFileNotFoundError("404 文件不存在")
+            )
+        },
+    )()
+    quiet_client = AtomGitClient(
+        config=ConfigFake(), transfer=HuggingFaceAdapter(download_adapter=quiet_adapter)
+    )
+    captured = StringIO()
+    with redirect_stdout(captured):
+        missing_result = quiet_client.download_file(
+            "user/repo", "missing.bin", token=False
+        )
+    check(
+        "native SDK download stays silent and returns a structured missing-file error",
+        not captured.getvalue()
+        and not missing_result.ok
+        and "不存在" in str(missing_result.error),
+        repr((captured.getvalue(), missing_result)),
+    )
+    try:
+        quiet_client.upload_file(
+            "/definitely/missing/atomgit-r4.bin", "user/repo", token="fake"
+        )
+    except FileNotFoundError:
+        check("native SDK still raises local missing-source errors", True)
+    else:
+        check("native SDK still raises local missing-source errors", False)
+
+    default_download = DefaultDownloadAdapterFake()
+    default_client = AtomGitClient(
+        config=ConfigFake(token="saved-token"),
+        transfer=HuggingFaceAdapter(download_adapter=default_download),
+    )
+    default_client.download_snapshot("user/repo")
+    check(
+        "canonical download path forwards the selected token",
+        default_download.calls[-1]["token"] == "saved-token",
     )
 
     passed = sum(condition for _, condition, _ in results)

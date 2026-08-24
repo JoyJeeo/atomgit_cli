@@ -22,9 +22,15 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
 ```
 
-CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；新的通用远程能力通过共享用例和
-端口装配到原生 `AtomGitClient`。CLI presentation（Click、提示、进度和退出码）
-仍由 CLI 层负责，SDK 返回 `OperationResult`，不会打印 CLI 文本。
+CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；通用远程能力现在通过
+`context.run_usecase -> AtomGitClient -> usecase -> adapter` 共享链路装配。认证和
+仓库的 V5/身份技术调用已经由 `adapters.atomgit_v5` 直接持有，历史 `services`
+只保留输出、返回值、方法身份和 monkeypatch 接缝。下载的枚举、路径安全、传输、
+checksum、resume、manifest 和 prune 技术实现也已迁入 `adapters.download`；
+`atomgit.download` 只保留历史 API 方法和 helper 路径，上传/LFS 仍处于后续迁移边界。
+每个 parity-required 能力的可导入符号和实际委派由 `validate_runtime_routes()`
+fail-closed 校验。CLI presentation（Click、提示、进度和退出码）仍由 CLI 层负责，
+SDK 返回 `OperationResult`，不会打印 CLI 文本。
 
 ## 2. 目录与模块
 
@@ -68,11 +74,13 @@ owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeyp
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
 实现也已下沉到 `atomgit.lifecycle` 的 environment、managed_paths、completion 和
 uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
-patch 接缝。认证和仓库 V5 管理实现已下沉到 `atomgit.services` 的 authentication
-与 repositories owner，`HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api`
-身份。CLI API 下载实现已下沉到 `atomgit.download` 的 service、transport、integrity、
-manifest、resume 和 prune owner；历史下载 helper、方法签名和 patch 接缝仍位于
-`atomgit.api`。CLI API upload 的 service、ordinary、resumable、projection、errors
+patch 接缝。认证和仓库 V5 管理的技术 owner 已下沉到 `atomgit.adapters.atomgit_v5`；
+`atomgit.services.authentication` 与 `repositories` 只作为历史兼容 wrapper，
+`HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api` 身份。下载实现已下沉到
+`atomgit.adapters.download` 的 service、transport、integrity、manifest、resume
+和 prune owner；`atomgit.download` 仅保留历史 wrapper/export，历史下载 helper、
+方法签名和 patch 接缝仍位于 `atomgit.api`。CLI API upload 的 service、ordinary、
+resumable、projection、errors
 和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
 `atomgit.api`。SDK 下载、上传、仓库、数据集、共享策略和异常转换已迁入
 `atomgit.sdk`，历史 `atomgit_hub` 模块只保留兼容导出和补丁传播；LFS
@@ -85,12 +93,16 @@ policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留�
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
 lifecycle 源码/可编辑安装策略移除。最终七目录责任架构已建立；现有
-`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 仍作为已验证的迁移 owner，
-新的 adapters 将这些 owner 接到共享 usecase 端口，后续 vertical slice 可以在
-保持历史身份和 patch seam 的前提下逐步收缩旧 facade。`atomgit.interfaces.sdk.AtomGitClient`
+`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 仍作为已验证的迁移边界；认证/仓库
+slice 已在保持历史身份和 patch seam 的前提下收缩旧 services；下载 slice 也已让
+CLI 与原生 SDK 经共享 usecase 直接调用 canonical adapter，不再把历史 API 当作
+默认下载 owner。上传/LFS 仍待后续 vertical slice。
+`atomgit.interfaces.sdk.AtomGitClient`
 是原生 SDK 入口，`atomgit.core.parity.CAPABILITY_REGISTRY` 对每项
 通用远程能力 fail-closed 地记录分类、共享用例、CLI 入口、SDK 入口、结果合同和
-专项测试。
+专项测试；`RUNTIME_ROUTE_REGISTRY` 进一步解析实际符号、检查 usecase 方法，并
+检查 CLI/SDK 源码委派到共享 usecase。故意将历史 API owner 作为 CLI adapter 的
+测试替身会被结构契约拒绝为绕行路径。
 `tests/test_infrastructure_utils_ownership.py` 另外锁定 owner provenance、共享 config
 对象、runtime 身份、旧 `os.walk`/`subprocess.run` patch 接缝和 facade 不回长。
 `tests/test_environment_lifecycle_ownership.py` 锁定生命周期 owner provenance、历史

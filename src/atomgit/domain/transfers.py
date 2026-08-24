@@ -24,6 +24,7 @@ def validate_upload_request(request: UploadRequest) -> UploadRequest:
         token=request.token,
         path_in_repo=request.path_in_repo or "./",
         ignore_patterns=tuple(request.ignore_patterns or ()),
+        message=request.message,
         resumable=bool(request.resumable),
         num_workers=request.num_workers,
         batch_size=request.batch_size,

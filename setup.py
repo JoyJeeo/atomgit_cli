@@ -58,6 +58,7 @@ setup(
     packages=[
         "atomgit",
         "atomgit.adapters",
+        "atomgit.adapters.download",
         "atomgit.api",
         "atomgit.cli",
         "atomgit.commands",

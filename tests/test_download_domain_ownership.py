@@ -21,7 +21,7 @@ from structure_contract import (  # noqa: E402
     validate_structure,
 )
 
-DOWNLOAD_MODULES = (
+LEGACY_DOWNLOAD_MODULES = (
     "download.__init__",
     "download.integrity",
     "download.manifest",
@@ -30,20 +30,24 @@ DOWNLOAD_MODULES = (
     "download.service",
     "download.transport",
 )
+ADAPTER_DOWNLOAD_MODULES = tuple(
+    name.replace("download.", "adapters.download.", 1)
+    for name in LEGACY_DOWNLOAD_MODULES
+)
 
 HISTORICAL_HELPER_OWNERS = {
-    "_atomgit_hf_endpoint": "download.transport",
-    "_atomgit_resolve_url": "download.transport",
-    "_atomgit_file_checksum": "download.integrity",
-    "_verify_download_checksum": "download.integrity",
-    "_download_manifest_path": "download.manifest",
-    "_download_manifest_lock": "download.manifest",
-    "_safe_download_destination": "download.service",
-    "_prune_managed_download_files": "download.prune",
-    "_atomgit_download_raw": "download.transport",
-    "_download_atomgit_file": "download.transport",
-    "_download_atomgit_file_resumable": "download.resume",
-    "_atomgit_list_repo_files": "download.service",
+    "_atomgit_hf_endpoint": "adapters.download.transport",
+    "_atomgit_resolve_url": "adapters.download.transport",
+    "_atomgit_file_checksum": "adapters.download.integrity",
+    "_verify_download_checksum": "adapters.download.integrity",
+    "_download_manifest_path": "adapters.download.manifest",
+    "_download_manifest_lock": "adapters.download.manifest",
+    "_safe_download_destination": "adapters.download.service",
+    "_prune_managed_download_files": "adapters.download.prune",
+    "_atomgit_download_raw": "adapters.download.transport",
+    "_download_atomgit_file": "adapters.download.transport",
+    "_download_atomgit_file_resumable": "adapters.download.resume",
+    "_atomgit_list_repo_files": "adapters.download.service",
 }
 
 results = []
@@ -79,7 +83,9 @@ def _top_level_definitions(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in DOWNLOAD_MODULES if name not in source_texts)
+    missing = tuple(
+        name for name in ADAPTER_DOWNLOAD_MODULES if name not in source_texts
+    )
     check(
         "all approved download owner modules contain real implementation", not missing
     )
@@ -91,8 +97,8 @@ def main():
     download_service = importlib.import_module("atomgit.download.service")
     owner_modules = {
         name: importlib.import_module(f"atomgit.{name}")
-        for name in DOWNLOAD_MODULES
-        if name != "download.__init__"
+        for name in ADAPTER_DOWNLOAD_MODULES
+        if name != "adapters.download.__init__"
     }
 
     check(
@@ -182,7 +188,14 @@ def main():
     )
     check(
         "every nested download module has exact transfer ownership",
-        all(PRODUCTION_MODULE_OWNERS[name] == "transfers" for name in DOWNLOAD_MODULES),
+        all(
+            PRODUCTION_MODULE_OWNERS[name] == "adapters"
+            for name in ADAPTER_DOWNLOAD_MODULES
+        )
+        and all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
+            for name in LEGACY_DOWNLOAD_MODULES
+        ),
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
@@ -192,7 +205,7 @@ def main():
     )
 
     placeholder = dict(source_texts)
-    placeholder["download.transport"] = '"""Placeholder."""\npass\n'
+    placeholder["adapters.download.transport"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(placeholder)
     check(
         "a download placeholder replacement fails closed",
@@ -200,17 +213,23 @@ def main():
         repr(errors),
     )
     unowned = dict(source_texts)
-    unowned["download.future"] = "VALUE = 1\n"
+    unowned["adapters.download.future"] = "VALUE = 1\n"
     errors = validate_structure(unowned)
     check(
         "an unowned download implementation fails closed",
-        any("download.future" in error and "unowned" in error for error in errors),
+        any(
+            "adapters.download.future" in error and "unowned" in error
+            for error in errors
+        ),
         repr(errors),
     )
 
     sdk_download_source = source_texts["sdk.downloads"]
     download_definitions = set().union(
-        *(_top_level_definitions(source_texts[name]) for name in DOWNLOAD_MODULES)
+        *(
+            _top_level_definitions(source_texts[name])
+            for name in ADAPTER_DOWNLOAD_MODULES
+        )
     )
     lfs_source = source_texts["lfs.service"]
     check(
@@ -219,6 +238,44 @@ def main():
         <= _top_level_definitions(sdk_download_source)
         and not ({"snapshot_download", "download_file"} & download_definitions)
         and "def _download_remote_gitattributes(" in lfs_source,
+    )
+    adapter_imports = {
+        node.module or ""
+        for name in ADAPTER_DOWNLOAD_MODULES
+        for node in ast.walk(ast.parse(source_texts[name]))
+        if isinstance(node, ast.ImportFrom)
+    }
+    check(
+        "canonical download adapters have no legacy owner imports",
+        not any(
+            name == "atomgit.api"
+            or ".api" in name
+            or "services" in name
+            or "sdk" in name
+            or name.startswith("download")
+            for name in adapter_imports
+        ),
+        repr(sorted(adapter_imports)),
+    )
+    adapter_source = source_texts["adapters.huggingface"]
+    check(
+        "native download adapter delegates directly to the canonical owner",
+        "self.downloads.download_snapshot(" in adapter_source
+        and "self.downloads.download_file(" in adapter_source
+        and "self.api.download_repo(" not in adapter_source
+        and "self.api.download_file(" not in adapter_source,
+    )
+    canonical_service_source = source_texts["adapters.download.service"]
+    canonical_service_tree = ast.parse(canonical_service_source)
+    check(
+        "canonical download adapter has no CLI output or swallowed failures",
+        not any(
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "print"
+            for node in ast.walk(canonical_service_tree)
+        )
+        and "sanitized_download_error" not in canonical_service_source,
     )
 
     passed = sum(condition for _, condition, _ in results)
