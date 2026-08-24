@@ -1,221 +1,145 @@
 # AtomGit CLI Architecture
 
+This document describes the implemented architecture on `yuto`. It is a
+runtime and ownership reference, not a roadmap. Observable CLI and legacy SDK
+contracts remain compatibility surfaces; the native SDK parity surface is
+implemented through the shared usecases below.
+
 ## Runtime Shape
 
 ```text
 console script / python -m atomgit
                 |
                 v
- cli/__init__.py Click schema
+       compatibility/cli facade
                 |
                 v
-        commands/ callbacks
-                |
-                v
-             api/__init__.py -----------+
-                |                       |
-                v                       v
-        huggingface_hub          config.py / utils.py
+        interfaces/cli -> usecases -> domain -> core
+                                      |
+                                      v
+                                adapters / infrastructure
 
-Python users
+python users
      |
-     v
-atomgit_hub.py -> sdk/ -----------------+
+     +--> legacy atomgit_hub facades -> sdk compatibility owners
      |
-     v
-huggingface_hub / datasets
+     +--> interfaces/sdk.AtomGitClient -> usecases -> adapters
 
-Zsh completion adapter
-     |
-     v
-lightweight cli/__init__.py schema -> live Click candidates
+Zsh completion -> lightweight CLI schema only
 ```
 
-The CLI and SDK are parallel wrappers. `atomgit_hub.py` does not call
-`api/__init__.py`, so shared behavior can drift unless it is deliberately centralized
-or covered by shared contract tests.
+The seven responsibility directories are the target business architecture:
 
-## Modules
+```text
+src/atomgit/
+├── core/            contracts, policies, ports, errors, parity registry
+├── domain/          authentication, repository, transfer rules
+├── usecases/        ordered business orchestration and final-state checks
+├── interfaces/      CLI presentation and native SDK request/result mapping
+├── adapters/        Hugging Face, AtomGit V5, and outbound technical ports
+├── compatibility/  historical paths, identities, signatures, and seams
+└── infrastructure/ config, runtime, filesystem, cache, Git, and lifecycle
+```
 
-- `__main__.py`: `python -m atomgit` entry point.
-- `__init__.py`: package metadata and public exports; completion requests skip
-  eager business and SDK exports while retaining runtime environment policy.
-- `cli/__init__.py`: historical Click command tree, exact schema,
-  prompt/output/exit
-  boundary, and lazy dependency facade; callbacks delegate through the
-  historical module context so old-path patches remain effective.
-- `cli/__main__.py`: minimal `python -m atomgit.cli` compatibility entry.
-- `commands/`: owned authentication/configuration, repository/cache,
-  transfer, update/uninstall, and completion command implementations.
-- `cli_contracts.py`: historical path for lightweight upload constants owned by
-  `upload.contracts`, preserving the completion-safe CLI import surface.
-- `completion.py`: historical facade for lifecycle-owned dynamic Zsh adapter
-  generation and atomic conda-environment hook management.
-- `uninstaller.py`: historical facade for lifecycle-owned uninstall policy.
-- `api/__init__.py`: historical CLI-facing concrete client and singleton facade;
-  service,
-  download, upload, and LFS methods resolve from owned compatibility modules
-  while the concrete class and patch facade remain historical.
-- `atomgit_hub.py`: historical facade for public HF-like Python SDK functions.
-- `runtime.py`: historical facade for the owned infrastructure runtime policy.
-- `version.py`: the single authoritative stable distribution version source.
-- `release.py`: standard-library Release resolver, asset/checksum/wheel metadata
-  validator, target-interpreter installer, post-install verification, and
-  `atomgit update` policy shared with the POSIX bootstrap contract.
-- `exceptions.py`: stable public SDK failure hierarchy.
-- `config.py`: historical facade preserving the shared configuration class and
-  singleton.
-- `utils.py`: historical utility facade preserving public and patch seams.
-- `infrastructure/`: owned runtime/config, validation, output, filesystem,
-  cache, and Git credential-helper implementations plus one internal utility
-  aggregation surface.
-- `lifecycle/`: owned environment/origin policy, exact managed paths, completion
-  transactions, and safe uninstall implementation.
-- `services/`: owned bounded authentication and repository V5 management,
-  including create/list/visibility/delete/branch final-state verification.
-- `download/`: owned CLI API download service, transport, integrity, manifest,
-  resume, and prune implementation; SDK downloads remain outside this package.
-- `upload/`: owned CLI API upload service, ordinary transfer, resumable
-  orchestration, projection, error policy, and lightweight contracts; LFS
-  transfer/policy and SDK upload remain outside this package.
-- `lfs/`: owned CLI API LFS policy, preupload classification/retry, attributes
-  transaction, slow-flow recovery, and transfer hooks; canonical pointer
-  serialization remains in the historical `lfs_pointer.py` owner.
-- `sdk/`: owned Python SDK shared policy, errors, downloads, uploads,
-  repository creation, and dataset loading; historical package and top-level
-  `atomgit_hub` imports preserve identities and patch seams.
-- `setup.py`: package metadata and `atomgit=atomgit.cli:cli` console entry.
+The historical `atomgit.cli`, `atomgit.api`, and `atomgit_hub` paths remain
+thin facades. Existing command names, Click objects, Python imports, function
+identities, signatures, return conventions, exception behavior, entry paths,
+and monkeypatch seams are tested compatibility contracts.
 
-## External Boundaries
+## Ownership And Dependency Direction
 
-- AtomGit user API: login identity validation.
-- AtomGit HF-compatible endpoint: repository upload, download, and creation.
-- User filesystem: configuration, cache, downloads, temporary upload data.
-- Global Git configuration: host-specific credential helper registration.
-- GitHub Releases API/assets: the only official AtomGit CLI distribution channel;
-  the local build helper contains no PyPI/twine publication path. Third-party
-  dependencies may still resolve from the user's configured pip index.
+Business dependencies point inward:
 
-## Important State
+```text
+interfaces / compatibility -> usecases -> domain -> core
+                                      -> adapters / infrastructure ports
+```
 
-- `HF_ENDPOINT`, `HF_HUB_DISABLE_XET`, and `HF_HOME` are set through the shared
-  idempotent runtime policy before HF imports.
-- Hugging Face progress-bar control and request timeout are process-global.
-- Git credential-helper installation modifies user-global Git configuration.
-- Git helper setup stores the previous host-specific values in the restrictive
-  `~/.atomgit/git-helper-state.json` without writing the current login token,
-  installs an empty reset plus the AtomGit helper for each AtomGit host, and
-  restores the previous values on logout.
-- Tokens are persisted locally and must never enter logs or fixtures.
-- Zsh completion queries the current Click tree on every Tab without loading
-  business dependencies, reading credentials, accessing the network, or
-  creating configuration. Each active conda environment owns only its adapter
-  and activation/deactivation hooks; environment switches unload the previous
-  Click function before loading the next. Legacy global `.zshrc` state migrates
-  only after confirmation. Exact-path uninstall preserves user configuration,
-  and a hook left after direct pip removal warns without mutating state.
+`core` has no Click, Hugging Face, AtomGit V5, or concrete transport imports.
+`domain` owns validation and success invariants without UI or network calls.
+`usecases` own ordering, rollback/reconciliation, and final-state verification.
+Interfaces translate user/API inputs and outputs but do not implement remote
+business rules. Adapters and infrastructure own external calls and technical
+state. `tests/structure_contract.py` and `tests/test_structure_guard.py`
+fail closed on unowned modules, new forbidden edges, cycles, facade growth,
+empty placeholders, stale artifact declarations, and missing parity metadata.
 
-## Repository ID Rules
+The extracted technical owners remain explicit and are not additional business
+layers: `commands/` owns CLI command implementations, `services/` owns the
+historical V5 authentication/repository service boundaries, `download/` and
+`upload/` own legacy CLI transfer implementations, `lfs/` owns LFS policy and
+recovery, `sdk/` owns legacy SDK implementations, and `lifecycle/` owns
+completion, installation provenance, managed paths, and uninstall policy.
+These owners are connected to the seven-directory architecture through the
+registered compatibility and adapter boundaries.
 
-The project accepts standard `owner/repo` IDs and advertises selected
-multi-level AtomGit names. Normalization must be consistent across create,
-upload, download, URL generation, and dataset loading. A validator accepting an
-ID is not sufficient if downstream operations transform it differently. A
-multi-level write also requires permission on the normalized physical
-`owner-namespace/repo` namespace; the client must surface authorization failure
-and must not report creation or upload success.
+## Public Surfaces
 
-## Upload Paths
+- `atomgit.cli` and `atomgit.cli.__main__` preserve the Click schema, lazy
+  imports, callback identities, output, prompts, progress, and exits.
+- `atomgit.api.HuggingFaceAPI` and its singleton preserve the historical API
+  surface and patch propagation.
+- `atomgit_hub`, `atomgit.atomgit_hub`, and `atomgit` exports preserve the
+  legacy HF-style SDK functions and signatures.
+- `atomgit.interfaces.sdk.AtomGitClient` exposes native authentication,
+  repository, upload, and download parity methods with structured
+  `OperationResult` values and stable `AtomGitError` mapping.
+- `core.parity.CAPABILITY_REGISTRY` classifies every general remote capability
+  as `parity-required`, `cli-only`, or `sdk-only`; a parity-required row must
+  name one shared usecase, CLI entry, SDK entry, result contract, and focused
+  tests.
 
-- Single file: prefer HF `upload_file` with a full remote filename.
-- Directory: the CLI defaults to `HfApi.upload_large_folder`; authenticate
-  through the `HfApi` instance according to the locked library signature.
-  Selected files are deterministically grouped into configurable 1..20-file
-  outer batches after ignore filtering, with 20 retained as the default.
-  Every resumable upload uses a stable private projection keyed by source/
-  repository/revision/prefix/batch size and index so HF metadata cannot drift
-  across destinations or incompatible outer groupings.
-  Because HF 1.1.7 has no large-folder `path_in_repo` argument, requested source
-  content is placed below that prefix in the projection. Explicit ordinary mode
-  uses `upload_folder` with the normalized repository prefix. Logical
-  dataset resumable uploads use the same verified AtomGit model compatibility
-  route as dataset creation and ordinary transfer.
-- Opt-in resumable LFS configuration keeps repository policy outside the upload
-  projection. After server mode selection, and again at preupload/commit for
-  cached metadata, the child gates LFS work and returns only unconfirmed,
-  validated extension patterns. The parent uses a private one-file buffer, an
-  immutable revision SHA, and `parent_commit` to check, append, and verify root
-  `.gitattributes` before retrying the same batch. Confirmed patterns are reused
-  across outer batches. The wildcard is repository-wide and is printed before
-  mutation. The same transaction retains the oversized-regular repair path.
-- Temporary directories must remain alive until the dependent HF call returns
-  and must be cleaned in `finally` or a context manager.
-- All AtomGit upload paths enter a context-gated wrapper around the locked HF
-  commit serializer. LFS object transfer remains unchanged, but each `lfsFile`
-  metadata record is committed as an exact canonical pointer `file` payload to
-  bypass the service's missing-final-LF materialization. The client then reads
-  the raw V5 contents blob at the returned commit and compares exact bytes;
-  resumable ambiguous commits verify reconciled paths before marking their HF
-  metadata committed. The wrapper is inactive outside AtomGit upload contexts.
+## External Boundaries And State
 
-## Source And Packaging Layout
+- Hugging Face Hub `1.1.7` calls are isolated behind the HF adapter and are
+  checked against the installed signatures.
+- AtomGit V5 requests, bounded response parsing, redirects, authentication
+  headers, and error categories are isolated behind the V5 adapter.
+- Configuration uses lazy reads, restrictive permissions, atomic writes, and
+  the shared config object. Tokens, signed URLs, and secret-bearing causes do
+  not enter logs, results, fixtures, or documentation.
+- Runtime environment variables, Hugging Face timeout/progress state,
+  temporary resources, and Git credential-helper changes are scoped and
+  restored on success and failure.
+- Public downloads may be anonymous. Explicit anonymous context never falls
+  back to a saved token; write operations require an explicit or saved token.
+- Repository IDs, repository type, visibility, revision, checksum, resume,
+  prune, LFS, and final-state verification use shared policy and result
+  contracts. CLI macOS metadata filtering remains an injected CLI policy.
 
-Production modules live in `src/atomgit` with registered domain packages.
-SDK implementations live in `src/atomgit/sdk`; package-level
-`src/atomgit/atomgit_hub.py` and separately packaged `src/atomgit_hub.py`
-preserve the historical imports and forward private monkeypatch seams to the
-same owners. `pyproject.toml` and `setup.py` both declare the exact `src`
-package/module mapping.
+## Transfer Invariants
 
-## Architectural Risks To Preserve In Task Context
+- Directory uploads keep temporary projections alive through the dependent HF
+  call and clean them afterward.
+- Resumable uploads use revision- and destination-scoped metadata and restore
+  global timeout/progress state.
+- AtomGit LFS pointers are canonical ASCII bytes ending in one LF and are
+  verified against the returned raw V5 blob before success is reported.
+- Downloads reject unsafe paths, isolate redirect credentials, preserve
+  revision in resume identity, verify optional checksums, and prune only files
+  recorded by a successful manifest-scoped download.
+- Non-main CLI revisions require an explicitly created and verified branch;
+  unsupported SDK revision behavior remains accurately rejected.
 
-- CLI and SDK duplicate endpoint, normalization, upload, and error behavior.
-- Global timeout changes are unsafe unless restored.
-- Mock upload objects can hide real HF signature incompatibilities.
-- Remote branch semantics differ from Hugging Face Hub expectations; current
-  upload interfaces reject non-main revisions.
-- Multi-level ID normalization is shared, but write behavior still needs
-  explicitly authorized remote acceptance evidence.
-- Configuration and credential-helper operations affect user-owned state.
+## Packaging And Entry Paths
 
-Do not perform a broad architectural rewrite as incidental work. Address these
-risks through focused tasks and compatibility tests.
+The project uses the explicit `src/` layout declared by both `pyproject.toml`
+and `setup.py`. Source, PEP 660 editable, wheel, and sdist contracts preserve
+the historical package/module set, the `atomgit` console entry point, both
+Python module entry paths, and the top-level `atomgit_hub` compatibility module.
+The distribution version is read from the single `version.py` authority.
 
-## Structural Refactor Gate
+## Verified Status And Residual Risk
 
-The public compatibility facades plus the extracted CLI command, infrastructure,
-lifecycle, services, transfer, LFS, and SDK packages are the implemented
-architecture. The approved
-long-term dependency direction is facade/CLI/SDK to services, transfers,
-lifecycle, or distribution, then to infrastructure/LFS, with only the
-registered special directions. `tests/structure_contract.py` assigns every
-current module an owner and records current edges, public surfaces, artifact
-contents, and exact legacy size ceilings. `tests/test_structure_guard.py`
-requires debt removal and declaration tightening in the same change, and
-rejects new edges, new forbidden directions, facade growth, cycles, unowned
-modules, and empty placeholders.
+The complete offline baseline is the mandatory gate:
+`python tests/run_cli_baseline.py` currently passes 92 isolated cases. Compile,
+dependency, packaging, import, security, portability, structure, and parity
+contracts are included in that matrix; no live remote write is required for
+the offline architecture and compatibility claims.
 
-Infrastructure, lifecycle, authentication/repository service, CLI API download,
-CLI API upload, LFS, Python SDK, and CLI command extraction are fail-closed
-through exact
-nested-module, artifact, facade-debt, identity, and old-path patch-seam
-contracts. CLI facade conversion removes the last registered forbidden
-direction: its lazy API access is now owned by the facade boundary rather than
-the CLI business domain. Source/editable
-installation detection now has one lifecycle owner shared by update and
-uninstall policy, and the package-absent POSIX uninstall fallback retains
-executable manifest and safety parity. `atomgit.api.HuggingFaceAPI` and its
-global singleton keep their historical identities while moved methods have
-service provenance and old-path module-object patches reach their former call
-sites. Download and upload methods and helpers likewise retain old-path
-identities and patch propagation. SDK download, upload, repository, dataset,
-shared policy, and error implementations now live in `atomgit.sdk`, while both
-historical `atomgit_hub` paths retain exact function identities and dependency
-patch propagation. LFS policy, transfer recovery, and attributes ownership live in the
-`atomgit.lfs` domain; `lfs_pointer.py` remains its canonical pointer owner.
-CLI authentication/configuration, repository/cache, transfer, update/uninstall,
-and completion implementations now live in `atomgit.commands`;
-`cli/__init__.py` retains the exact Click tree and resolves former runtime
-dependencies through its historical `atomgit.cli` module object. Both API and
-CLI facade conversions are complete as package facades, with exact source,
-editable, wheel, and sdist contracts.
+Controlled remote upload/download/checksum/LFS evidence is intentionally not
+claimed in the local acceptance checkpoint. Multi-level namespace writes and
+other remote behavior remain subject to the scoped test-repository
+authorization. Black, isort, and Ruff report pre-existing repository-wide
+formatting debt; new task-owned files must still be clean, and broad debt
+removal is a separate authorized task.

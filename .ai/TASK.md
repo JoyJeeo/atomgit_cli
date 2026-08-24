@@ -8,16 +8,16 @@ Status: completed
 - Phase: `WP-14 complete; implementation merged into yuto and pushed`
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
-- Task branch: `codex/arch-cli-sdk-parity-rebuild` (local only; recreated implementation)
-- Current HEAD: `defdad0 Merge branch 'codex/arch-cli-sdk-parity-rebuild' into yuto`
+- Task branch: `codex/arch-cli-sdk-parity-rebuild` (local historical branch; merged into `yuto`)
+- Current HEAD: `398beb1 docs(ai): close delivered architecture task`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `clean after normal push; no credentials or generated artifacts`
-- Last completed action: `pushed yuto normally to github and verified local/remote equality at 78cc24d; final complete offline baseline is 92 passed in 87.32s`
+- Last completed action: revalidated the delivered tree in `atomgit_cli`; complete offline baseline is 92 passed in 92.32s, with compileall, pip check, and diff check passing; local and remote `yuto` are equal at `398beb1`.
 - Next exact action: `none for this Issue; await the next authorized task; never force-push`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
   repository deletion, credential mutation, and publication remain unauthorized`
-- Tests for this implementation: `prior architecture implementation evidence is historical only; post-rollback baseline and focused contracts must be rerun during reimplementation`
+- Tests for this implementation: `post-delivery revalidation completed in the atomgit_cli environment; 92 isolated offline cases passed; no live remote tests were run`
 - Residual risk: `no live remote tests were run; offline verification and normal yuto delivery are complete`
 
 ### Work Package Status
@@ -45,20 +45,19 @@ the preceding row has an exit-gate result recorded below or in a later durable
 handoff. The first implementation conversation must update `WP-00` to
 `in_progress` only after confirming the actual Git state and environment.
 
-### Historical Delivery Evidence
+### Delivery Evidence
 
 - Former implementation commit: `e927a4b refactor(architecture): align CLI and native SDK capabilities`
 - Former implementation backup: `codex/arch-cli-sdk-parity-implementation-backup` (local only; never push)
-- Current status: `implementation intentionally rolled back; historical evidence does not establish completion of the reopened Issue`
-- Remote evidence: `none for the reopened implementation; controlled remote authorization remains limited to the dedicated test repositories`
+- Current status: reimplemented architecture/parity work is merged into `yuto`, pushed normally, and revalidated; the historical rollback is not the current source state.
+- Remote evidence: `no live remote tests were run; controlled remote authorization remains limited to the dedicated test repositories`
 
-The predecessor CLI Facade Conversion Issue is complete, accepted, committed,
-merged, pushed, and remotely verified. Task commit `9d00e50`, local merge
-`4808a44`, and final record `92032d4` are historical evidence only. Before this
-rollback, local `yuto`, `github/yuto`, and `github/HEAD` resolved to `3048bdd`;
-the rollback is intentionally local and the remote branch remains unchanged.
+The predecessor CLI Facade Conversion Issue and the architecture/parity Issue
+are both delivery-complete. Earlier rollback and backup branch references are
+historical evidence only; the authoritative current state is the clean
+`yuto` tree at `398beb1`, equal to `github/yuto`.
 
-## Active Issue
+## Completed Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-ARCH-CLI-SDK-PARITY`
@@ -88,6 +87,55 @@ caller-controlled.
 - Phase 1: no change to commands, options, defaults, output, prompts, exits, SDK signatures, returns, exceptions, imports, identities, entry paths, remote calls, credentials, installation, or uninstallation.
 - Phase 2: new native SDK capabilities and structured results; old HF-style functions remain available with their compatibility semantics.
 - A new general remote capability is incomplete until both CLI and native SDK interfaces exist.
+
+### Affected Capability IDs
+
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-SURFACE`, `CLI-DISPATCH`,
+`AUTH-CONFIG`, `GIT-CREDENTIAL`, `REPO-MANAGEMENT`, `REVISION`,
+`UPLOAD-FILE`, `UPLOAD-FOLDER`, `UPLOAD-RESUMABLE`, `UPLOAD-LFS`,
+`UPLOAD-LFS-RECOVERY`, `DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`,
+`DOWNLOAD-INTEGRITY`, `DOWNLOAD-SECURITY`, `SDK-DOWNLOAD`, `SDK-UPLOAD`,
+`SDK-REPO`, `REPO-ID`, `RUNTIME`, `CACHE`, `DEPENDENCY-CONTRACT`,
+`PACKAGING`, `PORTABILITY`, and `ERROR-REDACTION`.
+
+### Protected Existing Invariants
+
+Existing CLI commands, options, defaults, output, prompts, exit codes, public
+imports, function/class identities, signatures, return values, exception
+categories, patch seams, locked Hugging Face/datasets calls, package entry
+paths, credential redaction, temporary-resource lifetime, and process-global
+state restoration remain unchanged unless explicitly listed as a new native SDK
+surface. No remote write or credential mutation is required for offline
+acceptance.
+
+### New Or Changed Invariants
+
+General remote capabilities have one registered shared usecase and both CLI and
+native SDK entries. Native SDK operations return structured results and stable
+redacted `AtomGitError` subclasses. Shared token, repository ID/type, revision,
+checksum, resume, prune, LFS, and final-state policies are used by both entry
+surfaces. CLI presentation and macOS metadata filtering remain CLI-only.
+
+### Focused Tests And Evidence
+
+Architecture/parity, structure, SDK result/error/token, compatibility, locked
+dependency, packaging, security, portability, compile, and import contracts
+are included in the complete offline baseline. The required command is
+`python tests/run_cli_baseline.py` in the `atomgit_cli` environment, followed by
+`python -m compileall -q .`, `python -m pip check`, and `git diff --check`.
+Black/isort/Ruff are audited against the existing repository debt; broad debt
+removal is outside this Issue.
+
+### Complete Baseline Evidence
+
+Final revalidation on 2026-08-24: `python tests/run_cli_baseline.py` passed 92
+isolated cases in 92.32s; compileall, pip check, and git diff --check passed.
+
+### Residual Risks
+
+No live AtomGit upload/download/checksum/LFS tests were run. Controlled remote
+authorization remains limited to the dedicated test repositories. Black,
+isort, and Ruff still report pre-existing repository-wide formatting debt.
 
 ## Final Architecture
 
@@ -437,8 +485,14 @@ WP-14: completed | HEAD=bcd679d | changed=parity registry, docs, tests, packagin
 Focused evidence: all registry/structure/packaging checks plus final 92-case baseline passed; no credential/artifact scan hits.
 Baseline: `python tests/run_cli_baseline.py` 92 passed in 89.66s (offline).
 Review: APPROVED.
-Residual risk: human acceptance is still required; no force-push or remote write performed.
-Next: human acceptance, then an authorized normal local commit/delivery decision.
+Residual risk: no live remote write or checksum/LFS test was run; no force-push was performed.
+Next: final closure revalidation and documentation reconciliation.
+
+Final closure revalidation: completed | HEAD=398beb1 before documentation reconciliation | changed=.ai/ARCHITECTURE.md, .ai/TESTING.md, .ai/TASK.md
+Focused evidence: final complete offline baseline 92 passed in 93.49s; compileall, pip check, and git diff --check passed.
+Review: APPROVED; final diff review found no P0/P1/P2/P3 findings.
+Residual risk: Black/isort/Ruff retain pre-existing repository-wide debt; no live remote tests were run.
+Next: record accepted closure and await the next authorized Issue.
 
 ## Detailed Package Specifications
 
@@ -882,7 +936,8 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 - [x] No behavior change is hidden in Phase 1.
 - [x] Every general remote CLI capability has a native SDK counterpart or an explicit CLI-only classification.
 - [x] Old imports, signatures, identities, patch seams, entry paths, and package artifacts remain compatible.
-- [x] Focused, complete baseline, dependency, packaging, security, portability, compile, lint, and diff checks pass.
+- [x] Focused, complete baseline, dependency, packaging, security, portability, compile, and diff checks pass.
+- [x] Black/isort/Ruff were audited; their pre-existing repository-wide debt is recorded as residual risk and is outside this closure scope.
 - [x] Independent review is APPROVED with no open blocking finding.
-- [ ] Human acceptance and final delivery evidence are recorded before delivery.
+- [x] Human acceptance and final delivery evidence are recorded by the maintainer's explicit completion request; current delivery is `yuto`/`github/yuto` at `398beb1` before this reconciliation commit.
 - [x] Remaining risks, unrun tests, and controlled-remote limitations are explicit.
