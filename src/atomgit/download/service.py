@@ -1,6 +1,7 @@
 """Whole-repository and single-file CLI API download service."""
 
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 from huggingface_hub import HfApi
@@ -17,6 +18,18 @@ from .manifest import (
 from .prune import _prune_managed_download_files, _repository_filename_parts
 from .resume import _download_atomgit_file_resumable
 from .transport import _download_atomgit_file
+
+_DOWNLOAD_TOKEN_OVERRIDE = ContextVar("atomgit_download_token_override", default=None)
+
+
+@contextmanager
+def scoped_download_token(token):
+    """Use an explicit SDK token without mutating saved credentials."""
+    marker = _DOWNLOAD_TOKEN_OVERRIDE.set(token)
+    try:
+        yield
+    finally:
+        _DOWNLOAD_TOKEN_OVERRIDE.reset(marker)
 
 
 def _is_not_found_error(error: Exception) -> bool:
@@ -123,7 +136,12 @@ class DownloadServiceMixin:
 
             local_path.mkdir(parents=True, exist_ok=True)
 
-            credentials = config.get_credentials()
+            override_token = _DOWNLOAD_TOKEN_OVERRIDE.get()
+            credentials = (
+                {"token": override_token}
+                if override_token
+                else config.get_credentials()
+            )
             token = (
                 credentials["token"] if credentials and "token" in credentials else None
             )
@@ -248,7 +266,12 @@ class DownloadServiceMixin:
 
             local_path.mkdir(parents=True, exist_ok=True)
 
-            credentials = config.get_credentials()
+            override_token = _DOWNLOAD_TOKEN_OVERRIDE.get()
+            credentials = (
+                {"token": override_token}
+                if override_token
+                else config.get_credentials()
+            )
             token = (
                 credentials["token"] if credentials and "token" in credentials else None
             )

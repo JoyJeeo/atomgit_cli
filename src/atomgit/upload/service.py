@@ -1,6 +1,8 @@
 """Historical CLI API upload methods with owned transfer orchestration."""
 
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Optional
 
@@ -42,6 +44,17 @@ _atomgit_repo_type = None
 _RESUMABLE_LFS_PATTERN_MAX_COUNT = None
 _configure_remote_lfs_attributes = None
 _validated_lfs_patterns = None
+_UPLOAD_TOKEN_OVERRIDE = ContextVar("atomgit_upload_token_override", default=None)
+
+
+@contextmanager
+def scoped_upload_token(token):
+    """Use an explicit SDK token without mutating saved user credentials."""
+    marker = _UPLOAD_TOKEN_OVERRIDE.set(token)
+    try:
+        yield
+    finally:
+        _UPLOAD_TOKEN_OVERRIDE.reset(marker)
 
 
 class UploadServiceMixin:
@@ -90,7 +103,12 @@ class UploadServiceMixin:
                 print(f"文件不存在: {file_path}")
                 return False
 
-            credentials = config.get_credentials()
+            override_token = _UPLOAD_TOKEN_OVERRIDE.get()
+            credentials = (
+                {"token": override_token}
+                if override_token
+                else config.get_credentials()
+            )
             if not credentials:
                 print("未找到登录凭证")
                 return False
@@ -258,7 +276,12 @@ class UploadServiceMixin:
                 print(f"目录不存在: {dir_path}")
                 return False
 
-            credentials = config.get_credentials()
+            override_token = _UPLOAD_TOKEN_OVERRIDE.get()
+            credentials = (
+                {"token": override_token}
+                if override_token
+                else config.get_credentials()
+            )
             if not credentials:
                 print("未找到登录凭证")
                 return False
