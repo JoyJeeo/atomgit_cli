@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
@@ -9,16 +9,23 @@ Status: active
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity` (local only)
-- Current HEAD: `92032d4 docs(ai): record cli facade delivery; uncommitted task changes`
+- Current HEAD: `e927a4b refactor(architecture): align CLI and native SDK capabilities`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with task-owned architecture, interface, contract, test, and documentation changes; no generated artifacts`
-- Last completed action: `implemented core/domain/usecase/interface/adapter/compatibility boundaries and native AtomGitClient; complete baseline passed 92/92`
-- Next exact action: `finish independent review, rerun the complete baseline after any review fix, record human acceptance, commit the task branch, merge locally into yuto, push only yuto, and verify remote equality`
+- Worktree state: `clean after implementation commit; ignored Python caches are not tracked`
+- Last completed action: `created implementation commit e927a4b after APPROVED independent review and final 92-case baseline`
+- Next exact action: `record this delivery handoff, merge codex/arch-cli-sdk-parity into yuto with --no-ff, push only yuto, and verify github/yuto equality`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
   repository deletion, credential mutation, and publication remain unauthorized`
 - Tests for this implementation: `test_architecture_parity.py 11/11; structure guard 14/14; src-layout 6/6; development floor 15/15; packaging metadata 13/13; wheel/editable/sdist 37/37; python tests/run_cli_baseline.py 92 passed after the final fix; compileall, pip check, diff check, Ruff, Black, and isort passed`
 - Residual risk: `no controlled remote evidence was run; resumable native-SDK uploads bridge the verified CLI transfer owner through a scoped token context while full vertical-slice extraction remains follow-up work; source/tests/Git remain authoritative`
+
+### Delivery Evidence
+
+- Implementation commit: `e927a4b refactor(architecture): align CLI and native SDK capabilities`
+- Task branch: `codex/arch-cli-sdk-parity` (local only; never push this branch)
+- Human acceptance: `accepted by the explicit user request to complete development, verification, commit, and push`
+- Remote evidence: `no live AtomGit operation; controlled remote authorization remains limited to the dedicated test repositories`
 
 The predecessor CLI Facade Conversion Issue is complete, accepted, committed,
 merged, pushed, and remotely verified. Task commit `9d00e50`, local merge
