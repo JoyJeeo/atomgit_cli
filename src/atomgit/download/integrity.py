@@ -33,10 +33,12 @@ class DownloadChecksumMetadataError(ValueError):
 
 
 def _atomgit_file_checksum(
-    repo_id: str, repo_type: str, filename: str, token: str
+    repo_id: str, repo_type: str, filename: str, token: str, revision: str = "main"
 ) -> tuple:
     """Return (algorithm, digest, size) from AtomGit resolve metadata."""
-    checksum, _ = _atomgit_file_download_metadata(repo_id, repo_type, filename, token)
+    checksum, _ = _atomgit_file_download_metadata(
+        repo_id, repo_type, filename, token, revision
+    )
     return checksum
 
 
@@ -67,10 +69,10 @@ def _checksum_from_metadata_values(etag, size) -> tuple:
 
 
 def _atomgit_file_download_metadata(
-    repo_id: str, repo_type: str, filename: str, token: str
+    repo_id: str, repo_type: str, filename: str, token: str, revision: str = "main"
 ) -> tuple:
     """Return a strong checksum and current credential-safe download URL."""
-    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename)
+    resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename, revision)
     try:
         metadata = get_hf_file_metadata(
             resolve_url,
@@ -81,7 +83,9 @@ def _atomgit_file_download_metadata(
     except Exception as error:
         if filename.isascii() or not _is_not_found_error(error):
             raise
-        return _atomgit_file_download_metadata_raw(repo_id, repo_type, filename, token)
+        return _atomgit_file_download_metadata_raw(
+            repo_id, repo_type, filename, token, revision=revision
+        )
     checksum = _checksum_from_hf_metadata(metadata)
     location = urljoin(resolve_url, getattr(metadata, "location", None) or resolve_url)
     _download_url_origin(location)
@@ -147,9 +151,10 @@ def _atomgit_file_download_metadata_raw(
     token: str,
     timeout: int = 60,
     max_redirects: int = 5,
+    revision: str = "main",
 ) -> tuple:
     """Read strong metadata with a raw UTF-8 request target after a 404."""
-    current_url = _atomgit_resolve_url_raw(repo_id, repo_type, filename)
+    current_url = _atomgit_resolve_url_raw(repo_id, repo_type, filename, revision)
     current_headers = {
         "User-Agent": "atomgit-cli",
         "Accept": "*/*",

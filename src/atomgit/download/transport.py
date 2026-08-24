@@ -375,6 +375,7 @@ def _download_atomgit_file(
     dest: Path,
     token: str,
     checksum: tuple = None,
+    revision: str = "main",
 ) -> None:
     """Download one file from the already-selected repository type.
 
@@ -417,10 +418,12 @@ def _download_atomgit_file(
                 temporary_path.unlink(missing_ok=True)
 
     url_specs = [
-        (_atomgit_resolve_url(repo_id, repo_type, filename), False),
+        (_atomgit_resolve_url(repo_id, repo_type, filename, revision), False),
     ]
     if not filename.isascii():
-        url_specs.append((_atomgit_resolve_url_raw(repo_id, repo_type, filename), True))
+        url_specs.append(
+            (_atomgit_resolve_url_raw(repo_id, repo_type, filename, revision), True)
+        )
     last_error = None
     for url, raw in url_specs:
         try:

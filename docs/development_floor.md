@@ -12,9 +12,9 @@
 
 当前完整离线基线包含：
 
-- 26 个稳定能力 ID；
-- 112 条可观察行为不变量；
-- 91 个隔离 pytest case，每个 case 对应一个可直接执行的
+- 27 个稳定能力 ID；
+- 115 条可观察行为不变量；
+- 92 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
 
@@ -71,6 +71,7 @@ CLI command owner 与 `cli/__init__.py` package facade 还锁定历史 Click sch
 | `PACKAGING` | 分发安装 | wheel、入口、导入、installer 和 deploy |
 | `PORTABILITY` | 平台兼容 | Python 3.9+、Windows 和 POSIX 安全结果一致 |
 | `ERROR-REDACTION` | 错误脱敏 | 保留错误类别但不暴露凭证或签名 URL |
+| `ARCHITECTURE` | 七目录架构与 CLI/SDK parity | 通用远程能力必须有共享用例、双入口或明确 CLI-only 分类 |
 
 每个登记项还包含风险级别、入口、完整不变量、离线测试、文档、证据类别和受控
 远程证据状态。详细机器可读内容以可执行登记册为准。
