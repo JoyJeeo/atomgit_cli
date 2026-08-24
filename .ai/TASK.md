@@ -1,280 +1,285 @@
 # Current Issue Contract
 
-Status: inactive
+Status: active
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-19 13:27 +0800`
-- Phase: `completed, accepted, committed, merged, pushed, and remotely verified`
+- Updated: `2026-08-24`
+- Phase: `reopened after intentional rollback to the pre-implementation baseline; ready to reimplement Phase 1 and Phase 2`
 - Base branch: `yuto`
-- Base commit: `2c1ef67579bd759ffff6f4c05aeff588a701caab`
-- Base synchronization: `yuto`, `github/yuto`, and `github/HEAD` all resolved
-  to `2c1ef67` before branch creation
-- Task branch: `codex/cli-facade-conversion` (local only; never pushed)
-- Current HEAD: `4808a44 on yuto before this final delivery-record commit`
+- Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
+- Task branch: `codex/arch-cli-sdk-parity` (local only; implementation will be recreated)
+- Current HEAD: `pending rollback handoff commit on yuto`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after task commit, local no-ff merge, and yuto-only
-  push; this final delivery record is the only pending update`
-- Last completed action: `created task commit 9d00e50, merged it locally into
-  yuto as 4808a44, pushed only yuto, fetched github, and verified local yuto,
-  github/yuto, and github/HEAD all resolve to 4808a44`
-- Next exact action: `commit and push this final delivery record on yuto, verify
-  remote equality, then await an explicit maintainer request before activating
-  another Issue`
-- Blockers: `none`
-- Tests run: `focused CLI facade 7/7; command ownership 13/13; API facade 8/8;
-  structure 13/13; src layout 6/6; public imports 8/8; import order 5/5;
-  packaging 13/13; SDK ownership 18/18; wheel/source/editable/sdist smoke
-  37/37; final static python tests/run_cli_baseline.py -> 91 passed in 78.09s;
-  compileall, pip check, Black, isort, Ruff, credential/artifact scans, and git
-  diff --check passed`
+- Worktree state: `clean after rollback handoff commit; ignored Python caches are not tracked`
+- Last completed action: `rolled yuto back to 92032d4 and preserved the former implementation at codex/arch-cli-sdk-parity-implementation-backup`
+- Next exact action: `re-freeze the pre-implementation CLI/SDK baseline, add failing parity/architecture contracts, and reimplement the active Issue from Phase 1`
+- Blockers: `none; controlled remote tests are authorized only in
+  weixin_52273949/test_datasets as recorded below; remote Issue work,
+  repository deletion, credential mutation, and publication remain unauthorized`
+- Tests for this implementation: `prior architecture implementation evidence is historical only; post-rollback baseline and focused contracts must be rerun during reimplementation`
+- Residual risk: `the former implementation is retained only on the local backup branch; no architecture/parity implementation is currently claimed on yuto`
 
-The predecessor API Facade Conversion Issue is complete, accepted, committed,
-locally merged, pushed, and remotely verified. Its task commit is `4044fdc`,
-local merge is `78e6bc9`, final delivery record is `2c1ef67`, and local and
-remote `yuto` resolved to `2c1ef67` before this Issue was activated.
+### Historical Delivery Evidence
+
+- Former implementation commit: `e927a4b refactor(architecture): align CLI and native SDK capabilities`
+- Former implementation backup: `codex/arch-cli-sdk-parity-implementation-backup` (local only; never push)
+- Current status: `implementation intentionally rolled back; historical evidence does not establish completion of the reopened Issue`
+- Remote evidence: `none for the reopened implementation; controlled remote authorization remains limited to the dedicated test repositories`
+
+The predecessor CLI Facade Conversion Issue is complete, accepted, committed,
+merged, pushed, and remotely verified. Task commit `9d00e50`, local merge
+`4808a44`, and final record `92032d4` are historical evidence only. Local
+`yuto`, `github/yuto`, and `github/HEAD` resolve to `92032d4`.
 
 ## Active Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
-- ID: `LOCAL-REFACTOR-CLI-FACADE-CONVERSION`
-- Title: `Convert the historical CLI module into a compatibility facade package`
+- ID: `LOCAL-ARCH-CLI-SDK-PARITY`
+- Title: `Reorganize business architecture and align CLI and SDK capabilities`
 - Primary type: `refactoring`
-- Secondary types: `compatibility`, `cli`, `testing`, `distribution`,
-  `documentation`
-- Priority: `P2`
-- Approved program step: `13. CLI Facade Conversion, immediately after step
-  12 API Facade Conversion`
-- Observable objective: `replace src/atomgit/cli.py with
-  src/atomgit/cli/__init__.py as the historical atomgit.cli compatibility
-  facade after all command implementations have moved to atomgit.commands,
-  while preserving the exact Click tree, callbacks, symbols, module identity,
-  lazy dependency and patch seams, completion/import behavior, console and
-  Python module entry paths, artifact surface, and observable CLI behavior`
-- User impact: `none by design; commands, options, output, exits, completion,
-  imports, and executable entry paths remain stable`
+- Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `dependency`, `packaging`, `documentation`
+- Priority: `P1`
+- Delivery: `local implementation -> focused/full offline verification -> independent review -> human acceptance -> authorized delivery`
 
-### Authorization And Delivery
+### Objective
 
-- User authorization: `the maintainer approved the complete sequential
-  capability-oriented structure program on 2026-08-18; the delivered API
-  Facade Conversion contract records CLI facade conversion as a separate later
-  Issue; on 2026-08-19 the maintainer explicitly requested continued
-  development`
-- Accepted program conditions:
-  1. `cli.py becomes cli/__init__.py only after command ownership extraction`
-  2. `Click schema, callbacks, signatures, symbols, objects, runtime behavior,
-     module identity, lazy imports, and old patch seams remain stable`
-  3. `the facade contains only Click schema, compatibility assembly, thin owner
-     delegation, and lazy dependency adapters, not command business work`
-  4. `the existing cli -> api compatibility debt is removed without changing
-     command behavior; runtime API access stays lazy through the historical
-     module object`
-- Authorized local actions: `create a local task branch; edit task-owned
-  source, tests, exact registries, packaging contracts, and AI/human
-  architecture/testing documents; inspect locked dependencies; build temporary
-  artifacts; run offline checks; perform an independent review`
-- Standing delivery after completion and acceptance: `one cohesive conventional
-  task commit, local --no-ff merge into yuto, and push only yuto; never push
-  the task branch`
-- Unauthorized actions: `remote Issue/PR creation or transition, task-branch
-  push, tag or Release mutation, publication, live AtomGit writes, credential
-  mutation, deletion, or upstream main changes`
-- Delivery mode: `local task branch -> focused and complete offline
-  verification -> independent review -> human acceptance -> cohesive commit ->
-  local no-ff merge into yuto -> push only yuto -> verify github/yuto`
+Complete two separate phases. Phase 1 establishes the final seven-directory responsibility
+architecture with no observable behavior change. Phase 2 gives the native SDK
+every CLI general remote/business capability while preserving old HF-style SDK
+functions. An executable parity registry and structural gates prevent future
+one-sided CLI/SDK capability debt.
 
-### Evidence And Current Behavior
+Parity-required capabilities are authentication, repositories, upload, download,
+revision, repo type, token, checksum, resume, prune, LFS, and final-state
+verification. Completion, update, uninstall, Shell hooks, interactive config
+display, and presentation remain CLI-only. CLI default macOS metadata filtering
+is also CLI policy, not an SDK parity requirement; SDK ignore behavior remains
+caller-controlled.
 
-- `src/atomgit/cli.py` is a 452-line historical module that owns the exact
-  Click command/group/option schema, command callbacks, `_COMMAND_CONTEXT`,
-  `_LazyObject`, and lazy utility adapters; all real command implementations
-  already live in `atomgit.commands`.
-- `atomgit.cli.api` is a lazy proxy to `atomgit.api.api`, and utility adapters
-  lazily resolve `atomgit.utils`. Becoming a subpackage changes relative import
-  depth and would incorrectly resolve `atomgit.cli.api` or
-  `atomgit.cli.utils` unless the parent-package resolution is migrated
-  explicitly.
-- Tests patch many historical `atomgit.cli` names through direct assignment,
-  deletion, `patch.object`, and `sys.modules["atomgit.cli"]`; owner callbacks
-  must continue receiving that exact module object.
-- `setup.py` exposes `atomgit=atomgit.cli:cli`; `atomgit.__main__` and package
-  exports import the same Click root. The current flat module is also directly
-  executable as `python -m atomgit.cli`, so the package needs an executable
-  `cli/__main__.py` adapter to preserve that path.
-- `tests/structure_contract.py` registers flat `cli`, exact `atomgit/cli.py`
-  wheel/sdist paths, a 452-line facade ceiling, and the remaining forbidden
-  `cli -> api.__init__` edge. All must migrate and tighten atomically.
-- Locked contracts inspected in `atomgit_cli`: Click `8.4.2`,
-  `huggingface-hub==1.1.7`, and `datasets==4.4.1`.
+### User Impact
 
-### Expected Behavior
+- Phase 1: no change to commands, options, defaults, output, prompts, exits, SDK signatures, returns, exceptions, imports, identities, entry paths, remote calls, credentials, installation, or uninstallation.
+- Phase 2: new native SDK capabilities and structured results; old HF-style functions remain available with their compatibility semantics.
+- A new general remote capability is incomplete until both CLI and native SDK interfaces exist.
 
-- `import atomgit.cli`, `from atomgit.cli import cli`, package exports, console
-  scripts, `python -m atomgit`, and `python -m atomgit.cli` resolve the same
-  historical module name and exact Click root object.
-- The Click command tree, option order/types/defaults/flags/choices, callback
-  identities/signatures, help, completion, dispatch arguments, output, prompts,
-  error redaction, and exit codes remain exact.
-- `_COMMAND_CONTEXT` remains the `atomgit.cli` package module, owner functions
-  resolve historical assignment/deletion/patch seams there, and lazy API and
-  utility resolution continues to target `atomgit.api` and `atomgit.utils`.
-- Clean import permutations and completion remain lightweight and offline with
-  no credential reads, network requests, or eager business imports.
-- Source, default PEP 660 editable, wheel, and sdist discovery contain
-  `atomgit/cli/__init__.py` and the executable adapter, and exclude stale
-  `atomgit/cli.py`.
-- The CLI package facade contains only Click schema, compatibility imports,
-  lazy adapters, and thin calls to command owners; no authentication,
-  repository, transfer, lifecycle, filesystem, network, retry, or mutable-state
-  business implementation is introduced.
+## Final Architecture
 
-### Scope
+```text
+src/atomgit/
+├── core/
+├── domain/
+├── usecases/
+├── interfaces/
+├── adapters/
+├── compatibility/
+└── infrastructure/
+```
 
-#### In Scope
+Historical paths remain as thin facades, not additional business layers:
 
-- Replace the flat CLI module with the historical CLI package facade and retain
-  direct module execution through a minimal package `__main__` adapter.
-- Add focused executable evidence for exact path/provenance, Click and callback
-  identity/signatures, lazy parent resolution, old-path patch seams, facade-only
-  content, import/completion behavior, entry paths, and artifact discovery.
-- Migrate exact module-owner, dependency-edge, forbidden-edge, facade-debt,
-  source-layout, wheel/sdist, public-import, test-inventory, tool-policy, and
-  development-floor contracts.
-- Update the smallest authoritative AI and human architecture/testing/release
-  documentation to describe the delivered package facade.
+```text
+atomgit/cli/   -> historical CLI, Click, console/module entry surface
+atomgit/api/   -> historical HuggingFaceAPI and api singleton surface
+atomgit_hub.py -> historical top-level SDK surface
+```
 
-#### Out Of Scope
+Responsibilities:
 
-- Change Click commands, groups, arguments, options, defaults, output, prompts,
-  exits, errors, completion candidates, command owner implementations, or CLI
-  API behavior.
-- Move or redesign command owners, API/services, transfers, SDK, LFS,
-  infrastructure, lifecycle, distribution, configuration, or Shell code.
-- Change public/private symbols, callback or SDK signatures, dependency
-  versions, remote behavior, tokens, Git state, release policy, or test layout.
-- Add placeholder packages, generic compatibility layers, formatter sweeps,
-  live writes, publication, remote Issue/PR work, or upstream changes.
+- `core/`: Request/Result contracts, stable errors, ports, and shared policies; no Click, HF, V5, or concrete network imports.
+- `domain/`: authentication, repository, upload, download, and LFS rules and success invariants; no UI or concrete external calls.
+- `usecases/`: ordered create/list/visibility/branch/delete/upload/download operations and final-state verification; no printing or `sys.exit`.
+- `interfaces/`: user layer. `interfaces/cli` owns Click, prompts, output, progress, exits. `interfaces/sdk` owns native Python methods, parameter mapping, Results, and public errors. Neither owns remote business logic.
+- `adapters/`: outbound HF 1.1.7, AtomGit V5, filesystem/cache/manifest, and transport boundaries.
+- `compatibility/`: old paths, signatures, defaults, returns, exception mapping, identities, and patch seams; no new business logic.
+- `infrastructure/`: config, token persistence, runtime, cache, Git helper, completion, update, uninstall, and technical lifecycle facilities.
 
-### Affected Capability IDs
+Dependency direction:
 
-- `FLOOR-REGISTRY`, `CLI-SURFACE`, `CLI-DISPATCH`, `AUTH-CONFIG`,
-  `REPO-MANAGEMENT`, `REVISION`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
-  `UPLOAD-RESUMABLE`, `DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`, `RUNTIME`,
-  `DEPENDENCY-CONTRACT`, `PACKAGING`, `PORTABILITY`, and `ERROR-REDACTION`
+```text
+interfaces / compatibility -> usecases -> domain -> core -> outbound adapters
+```
 
-### Protected Existing Invariants
+Forbid new SDK-to-CLI dependencies, domain-to-HF/V5 imports, interface business
+implementations, Shell copies of core rules, compatibility growth, cycles,
+unowned modules, and direct external calls that bypass usecases/adapters.
 
-- All existing `110` invariants remain protected, especially `FLOOR-005..016`,
-  `CLI-001..007`, `DISPATCH-001..005`, authentication, repository, revision,
-  upload, download, runtime/global-state, dependency, packaging, portability,
-  and redaction invariants.
-- Exact imports, Click schema, symbols, object identities, callback/helper
-  signatures, dispatch, completion, runtime initialization, old-path patches,
-  API arguments/results, exception categories, output, and exit behavior remain
-  unchanged.
-- API, SDK, service, transfer, LFS, lifecycle, infrastructure, distribution,
-  Shell, and command-owner boundaries remain structurally outside this Issue.
+## Phase 1: Behavior-Preserving Architecture
 
-### New Or Changed Invariants
+### Steps
 
-- `FLOOR-017`: `the historical atomgit.cli path is a package facade with exact
-  Click/schema/callback identities, signatures, imports, lazy parent resolution,
-  patch seams, and executable entry paths; it contains no business
-  implementation and cannot regress to the flat module`
-- `PKG-023`: `source, default editable, wheel, and sdist surfaces include the
-  exact CLI package facade and executable adapter, exclude stale cli.py, retain
-  installed-only provenance, and preserve console plus both Python module entry
-  paths`
+1. Freeze CLI schema/dispatch/output/exits, SDK signatures/returns/errors,
+   public imports/identities, patch seams, locked dependency signatures,
+   global-state restoration, package surfaces, and the complete baseline.
+2. Add executable owner, edge, facade-debt, packaging, import, behavior, and
+   compatibility-seam contracts before moving implementation.
+3. Establish core contracts, domain owners, usecase boundaries, interfaces,
+   outbound adapters, compatibility registry, and infrastructure ownership.
+4. Migrate complete vertical slices: infrastructure/ports, authentication,
+   repositories, downloads, uploads, LFS, then lifecycle/distribution.
+5. Keep historical paths stable; shrink their facades only after new owners and
+   usecases are stable and tested. Remove duplicate implementations last.
 
-### Focused Tests And Evidence
+### Non-goals
 
-- Add `tests/test_cli_facade_conversion.py` for package path/provenance,
-  facade-only AST content, exact Click/callback/module identities, lazy API and
-  utility parent resolution, historical context and patch seams, console/module
-  entries, and API facade non-migration.
-- Update prior ownership and API facade contracts only where their explicit
-  `cli.py`-must-remain assertions become the newly authorized package facade.
-- Rerun exact command ownership, structure, source-layout, public-import,
-  import-order, CLI schema/dispatch/behavior, completion, packaging, artifact,
-  development-floor, dependency, security, global-state, and portability
-  evidence.
-- Run final `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
-  `python -m pip check`, changed/new-file Black, isort, Ruff, credential scan,
-  artifact audit, and `git diff --check`.
-- Controlled-remote evidence: `not applicable; observable remote behavior is
-  unchanged and live writes are not authorized for this structural migration`.
+No CLI or SDK behavior change, new SDK capability, dependency upgrade, live
+AtomGit write, credential mutation, publication, broad formatting, or unrelated
+roadmap work.
 
-### Acceptance Criteria
+### Invariants
 
-1. The flat `src/atomgit/cli.py` is absent and the real
-   `src/atomgit/cli/__init__.py` compatibility facade is the sole historical
-   `atomgit.cli` implementation, with a minimal package execution adapter.
-2. Historical imports, module/Click/callback identities, symbols, signatures,
-   schema, completion, lazy behavior, and package/entry references remain exact.
-3. Direct assignment, deletion, and `patch.object` at `atomgit.cli` reach every
-   owner category, restore exact values, and lazy API/utility resolution targets
-   the parent `atomgit` package rather than nonexistent CLI children.
-4. The facade contains no command business implementation; all command owners
-   and other domains remain unchanged except required compatibility declarations.
-5. Structure, source/editable/wheel/sdist, public import, import order,
-   completion, exact inventory, and development-floor contracts fail closed on
-   stale flat paths, missing package artifacts, regrowth, or seam drift.
-6. The remaining forbidden `cli -> api` structural debt is removed, while the
-   runtime API proxy remains lazy and behavior-compatible.
-7. The ledger remains monotonic at `26 capabilities`, at least `112 invariants`,
-   and at least `91 isolated pytest cases`.
-8. Focused tests, the complete offline baseline, supporting gates, and an
-   independent review pass with no open P0/P1/P2/P3 finding before acceptance.
+- `ARCH-001`: every production module has one owner and registered edges; no new unowned module, cycle, forbidden edge, or facade business definition.
+- `ARCH-002`: existing CLI/SDK/API behavior and locked-library calls remain exact.
+- `ARCH-003`: historical module/object/callback/function/signature/entry/patch identities remain stable.
+- `ARCH-004`: interfaces translate, usecases orchestrate, domains define rules, outbound adapters call external systems.
+- `ARCH-005`: compatibility contains translation and seams only.
+- `ARCH-006`: source/editable/wheel/sdist preserve historical entries and exclude stale duplicate implementations.
 
-### Verification Evidence
+### Evidence
 
-- Pre-edit complete baseline: `not rerun for this Issue yet; predecessor final
-  evidence is 90/90 and this Issue must produce a fresh post-change run`.
-- Failing pre-implementation contract: `tests/test_cli_facade_conversion.py`
-  failed as expected because the flat `cli.py` path remained and the package
-  facade plus executable adapter were absent.
-- Implementation and focused tests: `CLI facade 7/7; command ownership 13/13;
-  API facade 8/8; structure 13/13; src layout 6/6; public imports 8/8; import
-  order 5/5; packaging metadata 13/13; SDK ownership 18/18; wheel/source/
-  editable/sdist smoke 37/37`.
-- Complete baseline: `the first full run exposed one stale
-  source_texts["cli"] assertion in SDK ownership after 90 other cases passed;
-  the assertion was migrated to cli.__init__, its focused 18/18 test passed,
-  independent review then found an unregistered cli.__main__ package-self edge;
-  the resolver and guard were tightened, and the final static
-  python tests/run_cli_baseline.py passed 91/91 in 78.09s`.
-- Supporting gates: `python -m compileall -q ., python -m pip check, focused
-  Black --check, isort --check-only, Ruff, credential scan, tracked-artifact
-  audit, and git diff --check passed; wheel and sdist contain the exact CLI
-  package and all three installed entry paths passed`.
-- Independent review: `APPROVED after one P2 finding was resolved. The first
-  read-only pass found that from . import cli in cli/__main__.py executed
-  correctly but was not represented by the structural edge parser. The parser
-  now distinguishes package attributes from registered child modules, the
-  cli.__main__ -> cli.__init__ edge and fail-closed assertion are exact, and
-  focused structure plus the complete baseline passed afterward. The fresh
-  review found no open P0/P1/P2/P3 issue`.
+Run focused owner/edge/facade/import/patch/lazy tests for every slice and the
+full `python tests/run_cli_baseline.py` after each slice and at the end. Also
+run compileall, pip check, Black, isort, Ruff, credential/artifact scans, and
+git diff check. No live evidence is required; live writes remain unauthorized.
 
-### Residual Risks
+## Phase 2: CLI/SDK Capability Alignment
 
-- Import-system differences between a module and package affect `__spec__`,
-  `__path__`, relative imports, `python -m`, source provenance, and monkeypatch
-  behavior even when ordinary imports pass; focused source and installed
-  subprocess evidence is required.
-- Click decorators retain callback objects at import time, so package migration
-  must preserve exact schema and callback identities rather than recreate a
-  superficially equal command tree elsewhere.
-- `python -m atomgit.cli` requires a package `__main__` adapter even though the
-  documented entry paths are the console script and `python -m atomgit`.
-- Live AtomGit behavior will not be retested because the task is a
-  behavior-preserving facade migration and remote writes are not authorized.
-- Python 3.9 is represented by declared tooling and portability contracts in
-  the current Python 3.10 conda environment.
-- Human acceptance: `accepted on 2026-08-19 after the final self-test; the
-  maintainer explicitly authorized commit and push`.
-- Delivery evidence: `task commit 9d00e50 (refactor(cli): convert historical
-  module to facade package) was merged locally into yuto with --no-ff as
-  4808a44 (merge: convert cli to facade package); only yuto was pushed. After
-  fetch, local yuto, github/yuto, and github/HEAD all resolved to 4808a44. The
-  task branch was never pushed`.
+### Steps
+
+1. Freeze Phase 1 evidence.
+2. Create a fail-closed registry classifying each capability as `parity-required`, `cli-only`, or `sdk-only`.
+3. Define shared Request, Result, error, token, repo ID, repo type, visibility, revision, checksum, resume, prune, LFS, and final-state contracts.
+4. Implement one shared usecase and outbound adapter per general capability.
+5. Add native `interfaces/sdk` `AtomGitClient` methods and structured Results.
+6. Keep `snapshot_download`, `upload_folder`, `download_file`, `create_repository`, `hub_download_url`, and `load_dataset` through compatibility with existing signatures and primary semantics.
+7. Keep CLI output/prompts/progress/exits in the CLI interface and SDK Results/AtomGitError mapping in the SDK interface.
+8. Add cross-entry tests comparing canonical requests and remote result invariants.
+
+### SDK parity inventory
+
+- Authentication: login validation, logout state, whoami.
+- Repositories: create model/dataset, list, visibility, branch creation, safe delete with post-delete absence verification.
+- Upload: file, ordinary folder, resumable, path prefix, ignore, workers, batches, timeout/progress restoration, revision, canonical LFS pointer/commit verification.
+- Download: repository, file, model/dataset resolution, anonymous public access, token, revision, force, checksum, persistent resume, manifest-scoped prune.
+- Shared policies: repo ID, repo type, visibility, revision, token priority, redaction, errors, final-state verification.
+
+### Invariants
+
+- `PARITY-001`: each parity-required capability has one shared usecase and both CLI/native SDK interfaces before completion.
+- `PARITY-002`: CLI and SDK use one repo ID, repo type, revision, visibility, and token contract.
+- `PARITY-003`: CLI and SDK agree on remote success/failure and final verification; only presentation, wrapping, and exit behavior differ.
+- `PARITY-004`: SDK remote failures use stable redacted `AtomGitError` subclasses; local parameter failures remain standard exceptions.
+- `PARITY-005`: old HF-style functions preserve signatures, defaults, paths, primary behavior, and compatibility returns.
+- `PARITY-006`: no one-sided general capability can merge without registry and cross-entry evidence.
+- `PARITY-007`: CLI macOS filtering remains explicit CLI policy and is not silently imposed on SDK callers.
+
+## Shared Rules
+
+Token priority:
+
+```text
+explicit non-empty token > explicit token=False > saved config token > anonymous read > auth error for writes
+```
+
+Explicit credentials never silently fall back. Validate repo ID before credentials
+or network; normalize once; preserve logical model/dataset semantics; default
+revision is `main`; non-main upload requires an explicitly created and verified
+branch. Missing revisions map to `AtomGitRevisionNotFoundError`.
+
+Shared usecases return structured results or classified internal errors. CLI
+converts them to established output/exits. Native SDK returns structured Results
+and stable `AtomGitError` subclasses. Compatibility converts them to historical
+contracts. Tokens, signed URLs, response bodies, and secret-bearing causes never
+enter results, logs, fixtures, or messages.
+
+## Parity Delivery Gate
+
+Every future feature records:
+
+```text
+capability ID, classification, shared usecase, CLI entry, SDK entry,
+parameter mapping, shared remote result, CLI presentation, SDK result/error,
+focused tests, documentation
+```
+
+Every parity-required capability must have core/domain/usecase, outbound adapter,
+CLI interface, SDK interface, compatibility coverage, shared result tests, CLI
+output/exit tests, SDK result/error tests, registry/documentation updates, and a
+passing complete baseline. A one-sided implementation may remain on a branch
+while work continues, but cannot be complete, merged, released, or used as the
+basis for further feature expansion. Structure tests must fail closed when a
+new business path bypasses the shared owner or lacks parity registration.
+
+## Acceptance Criteria
+
+### Phase 1
+
+1. The seven responsibility directories and dependency direction are implemented without moving user behavior into domain or adding another business layer.
+2. Existing CLI, SDK, API, packaging, entry, dependency, global-state, credential-safety, and remote-call behavior remains exact.
+3. All migrated capabilities have one owner; historical facades contain no new business implementation and preserve identities/seams.
+4. Architecture, ownership, edge, facade, import, packaging, and behavior contracts fail closed.
+5. Focused tests, complete baseline, compileall, pip check, lint, security, artifact, and installed smoke pass.
+
+### Phase 2
+
+1. Native SDK interfaces cover every CLI general remote/business capability in the parity inventory.
+2. CLI and SDK share usecases, domain rules, outbound adapters, remote result invariants, and stable errors.
+3. Existing HF-style SDK functions remain compatible through thin facades.
+4. CLI-only capabilities and macOS policy are explicit exceptions, not accidental SDK gaps.
+5. Every parity capability has both-entry tests, cross-entry evidence, documentation, and complete baseline evidence.
+6. Future one-sided business additions fail parity and structure gates.
+7. Independent review has no open P0/P1/P2/P3 finding before human acceptance.
+
+## Required Verification
+
+All commands run in `atomgit_cli`:
+
+```bash
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+Also run applicable focused architecture/ownership/import/compatibility,
+CLI schema/dispatch/output, SDK signature/result/error/token, locked HF/datasets,
+packaging, source/editable/wheel/sdist, security, portability, Black, isort,
+Ruff, credential/artifact, and installed-entry tests. Independent review uses
+`.ai/REVIEW.md`. Controlled remote tests require separate explicit authorization.
+
+## Authorization And Delivery
+
+- The maintainer explicitly authorized implementation, verification, commit, local merge, and push in this turn; source, tests, contracts, packaging, and documentation are in scope.
+- Delivery mode is local task branch -> independent review -> human acceptance by this explicit delivery request -> cohesive commit -> local no-ff merge into yuto -> push only yuto -> remote equality verification.
+- Controlled remote test authorization: the maintainer explicitly authorizes
+  authenticated upload and download, test-branch creation, repository
+  visibility changes, deletion of test files or test branches, Git push, and
+  necessary test-data cleanup only in
+  `weixin_52273949/test_datasets` (`git@atomgit.com:weixin_52273949/test_datasets.git`).
+  Record pre-test state, keep fixtures clearly test-owned, verify final remote
+  state/checksums, and restore visibility or other mutable state after the
+  applicable scenario. Never display credentials.
+- Repository deletion, use of any other remote repository, remote repository
+  creation, remote Issue/PR operations, task-branch push to the development
+  repository, credential mutation, publication, tags/releases, and upstream
+  changes remain unauthorized.
+- Human acceptance is required before delivery or closure. After acceptance, standing project rules allow one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; never push the task branch.
+
+## Independent Review
+
+- Verdict: `not started for the reopened implementation`
+- Findings: `the prior APPROVED verdict applies only to the historical implementation preserved on the backup branch`
+- Review evidence: `must be recreated after the active Issue is implemented and the complete offline baseline passes`
+- Residual review risk: `all architecture, parity, compatibility, packaging, and remote-evidence risks are open for the reimplementation`
+
+## Definition Of Done
+
+- [ ] Phase 1 and Phase 2 remain separate and each has observable acceptance evidence.
+- [ ] Capability IDs, protected invariants, and new invariants agree with executable registries.
+- [ ] No behavior change is hidden in Phase 1.
+- [ ] Every general remote CLI capability has a native SDK counterpart or an explicit CLI-only classification.
+- [ ] Old imports, signatures, identities, patch seams, entry paths, and package artifacts remain compatible.
+- [ ] Focused, complete baseline, dependency, packaging, security, portability, compile, lint, and diff checks pass.
+- [ ] Independent review is APPROVED with no open blocking finding.
+- [ ] Human acceptance and final delivery evidence are recorded before delivery.
+- [x] Remaining risks, unrun tests, and controlled-remote limitations are explicit.
