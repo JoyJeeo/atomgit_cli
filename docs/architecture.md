@@ -22,12 +22,9 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
 ```
 
-CLI 和 SDK 共享本地凭证，但不是同一业务实现：
-
-- CLI：`cli/__init__.py -> api/__init__.py`；
-- SDK：历史 `atomgit_hub.py` facade 调用 `atomgit.sdk` 所有者函数。
-
-因此两侧上传、下载、repo ID 转换和异常行为可能发生漂移。
+CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；新的通用远程能力通过共享用例和
+端口装配到原生 `AtomGitClient`。CLI presentation（Click、提示、进度和退出码）
+仍由 CLI 层负责，SDK 返回 `OperationResult`，不会打印 CLI 文本。
 
 ## 2. 目录与模块
 
@@ -40,6 +37,12 @@ atomgit_cli/
 │   ├── atomgit/          # atomgit 包及历史兼容 facade
 │   │   ├── __init__.py   # 包元数据和公开导出
 │   │   ├── __main__.py   # python -m atomgit 入口
+│   │   ├── core/         # Request/Result、策略、端口和 parity registry
+│   │   ├── domain/       # 认证、仓库、传输规则与成功不变量
+│   │   ├── usecases/     # 无 UI 的有序业务编排
+│   │   ├── interfaces/   # CLI/原生 SDK 用户接口
+│   │   ├── adapters/     # HF、AtomGit V5 和配置 outbound 边界
+│   │   ├── compatibility/# 历史路径/签名/接缝及兼容注册
 │   │   ├── cli/          # 历史 Click schema、交互边界和兼容装配
 │   │   ├── commands/     # CLI 命令实现 owner
 │   │   ├── api/__init__.py # CLI 使用的 AtomGit/HF 兼容 facade
@@ -81,9 +84,13 @@ policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留�
 声明收紧必须在同一变更完成，不能保留可回长的旧上限。CLI facade 转换已移除
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
-lifecycle 源码/可编辑安装策略移除。批准的长期目标仍是 facade/CLI/SDK 向
-services、transfers、lifecycle、
-distribution 下沉，再依赖 infrastructure/LFS；目标目录在真实实现迁移前不会创建。
+lifecycle 源码/可编辑安装策略移除。最终七目录责任架构已建立；现有
+`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 仍作为已验证的迁移 owner，
+新的 adapters 将这些 owner 接到共享 usecase 端口，后续 vertical slice 可以在
+保持历史身份和 patch seam 的前提下逐步收缩旧 facade。`atomgit.interfaces.sdk.AtomGitClient`
+是原生 SDK 入口，`atomgit.core.parity.CAPABILITY_REGISTRY` 对每项
+通用远程能力 fail-closed 地记录分类、共享用例、CLI 入口、SDK 入口、结果合同和
+专项测试。
 `tests/test_infrastructure_utils_ownership.py` 另外锁定 owner provenance、共享 config
 对象、runtime 身份、旧 `os.walk`/`subprocess.run` patch 接缝和 facade 不回长。
 `tests/test_environment_lifecycle_ownership.py` 锁定生命周期 owner provenance、历史

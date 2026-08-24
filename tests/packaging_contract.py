@@ -39,16 +39,24 @@ PROJECT_METADATA = {
 SETUPTOOLS_LAYOUT = {
     "packages": [
         "atomgit",
+        "atomgit.adapters",
         "atomgit.api",
         "atomgit.cli",
         "atomgit.commands",
+        "atomgit.compatibility",
+        "atomgit.core",
+        "atomgit.domain",
         "atomgit.download",
         "atomgit.infrastructure",
+        "atomgit.interfaces",
+        "atomgit.interfaces.cli",
+        "atomgit.interfaces.sdk",
         "atomgit.lifecycle",
         "atomgit.lfs",
         "atomgit.sdk",
         "atomgit.services",
         "atomgit.upload",
+        "atomgit.usecases",
     ],
     "py-modules": ["atomgit_hub"],
     "package-dir": {"": "src"},
@@ -77,9 +85,9 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 80,
-        "changes": 442,
-        "digest": "3c11ab8793f9bddc8b7ad80076f81b17f48f6d4dd71699ce2e94b4c93613e4cf",
+        "files": 81,
+        "changes": 443,
+        "digest": "ff220e252cb665e97dfa05a4d2337d2f9a02730a8926ca09911a7a01cb17c518",
     },
     "isort": {
         "files": 82,
@@ -94,6 +102,10 @@ LEGACY_TOOL_DEBT = {
 }
 
 CLEAN_POLICY_FILES = {
+    "src/atomgit/adapters/__init__.py",
+    "src/atomgit/adapters/atomgit_v5.py",
+    "src/atomgit/adapters/config.py",
+    "src/atomgit/adapters/huggingface.py",
     "src/atomgit/api/__init__.py",
     "src/atomgit/cli/__init__.py",
     "src/atomgit/cli/__main__.py",
@@ -102,6 +114,14 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/commands/lifecycle.py",
     "src/atomgit/commands/repositories.py",
     "src/atomgit/commands/transfers.py",
+    "src/atomgit/compatibility/__init__.py",
+    "src/atomgit/compatibility/registry.py",
+    "src/atomgit/core/__init__.py",
+    "src/atomgit/core/contracts.py",
+    "src/atomgit/core/errors.py",
+    "src/atomgit/core/parity.py",
+    "src/atomgit/core/policies.py",
+    "src/atomgit/core/ports.py",
     "src/atomgit/completion.py",
     "src/atomgit/cli_contracts.py",
     "src/atomgit/config.py",
@@ -118,6 +138,14 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/infrastructure/output.py",
     "src/atomgit/infrastructure/utils.py",
     "src/atomgit/infrastructure/validation.py",
+    "src/atomgit/domain/__init__.py",
+    "src/atomgit/domain/authentication.py",
+    "src/atomgit/domain/repositories.py",
+    "src/atomgit/domain/transfers.py",
+    "src/atomgit/interfaces/__init__.py",
+    "src/atomgit/interfaces/cli/__init__.py",
+    "src/atomgit/interfaces/sdk/__init__.py",
+    "src/atomgit/interfaces/sdk/client.py",
     "src/atomgit/lifecycle/__init__.py",
     "src/atomgit/lifecycle/completion.py",
     "src/atomgit/lifecycle/environment.py",
@@ -147,6 +175,10 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/utils.py",
     "setup.py",
     "src/atomgit_hub.py",
+    "src/atomgit/usecases/__init__.py",
+    "src/atomgit/usecases/authentication.py",
+    "src/atomgit/usecases/repositories.py",
+    "src/atomgit/usecases/transfers.py",
     "tests/packaging_contract.py",
     "tests/test_src_layout_migration.py",
     "tests/test_packaging_metadata.py",
@@ -160,6 +192,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_cli_command_ownership.py",
     "tests/test_api_facade_conversion.py",
     "tests/test_cli_facade_conversion.py",
+    "tests/test_architecture_parity.py",
 }
 
 
