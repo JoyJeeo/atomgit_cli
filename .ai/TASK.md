@@ -9,11 +9,11 @@ Status: active
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity-rebuild` (local only; recreated implementation)
-- Current HEAD: `bcd679d docs(ai): fix rollback handoff references`
+- Current HEAD: `2f01cef refactor(architecture): align cli and native sdk capabilities`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty on the local task branch with task-owned source, tests, packaging, documentation, and TASK evidence changes; no credentials or generated artifacts`
-- Last completed action: `implemented the architecture/parity slices, repaired revision and anonymous-token compatibility seams, and ran the final complete offline baseline: 92 passed in 89.66s`
-- Next exact action: `review the final diff and human-accept the local implementation; commit/push/merge remain delivery decisions and no force-push is planned`
+- Worktree state: `clean after the normal local implementation commit; no credentials or generated artifacts`
+- Last completed action: `committed the verified implementation as 2f01cef; final complete offline baseline remains 92 passed in 89.66s`
+- Next exact action: `human-accept the local implementation; do not force-push, merge, or push until separately authorized`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
   repository deletion, credential mutation, and publication remain unauthorized`
