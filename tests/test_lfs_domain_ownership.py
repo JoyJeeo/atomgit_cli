@@ -20,7 +20,12 @@ from structure_contract import (  # noqa: E402
     validate_structure,
 )
 
-LFS_MODULES = ("lfs.__init__", "lfs.service")
+LFS_OWNER_MODULES = (
+    "adapters.lfs.__init__",
+    "adapters.lfs.pointer",
+    "adapters.lfs.service",
+)
+LFS_COMPATIBILITY_MODULES = ("lfs.__init__", "lfs.service", "lfs_pointer")
 LFS_DEFINITIONS = {
     "_slow_flow_stable_baseline",
     "_slow_flow_peer_baseline",
@@ -80,7 +85,11 @@ def main():
         print(f"[{label}] {name}{suffix}")
 
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in LFS_MODULES if name not in source_texts)
+    missing = tuple(
+        name
+        for name in (*LFS_OWNER_MODULES, *LFS_COMPATIBILITY_MODULES)
+        if name not in source_texts
+    )
     check(
         "all LFS owner modules contain real implementation", not missing, repr(missing)
     )
@@ -91,7 +100,8 @@ def main():
     api_module = sys.modules.get("atomgit.api") or importlib.import_module(
         "atomgit.api"
     )
-    lfs_service = importlib.import_module("atomgit.lfs.service")
+    lfs_service = importlib.import_module("atomgit.adapters.lfs.service")
+    historical_lfs_service = importlib.import_module("atomgit.lfs.service")
     check(
         "historical API class and singleton remain concrete and unchanged",
         api_module.HuggingFaceAPI.__module__ == "atomgit.api"
@@ -102,14 +112,15 @@ def main():
         all(
             getattr(api_module, name) is getattr(lfs_service, name)
             for name in api_module._LFS_OWNER_EXPORTS
-        ),
+        )
+        and historical_lfs_service is lfs_service,
     )
     check(
         "representative LFS signatures remain unchanged",
         str(inspect.signature(lfs_service._configure_remote_lfs_attributes))
         == "(*, token: str, repo_id: str, repo_type: str, revision: str, patterns, request_timeout: float) -> dict"
         and str(inspect.signature(lfs_service._scoped_resumable_lfs_recovery))
-        == "(coordinator: atomgit.lfs.service._SlowFlowCoordinator)",
+        == "(coordinator: atomgit.adapters.lfs.service._SlowFlowCoordinator)",
     )
 
     initial_mismatches = []
@@ -161,12 +172,12 @@ def main():
     )
 
     api_definitions = _top_level_definitions(source_texts["api.__init__"])
-    lfs_definitions = _top_level_definitions(source_texts["lfs.service"])
+    lfs_definitions = _top_level_definitions(source_texts["adapters.lfs.service"])
     upload_definitions = set().union(
         *(
             _top_level_definitions(source_texts[name])
             for name in source_texts
-            if name.startswith("upload.")
+            if name.startswith("adapters.upload.")
         )
     )
     check(
@@ -178,18 +189,27 @@ def main():
         not (LFS_DEFINITIONS & upload_definitions),
     )
     check(
-        "LFS modules have exact domain ownership",
-        all(
-            PRODUCTION_MODULE_OWNERS[name.removeprefix("atomgit.")] == "lfs"
-            for name in LFS_MODULES
+        "canonical LFS modules have adapter ownership and old paths are compatibility",
+        all(PRODUCTION_MODULE_OWNERS[name] == "adapters" for name in LFS_OWNER_MODULES)
+        and all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
+            for name in LFS_COMPATIBILITY_MODULES
         ),
     )
     errors = validate_structure(source_texts)
     check("structure contract accepts the LFS domain", not errors, repr(errors))
     check(
         "SDK implementation remains outside the LFS domain",
-        "upload_folder" in _top_level_definitions(source_texts["sdk.uploads"])
+        "upload_folder" in _top_level_definitions(source_texts["adapters.sdk_uploads"])
         and "upload_folder" not in lfs_definitions,
+    )
+    check(
+        "historical LFS paths contain no business definitions or dependency calls",
+        all(
+            not _top_level_definitions(source_texts[name])
+            and "huggingface_hub" not in source_texts[name]
+            for name in LFS_COMPATIBILITY_MODULES
+        ),
     )
 
     passed = sum(results)

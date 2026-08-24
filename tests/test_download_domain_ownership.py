@@ -231,7 +231,7 @@ def main():
             for name in ADAPTER_DOWNLOAD_MODULES
         )
     )
-    lfs_source = source_texts["lfs.service"]
+    lfs_source = source_texts["adapters.lfs.service"]
     check(
         "SDK download and LFS helpers remain outside the download package",
         {"snapshot_download", "download_file"}

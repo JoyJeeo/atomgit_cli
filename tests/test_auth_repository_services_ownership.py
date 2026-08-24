@@ -275,7 +275,7 @@ def main():
             & transfer_definitions
         )
         and transfer_definitions
-        <= _class_methods(source_texts["upload.service"], "UploadServiceMixin")
+        <= _class_methods(source_texts["adapters.upload.service"], "UploadServiceMixin")
         and not any(
             transfer_definitions
             & _class_methods(source_texts[name], "RepositoryServiceMixin")

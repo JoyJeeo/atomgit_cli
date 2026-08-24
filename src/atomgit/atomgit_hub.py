@@ -8,6 +8,7 @@ from .runtime import configure_hf_environment
 configure_hf_environment()
 
 
+from .adapters.sdk_uploads import hf_upload_folder, upload_folder  # noqa: E402,F401
 from .exceptions import (  # noqa: E402
     AtomGitAuthenticationError,
     AtomGitError,
@@ -32,7 +33,6 @@ from .sdk.downloads import (  # noqa: E402,F401
     snapshot_download,
 )
 from .sdk.repositories import create_repo, create_repository  # noqa: E402,F401
-from .sdk.uploads import hf_upload_folder, upload_folder  # noqa: E402,F401
 
 _sdk_datasets = sys.modules[load_dataset.__module__]
 _sdk_downloads = sys.modules[snapshot_download.__module__]
@@ -40,10 +40,10 @@ _sdk_repositories = sys.modules[create_repository.__module__]
 _sdk_uploads = sys.modules[upload_folder.__module__]
 _sdk_common = sys.modules[_sdk_downloads._get_token.__module__]
 _sdk_errors = sys.modules[_sdk_downloads._sdk_error.__module__]
-_get_token = _sdk_downloads._get_token
-_normalize_repo_id = _sdk_downloads._normalize_repo_id
-_atomgit_repo_type = _sdk_uploads._atomgit_repo_type
-_sdk_error = _sdk_downloads._sdk_error
+_get_token = _sdk_common._get_token
+_normalize_repo_id = _sdk_common._normalize_repo_id
+_atomgit_repo_type = _sdk_common._atomgit_repo_type
+_sdk_error = _sdk_errors._sdk_error
 Path = _sdk_downloads.Path
 os = _sdk_datasets.os
 warnings = _sdk_downloads.warnings
@@ -92,8 +92,8 @@ _SDK_PATCH_TARGETS = {
     "Path": (_sdk_datasets, _sdk_downloads, _sdk_uploads),
     "os": (_sdk_datasets,),
     "warnings": (_sdk_downloads,),
-    "config": (_sdk_common,),
-    "normalize_repo_id": (_sdk_common,),
+    "config": (_sdk_common, _sdk_uploads),
+    "normalize_repo_id": (_sdk_common, _sdk_uploads),
     "auth_error_kind": (_sdk_errors,),
     "is_retryable_download_error": (_sdk_errors,),
     "CanonicalLfsPointerError": (_sdk_errors,),
@@ -117,6 +117,16 @@ _SDK_PATCH_TARGETS = {
         _sdk_uploads,
     ),
 }
+
+# Seed every adapter resolution point from the historical owner. This keeps
+# private helper identity and monkeypatch propagation stable while the adapter
+# remains free of an eager import cycle through ``sdk.__init__``.
+for _patch_name, _patch_targets in _SDK_PATCH_TARGETS.items():
+    if not hasattr(sys.modules[__name__], _patch_name):
+        continue
+    _patch_value = globals()[_patch_name]
+    for _patch_target in _patch_targets:
+        setattr(_patch_target, _patch_name, _patch_value)
 
 
 def _forward_sdk_patch(module, name, value):

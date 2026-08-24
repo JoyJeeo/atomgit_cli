@@ -59,6 +59,8 @@ setup(
         "atomgit",
         "atomgit.adapters",
         "atomgit.adapters.download",
+        "atomgit.adapters.lfs",
+        "atomgit.adapters.upload",
         "atomgit.api",
         "atomgit.cli",
         "atomgit.commands",
