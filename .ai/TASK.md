@@ -1,24 +1,24 @@
 # Current Issue Contract
 
-Status: active
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-24`
-- Phase: `WP-14 complete; implementation merged into yuto; delivery push pending`
+- Phase: `WP-14 complete; implementation merged into yuto and pushed`
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity-rebuild` (local only; recreated implementation)
 - Current HEAD: `defdad0 Merge branch 'codex/arch-cli-sdk-parity-rebuild' into yuto`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean before recording this delivery checkpoint; no credentials or generated artifacts`
-- Last completed action: `merged codex/arch-cli-sdk-parity-rebuild into yuto with a normal no-ff merge; final complete offline baseline is 92 passed in 87.32s`
-- Next exact action: `commit this delivery checkpoint, push github/yuto normally, and verify remote equality; never force-push`
+- Worktree state: `clean after normal push; no credentials or generated artifacts`
+- Last completed action: `pushed yuto normally to github and verified local/remote equality at 78cc24d; final complete offline baseline is 92 passed in 87.32s`
+- Next exact action: `none for this Issue; await the next authorized task; never force-push`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
   repository deletion, credential mutation, and publication remain unauthorized`
 - Tests for this implementation: `prior architecture implementation evidence is historical only; post-rollback baseline and focused contracts must be rerun during reimplementation`
-- Residual risk: `remote equality remains to be verified after the authorized normal push; no live remote tests were run`
+- Residual risk: `no live remote tests were run; offline verification and normal yuto delivery are complete`
 
 ### Work Package Status
 
