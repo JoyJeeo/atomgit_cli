@@ -5,20 +5,20 @@ Status: active
 ## Handoff Snapshot
 
 - Updated: `2026-08-24`
-- Phase: `WP-14 complete; offline implementation verified; awaiting human acceptance`
+- Phase: `WP-14 complete; implementation merged into yuto; delivery push pending`
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity-rebuild` (local only; recreated implementation)
-- Current HEAD: `2f01cef refactor(architecture): align cli and native sdk capabilities`
+- Current HEAD: `defdad0 Merge branch 'codex/arch-cli-sdk-parity-rebuild' into yuto`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after the normal local implementation commit; no credentials or generated artifacts`
-- Last completed action: `committed the verified implementation as 2f01cef; final complete offline baseline remains 92 passed in 89.66s`
-- Next exact action: `human-accept the local implementation; do not force-push, merge, or push until separately authorized`
+- Worktree state: `clean before recording this delivery checkpoint; no credentials or generated artifacts`
+- Last completed action: `merged codex/arch-cli-sdk-parity-rebuild into yuto with a normal no-ff merge; final complete offline baseline is 92 passed in 87.32s`
+- Next exact action: `commit this delivery checkpoint, push github/yuto normally, and verify remote equality; never force-push`
 - Blockers: `none; controlled remote tests are authorized only in
   weixin_52273949/test_datasets as recorded below; remote Issue work,
   repository deletion, credential mutation, and publication remain unauthorized`
 - Tests for this implementation: `prior architecture implementation evidence is historical only; post-rollback baseline and focused contracts must be rerun during reimplementation`
-- Residual risk: `the former implementation is retained only on the local backup branch; no architecture/parity implementation is currently claimed on yuto`
+- Residual risk: `remote equality remains to be verified after the authorized normal push; no live remote tests were run`
 
 ### Work Package Status
 
