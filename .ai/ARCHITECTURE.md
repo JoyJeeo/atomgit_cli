@@ -65,9 +65,13 @@ fail closed on unowned modules, new forbidden edges, cycles, facade growth,
 empty placeholders, stale artifact declarations, and missing parity metadata.
 
 The extracted technical owners remain explicit and are not additional business
-layers: `commands/` owns CLI command implementations, `services/` owns the
-historical V5 authentication/repository service boundaries, `download/` and
-`upload/` own legacy CLI transfer implementations, `lfs/` owns LFS policy and
+layers: `commands/` owns CLI command implementations, `adapters.atomgit_v5`
+owns the V5 authentication/repository transport and response boundaries, and
+`services/` keeps only the historical authentication/repository wrappers,
+output, identities, and patch seams. `adapters.download` owns repository
+enumeration, destination safety, transport, checksum, resume, manifest, and
+prune behavior; `download/` keeps only historical method/export compatibility.
+`upload/` owns legacy CLI transfer implementations, `lfs/` owns LFS policy and
 recovery, `sdk/` owns legacy SDK implementations, and `lifecycle/` owns
 completion, installation provenance, managed paths, and uninstall policy.
 These owners are connected to the seven-directory architecture through the

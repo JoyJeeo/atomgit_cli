@@ -25,8 +25,10 @@ class UploadUseCase:
             token=token,
             path_in_repo=request.path_in_repo,
             ignore_patterns=list(request.ignore_patterns) or None,
+            message=request.message,
             timeout=request.timeout,
             progress=request.progress,
+            num_workers=request.num_workers,
         )
         return OperationResult(
             "upload_file",
@@ -48,6 +50,7 @@ class UploadUseCase:
             token=token,
             path_in_repo=request.path_in_repo,
             ignore_patterns=list(request.ignore_patterns) or None,
+            message=request.message,
             timeout=request.timeout,
             progress=request.progress,
             resumable=request.resumable,

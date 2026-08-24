@@ -100,18 +100,21 @@ def upload(
             context.print_info(f"仓库类型: {repo_type}")
         if revision:
             context.print_info(f"目标分支: {revision}")
-        if context.api.upload_folder(
+        result = context.run_usecase(
+            "upload_file",
             path,
             repo_id,
-            message=message,
-            upload_timeout=timeout_sec,
-            progress_bar=show_progress,
-            path_in_repo=path_in_repo,
             repo_type=repo_type,
             revision=revision,
+            path_in_repo=path_in_repo or "./",
             ignore_patterns=user_ignore_patterns,
+            timeout=timeout_sec or 300.0,
+            progress=show_progress,
+            message=message,
             num_workers=num_workers,
-        ):
+            _cli_repo_type_explicit=repo_type is not None,
+        )
+        if result.ok:
             context.print_success(f"文件上传成功: {path.name}")
         else:
             context.print_error(f"文件上传失败: {path.name}")
@@ -163,21 +166,24 @@ def upload(
         if not show_progress:
             context.print_info("进度条已禁用")
 
-        if context.api.upload_directory(
+        result = context.run_usecase(
+            "upload_folder",
             path,
             repo_id,
-            message=message,
-            upload_timeout=timeout_sec,
-            progress_bar=show_progress,
-            path_in_repo=path_in_repo,
             repo_type=repo_type,
             revision=revision,
+            path_in_repo=path_in_repo or "./",
             ignore_patterns=ignore_patterns,
             resumable=resumable,
             num_workers=num_workers,
             batch_size=batch_size,
+            timeout=request_timeout,
+            progress=show_progress,
+            message=message,
             auto_configure_lfs=auto_configure_lfs,
-        ):
+            _cli_repo_type_explicit=repo_type is not None,
+        )
+        if result.ok:
             context.print_success(f"目录上传成功: {path}")
         else:
             context.print_error(f"目录上传失败: {path}")
@@ -238,14 +244,17 @@ def download(
     if not context.config.is_logged_in():
         context.print_info("当前未登录，尝试下载公开仓库...")
 
-    download_options = {"force_download": force, "repo_type": repo_type}
-    if verify_checksum:
-        download_options["verify_checksum"] = True
-    if resume_download:
-        download_options["resume_download"] = True
-    if prune:
-        download_options["prune"] = True
-    if context.api.download_repo(repo_id, local_path, **download_options):
+    result = context.run_usecase(
+        "download_snapshot",
+        repo_id,
+        repo_type=repo_type,
+        local_dir=local_path,
+        force=force,
+        checksum=verify_checksum,
+        resume=resume_download,
+        prune=prune,
+    )
+    if result.ok:
         context.print_success(f"仓库下载成功: {local_path}")
     else:
         context.print_error(f"仓库下载失败: {repo_id}")
@@ -292,12 +301,17 @@ def download_file(
     if not context.config.is_logged_in():
         context.print_info("当前未登录，尝试从公开仓库下载...")
 
-    download_options = {"force_download": force, "repo_type": repo_type}
-    if verify_checksum:
-        download_options["verify_checksum"] = True
-    if resume_download:
-        download_options["resume_download"] = True
-    if context.api.download_file(repo_id, filename, local_path, **download_options):
+    result = context.run_usecase(
+        "download_file",
+        repo_id,
+        filename,
+        repo_type=repo_type,
+        local_dir=local_path,
+        force=force,
+        checksum=verify_checksum,
+        resume=resume_download,
+    )
+    if result.ok:
         context.print_success(f"文件下载成功: {filename}")
     else:
         context.print_error(f"文件下载失败: {repo_id}/{filename}")

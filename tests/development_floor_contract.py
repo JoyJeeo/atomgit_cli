@@ -1217,7 +1217,7 @@ CAPABILITY_REGISTRY = {
         (
             _invariant(
                 "ARCH-001",
-                "Every new general remote capability is registered as parity-required or an explicit CLI-only exception.",
+                "Every new general remote capability is registered as parity-required or an explicit CLI-only exception, with importable and invocation-level runtime route evidence.",
                 "test_architecture_parity.py",
             ),
             _invariant(

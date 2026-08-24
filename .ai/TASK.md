@@ -1,64 +1,267 @@
 # Current Issue Contract
 
-Status: completed
+Status: active
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-24`
-- Phase: `WP-14 complete; implementation merged into yuto and pushed`
+- Updated: `2026-08-25`
+- Phase: `R4 implementation, verification, independent review approved, and human acceptance granted; delivery authorized`
 - Base branch: `yuto`
-- Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
-- Task branch: `codex/arch-cli-sdk-parity-rebuild` (local historical branch; merged into `yuto`)
-- Closure source HEAD: `398beb1 docs(ai): close delivered architecture task`
-- Delivery merge: `bc7b9ed merge: close architecture development plan` (pushed; local and `github/yuto` equal)
+- Base commit: `8d9490d docs(ai): record final delivery state`
+- Task branch: `codex/architecture-compliance-recovery` (local only; no push authorized)
+- Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY` was marked completed, but this audit found P1 architecture and parity acceptance gaps
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after normal push; no credentials or generated artifacts`
-- Last completed action: merged the closure documentation into `yuto`, pushed normally, and verified local/remote equality at `bc7b9ed`; final offline baseline and required checks passed.
-- Next exact action: `none for this Issue; await the next authorized task; never force-push`
-- Blockers: `none; controlled remote tests are authorized only in
-  weixin_52273949/test_datasets as recorded below; remote Issue work,
-  repository deletion, credential mutation, and publication remain unauthorized`
-- Tests for this implementation: `post-delivery revalidation completed in the atomgit_cli environment; 92 isolated offline cases passed; no live remote tests were run`
-- Residual risk: `no live remote tests were run; offline verification and normal yuto delivery are complete`
+- Worktree state: `uncommitted task-owned changes in .ai/TASK.md, docs/architecture.md, core/parity, CLI/usecase/adapter wiring, and architecture tests; no credentials or generated artifacts`
+- Last completed action: `completed independent R4 review after repairing local FileNotFoundError compatibility, remote missing-file classification, CLI diagnostics, and anonymous context-marker handling; complete offline baseline passed 92/92; maintainer authorized commit, merge, and push`
+- Next exact action: `create the cohesive task-branch commit, merge it into yuto locally, push only yuto, and verify remote equality`
+- Blockers: `no implementation blocker; controlled remote download/upload evidence remains intentionally unrun`
+- Tests for this phase so far: `download ownership 18/18; architecture parity 21/21; download contract 45/45; checksum 23/23; resume 17/17; prune 49/49; path safety 15/15; raw integrity 12/12; redirect 9/9; manifest concurrency 9/9; Windows 12/12; structure 14/14; packaging metadata 13/13; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.33s; compileall, pip check, diff check, Black, isort, and Ruff passed; no live remote tests were run`
+- Residual risk: `upload/LFS technical-owner migration remains R5; controlled remote download behavior remains unverified`
 
-### Work Package Status
+### Corrective Work Package Status
 
 | Package | Status | Scope boundary |
 |---|---|---|
-| `WP-00` recovery/baseline freeze | `completed` | read-only reconciliation and pre-change evidence |
-| `WP-01` architecture contracts | `completed` | owner/edge/facade/seam/parity contracts only |
-| `WP-02` core and external boundaries | `completed` | immediately used contracts and ports only |
-| `WP-03` infrastructure/outbound ownership | `completed` | technical boundary migration only |
-| `WP-04` authentication slice | `completed` | behavior-preserving auth migration |
-| `WP-05` repository slice | `completed` | behavior-preserving repository migration |
-| `WP-06` download slice | `completed` | behavior-preserving download migration |
-| `WP-07` upload/LFS slice | `completed` | behavior-preserving upload/LFS migration |
-| `WP-08` lifecycle/facade closure | `completed` | behavior-preserving facade shrink |
-| `WP-09` Phase 1 gate | `completed` | review and explicit Phase 2 authorization |
-| `WP-10` parity/native SDK contract | `completed` | registry and public native SDK contract |
-| `WP-11` auth/repository parity | `completed` | native SDK auth/repository methods |
-| `WP-12` upload parity | `completed` | native SDK upload/LFS methods |
-| `WP-13` download parity | `completed` | native SDK download/checksum/resume/prune methods |
-| `WP-14` parity closure | `completed` | future-debt gate, docs, review, acceptance |
+| `R0` evidence recovery and acceptance re-audit | `completed` | read-only reconciliation; identified P1 gaps; no source edits |
+| `R1` executable architecture and call-path contract | `completed` | importable and invocation-level route checks; deliberate legacy bypass fixture fails closed |
+| `R2` CLI shared-usecase wiring | `completed` | authentication, repository, upload, and download CLI paths use shared usecases; baseline and review passed |
+| `R3` authentication/repository owner migration | `completed` | adapter owner, compatibility seams, focused evidence, baseline, and independent review passed |
+| `R4` download owner migration | `completed` | unify CLI/native SDK download path, integrity, resume, prune, and repo policy |
+| `R5` upload/LFS owner migration | `pending` | unify file/folder/resumable/LFS paths and preserve temporary/global-state contracts |
+| `R6` lifecycle and compatibility closure | `pending` | make compatibility the sole historical facade and place technical owners correctly |
+| `R7` final gate, independent review, and human acceptance | `in_progress` | verify original intent, update docs/evidence, and only then close the Issue |
 
 Only one row may become `in_progress`; a later row cannot change status until
 the preceding row has an exit-gate result recorded below or in a later durable
-handoff. The first implementation conversation must update `WP-00` to
-`in_progress` only after confirming the actual Git state and environment.
+handoff. R0 is complete because the re-audit and baseline evidence are recorded;
+R1 is complete because its invocation finding was fixed and its bypass fixture
+fails closed; R2 is complete because its compatibility gate and independent
+review passed; R3 is complete because its owner migration, baseline, and
+independent review passed; R4 is complete because its technical owner migration,
+compatibility regressions, final baseline, and independent review passed. Human
+acceptance remains required before delivery and Issue closure.
+Human acceptance for R3 was granted on 2026-08-24 with the instruction to
+continue development, so R7 is now the only package in progress. No new feature Issue
+may start while this corrective Issue has an open P1 gate.
 
-### Delivery Evidence
+### R1 Exit-Gate Evidence
+
+- `src/atomgit/core/parity.py` now exposes `RUNTIME_ROUTE_REGISTRY` and
+  `validate_runtime_routes()`, resolving every parity-required usecase, declared
+  usecase method, CLI owner, and native SDK callable.
+- `tests/test_architecture_parity.py` proves the complete registry, missing-route
+  rejection, non-importable-route rejection, and legacy-bypass rejection; the
+  focused script passes 18/18.
+- The gate is intentionally limited to executable route declarations. It does not
+  claim adapter technical ownership has already migrated; CLI adapters still
+  delegate to historical API owners and that migration is assigned to R3.
+
+### R1 Independent Review And Resolution
+
+- Initial verdict: `REQUEST CHANGES`; resolved by the R2 implementation below,
+  with a fresh review still required before R2 acceptance.
+- `P1` resolution: `validate_runtime_routes()` now inspects CLI callback source
+  for the registered `context.run_usecase()` operation and SDK source for its
+  corresponding usecase delegate; a deliberate legacy owner fixture fails closed.
+- `P1` runtime resolution: production command owners call the shared bridge;
+  adapters remain legacy-backed by design for R2 and are the R3 boundary.
+- `P2` mitigation: route operation/delegate contracts are executable and tested;
+  remaining technical-owner duplication is explicitly tracked for R3.
+
+### R2 Exit-Gate Evidence
+
+- CLI authentication, repository, upload, and download command owners now call
+  `context.run_usecase(...)`; the bridge preserves historical context patch
+  seams while routing through `AtomGitClient` and the shared usecases.
+- Upload request validation preserves `message`, worker count, and whether
+  `repo_type` was explicitly supplied; focused regressions pass 16/16,
+  17/17, and 49/49 for file, repo-type, and resumable behavior.
+- Structural and ownership gates pass: `test_structure_guard.py` 14/14,
+  `test_lfs_domain_ownership.py` 13/13, and packaging metadata 13/13.
+- `python tests/run_cli_baseline.py` passes 92/92 isolated cases after the
+  final fix; `compileall`, `pip check`, `git diff --check`, Black, and isort
+  checks also pass. No live remote write or credential mutation was run.
+
+### R2 Independent Review
+
+- Verdict: `APPROVED` for the R2 package.
+- Findings: no open P0/P1/P2/P3 findings within the R2 scope. The historical
+  API-backed adapter ownership is intentional and remains the explicit R3
+  migration boundary, not an R2 acceptance gap.
+- Residual review risk: technical-owner duplication and controlled remote
+  behavior remain unverified until R3 and authorized remote testing.
+
+### R3 Authentication/Repository Owner Migration Evidence
+
+- `src/atomgit/adapters/atomgit_v5.py` now owns the direct bounded V5 JSON
+  transport, identity lookup, repository list/create/visibility/delete/branch
+  operations, response parsing, error classification, and Hugging Face create
+  boundary. It has no import edge to `api` or `services`.
+- `services.authentication` and `services.repositories` retain only historical
+  method signatures, output/return conventions, API class provenance, and
+  patchable helper aliases; their methods delegate technical work to the
+  canonical adapter. Old API helper assignments now propagate to the adapter.
+- Repository creation preserves the logical (un-normalized) ID for the legacy
+  visibility callback while using the normalized ID for the remote create call.
+  Ambiguous visibility, deletion, and branch writes retain the old verified or
+  unknown-state diagnostics.
+- Focused evidence: authentication/repository ownership 24/24; login response
+  bound 5/5; login error semantics 11/11; repository list 24/24; visibility
+  30/30; deletion 48/48; branch 28/28; repository ID 68/68; structure 14/14;
+  packaging metadata 13/13.
+- Baseline: `python tests/run_cli_baseline.py` 92 passed in 80.22s in the
+  `atomgit_cli` environment (offline). Compileall, dependency, and diff checks
+  passed; no live remote writes or credential mutations were run.
+- Review status: `APPROVED`. Initial review found a P1 compatibility gap where
+  legacy direct branch calls could reach transport before revision validation;
+  `AtomGitV5Adapter.create_branch` now rejects unsafe branch/source values before
+  any request, with a focused regression. Final review found no open P0/P1/P2/P3
+  findings.
+
+### Audit Evidence And Decision
 
 - Former implementation commit: `e927a4b refactor(architecture): align CLI and native SDK capabilities`
-- Former implementation backup: `codex/arch-cli-sdk-parity-implementation-backup` (local only; never push)
-- Current status: reimplemented architecture/parity work is merged into `yuto`, pushed normally, and revalidated; the historical rollback is not the current source state.
+- Historical delivery records: `bc7b9ed`, `398beb1`, and `8d9490d` remain evidence of what was previously declared, not proof that the objective is currently satisfied.
+- Re-audit decision: `REQUEST CHANGES`; the closed Issue's offline tests are green, but its final seven-directory runtime ownership and shared CLI/SDK usecase requirements are not met by the actual call graph.
+- Blocking findings: `P1` CLI bypasses shared usecases; `P1` adapters depend on legacy business owners; `P1` parity registry does not verify runtime routing; `P2` compatibility ownership remains distributed.
 - Remote evidence: `no live remote tests were run; controlled remote authorization remains limited to the dedicated test repositories`
 
 The predecessor CLI Facade Conversion Issue and the architecture/parity Issue
-are both delivery-complete. Earlier rollback and backup branch references are
-historical evidence only; the authoritative current state is the clean
-`yuto` tree at `398beb1`, equal to `github/yuto`.
+remain historical records. Their prior completion claims are superseded for
+acceptance purposes by this corrective Issue. The authoritative source state at
+audit entry was clean `yuto` at `8d9490d`, equal to `github/yuto`; the current
+task branch contains only this TASK activation change.
 
-## Completed Issue
+## Active Corrective Issue
+
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-ARCH-CLI-SDK-PARITY-RECOVERY`
+- Title: `Reopen architecture/parity delivery and drive runtime ownership to the seven-directory contract`
+- Primary type: `refactoring`
+- Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`
+- Priority: `P1`
+- Delivery: `local task branch -> focused tests -> complete offline baseline -> independent review -> human acceptance -> explicitly authorized delivery`
+
+### Objective
+
+Reconcile the delivered architecture/parity Issue with its original intent. The
+seven directories must become the actual canonical runtime ownership model, not
+a parallel SDK facade over legacy business owners. CLI and native SDK entries for
+every general remote capability must call one registered shared usecase, while
+all existing CLI, legacy SDK, import, identity, signature, return, exception,
+patch-seam, packaging, security, and state-restoration contracts remain stable.
+
+This Issue is corrective and may not add unrelated product capabilities. It is
+executed one work package at a time. A package is not complete because its
+metadata exists; its exit gate must prove the real source/runtime behavior.
+
+### Reproducible Evidence
+
+- `python tests/run_cli_baseline.py` passes 92 isolated cases, so the current
+  offline behavior is not showing an immediate regression.
+- `python -m compileall -q .`, `python -m pip check`, `git diff --check`, and
+  `python tests/test_structure_guard.py` pass.
+- Production CLI command owners call `context.run_usecase`; the R2 bridge
+  assembles `AtomGitClient` with context-preserving adapters.
+- `adapters.atomgit_v5` and the HF adapter remain legacy-backed technical
+  adapters by explicit R2 scope; R3 migrates those owners.
+- The parity registry now resolves runtime symbols and checks CLI/SDK source
+  delegation to the registered shared usecases, with a bypass fixture that
+  fails closed.
+- The `compatibility` package is a registry alias, while historical facade and
+  patch logic remains distributed across multiple old paths.
+
+### In Scope
+
+- executable architecture and real call-path contracts;
+- CLI-to-usecase wiring with exact presentation/exit compatibility;
+- vertical migration of authentication, repositories, download, upload/LFS,
+  and lifecycle owners;
+- compatibility facade consolidation and patch-seam preservation;
+- packaging/artifact declarations, structure tests, parity registry, and
+  architecture documentation required by the migration;
+- focused regressions, complete offline verification, independent review, and
+  final human acceptance against the original objective.
+
+### Out Of Scope
+
+- new user-facing product capabilities unrelated to architecture compliance;
+- intentional changes to existing CLI/SDK behavior without explicit migration
+  authorization;
+- dependency upgrades, broad formatting debt removal, or release work;
+- live remote writes, repository creation/deletion, credential mutation, push,
+  publication, or Issue state changes on a remote tracker without explicit
+  authorization.
+
+### Affected Capability IDs
+
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-SURFACE`, `CLI-DISPATCH`,
+`AUTH-CONFIG`, `GIT-CREDENTIAL`, `REPO-MANAGEMENT`, `REVISION`, `UPLOAD-FILE`,
+`UPLOAD-FOLDER`, `UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`,
+`DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`, `DOWNLOAD-INTEGRITY`,
+`DOWNLOAD-SECURITY`, `SDK-DOWNLOAD`, `SDK-UPLOAD`, `SDK-REPO`, `REPO-ID`,
+`RUNTIME`, `CACHE`, `DEPENDENCY-CONTRACT`, `PACKAGING`, `PORTABILITY`,
+`ERROR-REDACTION`.
+
+### Protected Existing Invariants
+
+Existing command names, options, defaults, output, prompts, progress, exit
+codes, public imports, object/class/function identities, signatures, return
+values, exception categories, monkeypatch seams, locked HF/datasets calls,
+package entry paths, token redaction, temporary-resource lifetime, global-state
+restoration, installation/uninstallation behavior, and public/anonymous token
+semantics remain unchanged. Existing legacy HF-style SDK functions remain
+available with their compatibility semantics.
+
+### New Or Changed Invariants
+
+- Each parity-required capability has one executable shared usecase and both a
+  CLI and native SDK route to that same usecase.
+- Canonical `interfaces/usecases/domain/core/adapters/infrastructure` code has
+  no dependency on legacy facades or legacy business owners.
+- `compatibility` is the only owner of historical path/signature/identity/patch
+  adaptation and contains no new business orchestration.
+- The parity registry and structure guard fail closed on missing runtime routes,
+  one-sided capabilities, new legacy dependencies, facade growth, unowned
+  modules, cycles, stale artifacts, and missing focused evidence.
+- New development work cannot add product behavior while this Issue has an open
+  P1 exit gate.
+
+### Focused Tests And Evidence
+
+- Add a failing test for each real CLI/SDK/usecase route before changing it.
+- Add structural tests that inspect import edges and runtime route identity,
+  not only registry strings.
+- Preserve and extend ownership, compatibility, dependency-signature,
+  packaging, security, portability, and parity suites for each vertical slice.
+- Run the complete `python tests/run_cli_baseline.py` after every corrective
+  package and after the final review fix.
+- Before closure also run `python -m compileall -q .`, `python -m pip check`,
+  and `git diff --check`.
+- Controlled remote evidence remains optional unless a package explicitly
+  needs it; no live support claim may be made without authorized remote proof.
+
+### Acceptance Criteria
+
+The Issue cannot close until all of the following are true:
+
+1. The actual CLI and native SDK call paths share the registered usecases for
+   authentication, repositories, upload, download, revision, repo type, token,
+   checksum, resume, prune, LFS, and final-state verification.
+2. The seven-directory architecture is the canonical implementation location;
+   old `services/download/upload/lfs/sdk` modules are compatibility or technical
+   adapters only and do not receive new business logic.
+3. Existing public and safety contracts listed above pass focused regressions
+   and the complete baseline.
+4. Structure/parity tests fail closed when a future contributor bypasses the
+   canonical route or adds a one-sided CLI/SDK capability.
+5. Architecture and development-floor documentation describe verified current
+   behavior, and `TASK.md` evidence agrees with the real Git/source state.
+6. All corrective packages have recorded exit-gate evidence, independent review
+   returns `APPROVED`, and the human maintainer accepts the result against the
+   original development intent.
+
+## Historical Completed Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-ARCH-CLI-SDK-PARITY`
@@ -495,6 +698,23 @@ Review: APPROVED; final diff review found no P0/P1/P2/P3 findings.
 Residual risk: Black/isort/Ruff retain pre-existing repository-wide debt; no live remote tests were run.
 Next: record accepted closure and await the next authorized Issue.
 
+Corrective R2: completed | HEAD=8d9490d (working tree) | changed=.ai/TASK.md, docs/architecture.md, src/atomgit/{adapters/huggingface.py,cli,commands,core,domain/transfers.py,interfaces,usecases/transfers.py}, tests/{development_floor_contract.py,structure_contract.py,test_architecture_parity.py}
+Focused evidence: architecture 18/18; upload file 16/16; repo type 17/17;
+resumable upload 49/49; structure 14/14; LFS ownership 13/13; packaging
+metadata 13/13; compileall, pip check, diff check, Black, and isort passed.
+Baseline: `python tests/run_cli_baseline.py` 92 passed in 84.03s (offline).
+Review: APPROVED for R2; no open P0/P1/P2/P3 findings.
+Residual risk: adapters remain historical-API-backed by design for R2; R3
+technical-owner migration and live remote behavior are not complete.
+Next: R3 only after human acceptance and explicit authorization.
+
+Corrective R4: completed | HEAD=8d9490d (working tree) | changed=.ai/TASK.md, .ai/ARCHITECTURE.md, docs/architecture.md, pyproject.toml, setup.py, src/atomgit/{adapters/download,adapters/__init__.py,adapters/huggingface.py,api/__init__.py,core/errors.py,download,interfaces/cli/__init__.py,interfaces/sdk/client.py,upload/projection.py,upload/resumable.py}, tests/{structure_contract.py,packaging_contract.py,test_download_domain_ownership.py,test_architecture_parity.py,test_api_facade_conversion.py,test_packaging_metadata.py,test_src_layout_migration.py}
+Focused evidence: download ownership 18/18 then 21/21 after final compatibility regressions; download contract 45/45; checksum 23/23; resume 17/17; prune 49/49; path security 15/15; raw integrity 12/12; redirect security 9/9; manifest concurrency 9/9; Windows compatibility 12/12; structure 14/14; packaging metadata 13/13; wheel/sdist smoke 37/37.
+Baseline: `python tests/run_cli_baseline.py` passed 92/92 in 81.33s in `atomgit_cli` (offline) after the final review repairs; compileall, pip check, git diff --check, Black, isort, and Ruff passed.
+Review: APPROVED after resolving P1 compatibility findings for local missing-source exceptions, remote missing-file classification, CLI diagnostic presentation, and context-managed anonymous download credentials.
+Residual risk: upload/LFS technical-owner migration remains R5; no controlled remote download/checksum/resume/prune evidence was run; no remote writes or credential mutations were performed.
+Next: R7 human acceptance of R4; commit, merge, push, and remote operations remain unauthorized.
+
 ## Detailed Package Specifications
 
 The summaries above define ordering. This section defines the minimum work
@@ -907,8 +1127,8 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 
 ## Authorization And Delivery
 
-- The maintainer explicitly authorized implementation, verification, commit, local merge, and push in this turn; source, tests, contracts, packaging, and documentation are in scope.
-- Delivery mode is local task branch -> independent review -> human acceptance by this explicit delivery request -> cohesive commit -> local no-ff merge into yuto -> push only yuto -> remote equality verification.
+- The maintainer explicitly authorized R4 implementation and verification by requesting continued development, then authorized committing and pushing the completed work in the current request. Source, tests, contracts, packaging, and documentation are in scope.
+- Delivery mode is local task branch -> focused/full offline verification -> independent review -> human acceptance -> cohesive commit -> local no-ff merge into yuto -> push only yuto -> remote equality verification.
 - Controlled remote test authorization: the maintainer explicitly authorizes
   authenticated upload and download, test-branch creation, repository
   visibility changes, deletion of test files or test branches, Git push, and
@@ -921,14 +1141,14 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
   creation, remote Issue/PR operations, task-branch push to the development
   repository, credential mutation, publication, tags/releases, and upstream
   changes remain unauthorized.
-- Human acceptance is required before delivery or closure. After acceptance, standing project rules allow one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; never push the task branch.
+- Human acceptance was granted by the maintainer's explicit request to commit and push the completed R4 work. Standing project rules allow one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; never push the task branch.
 
 ## Independent Review
 
 - Verdict: `APPROVED`
-- Findings: `two implementation findings were repaired before approval: explicit anonymous downloads now cannot fall back to saved credentials, and resume identity includes revision; legacy facade signatures remain exact`
-- Review evidence: `final diff reviewed against the active Issue, locked HF/datasets signatures, structure/parity contracts, focused suites, compileall, pip check, Ruff, Black/isort, diff check, and the complete 92-case offline baseline`
-- Residual review risk: `controlled remote upload/download/checksum/LFS evidence was not run; no remote write is claimed or required for this local offline acceptance checkpoint`
+- Findings: `R4 review initially REQUEST CHANGES for local FileNotFoundError compatibility, remote missing-file classification, lost CLI diagnostics, and context-managed credential handling; all were repaired with focused regressions before the final APPROVED review`
+- Review evidence: `final diff reviewed against the active Issue, locked huggingface-hub==1.1.7 and datasets==4.4.1 signatures, structure/parity contracts, download ownership and security suites, packaging/source/wheel/sdist contracts, compileall, pip check, Ruff, Black/isort, diff check, and the complete 92-case offline baseline`
+- Residual review risk: `controlled remote upload/download/checksum/LFS evidence was not run; no remote write, credential mutation, commit, merge, or push is claimed or required before human acceptance`
 
 ## Definition Of Done
 
@@ -940,5 +1160,5 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 - [x] Focused, complete baseline, dependency, packaging, security, portability, compile, and diff checks pass.
 - [x] Black/isort/Ruff were audited; their pre-existing repository-wide debt is recorded as residual risk and is outside this closure scope.
 - [x] Independent review is APPROVED with no open blocking finding.
-- [x] Human acceptance and final delivery evidence are recorded by the maintainer's explicit completion request; current delivery is `yuto`/`github/yuto` at `398beb1` before this reconciliation commit.
+- [x] Human acceptance of R4 and delivery actions were authorized by the maintainer; commit, merge, and push are now in progress.
 - [x] Remaining risks, unrun tests, and controlled-remote limitations are explicit.

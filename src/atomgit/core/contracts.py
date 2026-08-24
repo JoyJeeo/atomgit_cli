@@ -61,6 +61,7 @@ class UploadRequest:
     token: Optional[Union[str, bool]] = None
     path_in_repo: str = "./"
     ignore_patterns: Tuple[str, ...] = ()
+    message: Optional[str] = None
     resumable: bool = False
     num_workers: int = 5
     batch_size: int = 20

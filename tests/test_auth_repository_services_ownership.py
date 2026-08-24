@@ -25,6 +25,7 @@ SERVICE_MODULES = (
     "services.authentication",
     "services.repositories",
 )
+ADAPTER_MODULE = "adapters.atomgit_v5"
 AUTHENTICATION_METHODS = (
     "login",
     "_get_login_user_by_token",
@@ -87,6 +88,7 @@ def main():
     api_module = importlib.import_module("atomgit.api")
     authentication = importlib.import_module("atomgit.services.authentication")
     repositories = importlib.import_module("atomgit.services.repositories")
+    adapter = importlib.import_module("atomgit.adapters.atomgit_v5")
 
     check(
         "historical concrete API class and singleton remain at the old path",
@@ -119,6 +121,58 @@ def main():
         is repositories._sanitized_v5_api_error,
     )
     check(
+        "V5 technical helpers are canonical adapter identities",
+        all(
+            getattr(adapter, name).__module__ == "atomgit.adapters.atomgit_v5"
+            and getattr(repositories, name) is getattr(adapter, name)
+            and getattr(api_module, name) is getattr(adapter, name)
+            for name in HISTORICAL_SERVICE_HELPERS
+        )
+        and authentication._sanitized_v5_api_error is adapter._sanitized_v5_api_error,
+    )
+    adapter_source = source_texts[ADAPTER_MODULE]
+    adapter_tree = ast.parse(adapter_source)
+    legacy_imports = {
+        node.module or ""
+        for node in ast.walk(adapter_tree)
+        if isinstance(node, ast.ImportFrom)
+    } | {
+        alias.name
+        for node in ast.walk(adapter_tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    check(
+        "canonical V5 adapter has no legacy API or service imports",
+        not any("services" in name or name.endswith("api") for name in legacy_imports),
+        repr(sorted(legacy_imports)),
+    )
+    original_adapter_reader = adapter._atomgit_v5_get_json
+    adapter._atomgit_v5_get_json = lambda path, token: [{"full_name": "user/repo"}]
+    try:
+        check(
+            "native repository adapter executes without historical service calls",
+            adapter.AtomGitV5Adapter().list("fake-adapter-token")
+            == [{"full_name": "user/repo"}],
+        )
+    finally:
+        adapter._atomgit_v5_get_json = original_adapter_reader
+    original_adapter_branch_reader = adapter._atomgit_v5_get_json
+    adapter._atomgit_v5_get_json = lambda *args, **kwargs: (_ for _ in ()).throw(
+        AssertionError("invalid branch reached the network")
+    )
+    try:
+        check(
+            "native branch adapter rejects unsafe revisions before transport",
+            not adapter.AtomGitV5Adapter().create_branch(
+                "user/repo", "bad..ref", "main", "fake-adapter-token"
+            ),
+        )
+    except ValueError:
+        check("native branch adapter rejects unsafe revisions before transport", True)
+    finally:
+        adapter._atomgit_v5_get_json = original_adapter_branch_reader
+    check(
         "historical moved method signatures are unchanged",
         str(inspect.signature(api_module.HuggingFaceAPI.login))
         == "(self, token: str) -> bool"
@@ -138,6 +192,7 @@ def main():
         check(
             "patching the old V5 reader reaches service and transfer call sites",
             repositories._atomgit_v5_get_json is replacement
+            and adapter._atomgit_v5_get_json is replacement
             and api_module._atomgit_v5_get_json is replacement,
         )
     with patch.object(api_module, "_is_not_found_error", replacement):

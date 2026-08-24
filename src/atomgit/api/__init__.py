@@ -67,13 +67,13 @@ from huggingface_hub._local_folder import (  # noqa: E402
 from huggingface_hub.file_download import http_get as hf_http_get  # noqa: E402,F401
 
 try:
+    from ..adapters.download import integrity as _download_integrity
+    from ..adapters.download import manifest as _download_manifest
+    from ..adapters.download import prune as _download_prune
+    from ..adapters.download import resume as _download_resume
+    from ..adapters.download import service as _download_service
+    from ..adapters.download import transport as _download_transport
     from ..config import config  # noqa: F401
-    from ..download import integrity as _download_integrity
-    from ..download import manifest as _download_manifest
-    from ..download import prune as _download_prune
-    from ..download import resume as _download_resume
-    from ..download import service as _download_service
-    from ..download import transport as _download_transport
     from ..download.service import DownloadServiceMixin
     from ..lfs import service as _lfs_service
     from ..lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
@@ -118,13 +118,13 @@ try:
         validate_upload_path_no_symlinks,
     )
 except ImportError:
+    from adapters.download import integrity as _download_integrity
+    from adapters.download import manifest as _download_manifest
+    from adapters.download import prune as _download_prune
+    from adapters.download import resume as _download_resume
+    from adapters.download import service as _download_service
+    from adapters.download import transport as _download_transport
     from config import config  # noqa: F401
-    from download import integrity as _download_integrity
-    from download import manifest as _download_manifest
-    from download import prune as _download_prune
-    from download import resume as _download_resume
-    from download import service as _download_service
-    from download import transport as _download_transport
     from download.service import DownloadServiceMixin
     from lfs import service as _lfs_service
     from lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
@@ -168,6 +168,8 @@ except ImportError:
         sanitized_download_error,
         validate_upload_path_no_symlinks,
     )
+
+_v5_adapter = _repository_service._v5_adapter
 
 _DOWNLOAD_OWNER_EXPORTS = {
     "_atomgit_hf_endpoint": _download_transport,
@@ -451,6 +453,8 @@ class HuggingFaceAPI(
 
 _repository_service._atomgit_open_url = _atomgit_open_url
 _repository_service._is_not_found_error = _is_not_found_error
+_v5_adapter._atomgit_open_url = _atomgit_open_url
+_v5_adapter._is_not_found_error = _is_not_found_error
 _authentication_service._sanitized_v5_api_error = _sanitized_v5_api_error
 _download_service._is_not_found_error = _is_not_found_error
 _download_integrity._is_not_found_error = _is_not_found_error
@@ -661,23 +665,23 @@ _DOWNLOAD_PATCH_TARGETS = {
 # their dependencies in the new owner modules. The API module itself remains a
 # partial implementation until the later transfer and facade program steps.
 _PATCH_TARGETS = {
-    "urllib": (_authentication_service, _repository_service),
-    "json": (_authentication_service, _repository_service),
-    "socket": (_repository_service,),
-    "config": (_authentication_service, _repository_service),
-    "create_repo": (_repository_service,),
-    "HfApi": (_repository_service,),
-    "quote": (_repository_service,),
-    "auth_error_kind": (_repository_service,),
-    "is_supported_upload_revision": (_repository_service,),
-    "normalize_repo_id": (_repository_service,),
-    "_atomgit_open_url": (_repository_service,),
-    "_is_not_found_error": (_repository_service,),
-    "_ATOMGIT_IDENTITY_MAX_JSON_BYTES": (_authentication_service,),
-    "_ATOMGIT_V5_API_BASE": (_repository_service,),
-    "_ATOMGIT_V5_MAX_JSON_BYTES": (_repository_service,),
+    "urllib": (_authentication_service, _repository_service, _v5_adapter),
+    "json": (_authentication_service, _repository_service, _v5_adapter),
+    "socket": (_repository_service, _v5_adapter),
+    "config": (_authentication_service, _repository_service, _v5_adapter),
+    "create_repo": (_repository_service, _v5_adapter),
+    "HfApi": (_repository_service, _v5_adapter),
+    "quote": (_repository_service, _v5_adapter),
+    "auth_error_kind": (_repository_service, _v5_adapter),
+    "is_supported_upload_revision": (_repository_service, _v5_adapter),
+    "normalize_repo_id": (_repository_service, _v5_adapter),
+    "_atomgit_open_url": (_repository_service, _v5_adapter),
+    "_is_not_found_error": (_repository_service, _v5_adapter),
+    "_ATOMGIT_IDENTITY_MAX_JSON_BYTES": (_authentication_service, _v5_adapter),
+    "_ATOMGIT_V5_API_BASE": (_repository_service, _v5_adapter),
+    "_ATOMGIT_V5_MAX_JSON_BYTES": (_repository_service, _v5_adapter),
     **{
-        name: (_repository_service,)
+        name: (_repository_service, _v5_adapter)
         for name in (
             "_atomgit_repo_type",
             "_atomgit_repo_exists",
@@ -694,6 +698,7 @@ _PATCH_TARGETS = {
     "_sanitized_v5_api_error": (
         _authentication_service,
         _repository_service,
+        _v5_adapter,
     ),
 }
 

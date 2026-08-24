@@ -19,7 +19,8 @@ def login(context, token, token_stdin):
 
     context.print_info("正在验证登录信息...")
 
-    if context.api.login(token):
+    result = context.run_usecase("login", token)
+    if result.ok:
         context.print_success("登录成功！")
 
         if context.check_git_available():
@@ -45,7 +46,10 @@ def logout(context):
     )
 
     if was_logged_in:
-        context.config.clear_credentials()
+        result = context.run_usecase("logout")
+        if not result.ok:
+            context.print_error("退出登录失败")
+            context.sys.exit(1)
 
     if (was_logged_in or has_git_state) and context.check_git_available():
         if not context.clear_git_credentials():
@@ -65,7 +69,8 @@ def whoami(context):
     if not context.config.is_logged_in():
         context.print_warning("请先登录：atomgit login")
         context.sys.exit(1)
-    user_info = context.api.get_login_user()
+    result = context.run_usecase("whoami")
+    user_info = result.value if result.ok else None
     if user_info:
         context.print_success(f"当前登录用户: {user_info['login']}")
     else:
