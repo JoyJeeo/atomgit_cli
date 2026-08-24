@@ -1,22 +1,22 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R5 implementation, offline verification, independent review approved, and human acceptance granted; delivery in progress`
+- Phase: `R5 implementation, offline verification, independent review approved, human acceptance granted, and delivery completed`
 - Base branch: `yuto`
 - Base commit: `25fe93b docs(ai): record architecture delivery`
-- Task branch: `codex/upload-lfs-owner-migration` (local only; no commit or push authorized)
+- Task branch: `codex/upload-lfs-owner-migration` (local only; not pushed)
 - Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY-RECOVERY` R4 delivery remains completed; R5 is activated as a new independently accepted local Issue by the maintainer's request to continue development
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `R5 source, tests, contracts, and documentation changes are uncommitted on the same task branch; no credentials or generated artifacts`
-- Last completed action: `migrated upload/LFS implementations into adapters, converted historical paths to aliases, tightened owner/edge/package contracts, fixed lazy-import compatibility, and passed the complete offline baseline`
-- Next exact action: `create the cohesive R5 task-branch commit, merge it into yuto locally, push only yuto, and verify remote equality`
+- Worktree state: `clean after task commit 51d7410, local no-ff merge 097a5bb, yuto push, and remote equality verification; no credentials or generated artifacts`
+- Last completed action: `created 51d7410, merged it into yuto as 097a5bb, pushed github/yuto, fetched, and verified local yuto and github/yuto at 097a5bb1f507adac346bfad60bcc5fb198b80e46`
+- Next exact action: `none; activate a new Issue explicitly before further development`
 - Blockers: `none`
 - Tests for this phase so far: `upload ownership 17/17; LFS ownership 14/14; SDK ownership 19/19; repository ownership 24/24; download ownership 18/18; structure 14/14; HF contract 16/16; packaging 13/13; src-layout 6/6; import-order 5/5; completion 19/19; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.03s; compileall, pip check, and diff check passed`
-- Residual risk: `controlled remote upload/LFS behavior remains unverified; R6 lifecycle and complete compatibility closure remain outside this Issue`
+- Residual risk: `controlled remote upload/LFS behavior remains unverified; R6 lifecycle and complete compatibility closure remain outside this delivered Issue`
 
 ## Active Issue
 
@@ -120,11 +120,11 @@ restoration remain exact.
 
 ### Authorization
 
-The maintainer's `继续开发` request explicitly activates this next R5 package.
-It authorizes local source, test, contract, packaging, and documentation edits
-plus offline verification on the local task branch. It does not authorize live
-remote operations, credential changes, commit, push, merge, Issue/PR changes,
-release, or publication.
+The maintainer's `继续开发` request activated this R5 package. The subsequent
+request to commit and push authorized one cohesive task commit, local no-ff
+merge into `yuto`, push of `yuto`, and remote equality verification. It did not
+authorize pushing the task branch, live remote operations, credential changes,
+Issue/PR changes, release, or publication.
 
 ### Complete Baseline Evidence
 
@@ -159,10 +159,11 @@ restoration, and the complete offline evidence.
 ### Review Disposition
 
 Human acceptance was granted by the maintainer's explicit request to commit
-and push the completed R5 work. The request authorizes one cohesive local task
-commit, local no-ff merge into `yuto`, push of `yuto`, and remote equality
-verification. It does not authorize pushing the task branch, remote Issue
-transitions, credential mutation, publication, or live remote operations.
+and push the completed R5 work. Delivery evidence is task commit `51d7410`,
+merge commit `097a5bb`, and remote `github/yuto` verified at
+`097a5bb1f507adac346bfad60bcc5fb198b80e46`. The task branch was not pushed;
+no remote Issue transition, credential mutation, publication, or live remote
+operation was performed.
 
 ### Corrective Work Package Status
 
@@ -173,7 +174,7 @@ transitions, credential mutation, publication, or live remote operations.
 | `R2` CLI shared-usecase wiring | `completed` | authentication, repository, upload, and download CLI paths use shared usecases; baseline and review passed |
 | `R3` authentication/repository owner migration | `completed` | adapter owner, compatibility seams, focused evidence, baseline, and independent review passed |
 | `R4` download owner migration | `completed` | unify CLI/native SDK download path, integrity, resume, prune, and repo policy |
-| `R5` upload/LFS owner migration | `in_progress` | implementation and offline gate complete; independent review and human acceptance remain |
+| `R5` upload/LFS owner migration | `completed` | canonical adapter ownership, compatibility seams, offline gate, review, acceptance, and delivery completed |
 | `R6` lifecycle and compatibility closure | `pending` | make compatibility the sole historical facade and place technical owners correctly |
 | `R7` final gate, independent review, and human acceptance | `completed` | verified original intent, updated docs/evidence, and delivered the Issue |
 
@@ -861,6 +862,13 @@ Review: APPROVED after resolving P1 compatibility findings for local missing-sou
 Residual risk: upload/LFS technical-owner migration remains R5; no controlled remote download/checksum/resume/prune evidence was run; no remote writes or credential mutations were performed.
 Next: delivery completed; activate a new Issue explicitly before further development.
 
+Corrective R5: completed | HEAD=51d7410 (task commit; merged as 097a5bb) | changed=.ai/TASK.md, .ai/ARCHITECTURE.md, docs/architecture.md, pyproject.toml, setup.py, src/atomgit/{adapters,lfs,lfs_pointer.py,sdk,upload,api,atomgit_hub.py}, tests/{structure_contract.py,packaging_contract.py,test_upload_domain_ownership.py,test_lfs_domain_ownership.py,test_sdk_domain_ownership.py,test_hf_api_contract.py,test_src_layout_migration.py,test_download_domain_ownership.py,test_auth_repository_services_ownership.py}
+Focused evidence: upload ownership 17/17; LFS ownership 14/14; SDK ownership 19/19; repository ownership 24/24; download ownership 18/18; structure 14/14; HF contract 16/16; packaging 13/13; src-layout 6/6; import-order 5/5; completion 19/19; wheel/sdist smoke 37/37.
+Baseline: `python tests/run_cli_baseline.py` passed 92/92 in 81.03s in `atomgit_cli` (offline); compileall, pip check, and git diff --check passed.
+Review: APPROVED; no open P0/P1/P2/P3 findings. Human acceptance granted; task commit 51d7410, merge 097a5bb, and github/yuto equality verified.
+Residual risk: controlled remote upload, resumable recovery, and LFS remote state/checksum evidence remain intentionally unrun; R6 is out of scope.
+Next: activate a new Issue explicitly before further development.
+
 ## Detailed Package Specifications
 
 The summaries above define ordering. This section defines the minimum work
@@ -1273,7 +1281,7 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 
 ## Authorization And Delivery
 
-- The maintainer explicitly authorized R4 implementation and verification by requesting continued development, then authorized committing and pushing the completed work in the current request. Source, tests, contracts, packaging, and documentation are in scope.
+- The maintainer explicitly authorized R5 implementation and verification by requesting continued development, then authorized committing and pushing the completed work in the current request. Source, tests, contracts, packaging, and documentation were in scope.
 - Delivery mode is local task branch -> focused/full offline verification -> independent review -> human acceptance -> cohesive commit -> local no-ff merge into yuto -> push only yuto -> remote equality verification.
 - Controlled remote test authorization: the maintainer explicitly authorizes
   authenticated upload and download, test-branch creation, repository
@@ -1287,8 +1295,8 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
   creation, remote Issue/PR operations, task-branch push to the development
   repository, credential mutation, publication, tags/releases, and upstream
   changes remain unauthorized.
-- Human acceptance was granted by the maintainer's explicit request to commit and push the completed R4 work. Standing project rules allow one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; never push the task branch.
-- Delivery evidence: task commit `2056237`, merge commit `17ebd5a`, and remote `github/yuto` verified at `17ebd5a976b086953dc6ea4f4930c94da46d764d` with `git fetch`, `git rev-parse`, and `git ls-remote`.
+- Human acceptance was granted by the maintainer's explicit request to commit and push the completed R5 work. Standing project rules allowed one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; the task branch was not pushed.
+- Delivery evidence: task commit `51d7410`, merge commit `097a5bb`, and remote `github/yuto` verified at `097a5bb1f507adac346bfad60bcc5fb198b80e46` with `git fetch`, `git rev-parse`, and `git ls-remote`.
 
 ## Independent Review
 
@@ -1307,5 +1315,5 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 - [x] Focused, complete baseline, dependency, packaging, security, portability, compile, and diff checks pass.
 - [x] Black/isort/Ruff were audited; their pre-existing repository-wide debt is recorded as residual risk and is outside this closure scope.
 - [x] Independent review is APPROVED with no open blocking finding.
-- [x] Human acceptance of R4 was granted by the maintainer; commit, merge, push, and remote equality verification are complete.
+- [x] Human acceptance of R5 was granted by the maintainer; commit, merge, push, and remote equality verification are complete.
 - [x] Remaining risks, unrun tests, and controlled-remote limitations are explicit.
