@@ -9,7 +9,7 @@ Status: active
 - Base branch: `yuto`
 - Base commit: `92032d4cec9b6b2c6fe2032fa1c3d509583dee5c`
 - Task branch: `codex/arch-cli-sdk-parity` (local only; implementation will be recreated)
-- Current HEAD: `pending rollback handoff commit on yuto`
+- Current HEAD: `a91c8e5 docs(ai): reopen architecture parity issue after rollback`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `clean after rollback handoff commit; ignored Python caches are not tracked`
 - Last completed action: `rolled yuto back to 92032d4 and preserved the former implementation at codex/arch-cli-sdk-parity-implementation-backup`
@@ -29,8 +29,9 @@ Status: active
 
 The predecessor CLI Facade Conversion Issue is complete, accepted, committed,
 merged, pushed, and remotely verified. Task commit `9d00e50`, local merge
-`4808a44`, and final record `92032d4` are historical evidence only. Local
-`yuto`, `github/yuto`, and `github/HEAD` resolve to `92032d4`.
+`4808a44`, and final record `92032d4` are historical evidence only. Before this
+rollback, local `yuto`, `github/yuto`, and `github/HEAD` resolved to `3048bdd`;
+the rollback is intentionally local and the remote branch remains unchanged.
 
 ## Active Issue
 
