@@ -1,4 +1,8 @@
-"""Lightweight defaults shared by CLI schema and upload runtime."""
+"""Compatibility alias for canonical upload adapter defaults."""
 
-_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
-DEFAULT_UPLOAD_BATCH_SIZE = 20
+import importlib
+import sys
+
+_owner = importlib.import_module("atomgit.adapters.upload.contracts")
+
+sys.modules[__name__] = _owner

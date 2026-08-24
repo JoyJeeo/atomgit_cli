@@ -1,8 +1,8 @@
 """Hugging Face 1.1.7 boundary used by the shared transfer usecases.
 
-Uploads retain their existing migration bridge. Downloads delegate directly
-to the canonical download adapter, so constructing the native client no longer
-imports the historical API facade.
+Uploads and downloads delegate directly to their canonical adapter owners.
+The historical API is loaded only when an explicitly injected compatibility
+seam requires it.
 """
 
 from pathlib import Path
@@ -51,7 +51,7 @@ class HuggingFaceAdapter:
     ):
         from huggingface_hub import upload_file
 
-        from ..lfs_pointer import run_canonical_lfs_upload
+        from .lfs.pointer import run_canonical_lfs_upload
 
         remote_path = (
             f"{path_in_repo.rstrip('/')}/{Path(source).name}"
@@ -95,10 +95,7 @@ class HuggingFaceAdapter:
         auto_configure_lfs=False,
     ):
         if resumable:
-            # The existing CLI owner contains the projection/LFS policy.  It
-            # remains the adapter bridge for resumable transfers; ordinary
-            # SDK uploads below use the explicit token directly.
-            from ..upload.service import scoped_upload_token
+            from .upload.service import scoped_upload_token
 
             with scoped_upload_token(token):
                 return self.api.upload_directory(

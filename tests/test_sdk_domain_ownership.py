@@ -32,11 +32,13 @@ SDK_MODULES = (
     "sdk.uploads",
 )
 
+SDK_UPLOAD_OWNER = "adapters.sdk_uploads"
+
 PUBLIC_OWNERS = {
     "snapshot_download": "sdk.downloads",
     "hub_download_url": "sdk.downloads",
     "download_file": "sdk.downloads",
-    "upload_folder": "sdk.uploads",
+    "upload_folder": SDK_UPLOAD_OWNER,
     "create_repository": "sdk.repositories",
     "load_dataset": "sdk.datasets",
 }
@@ -116,7 +118,9 @@ def _loaded_names(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in SDK_MODULES if name not in source_texts)
+    missing = tuple(
+        name for name in (*SDK_MODULES, SDK_UPLOAD_OWNER) if name not in source_texts
+    )
     check("all approved SDK owner modules contain real implementation", not missing)
     if missing:
         print(f"summary: 0/{len(results)} passed")
@@ -130,6 +134,9 @@ def main():
         for name in SDK_MODULES
         if name != "sdk.__init__"
     }
+    owner_modules[SDK_UPLOAD_OWNER] = importlib.import_module(
+        f"atomgit.{SDK_UPLOAD_OWNER}"
+    )
 
     check(
         "historical public SDK functions remain exact owner identities",
@@ -242,7 +249,7 @@ def main():
     with patch.object(top_level_facade, "hf_upload_folder", sentinel):
         check(
             "patch.object on the top-level facade reaches the upload owner",
-            owner_modules["sdk.uploads"].hf_upload_folder is sentinel,
+            owner_modules[SDK_UPLOAD_OWNER].hf_upload_folder is sentinel,
         )
 
     facade_definitions = _top_level_definitions(source_texts["atomgit_hub"])
@@ -252,7 +259,13 @@ def main():
     )
     check(
         "every nested SDK module has exact SDK ownership",
-        all(PRODUCTION_MODULE_OWNERS[name] == "sdk" for name in SDK_MODULES),
+        all(
+            PRODUCTION_MODULE_OWNERS[name] == "sdk"
+            for name in SDK_MODULES
+            if name != "sdk.uploads"
+        )
+        and PRODUCTION_MODULE_OWNERS["sdk.uploads"] == "compatibility"
+        and PRODUCTION_MODULE_OWNERS[SDK_UPLOAD_OWNER] == "adapters",
     )
     check(
         "the historical SDK facade debt ceiling tightens with moved implementation",
@@ -280,8 +293,13 @@ def main():
     check(
         "CLI API and LFS implementation remain outside the SDK package",
         "class HuggingFaceAPI(" in source_texts["api.__init__"]
-        and "def _configure_remote_lfs_attributes(" in source_texts["lfs.service"]
+        and "def _configure_remote_lfs_attributes("
+        in source_texts["adapters.lfs.service"]
         and "def cli(" in source_texts["cli.__init__"],
+    )
+    check(
+        "historical SDK upload path contains no business definition",
+        "upload_folder" not in _top_level_definitions(source_texts["sdk.uploads"]),
     )
 
     passed = sum(condition for _, condition, _ in results)

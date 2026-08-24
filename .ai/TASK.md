@@ -1,22 +1,168 @@
 # Current Issue Contract
 
-Status: inactive
+Status: active
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R4 implementation, verification, independent review approved, human acceptance granted, and delivery completed`
+- Phase: `R5 implementation, offline verification, independent review approved, and human acceptance granted; delivery in progress`
 - Base branch: `yuto`
-- Base commit: `8d9490d docs(ai): record final delivery state`
-- Task branch: `codex/architecture-compliance-recovery` (local only; no push authorized)
-- Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY` was marked completed, but this audit found P1 architecture and parity acceptance gaps
+- Base commit: `25fe93b docs(ai): record architecture delivery`
+- Task branch: `codex/upload-lfs-owner-migration` (local only; no commit or push authorized)
+- Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY-RECOVERY` R4 delivery remains completed; R5 is activated as a new independently accepted local Issue by the maintainer's request to continue development
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after task-branch commit, local no-ff merge, and delivery-record update; no credentials or generated artifacts`
-- Last completed action: `created task commit 2056237, merged it into yuto as 17ebd5a, pushed github/yuto, and verified local and remote yuto resolve to 17ebd5a976b086953dc6ea4f4930c94da46d764d`
-- Next exact action: `none; activate a new Issue explicitly before further development`
-- Blockers: `no implementation blocker; controlled remote download/upload evidence remains intentionally unrun`
-- Tests for this phase so far: `download ownership 18/18; architecture parity 21/21; download contract 45/45; checksum 23/23; resume 17/17; prune 49/49; path safety 15/15; raw integrity 12/12; redirect 9/9; manifest concurrency 9/9; Windows 12/12; structure 14/14; packaging metadata 13/13; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.33s; compileall, pip check, diff check, Black, isort, and Ruff passed; no live remote tests were run`
-- Residual risk: `upload/LFS technical-owner migration remains R5; controlled remote download behavior remains unverified`
+- Worktree state: `R5 source, tests, contracts, and documentation changes are uncommitted on the same task branch; no credentials or generated artifacts`
+- Last completed action: `migrated upload/LFS implementations into adapters, converted historical paths to aliases, tightened owner/edge/package contracts, fixed lazy-import compatibility, and passed the complete offline baseline`
+- Next exact action: `create the cohesive R5 task-branch commit, merge it into yuto locally, push only yuto, and verify remote equality`
+- Blockers: `none`
+- Tests for this phase so far: `upload ownership 17/17; LFS ownership 14/14; SDK ownership 19/19; repository ownership 24/24; download ownership 18/18; structure 14/14; HF contract 16/16; packaging 13/13; src-layout 6/6; import-order 5/5; completion 19/19; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.03s; compileall, pip check, and diff check passed`
+- Residual risk: `controlled remote upload/LFS behavior remains unverified; R6 lifecycle and complete compatibility closure remain outside this Issue`
+
+## Active Issue
+
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-R5-UPLOAD-LFS-OWNER-MIGRATION`
+- Title: `Migrate upload and LFS technical ownership into canonical adapters`
+- Primary type: `refactoring`
+- Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`
+- Priority: `P1`
+- Delivery: `local implementation -> focused/full offline verification -> independent review -> human acceptance; commit, merge, push, and remote writes remain unauthorized`
+
+### Objective
+
+Make the seven-directory architecture the real technical owner of file,
+ordinary-directory, resumable-directory, and LFS upload behavior. Canonical
+adapter modules must own Hugging Face and AtomGit protocol calls, projection,
+retry/reconciliation, pointer verification, and technical state handling.
+Historical `upload/`, `lfs/`, `sdk/uploads.py`, `atomgit.api`, and top-level SDK
+paths must retain only their established compatibility signatures, identities,
+returns, exception mapping, and patch seams.
+
+### User Impact
+
+No intended user-visible behavior change. Existing CLI commands/options/output,
+legacy SDK signatures and returns, native SDK structured results, upload target
+selection, LFS semantics, temporary-resource lifetime, and global-state
+restoration remain exact.
+
+### Affected Capability IDs
+
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-DISPATCH`, `REVISION`, `UPLOAD-FILE`,
+`UPLOAD-FOLDER`, `UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`,
+`SDK-UPLOAD`, `REPO-ID`, `RUNTIME`, `DEPENDENCY-CONTRACT`, `PACKAGING`,
+`PORTABILITY`, `ERROR-REDACTION`.
+
+### Protected Existing Invariants
+
+- CLI schema, defaults, Chinese output, progress, exit codes, and command
+  callback identities remain unchanged.
+- Historical API/SDK imports, function/class identities, signatures, return
+  values, error categories, assignment/deletion patch propagation, and lazy
+  import behavior remain unchanged.
+- Model/dataset routing, repository ID normalization, revision validation,
+  ignore/path-prefix policy, batch/worker behavior, and exact HF 1.1.7 keyword
+  contracts remain unchanged.
+- Temporary projections and fallback directories remain alive through their
+  dependent calls and are cleaned afterward; timeout, progress, environment,
+  context variables, and patched HF globals restore on success and failure.
+- LFS preupload classification, bounded retry/recovery, automatic attributes
+  transaction, canonical pointer bytes, raw V5 verification, and credential
+  redaction remain unchanged.
+
+### New Or Changed Invariants
+
+- `adapters` is the sole technical implementation owner for upload and LFS
+  protocol behavior; historical upload/LFS/SDK modules are compatibility
+  facades with no duplicate orchestration or direct external transport calls.
+- Structure and ownership tests fail closed if upload/LFS business definitions
+  or locked dependency calls return to a historical facade.
+- CLI and native SDK upload routes continue to reach the same registered
+  `UploadUseCase` and canonical adapter boundary.
+
+### In Scope
+
+- upload/LFS adapter owner modules and imports;
+- historical facade/export/patch-seam forwarding required by the migration;
+- exact owner, dependency-edge, packaging, parity, and facade-debt contracts;
+- focused offline regressions, affected architecture documentation, complete
+  baseline, DoD checks, and independent review.
+
+### Out Of Scope
+
+- new upload features or public parameter changes;
+- lifecycle/R6 migration, dependency upgrades, broad formatting, or release;
+- live upload, repository/branch creation or deletion, credential mutation,
+  publication, remote Issue/PR actions, commit, merge, or push.
+
+### Focused Tests And Evidence
+
+- fail-closed upload and LFS owner/facade tests;
+- upload file, ordinary, resumable, LFS, SDK lifetime/timeout/parameters,
+  global-state, parity, API facade, structure, packaging, and installed artifact
+  suites;
+- real installed HF/datasets versions and callable signatures;
+- `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
+  `python -m pip check`, formatting/static debt audit, and `git diff --check`.
+
+### Acceptance Criteria
+
+1. Canonical adapter modules own all direct HF/V5 upload and LFS technical
+   behavior, with no historical business owner remaining.
+2. Historical API/CLI/SDK paths preserve every registered identity, signature,
+   return, error, lazy-import, assignment/deletion, and monkeypatch seam.
+3. All protected upload/LFS/state/security/dependency/packaging behavior passes
+   focused regressions and the complete offline baseline.
+4. Structure gates fail closed on reintroduced facade business logic, direct
+   historical dependency calls, missing owners, stale artifacts, or bypassed
+   CLI/native SDK usecase routes.
+5. Architecture and durable task evidence match the actual source and Git
+   state; independent review has no open blocking finding before acceptance.
+
+### Authorization
+
+The maintainer's `继续开发` request explicitly activates this next R5 package.
+It authorizes local source, test, contract, packaging, and documentation edits
+plus offline verification on the local task branch. It does not authorize live
+remote operations, credential changes, commit, push, merge, Issue/PR changes,
+release, or publication.
+
+### Complete Baseline Evidence
+
+`python tests/run_cli_baseline.py` passed 92/92 in 81.03s in the
+`atomgit_cli` environment (offline). Compileall, pip check, diff check,
+packaging metadata, source-layout, wheel/sdist, structure, import-order,
+completion, ownership, dependency signature, upload/LFS, SDK lifetime/timeout,
+pointer, progress, and global-state checks passed. No live remote upload/LFS or
+credential mutation was run.
+
+### Independent Review
+
+`APPROVED` on 2026-08-25. Independent review of the full R5 diff found no
+open P0/P1/P2/P3 findings. Review covered canonical owner edges, historical
+module identity and patch propagation, locked HF 1.1.7 signatures, lazy
+completion imports, source/editable/wheel/sdist artifacts, security/state
+restoration, and the complete offline evidence.
+
+### R5 Exit-Gate Evidence
+
+- Canonical owners: `adapters.upload`, `adapters.lfs`, and
+  `adapters.sdk_uploads`; historical `upload/`, `lfs/`, `lfs_pointer.py`, and
+  `sdk/uploads.py` are import aliases with preserved identity and patch seams.
+- Contracts updated: structure, packaging/source artifact, HF 1.1.7 call-site
+  binding, upload/LFS/SDK ownership tests, and architecture documentation.
+- Installation evidence: wheel/sdist smoke passed 37/37 in isolated venvs;
+  completion/import-order remains free of Hugging Face imports on schema-only
+  paths.
+- Residual risk: controlled remote upload, resumable recovery, and LFS remote
+  state/checksum evidence remain intentionally unrun; R6 is out of scope.
+
+### Review Disposition
+
+Human acceptance was granted by the maintainer's explicit request to commit
+and push the completed R5 work. The request authorizes one cohesive local task
+commit, local no-ff merge into `yuto`, push of `yuto`, and remote equality
+verification. It does not authorize pushing the task branch, remote Issue
+transitions, credential mutation, publication, or live remote operations.
 
 ### Corrective Work Package Status
 
@@ -27,7 +173,7 @@ Status: inactive
 | `R2` CLI shared-usecase wiring | `completed` | authentication, repository, upload, and download CLI paths use shared usecases; baseline and review passed |
 | `R3` authentication/repository owner migration | `completed` | adapter owner, compatibility seams, focused evidence, baseline, and independent review passed |
 | `R4` download owner migration | `completed` | unify CLI/native SDK download path, integrity, resume, prune, and repo policy |
-| `R5` upload/LFS owner migration | `pending` | unify file/folder/resumable/LFS paths and preserve temporary/global-state contracts |
+| `R5` upload/LFS owner migration | `in_progress` | implementation and offline gate complete; independent review and human acceptance remain |
 | `R6` lifecycle and compatibility closure | `pending` | make compatibility the sole historical facade and place technical owners correctly |
 | `R7` final gate, independent review, and human acceptance | `completed` | verified original intent, updated docs/evidence, and delivered the Issue |
 

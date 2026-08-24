@@ -27,7 +27,9 @@ CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；通用远程能力现�
 仓库的 V5/身份技术调用已经由 `adapters.atomgit_v5` 直接持有，历史 `services`
 只保留输出、返回值、方法身份和 monkeypatch 接缝。下载的枚举、路径安全、传输、
 checksum、resume、manifest 和 prune 技术实现也已迁入 `adapters.download`；
-`atomgit.download` 只保留历史 API 方法和 helper 路径，上传/LFS 仍处于后续迁移边界。
+`atomgit.download` 只保留历史 API 方法和 helper 路径；上传/LFS 的 file、folder、
+resumable、projection、LFS pointer、attributes 和 recovery 技术实现已迁入
+`adapters.upload`、`adapters.lfs` 与 `adapters.sdk_uploads`，历史路径只保留兼容 alias。
 每个 parity-required 能力的可导入符号和实际委派由 `validate_runtime_routes()`
 fail-closed 校验。CLI presentation（Click、提示、进度和退出码）仍由 CLI 层负责，
 SDK 返回 `OperationResult`，不会打印 CLI 文本。
@@ -79,12 +81,14 @@ patch 接缝。认证和仓库 V5 管理的技术 owner 已下沉到 `atomgit.ad
 `HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api` 身份。下载实现已下沉到
 `atomgit.adapters.download` 的 service、transport、integrity、manifest、resume
 和 prune owner；`atomgit.download` 仅保留历史 wrapper/export，历史下载 helper、
-方法签名和 patch 接缝仍位于 `atomgit.api`。CLI API upload 的 service、ordinary、
-resumable、projection、errors
-和轻量 contracts 已迁入 `atomgit.upload`，历史 helper、方法签名与 patch 接缝仍位于
-`atomgit.api`。SDK 下载、上传、仓库、数据集、共享策略和异常转换已迁入
-`atomgit.sdk`，历史 `atomgit_hub` 模块只保留兼容导出和补丁传播；LFS
-policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留历史兼容导出和补丁传播。
+方法签名和 patch 接缝仍位于 `atomgit.api`。CLI/API upload 的 service、ordinary、
+resumable、projection、errors 和 contracts 已迁入 `atomgit.adapters.upload`；
+历史 `atomgit.upload` 路径只是 module alias，`atomgit.api` 仍保留原 helper、
+方法签名与 patch 接缝。旧 SDK 的 folder upload 技术实现位于
+`atomgit.adapters.sdk_uploads`，`atomgit.sdk.uploads` 仅保留兼容 alias；LFS
+protocol、pointer、attributes 和 recovery 由 `atomgit.adapters.lfs` 持有，
+`atomgit.lfs` 与 `lfs_pointer.py` 仅保留历史 alias。所有历史路径都保留原始
+导入身份、签名、返回值和补丁传播。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
 公共导入、构件内容和遗留 facade 体量上限，并由 `tests/test_structure_guard.py`
@@ -93,10 +97,10 @@ policy/transfer 由 `atomgit.lfs.service` 持有，`api/__init__.py` 仅保留�
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
 lifecycle 源码/可编辑安装策略移除。最终七目录责任架构已建立；现有
-`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 仍作为已验证的迁移边界；认证/仓库
-slice 已在保持历史身份和 patch seam 的前提下收缩旧 services；下载 slice 也已让
-CLI 与原生 SDK 经共享 usecase 直接调用 canonical adapter，不再把历史 API 当作
-默认下载 owner。上传/LFS 仍待后续 vertical slice。
+`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 现在都是已验证的兼容边界；认证/仓库
+与下载 slice 已保持历史身份和 patch seam，并由 CLI 与原生 SDK 经共享 usecase 调用
+canonical adapter。上传/LFS slice 也已完成同样的技术 owner 下沉；受控远程上传、LFS
+恢复和 checksum 证据仍未在本地门禁中宣称。
 `atomgit.interfaces.sdk.AtomGitClient`
 是原生 SDK 入口，`atomgit.core.parity.CAPABILITY_REGISTRY` 对每项
 通用远程能力 fail-closed 地记录分类、共享用例、CLI 入口、SDK 入口、结果合同和

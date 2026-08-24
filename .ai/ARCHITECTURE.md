@@ -71,10 +71,13 @@ owns the V5 authentication/repository transport and response boundaries, and
 output, identities, and patch seams. `adapters.download` owns repository
 enumeration, destination safety, transport, checksum, resume, manifest, and
 prune behavior; `download/` keeps only historical method/export compatibility.
-`upload/` owns legacy CLI transfer implementations, `lfs/` owns LFS policy and
-recovery, `sdk/` owns legacy SDK implementations, and `lifecycle/` owns
-completion, installation provenance, managed paths, and uninstall policy.
-These owners are connected to the seven-directory architecture through the
+`adapters.upload` owns file, ordinary-directory, resumable, projection, retry,
+and HF technical transfer behavior; `adapters.lfs` owns LFS protocol, pointer,
+attributes, and recovery behavior; and `adapters.sdk_uploads` owns the legacy
+SDK upload implementation. Historical `upload/`, `lfs/`, `lfs_pointer.py`, and
+`sdk/uploads.py` paths are module aliases that retain signatures, identities,
+and patch seams only. `lifecycle/` owns completion, installation provenance,
+managed paths, and uninstall policy. These owners are connected through the
 registered compatibility and adapter boundaries.
 
 ## Public Surfaces

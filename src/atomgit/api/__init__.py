@@ -73,16 +73,16 @@ try:
     from ..adapters.download import resume as _download_resume
     from ..adapters.download import service as _download_service
     from ..adapters.download import transport as _download_transport
-    from ..config import config  # noqa: F401
-    from ..download.service import DownloadServiceMixin
-    from ..lfs import service as _lfs_service
-    from ..lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
-    from ..lfs_pointer import (  # noqa: F401
+    from ..adapters.lfs import service as _lfs_service
+    from ..adapters.lfs.pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
+    from ..adapters.lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
+    from ..config import config  # noqa: F401
+    from ..download.service import DownloadServiceMixin
     from ..services import _delete_legacy_patch, _forward_legacy_patch
     from ..services import authentication as _authentication_service
     from ..services import repositories as _repository_service
@@ -124,16 +124,16 @@ except ImportError:
     from adapters.download import resume as _download_resume
     from adapters.download import service as _download_service
     from adapters.download import transport as _download_transport
-    from config import config  # noqa: F401
-    from download.service import DownloadServiceMixin
-    from lfs import service as _lfs_service
-    from lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
-    from lfs_pointer import (  # noqa: F401
+    from adapters.lfs import service as _lfs_service
+    from adapters.lfs.pointer import (  # noqa: F401
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
         verify_canonical_lfs_pointers,
     )
+    from adapters.lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
+    from config import config  # noqa: F401
+    from download.service import DownloadServiceMixin
     from services import _delete_legacy_patch, _forward_legacy_patch
     from services import authentication as _authentication_service
     from services import repositories as _repository_service
@@ -278,19 +278,19 @@ except ImportError:  # 老版本无此 API 时，提供 no-op 回退，保证可
 
 
 try:
-    from ..upload import errors as _upload_errors
-    from ..upload import ordinary as _upload_ordinary
-    from ..upload import projection as _upload_projection
-    from ..upload import resumable as _upload_resumable
-    from ..upload import service as _upload_service
-    from ..upload.service import UploadServiceMixin
+    from ..adapters.upload import errors as _upload_errors
+    from ..adapters.upload import ordinary as _upload_ordinary
+    from ..adapters.upload import projection as _upload_projection
+    from ..adapters.upload import resumable as _upload_resumable
+    from ..adapters.upload import service as _upload_service
+    from ..adapters.upload.service import UploadServiceMixin
 except ImportError:
-    from upload import errors as _upload_errors
-    from upload import ordinary as _upload_ordinary
-    from upload import projection as _upload_projection
-    from upload import resumable as _upload_resumable
-    from upload import service as _upload_service
-    from upload.service import UploadServiceMixin
+    from adapters.upload import errors as _upload_errors
+    from adapters.upload import ordinary as _upload_ordinary
+    from adapters.upload import projection as _upload_projection
+    from adapters.upload import resumable as _upload_resumable
+    from adapters.upload import service as _upload_service
+    from adapters.upload.service import UploadServiceMixin
 
 _UPLOAD_OWNER_EXPORTS = {
     "_set_progress_bar": _upload_ordinary,

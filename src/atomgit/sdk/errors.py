@@ -1,5 +1,6 @@
 """Stable, credential-safe Python SDK error policy."""
 
+from ..adapters.lfs.pointer import CanonicalLfsPointerError
 from ..exceptions import (
     AtomGitAuthenticationError,
     AtomGitError,
@@ -11,7 +12,6 @@ from ..exceptions import (
     AtomGitUnsupportedError,
 )
 from ..infrastructure.utils import auth_error_kind, is_retryable_download_error
-from ..lfs_pointer import CanonicalLfsPointerError
 
 
 def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGitError:

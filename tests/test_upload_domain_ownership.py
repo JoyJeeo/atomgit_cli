@@ -21,7 +21,16 @@ from structure_contract import (  # noqa: E402
     validate_structure,
 )
 
-UPLOAD_MODULES = (
+UPLOAD_OWNER_MODULES = (
+    "adapters.upload.__init__",
+    "adapters.upload.contracts",
+    "adapters.upload.errors",
+    "adapters.upload.ordinary",
+    "adapters.upload.projection",
+    "adapters.upload.resumable",
+    "adapters.upload.service",
+)
+UPLOAD_COMPATIBILITY_MODULES = (
     "upload.__init__",
     "upload.contracts",
     "upload.errors",
@@ -32,22 +41,22 @@ UPLOAD_MODULES = (
 )
 
 HISTORICAL_HELPER_OWNERS = {
-    "_set_progress_bar": "upload.ordinary",
-    "_capture_progress_bar_state": "upload.ordinary",
-    "_restore_progress_bar_state": "upload.ordinary",
-    "_upload_folder_with_workers": "upload.ordinary",
-    "ResumableProjectionError": "upload.projection",
-    "_resumable_projection_cache_root": "upload.projection",
-    "_prepare_resumable_upload_projection": "upload.projection",
-    "_collect_resumable_upload_files": "upload.projection",
-    "_resumable_committed_file_count": "upload.projection",
-    "ResumableTargetRevisionError": "upload.errors",
-    "ResumableWorkerError": "upload.errors",
-    "ResumableCommitError": "upload.errors",
-    "_classify_upload_error": "upload.errors",
-    "_run_resumable_upload": "upload.resumable",
-    "_execute_resumable_upload_process": "upload.resumable",
-    "_validate_resumable_upload_target": "upload.resumable",
+    "_set_progress_bar": "adapters.upload.ordinary",
+    "_capture_progress_bar_state": "adapters.upload.ordinary",
+    "_restore_progress_bar_state": "adapters.upload.ordinary",
+    "_upload_folder_with_workers": "adapters.upload.ordinary",
+    "ResumableProjectionError": "adapters.upload.projection",
+    "_resumable_projection_cache_root": "adapters.upload.projection",
+    "_prepare_resumable_upload_projection": "adapters.upload.projection",
+    "_collect_resumable_upload_files": "adapters.upload.projection",
+    "_resumable_committed_file_count": "adapters.upload.projection",
+    "ResumableTargetRevisionError": "adapters.upload.errors",
+    "ResumableWorkerError": "adapters.upload.errors",
+    "ResumableCommitError": "adapters.upload.errors",
+    "_classify_upload_error": "adapters.upload.errors",
+    "_run_resumable_upload": "adapters.upload.resumable",
+    "_execute_resumable_upload_process": "adapters.upload.resumable",
+    "_validate_resumable_upload_target": "adapters.upload.resumable",
 }
 
 LFS_BOUNDARY_DEFINITIONS = {
@@ -105,18 +114,22 @@ def _loaded_names(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in UPLOAD_MODULES if name not in source_texts)
-    check("all approved upload owner modules contain real implementation", not missing)
+    missing = tuple(
+        name
+        for name in (*UPLOAD_OWNER_MODULES, *UPLOAD_COMPATIBILITY_MODULES)
+        if name not in source_texts
+    )
+    check("all canonical and compatibility upload modules exist", not missing)
     if missing:
         print(f"summary: 0/{len(results)} passed")
         return 1
 
     api_module = importlib.import_module("atomgit.api")
-    upload_service = importlib.import_module("atomgit.upload.service")
+    upload_service = importlib.import_module("atomgit.adapters.upload.service")
     owner_modules = {
         name: importlib.import_module(f"atomgit.{name}")
-        for name in UPLOAD_MODULES
-        if name != "upload.__init__"
+        for name in UPLOAD_OWNER_MODULES
+        if name != "adapters.upload.__init__"
     }
 
     check(
@@ -149,7 +162,7 @@ def main():
     upload_runtime_modules = {
         module
         for name, module in owner_modules.items()
-        if name not in {"upload.contracts", "upload.__init__"}
+        if name not in {"adapters.upload.contracts", "adapters.upload.__init__"}
     }
     missing_consumers = {}
     for name in api_module._UPLOAD_OWNER_EXPORTS:
@@ -228,8 +241,15 @@ def main():
         ),
     )
     check(
-        "every nested upload module has exact transfer ownership",
-        all(PRODUCTION_MODULE_OWNERS[name] == "transfers" for name in UPLOAD_MODULES),
+        "canonical upload modules have adapter ownership and old paths are compatibility",
+        all(
+            PRODUCTION_MODULE_OWNERS[name] == "adapters"
+            for name in UPLOAD_OWNER_MODULES
+        )
+        and all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
+            for name in UPLOAD_COMPATIBILITY_MODULES
+        ),
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
@@ -239,7 +259,7 @@ def main():
     )
 
     placeholder = dict(source_texts)
-    placeholder["upload.resumable"] = '"""Placeholder."""\npass\n'
+    placeholder["adapters.upload.resumable"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(placeholder)
     check(
         "an upload placeholder replacement fails closed",
@@ -247,25 +267,37 @@ def main():
         repr(errors),
     )
     unowned = dict(source_texts)
-    unowned["upload.future"] = "VALUE = 1\n"
+    unowned["adapters.upload.future"] = "VALUE = 1\n"
     errors = validate_structure(unowned)
     check(
         "an unowned upload implementation fails closed",
-        any("upload.future" in error and "unowned" in error for error in errors),
+        any(
+            "adapters.upload.future" in error and "unowned" in error for error in errors
+        ),
         repr(errors),
     )
 
-    lfs_definitions = _top_level_definitions(source_texts["lfs.service"])
+    lfs_definitions = _top_level_definitions(source_texts["adapters.lfs.service"])
     upload_definitions = set().union(
-        *(_top_level_definitions(source_texts[name]) for name in UPLOAD_MODULES)
+        *(_top_level_definitions(source_texts[name]) for name in UPLOAD_OWNER_MODULES)
     )
-    sdk_upload_definitions = _top_level_definitions(source_texts["sdk.uploads"])
+    sdk_upload_definitions = _top_level_definitions(
+        source_texts["adapters.sdk_uploads"]
+    )
     check(
         "LFS and SDK ownership remain outside the upload package",
         LFS_BOUNDARY_DEFINITIONS <= lfs_definitions
         and not (LFS_BOUNDARY_DEFINITIONS & upload_definitions)
         and "upload_folder" in sdk_upload_definitions
         and "upload_folder" not in upload_definitions,
+    )
+    check(
+        "historical upload paths contain no business definitions or dependency calls",
+        all(
+            not _top_level_definitions(source_texts[name])
+            and "huggingface_hub" not in source_texts[name]
+            for name in UPLOAD_COMPATIBILITY_MODULES
+        ),
     )
 
     passed = sum(condition for _, condition, _ in results)
