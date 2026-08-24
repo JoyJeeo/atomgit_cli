@@ -1,19 +1,19 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R4 implementation, verification, independent review approved, and human acceptance granted; delivery authorized`
+- Phase: `R4 implementation, verification, independent review approved, human acceptance granted, and delivery completed`
 - Base branch: `yuto`
 - Base commit: `8d9490d docs(ai): record final delivery state`
 - Task branch: `codex/architecture-compliance-recovery` (local only; no push authorized)
 - Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY` was marked completed, but this audit found P1 architecture and parity acceptance gaps
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `uncommitted task-owned changes in .ai/TASK.md, docs/architecture.md, core/parity, CLI/usecase/adapter wiring, and architecture tests; no credentials or generated artifacts`
-- Last completed action: `completed independent R4 review after repairing local FileNotFoundError compatibility, remote missing-file classification, CLI diagnostics, and anonymous context-marker handling; complete offline baseline passed 92/92; maintainer authorized commit, merge, and push`
-- Next exact action: `create the cohesive task-branch commit, merge it into yuto locally, push only yuto, and verify remote equality`
+- Worktree state: `clean after task-branch commit, local no-ff merge, and delivery-record update; no credentials or generated artifacts`
+- Last completed action: `created task commit 2056237, merged it into yuto as 17ebd5a, pushed github/yuto, and verified local and remote yuto resolve to 17ebd5a976b086953dc6ea4f4930c94da46d764d`
+- Next exact action: `none; activate a new Issue explicitly before further development`
 - Blockers: `no implementation blocker; controlled remote download/upload evidence remains intentionally unrun`
 - Tests for this phase so far: `download ownership 18/18; architecture parity 21/21; download contract 45/45; checksum 23/23; resume 17/17; prune 49/49; path safety 15/15; raw integrity 12/12; redirect 9/9; manifest concurrency 9/9; Windows 12/12; structure 14/14; packaging metadata 13/13; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.33s; compileall, pip check, diff check, Black, isort, and Ruff passed; no live remote tests were run`
 - Residual risk: `upload/LFS technical-owner migration remains R5; controlled remote download behavior remains unverified`
@@ -29,7 +29,7 @@ Status: active
 | `R4` download owner migration | `completed` | unify CLI/native SDK download path, integrity, resume, prune, and repo policy |
 | `R5` upload/LFS owner migration | `pending` | unify file/folder/resumable/LFS paths and preserve temporary/global-state contracts |
 | `R6` lifecycle and compatibility closure | `pending` | make compatibility the sole historical facade and place technical owners correctly |
-| `R7` final gate, independent review, and human acceptance | `in_progress` | verify original intent, update docs/evidence, and only then close the Issue |
+| `R7` final gate, independent review, and human acceptance | `completed` | verified original intent, updated docs/evidence, and delivered the Issue |
 
 Only one row may become `in_progress`; a later row cannot change status until
 the preceding row has an exit-gate result recorded below or in a later durable
@@ -39,10 +39,10 @@ fails closed; R2 is complete because its compatibility gate and independent
 review passed; R3 is complete because its owner migration, baseline, and
 independent review passed; R4 is complete because its technical owner migration,
 compatibility regressions, final baseline, and independent review passed. Human
-acceptance remains required before delivery and Issue closure.
+acceptance was granted before delivery and Issue closure.
 Human acceptance for R3 was granted on 2026-08-24 with the instruction to
-continue development, so R7 is now the only package in progress. No new feature Issue
-may start while this corrective Issue has an open P1 gate.
+continue development; R4 was accepted in the current delivery request. No new
+feature Issue may start without explicit activation after this corrective Issue.
 
 ### R1 Exit-Gate Evidence
 
@@ -140,7 +140,7 @@ task branch contains only this TASK activation change.
 - Primary type: `refactoring`
 - Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`
 - Priority: `P1`
-- Delivery: `local task branch -> focused tests -> complete offline baseline -> independent review -> human acceptance -> explicitly authorized delivery`
+- Delivery: `local task branch -> focused tests -> complete offline baseline -> independent review -> human acceptance -> cohesive commit 2056237 -> local no-ff merge 17ebd5a -> github/yuto push and equality verification`
 
 ### Objective
 
@@ -708,12 +708,12 @@ Residual risk: adapters remain historical-API-backed by design for R2; R3
 technical-owner migration and live remote behavior are not complete.
 Next: R3 only after human acceptance and explicit authorization.
 
-Corrective R4: completed | HEAD=8d9490d (working tree) | changed=.ai/TASK.md, .ai/ARCHITECTURE.md, docs/architecture.md, pyproject.toml, setup.py, src/atomgit/{adapters/download,adapters/__init__.py,adapters/huggingface.py,api/__init__.py,core/errors.py,download,interfaces/cli/__init__.py,interfaces/sdk/client.py,upload/projection.py,upload/resumable.py}, tests/{structure_contract.py,packaging_contract.py,test_download_domain_ownership.py,test_architecture_parity.py,test_api_facade_conversion.py,test_packaging_metadata.py,test_src_layout_migration.py}
+Corrective R4: completed | HEAD=2056237 (task commit; merged as 17ebd5a) | changed=.ai/TASK.md, .ai/ARCHITECTURE.md, docs/architecture.md, pyproject.toml, setup.py, src/atomgit/{adapters/download,adapters/__init__.py,adapters/atomgit_v5.py,adapters/huggingface.py,api/__init__.py,cli,commands,core,domain,download,interfaces,services,upload,usecases}, tests/{development_floor_contract.py,structure_contract.py,packaging_contract.py,test_download_domain_ownership.py,test_architecture_parity.py,test_api_facade_conversion.py,test_auth_repository_services_ownership.py,test_packaging_metadata.py,test_src_layout_migration.py}
 Focused evidence: download ownership 18/18 then 21/21 after final compatibility regressions; download contract 45/45; checksum 23/23; resume 17/17; prune 49/49; path security 15/15; raw integrity 12/12; redirect security 9/9; manifest concurrency 9/9; Windows compatibility 12/12; structure 14/14; packaging metadata 13/13; wheel/sdist smoke 37/37.
 Baseline: `python tests/run_cli_baseline.py` passed 92/92 in 81.33s in `atomgit_cli` (offline) after the final review repairs; compileall, pip check, git diff --check, Black, isort, and Ruff passed.
 Review: APPROVED after resolving P1 compatibility findings for local missing-source exceptions, remote missing-file classification, CLI diagnostic presentation, and context-managed anonymous download credentials.
 Residual risk: upload/LFS technical-owner migration remains R5; no controlled remote download/checksum/resume/prune evidence was run; no remote writes or credential mutations were performed.
-Next: R7 human acceptance of R4; commit, merge, push, and remote operations remain unauthorized.
+Next: delivery completed; activate a new Issue explicitly before further development.
 
 ## Detailed Package Specifications
 
@@ -1142,13 +1142,14 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
   repository, credential mutation, publication, tags/releases, and upstream
   changes remain unauthorized.
 - Human acceptance was granted by the maintainer's explicit request to commit and push the completed R4 work. Standing project rules allow one cohesive conventional commit, local no-ff merge into yuto, push only yuto, fetch, and remote equality verification; never push the task branch.
+- Delivery evidence: task commit `2056237`, merge commit `17ebd5a`, and remote `github/yuto` verified at `17ebd5a976b086953dc6ea4f4930c94da46d764d` with `git fetch`, `git rev-parse`, and `git ls-remote`.
 
 ## Independent Review
 
 - Verdict: `APPROVED`
 - Findings: `R4 review initially REQUEST CHANGES for local FileNotFoundError compatibility, remote missing-file classification, lost CLI diagnostics, and context-managed credential handling; all were repaired with focused regressions before the final APPROVED review`
 - Review evidence: `final diff reviewed against the active Issue, locked huggingface-hub==1.1.7 and datasets==4.4.1 signatures, structure/parity contracts, download ownership and security suites, packaging/source/wheel/sdist contracts, compileall, pip check, Ruff, Black/isort, diff check, and the complete 92-case offline baseline`
-- Residual review risk: `controlled remote upload/download/checksum/LFS evidence was not run; no remote write, credential mutation, commit, merge, or push is claimed or required before human acceptance`
+- Residual review risk: `controlled remote upload/download/checksum/LFS evidence was not run; no credential mutation or live repository test was performed`
 
 ## Definition Of Done
 
@@ -1160,5 +1161,5 @@ Ruff, credential/artifact, and installed-entry tests. Independent review uses
 - [x] Focused, complete baseline, dependency, packaging, security, portability, compile, and diff checks pass.
 - [x] Black/isort/Ruff were audited; their pre-existing repository-wide debt is recorded as residual risk and is outside this closure scope.
 - [x] Independent review is APPROVED with no open blocking finding.
-- [x] Human acceptance of R4 and delivery actions were authorized by the maintainer; commit, merge, and push are now in progress.
+- [x] Human acceptance of R4 was granted by the maintainer; commit, merge, push, and remote equality verification are complete.
 - [x] Remaining risks, unrun tests, and controlled-remote limitations are explicit.
