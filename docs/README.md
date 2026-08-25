@@ -7,6 +7,8 @@
 - [cli_feature_baseline.md](cli_feature_baseline.md)：当前公开 CLI 功能清单及不可回退的测试契约。
 - [upload_command_analysis.md](upload_command_analysis.md)：当前 upload 参数、分支和
   已知缺陷。
+- [upload_observability_design.md](upload_observability_design.md)：尚未实现的上传
+  速度、慢流检测和连接替换只读观测窗口设计结论。
 - [development.md](development.md)：conda 环境、分支、Issue 开发流程，以及
   Codex 对话切换和 worktree 交接规则。
 - [testing.md](testing.md)：离线、契约、打包和远程测试规范。

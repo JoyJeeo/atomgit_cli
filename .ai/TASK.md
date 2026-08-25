@@ -2,6 +2,15 @@
 
 Status: active (R8 post-delivery comprehensive acceptance testing)
 
+## Deferred Design Record
+
+- `docs/upload_observability_design.md` records the maintainer-approved design
+  conclusions from the upload observability discussion.
+- The design is documentation only: no upload status command, telemetry snapshot,
+  `--path-in-local` option, or runtime behavior has been implemented.
+- A future conversation must reconcile the design with the then-current CLI and
+  activate a separate maintainer-authorized Issue before implementation.
+
 ## Active Test Issue
 
 - Updated: `2026-08-25`
