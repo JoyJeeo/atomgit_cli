@@ -1,24 +1,24 @@
 # Current Issue Contract
 
-Status: accepted (R8 complete; commit, local yuto merge, and yuto-only push authorized)
+Status: inactive (R8 completed, accepted, merged, and pushed)
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R8 implementation, verification, review, and human acceptance complete; authorized delivery is in progress`
+- Phase: `R8 delivered; no Issue is active`
 - Base branch: `yuto`
 - Base commit: `8a93aa6 merge: close seven-directory source layout`
 - Task branch: `codex/r8-root-facade-physical-closure (local-only, created from yuto at 8a93aa6 after explicit implementation authorization)`
 - Prior delivery: `R7 task commit 2e781d9 and yuto merge commit 8a93aa6 were pushed; local yuto, github/yuto, and ls-remote all verified at 8a93aa6d8344f18b1be0edd6a44b6fb46054d3d3`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `same task worktree is dirty with the uncommitted R8 TASK, source, compatibility, structure, packaging, test, and documentation changes; the ten explicitly authorized root files are deleted and no commit was made`
-- Last completed action: `maintainer requested final test acceptance and authorized commit/push on 2026-08-25; the complete offline baseline passed 92/92 in 99.27s and every final static/scope/security gate passed`
-- Next exact action: `commit the local task branch, merge it locally into yuto, push only yuto, and report the exact task and merge commits`
-- Blockers: `none for the authorized local commit, yuto merge, and yuto-only push; live tests, publication, and all other remote writes remain unauthorized`
+- Worktree state: `R8 implementation commit bd859b7 was merged locally into yuto as 5c342ce and pushed only on yuto; the final delivery record is committed separately so the worktree remains clean`
+- Last completed action: `pushed github/yuto from 8a93aa6 to merge commit 5c342ce after final acceptance baseline 92/92 in 99.27s and all static/scope/security gates passed`
+- Next exact action: `none; activate at most one new maintainer-authorized Issue before further development`
+- Blockers: `none; live tests, publication, and unrelated remote writes were not authorized or performed`
 - Current evidence: `pre-change baseline 92/92 in 99.84s; pre-deletion rootless artifact smoke 49/49 and baseline 92/92 in 92.13s; post-deletion structure 18/18, source layout 11/11, packaging metadata 13/13, public imports 11/11, utilities 17/17, lifecycle 26/26, completion 19/19, uninstaller 14/14, config permissions 15/15, runtime 9/9, canonical LFS 24/24, LFS ownership 14/14, CLI facade 9/9, architecture parity 21/21, artifact smoke 49/49, independent review APPROVED, and acceptance baseline 92/92 in 99.27s; compileall, pip check, diff check, exact deletion scope, credential-pattern, and generated-artifact checks pass`
 - Residual risk: `live remote behavior is outside this Issue and is not claimed; the active environment did not separately execute a Python 3.9 interpreter, while source/tool policy and the locked dependency contracts retain Python 3.9 support`
 
-## Pending Issue
+## Completed Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-R8-ROOT-FACADE-PHYSICAL-CLOSURE`
@@ -26,7 +26,7 @@ Status: accepted (R8 complete; commit, local yuto merge, and yuto-only push auth
 - Primary type: `refactoring`
 - Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `distribution`, `testing`, `packaging`, `documentation`, `portability`
 - Priority: `P1`
-- Status: `accepted; WP-10 and independent review are complete; authorized delivery is in progress`
+- Status: `completed and accepted; implementation bd859b7 merged as 5c342ce and pushed to github/yuto`
 - Delivery: `read-only inventory -> explicit implementation authorization -> focused migration slices -> exact-root deletion gate -> complete offline verification -> independent review -> human acceptance -> separately authorized commit/merge/push`
 
 ### Objective
@@ -174,11 +174,13 @@ eighth first-level directory.
 - `WP-07: completed | compatibility/utils.py retains validation/filesystem/output/cache/Git seams and sys.modules preload compatibility; utilities 17/17 plus repaired affected baseline scripts`
 - `WP-08: completed (non-destructive) | all ten historical paths pass with root files omitted from isolated source, wheel, sdist, and PEP 660 editable copies; artifact smoke 49/49; pre-deletion full baseline 92/92 in 92.13s`
 - `WP-09: completed | maintainer authorized the ten exact paths on 2026-08-25; only those tracked regular files were deleted; exact five-root source, owner, edge, facade-debt, wheel, sdist, tool-debt, and documentation contracts reconciled; structure 18/18, source layout 11/11, packaging metadata 13/13`
-- `WP-10: completed through review | final post-deletion focused gates pass; wheel/sdist/editable artifact smoke 49/49; complete offline baseline 92/92 in 96.34s; compileall, pip check, diff/scope/security/artifact scans pass; independent review APPROVED with no findings; human acceptance remains`
+- `WP-10: completed and accepted | final post-deletion focused gates pass; wheel/sdist/editable artifact smoke 49/49; acceptance baseline 92/92 in 99.27s; compileall, pip check, diff/scope/security/artifact scans pass; independent review APPROVED with no findings; delivered as bd859b7 merged by 5c342ce`
 
 The exact deletion gate was satisfied by the maintainer's explicit authorization
-on `2026-08-25`. The ten deletions are recoverable from Git until committed;
-commit, merge, push, live tests, and remote writes remain unauthorized.
+on `2026-08-25`. The maintainer accepted the final test result and authorized
+commit/push on the same date; the task commit was merged locally and only
+`github/yuto` was pushed. Live tests and unrelated remote writes were not
+authorized or performed.
 
 ### Independent Review
 
@@ -345,8 +347,10 @@ generated-artifact, bytecode, and repository-leak scans.
   branch on `2026-08-25`.
 - The maintainer separately authorized deletion of exactly the ten listed root
   files on `2026-08-25`; no broad glob or recursive deletion was used.
-- Commit, merge, push, live tests, publication, remote Issue/PR operations, and
-  all other remote writes remain unauthorized.
+- The maintainer accepted the final verification and authorized commit/push on
+  `2026-08-25`; task commit `bd859b7` was merged as `5c342ce` and only
+  `github/yuto` was pushed. Live tests, publication, remote Issue/PR operations,
+  and unrelated remote writes were not authorized or performed.
 
 ## Historical R7 Delivery Evidence
 
