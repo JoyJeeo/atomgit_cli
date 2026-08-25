@@ -21,7 +21,9 @@ if str(TESTS_DIRECTORY) not in sys.path:
 
 from structure_contract import EXPECTED_SDIST_FILES, EXPECTED_WHEEL_FILES  # noqa: E402
 
-VERSION_TEXT = (REPOSITORY_ROOT / "src" / "atomgit" / "version.py").read_text(encoding="utf-8")
+VERSION_TEXT = (
+    REPOSITORY_ROOT / "src" / "atomgit" / "infrastructure" / "version.py"
+).read_text(encoding="utf-8")
 EXPECTED_VERSION = re.search(r'__version__\s*=\s*["\']([^"\']+)', VERSION_TEXT).group(1)
 SOURCE_FILES = tuple(sorted(EXPECTED_SDIST_FILES)) + (
     "setup.py",
@@ -33,6 +35,20 @@ SOURCE_FILES = tuple(sorted(EXPECTED_SDIST_FILES)) + (
     "pyproject.toml",
     "install.sh",
     "uninstall.sh",
+)
+TARGET_WHEEL_FILES = EXPECTED_WHEEL_FILES
+TARGET_SDIST_FILES = EXPECTED_SDIST_FILES
+TARGET_IMPORT_PROBE = (
+    "import importlib, pathlib, sys, atomgit; "
+    "names=('cli_contracts','completion','config','exceptions','lfs_pointer',"
+    "'release','runtime','uninstaller','utils','version'); "
+    "modules={name:importlib.import_module('atomgit.' + name) for name in names}; "
+    "assert all(sys.modules['atomgit.' + name] is module "
+    "for name,module in modules.items()); "
+    "assert atomgit.config is modules['config'].config; "
+    "assert all({'compatibility','infrastructure','adapters'} & "
+    "set(pathlib.Path(module.__file__).parts) for module in modules.values()); "
+    "print('rootless-artifact', atomgit.__version__)"
 )
 results = []
 
@@ -237,6 +253,18 @@ def main():
                 "Commands:",
             ),
             (
+                "historical release module help",
+                [
+                    venv_python,
+                    "-W",
+                    "error",
+                    "-m",
+                    "atomgit.release",
+                    "--help",
+                ],
+                "AtomGit Release installer core",
+            ),
+            (
                 "installed imports",
                 [
                     venv_python,
@@ -245,7 +273,9 @@ def main():
                         "import importlib, pathlib, sys, atomgit, atomgit_hub; "
                         "prefix = str(pathlib.Path(sys.prefix).resolve()); "
                         "modules=(atomgit, atomgit_hub) + tuple(importlib.import_module(n) "
-                        "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.cli.__main__', 'atomgit.utils', "
+                        "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.cli.__main__', "
+                        "'atomgit.cli_contracts', 'atomgit.config', 'atomgit.exceptions', "
+                        "'atomgit.runtime', 'atomgit.version', 'atomgit.utils', "
                         "'atomgit.completion', 'atomgit.uninstaller', "
                         "'atomgit.release', 'atomgit.lfs_pointer', "
                         "'atomgit.compatibility.authentication', "
@@ -398,6 +428,172 @@ def main():
             editable_probe.returncode == 0
             and "installed-editable " + EXPECTED_VERSION in editable_probe.stdout,
             (editable_probe.stdout + editable_probe.stderr)[-500:],
+        )
+
+        target_source = root / "rootless-source"
+        target_dist = root / "rootless-dist"
+        target_venv = root / "rootless-venv"
+        target_source.mkdir()
+        target_dist.mkdir()
+        for relative_name in SOURCE_FILES:
+            destination = target_source / relative_name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(REPOSITORY_ROOT / relative_name, destination)
+
+        target_build = run(
+            [
+                sys.executable,
+                "-m",
+                "build",
+                "--wheel",
+                "--sdist",
+                "--no-isolation",
+                "--outdir",
+                target_dist,
+            ],
+            target_source,
+        )
+        check(
+            "rootless temporary wheel and sdist build succeeds",
+            target_build.returncode == 0,
+            target_build.stderr[-500:],
+        )
+        target_wheels = list(target_dist.glob("*.whl"))
+        target_sdists = list(target_dist.glob("*.tar.gz"))
+        check(
+            "rootless build produces one wheel and one sdist",
+            len(target_wheels) == 1 and len(target_sdists) == 1,
+        )
+        if not target_wheels or not target_sdists:
+            return 1
+
+        with zipfile.ZipFile(target_wheels[0]) as target_wheel_archive:
+            target_wheel_files = {
+                name
+                for name in target_wheel_archive.namelist()
+                if name.endswith(".py") and ".dist-info/" not in name
+            }
+        check(
+            "rootless wheel contains exactly five root package Python files",
+            target_wheel_files == TARGET_WHEEL_FILES,
+            repr(
+                {
+                    "missing": sorted(TARGET_WHEEL_FILES - target_wheel_files),
+                    "extra": sorted(target_wheel_files - TARGET_WHEEL_FILES),
+                }
+            ),
+        )
+        with tarfile.open(target_sdists[0], "r:gz") as target_sdist_archive:
+            target_sdist_files = {
+                name.split("/", 1)[1]
+                for name in target_sdist_archive.getnames()
+                if "/" in name and name.endswith(".py") and not name.endswith("setup.py")
+            }
+        check(
+            "rootless sdist contains exactly five root package Python files",
+            target_sdist_files == TARGET_SDIST_FILES,
+            repr(
+                {
+                    "missing": sorted(TARGET_SDIST_FILES - target_sdist_files),
+                    "extra": sorted(target_sdist_files - TARGET_SDIST_FILES),
+                }
+            ),
+        )
+
+        target_venv_result = run(
+            [sys.executable, "-m", "venv", "--system-site-packages", target_venv],
+            root,
+        )
+        check(
+            "rootless artifact venv creation succeeds",
+            target_venv_result.returncode == 0,
+            target_venv_result.stderr[-500:],
+        )
+        target_bin = target_venv / ("Scripts" if os.name == "nt" else "bin")
+        target_python = target_bin / ("python.exe" if os.name == "nt" else "python")
+        target_environment = environment.copy()
+        target_environment["PYTHONPATH"] = sysconfig.get_paths()["purelib"]
+
+        for label, artifact in (
+            ("wheel", target_wheels[0]),
+            ("sdist", target_sdists[0]),
+        ):
+            install = run(
+                [
+                    target_python,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-deps",
+                    "--no-build-isolation",
+                    artifact,
+                ],
+                root,
+                target_environment,
+            )
+            probe = run(
+                [target_python, "-c", TARGET_IMPORT_PROBE],
+                root,
+                target_environment,
+            )
+            release = run(
+                [
+                    target_python,
+                    "-W",
+                    "error",
+                    "-m",
+                    "atomgit.release",
+                    "--help",
+                ],
+                root,
+                target_environment,
+            )
+            check(
+                f"rootless {label} preserves all historical imports and execution",
+                install.returncode == 0
+                and probe.returncode == 0
+                and "rootless-artifact " + EXPECTED_VERSION in probe.stdout
+                and release.returncode == 0
+                and not release.stderr,
+                (install.stderr + probe.stderr + release.stderr)[-500:],
+            )
+            uninstall = run(
+                [target_python, "-m", "pip", "uninstall", "--yes", "atomgit"],
+                root,
+                target_environment,
+            )
+            check(
+                f"rootless {label} uninstall succeeds before the next install mode",
+                uninstall.returncode == 0,
+                uninstall.stderr[-500:],
+            )
+
+        target_editable = run(
+            [
+                target_python,
+                "-m",
+                "pip",
+                "install",
+                "--no-deps",
+                "--no-build-isolation",
+                "--editable",
+                target_source,
+            ],
+            root,
+            target_environment,
+        )
+        target_editable_probe = run(
+            [target_python, "-c", TARGET_IMPORT_PROBE],
+            root,
+            target_environment,
+        )
+        check(
+            "rootless PEP 660 editable install preserves all historical imports",
+            target_editable.returncode == 0
+            and target_editable_probe.returncode == 0
+            and "rootless-artifact " + EXPECTED_VERSION
+            in target_editable_probe.stdout,
+            (target_editable.stderr + target_editable_probe.stderr)[-500:],
         )
 
     check(

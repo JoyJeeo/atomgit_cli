@@ -10,52 +10,56 @@ from pathlib import Path
 import click
 
 try:
-    from ..runtime import configure_hf_environment
+    from ..infrastructure.runtime import configure_hf_environment
     from .facade import _install_legacy_cli_main
 except ImportError:
     from compatibility.facade import _install_legacy_cli_main
-    from runtime import configure_hf_environment
+    from infrastructure.runtime import configure_hf_environment
 
 configure_hf_environment()
 
 try:
-    from ..cli_contracts import (
+    from ..core.contracts import (
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
-    from ..completion import (
+    from ..infrastructure.completion import (
         CompletionConfigError,
         completion_script,
         install_completion,
         legacy_completion_present,
         uninstall_completion,
     )
-    from ..config import config
-    from ..release import ReleaseError, is_stable_version, run_update
-    from ..uninstaller import UninstallError, build_uninstall_plan, run_uninstall
-    from ..version import __version__
+    from ..infrastructure.config import config
+    from ..infrastructure.managed_paths import UninstallError
+    from ..infrastructure.release import ReleaseError, is_stable_version, run_update
+    from ..infrastructure.uninstall import build_uninstall_plan, run_uninstall
+    from ..infrastructure.version import __version__
 except ImportError:
-    from cli_contracts import (
+    from core.contracts import (
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
-    from completion import (
+    from infrastructure.completion import (
         CompletionConfigError,
         completion_script,
         install_completion,
         legacy_completion_present,
         uninstall_completion,
     )
-    from config import config
-    from release import ReleaseError, is_stable_version, run_update
-    from uninstaller import UninstallError, build_uninstall_plan, run_uninstall
-    from version import __version__
+    from infrastructure.config import config
+    from infrastructure.managed_paths import UninstallError
+    from infrastructure.release import ReleaseError, is_stable_version, run_update
+    from infrastructure.uninstall import build_uninstall_plan, run_uninstall
+    from infrastructure.version import __version__
 
 
 _COMMAND_CONTEXT = sys.modules[__name__]
 
 
 def _import_runtime_module(name):
+    if name == "utils":
+        name = "infrastructure.utils"
     if __package__:
         return importlib.import_module(f"..{name}", __package__)
     return importlib.import_module(name)

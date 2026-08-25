@@ -283,12 +283,12 @@ def main():
 
     check(
         "historical lifecycle facades contain no owned definitions",
-        not _top_level_definitions(source_texts["completion"])
-        and not _top_level_definitions(source_texts["uninstaller"])
-        and LEGACY_FACADE_DEBT["completion"]["max_functions"] == 0
-        and LEGACY_FACADE_DEBT["completion"]["max_classes"] == 0
-        and LEGACY_FACADE_DEBT["uninstaller"]["max_functions"] == 0
-        and LEGACY_FACADE_DEBT["uninstaller"]["max_classes"] == 0,
+        not _top_level_definitions(source_texts["compatibility.completion"])
+        and not _top_level_definitions(source_texts["compatibility.uninstaller"])
+        and LEGACY_FACADE_DEBT["compatibility.completion"]["max_functions"] == 0
+        and LEGACY_FACADE_DEBT["compatibility.completion"]["max_classes"] == 0
+        and LEGACY_FACADE_DEBT["compatibility.uninstaller"]["max_functions"] == 0
+        and LEGACY_FACADE_DEBT["compatibility.uninstaller"]["max_classes"] == 0,
     )
     check(
         "infrastructure owners replace physically absent lifecycle aliases",
@@ -305,12 +305,14 @@ def main():
     )
 
     regrown = dict(source_texts)
-    regrown["completion"] += "\n\ndef future_completion_behavior():\n    return None\n"
+    regrown[
+        "compatibility.completion"
+    ] += "\n\ndef future_completion_behavior():\n    return None\n"
     errors = validate_structure(regrown)
     check(
         "historical lifecycle facade regrowth fails closed",
         any(
-            "legacy facade debt contract is stale in completion" in error
+            "legacy facade debt contract is stale in compatibility.completion" in error
             for error in errors
         ),
         repr(errors),

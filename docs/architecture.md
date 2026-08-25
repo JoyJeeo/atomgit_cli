@@ -18,7 +18,7 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   |
   +-- import AtomGitClient --> interfaces/sdk ---> usecases ---> adapters
   |
-  +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
+  +-- Zsh Tab ---------------> 轻量 cli package schema -> infrastructure/completion.py
 ```
 
 CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；原生 `AtomGitClient` 是面向新开发的
@@ -56,7 +56,7 @@ atomgit_cli/
 │   │   ├── infrastructure/# 配置、运行时、文件系统和生命周期设施
 │   │   ├── api.py        # 历史 API 根 shim
 │   │   ├── cli.py        # 历史 CLI 根 shim 与模块执行入口
-│   │   └── ...           # 冻结白名单中的其余根兼容 shim
+│   │   └── atomgit_hub.py# 包内 SDK 历史 facade
 │   └── atomgit_hub.py    # 顶层 SDK 兼容代理
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
@@ -75,13 +75,13 @@ facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指�
 退出转换由 `atomgit.interfaces.cli` 持有。认证/配置、仓库/缓存、上传下载、
 更新/卸载及补全命令实现已迁入 `atomgit.interfaces.cli.commands`；
 owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
-`utils.py`、`config.py` 和 `runtime.py`
-保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
+`atomgit.utils`、`atomgit.config` 和 `atomgit.runtime` 的历史导入路径由有限 loader
+路由到 `compatibility` facade，但实现分别位于 `atomgit.infrastructure` 的 validation、
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
 实现也已下沉到 `atomgit.infrastructure` 的 environment、managed_paths、completion
-和 uninstall owner；`atomgit.lifecycle` 仅保留模块别名，历史 `completion.py` 与
-`uninstaller.py` 只保留兼容转发和旧路径 patch 接缝。Release/update 的校验、受限下载、安装和安装后验证已下沉到
-`atomgit.infrastructure.release`；历史 `atomgit.release` 仅保留符号转发和旧路径
+和 uninstall owner；`atomgit.lifecycle` 仅保留模块别名，历史 `atomgit.completion` 与
+`atomgit.uninstaller` 由 `compatibility` 保留转发和旧路径 patch 接缝。Release/update 的校验、受限下载、安装和安装后验证已下沉到
+`atomgit.infrastructure.release`；历史 `atomgit.release` 由有限 loader 保留符号转发和旧路径
 patch 接缝。认证和仓库 V5 管理的技术 owner 已下沉到 `atomgit.adapters.atomgit_v5`；
 `atomgit.compatibility.authentication` 与 `repositories` 持有历史兼容 wrapper，
 `atomgit.services.authentication` 与 `repositories` 是其模块别名，
@@ -95,7 +95,7 @@ resumable、projection、errors 和 contracts 已迁入 `atomgit.adapters.upload
 方法签名与 patch 接缝。旧 SDK 的 folder upload 技术实现位于
 `atomgit.adapters.sdk_uploads`，`atomgit.sdk.uploads` 仅保留兼容 alias；LFS
 protocol、pointer、attributes 和 recovery 由 `atomgit.adapters.lfs` 持有，
-`atomgit.lfs` 与 `lfs_pointer.py` 仅保留历史 alias。所有历史路径都保留原始
+`atomgit.lfs` 与 `atomgit.lfs_pointer` 仅保留历史 alias。所有历史路径都保留原始
 导入身份、签名、返回值和补丁传播。
 
 当前结构由 `tests/structure_contract.py` 声明式登记所有模块所有者、内部依赖边、
@@ -104,8 +104,10 @@ protocol、pointer、attributes 和 recovery 由 `atomgit.adapters.lfs` 持有�
 声明收紧必须在同一变更完成，不能保留可回长的旧上限。CLI facade 转换已移除
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
-lifecycle 源码/可编辑安装策略移除。`src/atomgit` 现仅有七个责任目录；九个旧一级
-目录已按授权物理删除，历史路径由 compatibility 在运行时注册，物理布局与结构门禁
+lifecycle 源码/可编辑安装策略移除。`src/atomgit` 现仅有七个责任目录和
+`__init__.py`、`__main__.py`、`api.py`、`atomgit_hub.py`、`cli.py` 五个根 Python 文件；
+九个旧一级目录及十个非入口根 facade 已按授权物理删除，历史路径由 compatibility
+在运行时注册，物理布局与结构门禁
 均通过。认证/仓库
 与下载 slice 已保持历史身份和 patch seam，并由 CLI 与原生 SDK 经共享 usecase 调用
 canonical adapter。上传/LFS slice 也已完成同样的技术 owner 下沉；受控远程上传、LFS
@@ -472,7 +474,7 @@ CLI 直连 resolve 下载在目标目录使用唯一临时文件，完整成功�
 - 自执行回归脚本由 pytest 隔离矩阵逐个在子进程和临时 HOME 中运行；
 - 它们主要验证离线契约，不替代需要显式授权的远程行为验收；
 - `requirements.txt` 锁定 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；
-- 包名为 `atomgit`，版本由 `src/atomgit/version.py` 单一来源提供；
+- 包名为 `atomgit`，版本由 `src/atomgit/infrastructure/version.py` 单一来源提供；
 - `pyproject.toml` 显式选择 setuptools 构建后端并登记 `src/` 包映射；
   `setup.py` 在迁移期继续提供项目元数据，二者的发现声明必须一致；
 - `py_modules=['atomgit_hub']` 打包 `src/atomgit_hub.py`，保留顶层兼容导入；

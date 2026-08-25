@@ -2,7 +2,7 @@
 
 import click
 
-from ...cli_contracts import DEFAULT_UPLOAD_BATCH_SIZE
+from ...core.contracts import DEFAULT_UPLOAD_BATCH_SIZE
 from .commands import authentication as _authentication_commands
 from .commands import lifecycle as _lifecycle_commands
 from .commands import repositories as _repositories_commands

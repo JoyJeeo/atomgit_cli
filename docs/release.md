@@ -44,7 +44,7 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
 
 发布身份和版本规则：
 
-1. `yuto` 是唯一发布分支；版本源在 `src/atomgit/version.py`，使用稳定 `X.Y.Z`。
+1. `yuto` 是唯一发布分支；版本源在 `src/atomgit/infrastructure/version.py`，使用稳定 `X.Y.Z`。
 2. 从明确的 `yuto` SHA 创建本地 `release/X.Y.Z` 准备分支，合并回 `yuto` 后才发布。
 3. 维护者手动启动 `.github/workflows/release.yml`，输入版本和精确 SHA；workflow
    使用受保护的 `release-approval` 环境。

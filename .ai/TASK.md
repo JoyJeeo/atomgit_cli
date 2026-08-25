@@ -1,22 +1,354 @@
 # Current Issue Contract
 
-Status: completed (R7 accepted by the maintainer; delivery to `yuto` explicitly authorized on 2026-08-25)
+Status: accepted (R8 complete; commit, local yuto merge, and yuto-only push authorized)
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R7 WP-00 through WP-07 complete; exact seven-directory tree, compatibility, artifacts, complete offline baseline, DoD, independent review, and human acceptance pass; delivery to yuto is authorized`
+- Phase: `R8 implementation, verification, review, and human acceptance complete; authorized delivery is in progress`
 - Base branch: `yuto`
-- Base commit: `23c6d7d merge: close lifecycle facade ownership`
-- Task branch: `codex/r7-seven-directory-physical-closure` (pre-deletion checkpoint push explicitly authorized on `2026-08-25`)
-- Historical closure: R1-R6 architecture and ownership packages were delivered; their physical source-tree outcome does not satisfy the maintainer's newly clarified seven-directory requirement
+- Base commit: `8a93aa6 merge: close seven-directory source layout`
+- Task branch: `codex/r8-root-facade-physical-closure (local-only, created from yuto at 8a93aa6 after explicit implementation authorization)`
+- Prior delivery: `R7 task commit 2e781d9 and yuto merge commit 8a93aa6 were pushed; local yuto, github/yuto, and ls-remote all verified at 8a93aa6d8344f18b1be0edd6a44b6fb46054d3d3`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `ready for the explicitly authorized delivery commit with only the R7 seven-directory closure, compatibility, structure, packaging, documentation, test, and handoff changes; no credentials or generated artifacts`
-- Last completed action: `reran the mandatory complete offline delivery gate after the final documentation reconciliation; all 92 isolated cases passed in 85.67s, and compileall, pip check, and diff checks passed`
-- Next exact action: `create the authorized cohesive R7 commit, merge the local task branch into yuto, push only yuto, verify remote equality, then record the separately planned root-facade closure as the next local Issue without starting implementation`
-- Blockers: `none for the authorized R7 delivery; live comprehensive acceptance remains intentionally not run and is accepted as explicitly recorded residual evidence rather than claimed as passing`
-- Tests for this phase so far: `post-deletion layout 9/9; structure 15/15; packaging metadata 13/13; API facade 8/8; CLI facade 9/9; CLI ownership 13/13; auth/repository ownership 25/25; download ownership 20/20; upload ownership 17/17; LFS ownership 14/14; SDK ownership 20/20; lifecycle ownership 26/26; public imports 8/8; import order 5/5; shell completion 19/19; wheel/sdist/editable smoke 38/38 including warning-free installed python -m atomgit.cli.__main__; final delivery baseline 92/92 in 85.67s on 2026-08-25; python -m compileall -q ., python -m pip check, git diff 23c6d7d --check, and git diff --cached --check pass`
-- Residual risk: `controlled remote upload/download/repository/LFS behavior remains intentionally unrun; full-repository Black/isort/Ruff still report the exact registered historical debt while all Issue-owned files pass the clean policy`
+- Worktree state: `same task worktree is dirty with the uncommitted R8 TASK, source, compatibility, structure, packaging, test, and documentation changes; the ten explicitly authorized root files are deleted and no commit was made`
+- Last completed action: `maintainer requested final test acceptance and authorized commit/push on 2026-08-25; the complete offline baseline passed 92/92 in 99.27s and every final static/scope/security gate passed`
+- Next exact action: `commit the local task branch, merge it locally into yuto, push only yuto, and report the exact task and merge commits`
+- Blockers: `none for the authorized local commit, yuto merge, and yuto-only push; live tests, publication, and all other remote writes remain unauthorized`
+- Current evidence: `pre-change baseline 92/92 in 99.84s; pre-deletion rootless artifact smoke 49/49 and baseline 92/92 in 92.13s; post-deletion structure 18/18, source layout 11/11, packaging metadata 13/13, public imports 11/11, utilities 17/17, lifecycle 26/26, completion 19/19, uninstaller 14/14, config permissions 15/15, runtime 9/9, canonical LFS 24/24, LFS ownership 14/14, CLI facade 9/9, architecture parity 21/21, artifact smoke 49/49, independent review APPROVED, and acceptance baseline 92/92 in 99.27s; compileall, pip check, diff check, exact deletion scope, credential-pattern, and generated-artifact checks pass`
+- Residual risk: `live remote behavior is outside this Issue and is not claimed; the active environment did not separately execute a Python 3.9 interpreter, while source/tool policy and the locked dependency contracts retain Python 3.9 support`
+
+## Pending Issue
+
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-R8-ROOT-FACADE-PHYSICAL-CLOSURE`
+- Title: `Move non-entry root Python facades into the seven responsibility directories without breaking historical imports`
+- Primary type: `refactoring`
+- Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `distribution`, `testing`, `packaging`, `documentation`, `portability`
+- Priority: `P1`
+- Status: `accepted; WP-10 and independent review are complete; authorized delivery is in progress`
+- Delivery: `read-only inventory -> explicit implementation authorization -> focused migration slices -> exact-root deletion gate -> complete offline verification -> independent review -> human acceptance -> separately authorized commit/merge/push`
+
+### Objective
+
+Reduce the physical Python files directly under `src/atomgit` from R7's frozen
+fifteen-file allowlist to exactly these five package entry and historical entry
+shims:
+
+```text
+__init__.py
+__main__.py
+api.py
+atomgit_hub.py
+cli.py
+```
+
+The seven first-level responsibility directories remain exact and unchanged:
+
+```text
+adapters/
+compatibility/
+core/
+domain/
+infrastructure/
+interfaces/
+usecases/
+```
+
+Real implementation must remain with its canonical responsibility owner.
+Historical root module behavior moves physically under `compatibility` or is
+provided by a finite explicit alias/loader. Removing a root file must not
+remove its `atomgit.<name>` import path, symbols, signature, return, exception,
+identity, patch seam, lazy-import behavior, or applicable module execution.
+
+### Current Evidence And Problem Statement
+
+- R7 delivered an exact seven-directory physical tree, but retained fifteen
+  approved root Python files because their historical compatibility behavior
+  was separately frozen.
+- `cli_contracts.py`, `exceptions.py`, `lfs_pointer.py`, `runtime.py`, and
+  `version.py` are small forwarding or authority modules with low-to-medium
+  migration risk.
+- `config.py` has a package-attribute/module-name collision with the exported
+  shared `config` singleton.
+- `release.py` preserves historical symbol patching and executable-module
+  behavior.
+- `completion.py`, `uninstaller.py`, and `utils.py` forward monkeypatch
+  assignment and deletion to multiple canonical infrastructure owners; a
+  simple module alias is not automatically equivalent.
+- Before R8, `setup.py` read `src/atomgit/version.py` directly; it now reads the
+  canonical `src/atomgit/infrastructure/version.py` authority without runtime import.
+- Existing structure, package artifact, public import, installed smoke,
+  completion, lifecycle, utility, SDK, and CLI contracts freeze the current
+  paths and must be tightened in the same change as each physical removal.
+
+### User Impact
+
+No user-visible capability or supported import is intended to change. CLI,
+native `atomgit.interfaces.sdk.AtomGitClient`, and historical `atomgit_hub`
+behavior must remain compatible. This Issue changes physical ownership and
+module loading only; any historical path that cannot be preserved must be
+reported before deletion and requires a separate maintainer compatibility
+decision.
+
+### Affected Capability IDs
+
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-SURFACE`, `CLI-DISPATCH`, `AUTH-CONFIG`,
+`GIT-CREDENTIAL`, `UPLOAD-LFS`, `SDK-DOWNLOAD`, `SDK-UPLOAD`, `SDK-REPO`,
+`RUNTIME`, `CACHE`, `DEPENDENCY-CONTRACT`, `PACKAGING`, `PORTABILITY`, and
+`ERROR-REDACTION`.
+
+### Protected Existing Invariants
+
+- The development floor remains at 27 capabilities and 116 invariants unless
+  the maintainer explicitly authorizes an invariant replacement. `ARCH-004`
+  is tightened from the current root allowlist to the exact five-file result;
+  no registered behavior evidence is deleted or weakened.
+- `atomgit`, `atomgit.api`, `atomgit.cli`, `atomgit_hub`, console execution,
+  `python -m atomgit`, `python -m atomgit.cli`, and
+  `python -m atomgit.cli.__main__` retain current behavior.
+- Historical imports including `atomgit.cli_contracts`, `atomgit.exceptions`,
+  `atomgit.lfs_pointer`, `atomgit.runtime`, `atomgit.config`,
+  `atomgit.version`, `atomgit.release`, `atomgit.completion`,
+  `atomgit.uninstaller`, and `atomgit.utils` remain importable.
+- Public and tested private symbols preserve signatures, callable/class/singleton
+  identities where currently contracted, returns, error categories, module
+  assignment/deletion behavior, and `unittest.mock.patch` propagation.
+- Completion-only imports stay lightweight and do not eagerly load Hugging
+  Face, datasets, SDK, remote transport, or CLI business execution paths.
+- The shared config singleton, private configuration permissions, atomic
+  persistence, credential-helper isolation, token redaction, global-state
+  restoration, managed-path safety, and source/editable-install protections
+  remain unchanged.
+- Locked `huggingface-hub==1.1.7`, `datasets==4.4.1`, Python 3.9 support,
+  package contents, console entry point, wheel, sdist, and editable-install
+  behavior remain exact.
+
+### New Or Changed Invariants
+
+- `src/atomgit` has exactly the seven canonical first-level directories and
+  exactly the five approved root Python files; any sixth root file fails the
+  source-layout, structure, packaging, and installed-artifact gates.
+- The ten removed root files have one explicit compatibility route each; no
+  unbounded fallback importer or generic root-module shim registry is allowed.
+- Canonical production code imports canonical owners directly. It must not use
+  a historical alias as an internal dependency merely to preserve compatibility.
+- Physical compatibility facades belong under `compatibility`; core errors and
+  contracts remain under `core`; LFS pointer protocol remains under `adapters`;
+  runtime, configuration, lifecycle, utilities, release, and version facilities
+  remain under `infrastructure`.
+- `compatibility` may translate historical paths, names, signatures, identities,
+  and patches but may not contain new validation, orchestration, filesystem,
+  credential, release transport, or remote business implementation.
+- Every facade debt ceiling, module owner, dependency edge, package manifest,
+  and artifact expectation tightens in the same slice that removes a root file.
+
+### Implemented Destination Map
+
+| Former root file | Canonical implementation owner | Historical compatibility location/treatment | Risk |
+|---|---|---|---|
+| `cli_contracts.py` | `core/contracts.py` | `compatibility/cli_contracts.py` or exact runtime alias | low |
+| `exceptions.py` | `core/errors.py` | `compatibility/exceptions.py` or exact runtime alias | low |
+| `lfs_pointer.py` | `adapters/lfs/pointer.py` | `compatibility/lfs_pointer.py` or exact runtime alias | low |
+| `runtime.py` | `infrastructure/runtime.py` | `compatibility/runtime.py` or exact runtime alias | low |
+| `version.py` | `infrastructure/version.py` | exact `atomgit.version` alias; update build-time reader | medium |
+| `release.py` | `infrastructure/release.py` | `compatibility/release.py` plus execution loader if required | medium-high |
+| `completion.py` | `infrastructure/completion.py` and existing lifecycle owners | `compatibility/completion.py` composite facade | high |
+| `uninstaller.py` | `infrastructure/uninstall.py`, `environment.py`, `managed_paths.py` | `compatibility/uninstaller.py` composite facade | high |
+| `config.py` | `infrastructure/config.py` | `compatibility/config.py` or dedicated module/singleton-safe alias | high |
+| `utils.py` | `infrastructure/validation.py`, `filesystem.py`, `output.py`, `cache.py`, `git_credentials.py` | `compatibility/utils.py` composite facade | high |
+
+The implemented routes preserve the recorded identity and patch requirements
+without moving canonical behavior into the compatibility layer or creating an
+eighth first-level directory.
+
+### R8 Package Evidence Ledger
+
+- `WP-00: completed | HEAD=8a93aa6 | pre-change baseline 92/92 in 99.84s; ten root modules, callers, metadata, import modes, execution paths, artifacts, and locked signatures inventoried`
+- `WP-01: completed | exact five-file target plus bounded ten-file migration allowance; sixth-root and missing-entry fixtures fail closed; structure 18/18`
+- `WP-02: completed | cli_contracts, exceptions, lfs_pointer, and runtime use canonical owners through finite historical routes; identities covered by public/ownership tests`
+- `WP-03: completed | infrastructure/version.py is the build/runtime authority; setup.py reads it without runtime import; source and artifact version identity passes`
+- `WP-04: completed | compatibility/release.py retains forwarded identities, assignment/deletion seams, and warning-free python -m atomgit.release --help`
+- `WP-05: completed | compatibility completion/uninstaller facades retain multi-owner assignment/deletion propagation; lifecycle 26/26, completion 19/19, uninstaller 14/14`
+- `WP-06: completed | atomgit.config retains Config/shared-singleton identity, normal-import package attribute behavior, permissions, and atomic persistence; config 15/15`
+- `WP-07: completed | compatibility/utils.py retains validation/filesystem/output/cache/Git seams and sys.modules preload compatibility; utilities 17/17 plus repaired affected baseline scripts`
+- `WP-08: completed (non-destructive) | all ten historical paths pass with root files omitted from isolated source, wheel, sdist, and PEP 660 editable copies; artifact smoke 49/49; pre-deletion full baseline 92/92 in 92.13s`
+- `WP-09: completed | maintainer authorized the ten exact paths on 2026-08-25; only those tracked regular files were deleted; exact five-root source, owner, edge, facade-debt, wheel, sdist, tool-debt, and documentation contracts reconciled; structure 18/18, source layout 11/11, packaging metadata 13/13`
+- `WP-10: completed through review | final post-deletion focused gates pass; wheel/sdist/editable artifact smoke 49/49; complete offline baseline 92/92 in 96.34s; compileall, pip check, diff/scope/security/artifact scans pass; independent review APPROVED with no findings; human acceptance remains`
+
+The exact deletion gate was satisfied by the maintainer's explicit authorization
+on `2026-08-25`. The ten deletions are recoverable from Git until committed;
+commit, merge, push, live tests, and remote writes remain unauthorized.
+
+### Independent Review
+
+- Inputs: active Issue and acceptance criteria, complete diff from `8a93aa6`,
+  all affected and new source/tests, architecture and release documentation,
+  locked dependency contracts, focused results, artifact smoke, and the final
+  complete offline baseline.
+- Findings: none.
+- Missing evidence: no live remote operations were run because they are outside
+  the authorized scope; no separate Python 3.9 interpreter run was performed.
+- Verdict: `APPROVED`.
+- The verdict does not authorize commit, merge, push, Issue closure, release, or
+  any remote write.
+
+### Work Packages And Authorization Gates
+
+Only one package may be active at a time. Each slice adds/fixes focused tests
+before deleting its old physical root file.
+
+1. **WP-00: read-only inventory and freeze.** Inventory all source, test,
+   documentation, build, module-execution, lazy-import, symbol identity, and
+   patch callers for the ten root modules. Record required `__name__`,
+   `__package__`, `__file__`, `sys.modules`, package-attribute, and `python -m`
+   behavior. Reconcile the destination map before any source edit.
+2. **WP-01: fail-closed contracts first.** Extend structure, source-layout,
+   facade debt, import, alias/loader, packaging, wheel, sdist, and editable
+   tests to describe the intended five-root outcome while retaining tests for
+   the current state during staged migration. Register any new test script in
+   the baseline inventory and capability ledger.
+3. **WP-02: low-risk owner routes.** Redirect internal imports to
+   `core.contracts`, `core.errors`, `adapters.lfs.pointer`, and
+   `infrastructure.runtime`; implement explicit historical routes for
+   `cli_contracts`, `exceptions`, `lfs_pointer`, and `runtime`; prove identities
+   and patch behavior before physical removal.
+4. **WP-03: version and build authority.** Create
+   `infrastructure/version.py`, update package imports and `setup.py` build-time
+   reading without importing runtime dependencies, preserve `atomgit.version`,
+   and verify source/wheel/sdist version identity.
+5. **WP-04: release compatibility.** Move the historical forwarding surface to
+   `compatibility/release.py`, retain all established symbols and patch seams,
+   and add a narrow meta-path loader only if required to preserve executable
+   `atomgit.release` behavior without a physical root file.
+6. **WP-05: completion and uninstall compatibility.** Move composite facades
+   to `compatibility`, preserve every cross-owner assignment/deletion seam,
+   managed-path and environment safety, and prove the completion schema path
+   remains lightweight before deleting the root files.
+7. **WP-06: config module/singleton compatibility.** Resolve the
+   `atomgit.config` module versus package-level `atomgit.config` singleton
+   collision explicitly. Preserve `Config`, the shared singleton, lazy config
+   reads, private modes, atomic writes, and import-order behavior in clean
+   processes and installed artifacts.
+8. **WP-07: utility composite compatibility.** Move only forwarding and patch
+   maps to `compatibility/utils.py`; keep validation, filesystem, output,
+   cache, and Git credential behavior in their existing infrastructure owners.
+   Verify every public and registered private seam, including `os.walk`,
+   `subprocess.run`, output helpers, and Git-helper transaction helpers.
+9. **WP-08: alias/loader cutover and exact deletion gate.** Prove all ten old
+   imports in source, editable, wheel, and sdist environments with the physical
+   root files absent in a temporary copy. Stop for explicit authorization to
+   delete exactly `cli_contracts.py`, `completion.py`, `config.py`,
+   `exceptions.py`, `lfs_pointer.py`, `release.py`, `runtime.py`,
+   `uninstaller.py`, `utils.py`, and `version.py`; do not use a broad glob or
+   recursive deletion.
+10. **WP-09: physical closure and artifact reconciliation.** After exact
+    deletion authorization, remove only the approved files, tighten the root
+    allowlist to the five entry files, update owner/edge/debt and artifact
+    declarations, and reconcile the smallest authoritative architecture,
+    testing, development-floor, and packaging documentation.
+11. **WP-10: final verification and review.** Run focused suites, complete
+    offline baseline, build/install smoke, compile/dependency/diff/security
+    checks, independent review, fix all findings, rerun gates, and request human
+    acceptance. Commit, merge, and push remain separately authorized actions.
+
+### Focused Tests And Evidence
+
+- Add an exact root-file contract that fails on a sixth root `.py`, a missing
+  required entry file, or any recreated historical first-level directory.
+- Test all ten historical imports in fresh subprocesses, in multiple import
+  orders, with and without completion mode, and from source, PEP 660 editable,
+  wheel, and sdist installations isolated from the worktree.
+- Compare public/tested-private symbol presence, `inspect.signature`, callable
+  identity, class identity, singleton identity, exception inheritance,
+  `__all__`, package exports, `sys.modules`, assignment, deletion, and
+  `patch.object` restoration against the pre-migration contract.
+- Verify `atomgit --help`, `atomgit --version`, `python -m atomgit --help`,
+  `python -m atomgit.cli --help`, and
+  `python -m atomgit.cli.__main__ --help` without warnings. Test historical
+  release module execution only if WP-00 proves it is an existing contract.
+- Preserve and extend `test_infrastructure_utils_ownership.py`,
+  `test_environment_lifecycle_ownership.py`, `test_runtime_policy.py`,
+  `test_config_permissions.py`, `test_import_order_contract.py`,
+  `test_public_import_contract.py`, `test_api_facade_conversion.py`,
+  `test_cli_facade_conversion.py`, `test_sdk_domain_ownership.py`,
+  `test_src_layout_migration.py`, `test_structure_guard.py`,
+  `test_packaging_metadata.py`, and `test_wheel_smoke.py`.
+- Prove no compatibility facade adds business definitions, concrete network
+  calls, credential persistence, broad dynamic imports, heavy schema-only
+  dependencies, cycles, unregistered edges, or duplicate implementation.
+- Verify the build backend reads one version authority without importing the
+  AtomGit runtime or user configuration.
+- Keep the monotonic ledger at 27 capabilities and 116 invariants unless an
+  explicitly reviewed replacement is required. Every new `test_*.py` joins the
+  exact baseline inventory and at least one affected capability.
+
+### Required Final Commands
+
+All Python and project commands run in the `atomgit_cli` conda environment:
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+Also run the focused import/identity/patch suites, structure/layout suites,
+source/editable/wheel/sdist smoke, installed-entry probes, locked dependency
+signature checks, issue-owned Black/isort/Ruff clean policy, and credential,
+generated-artifact, bytecode, and repository-leak scans.
+
+### Out Of Scope
+
+- New CLI, native SDK, or historical `atomgit_hub` capabilities or parameters.
+- Dependency upgrades, version release, publication, broad formatting cleanup,
+  remote Issue/PR operations, or unrelated roadmap work.
+- Remote AtomGit repository creation, deletion, visibility/branch changes,
+  upload, download, LFS, credential mutation, or fixture cleanup. The separate
+  comprehensive test plan for `test_model` and `test_datasets` is not started
+  by this Issue plan.
+- Removing `__init__.py`, `__main__.py`, `api.py`, `cli.py`,
+  `atomgit_hub.py`, or top-level `src/atomgit_hub.py`.
+- Silently breaking a historical import or patch seam because it is private;
+  any unpreservable path requires an explicit compatibility decision.
+
+### Acceptance Criteria
+
+1. `src/atomgit` contains exactly seven first-level directories and exactly
+   the five approved root Python files.
+2. The ten former root module paths remain importable through finite explicit
+   compatibility routes in source, editable, wheel, and sdist environments.
+3. Canonical implementations remain in the destination layers listed above;
+   compatibility owns only path/signature/identity/patch translation.
+4. CLI, native `AtomGitClient`, historical `atomgit_hub`, package exports,
+   config singleton, errors, lifecycle, utilities, release, LFS pointer,
+   runtime, and version behavior pass focused equivalence tests.
+5. Completion imports remain lightweight; module execution paths are warning
+   free; no new cycle, forbidden edge, facade business definition, duplicate
+   owner, unowned module, or stale artifact path exists.
+6. The exact structure, package metadata, source/editable/wheel/sdist, security,
+   portability, locked dependency, compile, dependency, and diff gates pass.
+7. The complete offline baseline passes with all 27 capabilities and 116
+   invariants accounted for, or an explicitly authorized replacement record.
+8. Independent review has no open P0/P1/P2 finding, human acceptance is
+   recorded, and all unrun tests and residual risks are explicit before any
+   delivery action.
+
+### Authorization And Handoff
+
+- The maintainer authorized recording this complete local development Issue
+  plan on `2026-08-25` after R7 was completed and pushed.
+- The maintainer authorized R8 implementation and creation of the local task
+  branch on `2026-08-25`.
+- The maintainer separately authorized deletion of exactly the ten listed root
+  files on `2026-08-25`; no broad glob or recursive deletion was used.
+- Commit, merge, push, live tests, publication, remote Issue/PR operations, and
+  all other remote writes remain unauthorized.
+
+## Historical R7 Delivery Evidence
 
 ### WP-00/WP-01 Evidence
 
@@ -86,16 +418,16 @@ Status: completed (R7 accepted by the maintainer; delivery to `yuto` explicitly 
   plus installed regressions. Final verdict `APPROVED`; no open P0/P1/P2/P3
   findings.
 
-## Pending Issue
+## Historical Completed Issue: R7 Seven-Directory Physical Closure
 
-- Remote Issue: `none; do not create one without explicit authorization`
+- Remote Issue: `none; no remote Issue was created`
 - ID: `LOCAL-R7-SEVEN-DIRECTORY-PHYSICAL-CLOSURE`
 - Title: `Migrate the source tree to exactly seven responsibility directories without losing existing capabilities`
 - Primary type: `refactoring`
 - Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`, `portability`
 - Priority: `P1`
-- Status: `active; implementation explicitly authorized by the maintainer in the current conversation`
-- Delivery: `read-only inventory -> explicit implementation activation -> focused migration slices -> complete offline verification -> independent review -> human acceptance -> separately authorized old-directory deletion -> final verification -> separately authorized commit/merge/push`
+- Status: `completed, accepted, merged, and pushed on 2026-08-25`
+- Delivery: `task commit 2e781d9 -> local no-ff merge 8a93aa6 -> github/yuto push -> local/tracking/ls-remote equality verified at 8a93aa6d8344f18b1be0edd6a44b6fb46054d3d3`
 
 ### Objective
 
@@ -358,11 +690,9 @@ The Issue cannot close until all of the following are true:
 - Remote Issue/PR changes, publication, credential mutation, and live remote
   tests remain unauthorized. The planned comprehensive remote matrix was not
   run and is retained as residual evidence rather than reported as passing.
-- A future AI taking over must read `AGENTS.md`, `.ai/README.md`, this Issue,
-  `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`, `.ai/DEVELOPMENT_RULES.md`,
-  `.ai/DOD.md`, and `.ai/WORKFLOW.md`; verify Git/worktree state; report the
-  recovered objective and blockers; verify the nine old directories remain
-  absent, then continue the recorded WP-07 final gate without recreating them.
+- R7 is closed and must not resume as an active Issue. Future work uses the R8
+  contract at the top of this file, while preserving the delivered seven-directory
+  result and reconciling any newer `yuto` state before implementation.
 
 ## Historical Completed Issue: R6 Lifecycle Facade Closure
 

@@ -32,20 +32,20 @@ from urllib.parse import quote, urljoin, urlsplit  # noqa: F401
 import httpx
 
 try:
-    from ..runtime import configure_hf_environment
+    from ..infrastructure.runtime import configure_hf_environment
 except ImportError:
-    from runtime import configure_hf_environment
+    from infrastructure.runtime import configure_hf_environment
 
 configure_hf_environment()
 
 # isort: off -- runtime policy must precede all Hugging Face imports.
 try:
-    from ..cli_contracts import (  # noqa: F401
+    from ..core.contracts import (  # noqa: F401
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
 except ImportError:
-    from cli_contracts import (  # noqa: F401
+    from core.contracts import (  # noqa: F401
         _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
         DEFAULT_UPLOAD_BATCH_SIZE,
     )
@@ -107,8 +107,8 @@ try:
         _repo_private_state,
         _sanitized_v5_api_error,
     )
-    from ..config import config  # noqa: F401
-    from ..utils import (  # noqa: F401
+    from ..infrastructure.config import config  # noqa: F401
+    from ..infrastructure.utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,
@@ -158,8 +158,8 @@ except ImportError:
         _repo_private_state,
         _sanitized_v5_api_error,
     )
-    from config import config  # noqa: F401
-    from utils import (  # noqa: F401
+    from infrastructure.config import config  # noqa: F401
+    from infrastructure.utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
         is_supported_upload_revision,

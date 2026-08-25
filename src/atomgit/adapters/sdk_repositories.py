@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 from huggingface_hub import create_repo
 
-from ..exceptions import (
+from ..core.errors import (
     AtomGitAuthenticationError,
     AtomGitRepositoryExistsError,
     AtomGitUnsupportedError,

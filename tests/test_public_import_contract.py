@@ -58,6 +58,43 @@ def main():
     cli_module = modules["atomgit.cli"]
     package_sdk = importlib.import_module("atomgit.atomgit_hub")
     standalone_sdk = modules["atomgit_hub"]
+    owner_pairs = {
+        "atomgit.cli_contracts": "atomgit.core.contracts",
+        "atomgit.config": "atomgit.infrastructure.config",
+        "atomgit.exceptions": "atomgit.core.errors",
+        "atomgit.lfs_pointer": "atomgit.adapters.lfs.pointer",
+        "atomgit.release": "atomgit.infrastructure.release",
+        "atomgit.runtime": "atomgit.infrastructure.runtime",
+        "atomgit.version": "atomgit.infrastructure.version",
+    }
+    identity_symbols = {
+        "atomgit.config": ("Config", "config"),
+        "atomgit.exceptions": PUBLIC_SYMBOLS["atomgit.exceptions"],
+        "atomgit.lfs_pointer": PUBLIC_SYMBOLS["atomgit.lfs_pointer"],
+        "atomgit.release": PUBLIC_SYMBOLS["atomgit.release"],
+        "atomgit.runtime": PUBLIC_SYMBOLS["atomgit.runtime"],
+    }
+    check(
+        "historical root symbols retain exact canonical owner identities",
+        all(
+            getattr(modules[historical], symbol)
+            is getattr(importlib.import_module(owner), symbol)
+            for historical, owner in owner_pairs.items()
+            if historical in identity_symbols
+            for symbol in identity_symbols[historical]
+        ),
+    )
+    check(
+        "historical contract and version values equal their canonical authorities",
+        modules["atomgit.cli_contracts"].DEFAULT_UPLOAD_BATCH_SIZE
+        == importlib.import_module("atomgit.core.contracts").DEFAULT_UPLOAD_BATCH_SIZE
+        and modules["atomgit.version"].__version__
+        == importlib.import_module("atomgit.infrastructure.version").__version__,
+    )
+    check(
+        "the package-level config export remains the shared singleton",
+        atomgit.config is modules["atomgit.config"].config,
+    )
     check(
         "package facade exports preserve the global API and Click entry objects",
         atomgit.api is api_module.api and atomgit.cli is cli_module.cli,

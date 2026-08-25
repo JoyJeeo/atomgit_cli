@@ -20,22 +20,25 @@ EXPECTED_FIRST_LEVEL_DIRECTORIES = {
     "interfaces",
     "usecases",
 }
-ROOT_PYTHON_ALLOWLIST = {
+TARGET_ROOT_PYTHON = {
     "__init__.py",
     "__main__.py",
     "atomgit_hub.py",
     "api.py",
     "cli.py",
-    "cli_contracts.py",
-    "completion.py",
-    "config.py",
-    "exceptions.py",
-    "lfs_pointer.py",
-    "release.py",
-    "runtime.py",
-    "uninstaller.py",
-    "utils.py",
-    "version.py",
+}
+ROOT_PYTHON_ALLOWLIST = TARGET_ROOT_PYTHON
+HISTORICAL_ROOT_MODULE_SOURCES = {
+    "atomgit.cli_contracts": "compatibility/cli_contracts.py",
+    "atomgit.completion": "compatibility/completion.py",
+    "atomgit.config": "compatibility/config.py",
+    "atomgit.exceptions": "compatibility/exceptions.py",
+    "atomgit.lfs_pointer": "compatibility/lfs_pointer.py",
+    "atomgit.release": "compatibility/release.py",
+    "atomgit.runtime": "compatibility/runtime.py",
+    "atomgit.uninstaller": "compatibility/uninstaller.py",
+    "atomgit.utils": "compatibility/utils.py",
+    "atomgit.version": "infrastructure/version.py",
 }
 PACKAGE_MODULES = {
     "__init__.py",
@@ -70,18 +73,25 @@ PACKAGE_MODULES = {
     "api.py",
     "atomgit_hub.py",
     "cli.py",
-    "cli_contracts.py",
-    "completion.py",
-    "config.py",
     "compatibility/__init__.py",
     "compatibility/authentication.py",
     "compatibility/api.py",
     "compatibility/cli.py",
+    "compatibility/cli_contracts.py",
+    "compatibility/completion.py",
+    "compatibility/config.py",
     "compatibility/download.py",
+    "compatibility/exceptions.py",
     "compatibility/facade.py",
     "compatibility/legacy_packages.py",
+    "compatibility/lfs_pointer.py",
+    "compatibility/release.py",
     "compatibility/registry.py",
     "compatibility/repositories.py",
+    "compatibility/root_modules.py",
+    "compatibility/runtime.py",
+    "compatibility/uninstaller.py",
+    "compatibility/utils.py",
     "core/__init__.py",
     "core/contracts.py",
     "core/errors.py",
@@ -92,13 +102,6 @@ PACKAGE_MODULES = {
     "domain/authentication.py",
     "domain/repositories.py",
     "domain/transfers.py",
-    "exceptions.py",
-    "lfs_pointer.py",
-    "release.py",
-    "runtime.py",
-    "uninstaller.py",
-    "utils.py",
-    "version.py",
     "infrastructure/__init__.py",
     "infrastructure/cache.py",
     "infrastructure/completion.py",
@@ -113,6 +116,7 @@ PACKAGE_MODULES = {
     "infrastructure/uninstall.py",
     "infrastructure/utils.py",
     "infrastructure/validation.py",
+    "infrastructure/version.py",
     "interfaces/__init__.py",
     "interfaces/cli/__init__.py",
     "interfaces/cli/runner.py",
@@ -195,6 +199,8 @@ def copy_ignore(directory, names):
 
 
 def main():
+    from atomgit.compatibility.root_modules import LEGACY_ROOT_MODULE_SOURCES
+
     first_level_directories = {
         path.name
         for path in PACKAGE_ROOT.iterdir()
@@ -226,9 +232,21 @@ def main():
     )
     package_root_python = {path.name for path in PACKAGE_ROOT.glob("*.py")}
     check(
-        "src/atomgit root Python files use the frozen compatibility allowlist",
-        package_root_python <= ROOT_PYTHON_ALLOWLIST,
-        repr(sorted(package_root_python - ROOT_PYTHON_ALLOWLIST)),
+        "src/atomgit root Python files are exactly the five approved entries",
+        package_root_python == ROOT_PYTHON_ALLOWLIST,
+        repr(sorted(package_root_python ^ ROOT_PYTHON_ALLOWLIST)),
+    )
+    actual_root_routes = {
+        name: path.relative_to(PACKAGE_ROOT).as_posix()
+        for name, path in LEGACY_ROOT_MODULE_SOURCES.items()
+    }
+    check(
+        "the historical root loader has exactly ten finite non-root sources",
+        actual_root_routes == HISTORICAL_ROOT_MODULE_SOURCES
+        and all(
+            (PACKAGE_ROOT / path).is_file() for path in actual_root_routes.values()
+        ),
+        repr(actual_root_routes),
     )
     check(
         "the top-level SDK compatibility shim is minimal and single-sourced",
@@ -286,7 +304,7 @@ def main():
                 sys.executable,
                 "-c",
                 (
-                    "import importlib, atomgit; "
+                    "import importlib, pathlib, sys, atomgit; "
                     "pairs={"
                     "'atomgit.commands.authentication':'atomgit.interfaces.cli.commands.authentication',"
                     "'atomgit.download.service':'atomgit.compatibility.download',"
@@ -298,7 +316,19 @@ def main():
                     "assert all(importlib.import_module(old) is importlib.import_module(new) "
                     "for old,new in pairs.items()); "
                     "importlib.import_module('atomgit.api'); "
-                    "importlib.import_module('atomgit.cli')"
+                    "importlib.import_module('atomgit.cli'); "
+                    "roots=('cli_contracts','completion','config','exceptions',"
+                    "'lfs_pointer','release','runtime','uninstaller','utils','version'); "
+                    "modules={name:importlib.import_module('atomgit.' + name) for name in roots}; "
+                    "assert all(sys.modules['atomgit.' + name] is module "
+                    "for name,module in modules.items()); "
+                    "assert all(module.__name__ == 'atomgit.' + name "
+                    "for name,module in modules.items() if name != 'lfs_pointer'); "
+                    "assert modules['lfs_pointer'].__name__ == 'atomgit.adapters.lfs.pointer'; "
+                    "assert atomgit.config is modules['config'].config; "
+                    "assert all({'compatibility','infrastructure'} & "
+                    "set(pathlib.Path(module.__file__).parts) "
+                    "for name,module in modules.items() if name != 'lfs_pointer')"
                 ),
             ],
             cwd=str(isolated_root),
@@ -317,12 +347,36 @@ def main():
             timeout=30,
             check=False,
         )
+        release_probe = subprocess.run(
+            [
+                sys.executable,
+                "-W",
+                "error",
+                "-m",
+                "atomgit.release",
+                "--help",
+            ],
+            cwd=str(isolated_root),
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
     check(
-        "historical imports survive after legacy directories are physically absent",
+        "historical imports survive after legacy directories and root facades are physically absent",
         import_probe.returncode == 0
         and module_probe.returncode == 0
+        and release_probe.returncode == 0
         and "Commands:" in module_probe.stdout,
-        (import_probe.stderr + module_probe.stderr).strip(),
+        (import_probe.stderr + module_probe.stderr + release_probe.stderr).strip(),
+    )
+    check(
+        "historical release module execution is warning-free without its root file",
+        release_probe.returncode == 0
+        and "AtomGit Release installer core" in release_probe.stdout
+        and not release_probe.stderr,
+        release_probe.stderr.strip(),
     )
     check(
         "source layout does not create placeholder production modules",

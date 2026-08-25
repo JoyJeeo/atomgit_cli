@@ -1,6 +1,6 @@
 """Historical public path for the core-owned AtomGit error hierarchy."""
 
-from .core.errors import (
+from atomgit.core.errors import (
     AtomGitAuthenticationError,
     AtomGitError,
     AtomGitNetworkError,

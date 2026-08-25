@@ -3,7 +3,7 @@
 import sys
 import types
 
-from .runtime import configure_hf_environment
+from .infrastructure.runtime import configure_hf_environment
 
 configure_hf_environment()
 
@@ -23,7 +23,7 @@ from .adapters.sdk_downloads import (  # noqa: E402,F401
 )
 from .adapters.sdk_repositories import create_repo, create_repository  # noqa: E402,F401
 from .adapters.sdk_uploads import hf_upload_folder, upload_folder  # noqa: E402,F401
-from .exceptions import (  # noqa: E402
+from .core.errors import (  # noqa: E402
     AtomGitAuthenticationError,
     AtomGitError,
     AtomGitNetworkError,

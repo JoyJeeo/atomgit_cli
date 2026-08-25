@@ -1,8 +1,4 @@
-"""Historical utility import facade.
-
-Implementations live in :mod:`atomgit.infrastructure.utils`; this module keeps
-the old import path and the module-object patch seams used by callers.
-"""
+"""Historical utility import facade with cross-owner patch forwarding."""
 
 # ruff: noqa: F401
 
@@ -11,16 +7,14 @@ import subprocess
 import sys
 import types
 
-from .infrastructure import cache as _cache
-from .infrastructure import filesystem as _filesystem
-from .infrastructure import git_credentials as _git_credentials
-from .infrastructure import output as _output
-from .infrastructure import utils as _implementation
-from .infrastructure import validation as _validation
-from .infrastructure.utils import *  # noqa: F401,F403
+from atomgit.infrastructure import cache as _cache
+from atomgit.infrastructure import filesystem as _filesystem
+from atomgit.infrastructure import git_credentials as _git_credentials
+from atomgit.infrastructure import output as _output
+from atomgit.infrastructure import utils as _implementation
+from atomgit.infrastructure import validation as _validation
+from atomgit.infrastructure.utils import *  # noqa: F401,F403
 
-# Private names remain available because older integrations and tests use them
-# to inspect or patch the Git-helper transaction.
 _GIT_CREDENTIAL_HOSTS = _git_credentials._GIT_CREDENTIAL_HOSTS
 _GIT_HELPER_STATE_VERSION = _git_credentials._GIT_HELPER_STATE_VERSION
 _GIT_HELPER_STATE_FILENAME = _git_credentials._GIT_HELPER_STATE_FILENAME
@@ -41,9 +35,6 @@ _REPO_ID_ERROR = _validation._REPO_ID_ERROR
 _REPO_SEGMENT_CHARS = _validation._REPO_SEGMENT_CHARS
 
 
-# Preserve the historical module-object patch seam while keeping ownership in
-# the split implementation modules.  Git credentials imported output helpers
-# directly, so those aliases are updated alongside the output owner.
 _PATCH_TARGETS = {
     "os": (_validation, _filesystem, _cache, _git_credentials),
     "subprocess": (_git_credentials,),
