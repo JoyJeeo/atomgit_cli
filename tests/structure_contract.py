@@ -17,27 +17,33 @@ CANONICAL_FIRST_LEVEL_DIRECTORIES = frozenset(
     }
 )
 
-# Root modules are intentionally finite: each is either a package entry shim
-# or a compatibility surface that cannot live below a responsibility package.
-ROOT_COMPATIBILITY_PYTHON_ALLOWLIST = frozenset(
+# Only package and historical entry shims may remain at the package root.
+TARGET_ROOT_PYTHON_FILES = frozenset(
     {
         "__init__.py",
         "__main__.py",
         "api.py",
         "atomgit_hub.py",
         "cli.py",
-        "cli_contracts.py",
-        "completion.py",
-        "config.py",
-        "exceptions.py",
-        "lfs_pointer.py",
-        "release.py",
-        "runtime.py",
-        "uninstaller.py",
-        "utils.py",
-        "version.py",
     }
 )
+
+ROOT_COMPATIBILITY_PYTHON_ALLOWLIST = TARGET_ROOT_PYTHON_FILES
+
+
+def validate_root_python_files(root_python):
+    """Validate the exact package-root Python files."""
+
+    actual = set(root_python)
+    errors = []
+    missing = set(TARGET_ROOT_PYTHON_FILES) - actual
+    unexpected = actual - set(TARGET_ROOT_PYTHON_FILES)
+    if missing or unexpected:
+        errors.append(
+            "root compatibility Python contract mismatch: "
+            f"unexpected={sorted(unexpected)}, missing={sorted(missing)}"
+        )
+    return errors
 
 
 def validate_physical_layout(repository_root):
@@ -57,12 +63,7 @@ def validate_physical_layout(repository_root):
             f"missing={sorted(set(CANONICAL_FIRST_LEVEL_DIRECTORIES) - directories)}"
         )
     root_python = {path.name for path in package_root.glob("*.py")}
-    unexpected_root = root_python - set(ROOT_COMPATIBILITY_PYTHON_ALLOWLIST)
-    if unexpected_root:
-        errors.append(
-            "root compatibility Python allowlist mismatch: "
-            f"unexpected={sorted(unexpected_root)}"
-        )
+    errors.extend(validate_root_python_files(root_python))
     return errors
 
 PRODUCTION_MODULE_OWNERS = {
@@ -98,16 +99,25 @@ PRODUCTION_MODULE_OWNERS = {
     "api": "facade",
     "atomgit_hub": "compatibility",
     "cli": "facade",
-    "cli_contracts": "compatibility",
     "compatibility.__init__": "compatibility",
     "compatibility.authentication": "compatibility",
     "compatibility.api": "facade",
     "compatibility.cli": "facade",
+    "compatibility.cli_contracts": "compatibility",
+    "compatibility.completion": "compatibility",
+    "compatibility.config": "compatibility",
     "compatibility.download": "compatibility",
+    "compatibility.exceptions": "compatibility",
     "compatibility.facade": "compatibility",
     "compatibility.legacy_packages": "compatibility",
+    "compatibility.lfs_pointer": "compatibility",
+    "compatibility.release": "compatibility",
     "compatibility.registry": "compatibility",
     "compatibility.repositories": "compatibility",
+    "compatibility.root_modules": "compatibility",
+    "compatibility.runtime": "compatibility",
+    "compatibility.uninstaller": "compatibility",
+    "compatibility.utils": "compatibility",
     "core.__init__": "core",
     "core.contracts": "core",
     "core.errors": "core",
@@ -118,15 +128,6 @@ PRODUCTION_MODULE_OWNERS = {
     "domain.authentication": "domain",
     "domain.repositories": "domain",
     "domain.transfers": "domain",
-    "completion": "compatibility",
-    "config": "infrastructure",
-    "exceptions": "infrastructure",
-    "lfs_pointer": "compatibility",
-    "release": "compatibility",
-    "runtime": "infrastructure",
-    "uninstaller": "compatibility",
-    "utils": "infrastructure",
-    "version": "infrastructure",
     "infrastructure.__init__": "infrastructure",
     "infrastructure.cache": "infrastructure",
     "infrastructure.completion": "infrastructure",
@@ -141,6 +142,7 @@ PRODUCTION_MODULE_OWNERS = {
     "infrastructure.uninstall": "infrastructure",
     "infrastructure.utils": "infrastructure",
     "infrastructure.validation": "infrastructure",
+    "infrastructure.version": "infrastructure",
     "interfaces.__init__": "interfaces",
     "interfaces.cli.__init__": "interfaces",
     "interfaces.cli.runner": "interfaces",
@@ -172,6 +174,7 @@ DOMAIN_DEPENDENCIES = {
         "adapters",
         "cli",
         "compatibility",
+        "core",
         "transfers",
         "distribution",
         "infrastructure",
@@ -180,6 +183,7 @@ DOMAIN_DEPENDENCIES = {
     },
     "cli": {
         "compatibility",
+        "core",
         "interfaces",
         "transfers",
         "distribution",
@@ -230,13 +234,13 @@ CURRENT_INTERNAL_EDGES = {
     ("adapters.sdk_downloads", "adapters.sdk_errors"),
     ("adapters.sdk_downloads", "infrastructure.utils"),
     ("adapters.sdk_errors", "adapters.lfs.pointer"),
-    ("adapters.sdk_errors", "exceptions"),
+    ("adapters.sdk_errors", "core.errors"),
     ("adapters.sdk_errors", "infrastructure.utils"),
     ("adapters.sdk_repositories", "adapters.sdk_common"),
     ("adapters.sdk_repositories", "adapters.sdk_errors"),
-    ("adapters.sdk_repositories", "exceptions"),
+    ("adapters.sdk_repositories", "core.errors"),
     ("adapters.sdk_uploads", "adapters.lfs.pointer"),
-    ("adapters.sdk_uploads", "exceptions"),
+    ("adapters.sdk_uploads", "core.errors"),
     ("adapters.sdk_uploads", "infrastructure.config"),
     ("adapters.sdk_uploads", "infrastructure.validation"),
     ("adapters.sdk_uploads", "adapters.sdk_errors"),
@@ -260,13 +264,13 @@ CURRENT_INTERNAL_EDGES = {
     ("__init__", "api"),
     ("__init__", "atomgit_hub"),
     ("__init__", "compatibility.legacy_packages"),
+    ("__init__", "compatibility.root_modules"),
     ("__init__", "cli"),
-    ("__init__", "config"),
-    ("__init__", "runtime"),
-    ("__init__", "version"),
+    ("__init__", "infrastructure.runtime"),
+    ("__init__", "infrastructure.version"),
     ("__main__", "cli"),
-    ("atomgit_hub", "exceptions"),
-    ("atomgit_hub", "runtime"),
+    ("atomgit_hub", "core.errors"),
+    ("atomgit_hub", "infrastructure.runtime"),
     ("atomgit_hub", "adapters.sdk_datasets"),
     ("atomgit_hub", "adapters.sdk_downloads"),
     ("atomgit_hub", "adapters.sdk_repositories"),
@@ -278,7 +282,7 @@ CURRENT_INTERNAL_EDGES = {
     ("interfaces.cli.runner", "adapters.download.service"),
     ("interfaces.cli.runner", "infrastructure.validation"),
     ("interfaces.cli.runner", "interfaces.sdk.__init__"),
-    ("interfaces.cli.schema", "cli_contracts"),
+    ("interfaces.cli.schema", "core.contracts"),
     ("interfaces.cli.schema", "interfaces.cli.commands.__init__"),
     ("interfaces.cli.commands.__init__", "interfaces.cli.commands.authentication"),
     ("interfaces.cli.commands.__init__", "interfaces.cli.commands.lifecycle"),
@@ -291,29 +295,45 @@ CURRENT_INTERNAL_EDGES = {
     ("compatibility.api", "adapters.lfs.service"),
     ("compatibility.api", "adapters.upload.__init__"),
     ("compatibility.api", "adapters.upload.service"),
-    ("compatibility.api", "cli_contracts"),
+    ("compatibility.api", "core.contracts"),
     ("compatibility.api", "compatibility.__init__"),
     ("compatibility.api", "compatibility.authentication"),
     ("compatibility.api", "compatibility.download"),
     ("compatibility.api", "compatibility.facade"),
     ("compatibility.api", "compatibility.repositories"),
-    ("compatibility.api", "config"),
-    ("compatibility.api", "runtime"),
-    ("compatibility.api", "utils"),
+    ("compatibility.api", "infrastructure.config"),
+    ("compatibility.api", "infrastructure.runtime"),
+    ("compatibility.api", "infrastructure.utils"),
     ("compatibility.authentication", "adapters.atomgit_v5"),
     ("compatibility.authentication", "infrastructure.config"),
     ("compatibility.cli", "api"),
-    ("compatibility.cli", "cli_contracts"),
-    ("compatibility.cli", "completion"),
-    ("compatibility.cli", "config"),
+    ("compatibility.cli", "core.contracts"),
     ("compatibility.cli", "compatibility.facade"),
     ("compatibility.cli", "interfaces.cli.__init__"),
     ("compatibility.cli", "interfaces.cli.schema"),
-    ("compatibility.cli", "release"),
-    ("compatibility.cli", "runtime"),
-    ("compatibility.cli", "uninstaller"),
-    ("compatibility.cli", "utils"),
-    ("compatibility.cli", "version"),
+    ("compatibility.cli", "infrastructure.completion"),
+    ("compatibility.cli", "infrastructure.config"),
+    ("compatibility.cli", "infrastructure.managed_paths"),
+    ("compatibility.cli", "infrastructure.release"),
+    ("compatibility.cli", "infrastructure.runtime"),
+    ("compatibility.cli", "infrastructure.uninstall"),
+    ("compatibility.cli", "infrastructure.utils"),
+    ("compatibility.cli", "infrastructure.version"),
+    ("compatibility.cli_contracts", "core.contracts"),
+    ("compatibility.completion", "compatibility.facade"),
+    ("compatibility.completion", "infrastructure.__init__"),
+    ("compatibility.completion", "infrastructure.completion"),
+    ("compatibility.config", "infrastructure.__init__"),
+    ("compatibility.config", "infrastructure.config"),
+    ("compatibility.exceptions", "core.errors"),
+    ("compatibility.release", "infrastructure.__init__"),
+    ("compatibility.runtime", "infrastructure.__init__"),
+    ("compatibility.runtime", "infrastructure.runtime"),
+    ("compatibility.uninstaller", "compatibility.facade"),
+    ("compatibility.uninstaller", "infrastructure.__init__"),
+    ("compatibility.uninstaller", "infrastructure.uninstall"),
+    ("compatibility.utils", "infrastructure.__init__"),
+    ("compatibility.utils", "infrastructure.utils"),
     ("compatibility.download", "adapters.download.service"),
     ("compatibility.download", "infrastructure.config"),
     ("compatibility.download", "infrastructure.validation"),
@@ -325,9 +345,6 @@ CURRENT_INTERNAL_EDGES = {
     ("core.__init__", "core.parity"),
     ("core.__init__", "core.policies"),
     ("core.policies", "core.errors"),
-    ("completion", "compatibility.facade"),
-    ("completion", "infrastructure.__init__"),
-    ("completion", "infrastructure.completion"),
     ("domain.__init__", "domain.authentication"),
     ("domain.__init__", "domain.repositories"),
     ("domain.__init__", "domain.transfers"),
@@ -341,10 +358,7 @@ CURRENT_INTERNAL_EDGES = {
     ("infrastructure.environment", "infrastructure.managed_paths"),
     ("infrastructure.uninstall", "infrastructure.environment"),
     ("infrastructure.uninstall", "infrastructure.managed_paths"),
-    ("release", "infrastructure.__init__"),
     ("infrastructure.release", "infrastructure.environment"),
-    ("config", "infrastructure.config"),
-    ("config", "infrastructure.__init__"),
     ("infrastructure.git_credentials", "infrastructure.output"),
     ("infrastructure.utils", "infrastructure.cache"),
     ("infrastructure.utils", "infrastructure.filesystem"),
@@ -360,15 +374,6 @@ CURRENT_INTERNAL_EDGES = {
     ("interfaces.sdk.client", "usecases.authentication"),
     ("interfaces.sdk.client", "usecases.repositories"),
     ("interfaces.sdk.client", "usecases.transfers"),
-    ("runtime", "infrastructure.runtime"),
-    ("runtime", "infrastructure.__init__"),
-    ("uninstaller", "compatibility.facade"),
-    ("uninstaller", "infrastructure.__init__"),
-    ("uninstaller", "infrastructure.uninstall"),
-    ("utils", "infrastructure.utils"),
-    ("utils", "infrastructure.__init__"),
-    ("cli_contracts", "core.contracts"),
-    ("exceptions", "core.errors"),
     ("usecases.__init__", "usecases.authentication"),
     ("usecases.__init__", "usecases.repositories"),
     ("usecases.__init__", "usecases.transfers"),
@@ -390,21 +395,29 @@ LEGACY_FACADE_DEBT = {
     "atomgit_hub": {"max_lines": 168, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 27, "max_functions": 0, "max_classes": 0},
     "compatibility.api": {"max_lines": 781, "max_functions": 0, "max_classes": 1},
-    "compatibility.cli": {"max_lines": 139, "max_functions": 3, "max_classes": 1},
-    "completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
-    "config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
-    "runtime": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
-    "uninstaller": {"max_lines": 55, "max_functions": 0, "max_classes": 0},
-    "utils": {"max_lines": 130, "max_functions": 0, "max_classes": 0},
+    "compatibility.cli": {"max_lines": 143, "max_functions": 3, "max_classes": 1},
+    "compatibility.completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
+    "compatibility.config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
+    "compatibility.release": {"max_lines": 39, "max_functions": 2, "max_classes": 0},
+    "compatibility.runtime": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
+    "compatibility.uninstaller": {"max_lines": 55, "max_functions": 0, "max_classes": 0},
+    "compatibility.utils": {"max_lines": 121, "max_functions": 0, "max_classes": 0},
 }
 
 PUBLIC_IMPORTS = (
     "atomgit",
     "atomgit.api",
+    "atomgit.cli_contracts",
     "atomgit.cli",
     "atomgit.completion",
+    "atomgit.config",
+    "atomgit.exceptions",
+    "atomgit.lfs_pointer",
+    "atomgit.release",
+    "atomgit.runtime",
     "atomgit.uninstaller",
     "atomgit.utils",
+    "atomgit.version",
     "atomgit_hub",
 )
 
@@ -430,12 +443,47 @@ PUBLIC_SYMBOLS = {
     ),
     "atomgit.api": ("HuggingFaceAPI", "api"),
     "atomgit.cli": ("cli",),
+    "atomgit.cli_contracts": (
+        "_RESUMABLE_DEFAULT_REQUEST_TIMEOUT",
+        "DEFAULT_UPLOAD_BATCH_SIZE",
+    ),
     "atomgit.completion": (
         "CompletionConfigError",
         "completion_script",
         "install_completion",
         "legacy_completion_present",
         "uninstall_completion",
+    ),
+    "atomgit.config": ("Config", "config"),
+    "atomgit.exceptions": (
+        "AtomGitError",
+        "AtomGitAuthenticationError",
+        "AtomGitRepositoryNotFoundError",
+        "AtomGitRepositoryExistsError",
+        "AtomGitRevisionNotFoundError",
+        "AtomGitTimeoutError",
+        "AtomGitNetworkError",
+        "AtomGitUnsupportedError",
+    ),
+    "atomgit.lfs_pointer": (
+        "CanonicalLfsPointer",
+        "CanonicalLfsPointerError",
+        "canonical_lfs_pointer",
+        "run_canonical_lfs_upload",
+        "verify_canonical_lfs_pointers",
+    ),
+    "atomgit.release": (
+        "ReleaseError",
+        "ReleaseValidationError",
+        "is_stable_version",
+        "validate_release_assets",
+        "run_update",
+        "_main",
+    ),
+    "atomgit.runtime": (
+        "ATOMGIT_HF_ENDPOINT",
+        "ATOMGIT_DISABLE_XET",
+        "configure_hf_environment",
     ),
     "atomgit.uninstaller": (
         "UninstallError",
@@ -445,6 +493,14 @@ PUBLIC_SYMBOLS = {
         "remove_managed_completion",
         "run_uninstall",
     ),
+    "atomgit.utils": (
+        "normalize_repo_id",
+        "parse_ignore_patterns",
+        "validate_repo_name",
+        "get_directory_size",
+        "setup_git_credentials",
+    ),
+    "atomgit.version": ("__version__",),
     "atomgit_hub": (
         "snapshot_download",
         "hub_download_url",
@@ -480,16 +536,6 @@ EXPECTED_WHEEL_FILES = {
     "atomgit/api.py",
     "atomgit/atomgit_hub.py",
     "atomgit/cli.py",
-    "atomgit/cli_contracts.py",
-    "atomgit/completion.py",
-    "atomgit/config.py",
-    "atomgit/exceptions.py",
-    "atomgit/lfs_pointer.py",
-    "atomgit/release.py",
-    "atomgit/runtime.py",
-    "atomgit/uninstaller.py",
-    "atomgit/utils.py",
-    "atomgit/version.py",
     "atomgit_hub.py",
     "atomgit/infrastructure/__init__.py",
     "atomgit/infrastructure/cache.py",
@@ -509,16 +555,6 @@ EXPECTED_SDIST_FILES = {
     "src/atomgit/api.py",
     "src/atomgit/atomgit_hub.py",
     "src/atomgit/cli.py",
-    "src/atomgit/cli_contracts.py",
-    "src/atomgit/completion.py",
-    "src/atomgit/config.py",
-    "src/atomgit/exceptions.py",
-    "src/atomgit/lfs_pointer.py",
-    "src/atomgit/release.py",
-    "src/atomgit/runtime.py",
-    "src/atomgit/uninstaller.py",
-    "src/atomgit/utils.py",
-    "src/atomgit/version.py",
     "src/atomgit_hub.py",
     "src/atomgit/infrastructure/__init__.py",
     "src/atomgit/infrastructure/cache.py",
@@ -564,11 +600,21 @@ _NEW_ARCHITECTURE_MODULES = {
     "compatibility/authentication.py",
     "compatibility/api.py",
     "compatibility/cli.py",
+    "compatibility/cli_contracts.py",
+    "compatibility/completion.py",
+    "compatibility/config.py",
     "compatibility/download.py",
+    "compatibility/exceptions.py",
     "compatibility/facade.py",
     "compatibility/legacy_packages.py",
+    "compatibility/lfs_pointer.py",
+    "compatibility/release.py",
     "compatibility/registry.py",
     "compatibility/repositories.py",
+    "compatibility/root_modules.py",
+    "compatibility/runtime.py",
+    "compatibility/uninstaller.py",
+    "compatibility/utils.py",
     "core/__init__.py",
     "core/contracts.py",
     "core/errors.py",
@@ -583,6 +629,7 @@ _NEW_ARCHITECTURE_MODULES = {
     "infrastructure/environment.py",
     "infrastructure/managed_paths.py",
     "infrastructure/uninstall.py",
+    "infrastructure/version.py",
     "interfaces/__init__.py",
     "interfaces/cli/__init__.py",
     "interfaces/cli/runner.py",
@@ -628,24 +675,42 @@ def discover_internal_edges(source_texts):
     for module_name, source in source_texts.items():
         tree = ast.parse(source, filename=f"{module_name}.py")
         for node in ast.walk(tree):
-            if isinstance(node, ast.ImportFrom) and node.level:
-                package = module_name.rsplit(".", 1)[0] if "." in module_name else ""
-                base_parts = package.split(".") if package else []
-                if node.level > 1:
-                    base_parts = base_parts[: -(node.level - 1)]
-                base = ".".join(base_parts)
-                imported = f"{base}.{node.module}".strip(".") if node.module else base
-                candidates = (
-                    [imported]
-                    if node.module
-                    else [f"{base}.{alias.name}".strip(".") for alias in node.names]
-                )
-                if (
-                    not node.module
-                    and resolve_module(base) is not None
-                    and not any(resolve_module(candidate) for candidate in candidates)
-                ):
-                    candidates.append(base)
+            if isinstance(node, ast.ImportFrom):
+                if node.level:
+                    package = (
+                        module_name.rsplit(".", 1)[0] if "." in module_name else ""
+                    )
+                    base_parts = package.split(".") if package else []
+                    if node.level > 1:
+                        base_parts = base_parts[: -(node.level - 1)]
+                    base = ".".join(base_parts)
+                    imported = (
+                        f"{base}.{node.module}".strip(".") if node.module else base
+                    )
+                    candidates = (
+                        [imported]
+                        if node.module
+                        else [
+                            f"{base}.{alias.name}".strip(".")
+                            for alias in node.names
+                        ]
+                    )
+                    if (
+                        not node.module
+                        and resolve_module(base) is not None
+                        and not any(
+                            resolve_module(candidate) for candidate in candidates
+                        )
+                    ):
+                        candidates.append(base)
+                elif node.module == "atomgit":
+                    imported = ""
+                    candidates = [alias.name for alias in node.names]
+                elif node.module and node.module.startswith("atomgit."):
+                    imported = node.module.removeprefix("atomgit.")
+                    candidates = [imported]
+                else:
+                    continue
                 edges.update(
                     (module_name, resolved)
                     for candidate in candidates
@@ -657,13 +722,15 @@ def discover_internal_edges(source_texts):
                 and node.func.id in {"_LazyObject", "_import_runtime_module"}
                 and node.args
                 and isinstance(node.args[0], ast.Constant)
-                and resolve_module(node.args[0].value) is not None
             ):
-                resolved = resolve_module(node.args[0].value)
+                candidate = node.args[0].value
+                if module_name == "compatibility.cli" and candidate == "utils":
+                    candidate = "infrastructure.utils"
+                resolved = resolve_module(candidate)
                 if resolved is not None:
                     edges.add((module_name, resolved))
         if module_name == "compatibility.cli" and "_lazy_utility(" in source:
-            edges.add(("compatibility.cli", "utils"))
+            edges.add(("compatibility.cli", "infrastructure.utils"))
     return edges
 
 

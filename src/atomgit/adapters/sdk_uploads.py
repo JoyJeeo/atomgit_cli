@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 from huggingface_hub import constants as hf_constants
 from huggingface_hub import upload_folder as hf_upload_folder
 
-from ..exceptions import AtomGitAuthenticationError, AtomGitUnsupportedError
+from ..core.errors import AtomGitAuthenticationError, AtomGitUnsupportedError
 from ..infrastructure.config import config
 from ..infrastructure.validation import (
     normalize_repo_id,

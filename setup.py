@@ -8,7 +8,9 @@ from setuptools import setup
 SETUP_ROOT = Path(__file__).resolve().parent
 VERSION_NAMESPACE = {}
 exec(
-    SETUP_ROOT.joinpath("src", "atomgit", "version.py").read_text(encoding="utf-8"),
+    SETUP_ROOT.joinpath("src", "atomgit", "infrastructure", "version.py").read_text(
+        encoding="utf-8"
+    ),
     VERSION_NAMESPACE,
 )
 __version__ = VERSION_NAMESPACE["__version__"]

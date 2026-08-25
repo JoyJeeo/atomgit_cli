@@ -189,17 +189,24 @@ def main():
         all(
             LEGACY_FACADE_DEBT[name]["max_functions"] == 0
             and LEGACY_FACADE_DEBT[name]["max_classes"] == 0
-            for name in ("config", "runtime", "utils")
+            for name in (
+                "compatibility.config",
+                "compatibility.runtime",
+                "compatibility.utils",
+            )
         ),
     )
 
     regrown = dict(source_texts)
-    regrown["utils"] += "\n\ndef future_utility_behavior():\n    return None\n"
+    regrown[
+        "compatibility.utils"
+    ] += "\n\ndef future_utility_behavior():\n    return None\n"
     errors = validate_structure(regrown)
     check(
         "historical utility facade regrowth fails closed",
         any(
-            "legacy facade debt contract is stale in utils" in error for error in errors
+            "legacy facade debt contract is stale in compatibility.utils" in error
+            for error in errors
         ),
         repr(errors),
     )

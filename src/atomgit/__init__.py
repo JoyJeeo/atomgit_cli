@@ -11,12 +11,14 @@ AtomGit CLI - 基于Transformers和Hugging Face Hub的模型文件上传下载�
 import os
 from importlib import import_module
 
-from .runtime import configure_hf_environment
-from .version import __version__
+from .compatibility.root_modules import install_legacy_root_module_finder
+from .infrastructure.runtime import configure_hf_environment
+from .infrastructure.version import __version__
 
 __author__ = 'JoyJeeo'
 __description__ = 'AtomGit模型文件上传下载CLI工具'
 
+install_legacy_root_module_finder()
 configure_hf_environment()
 
 
@@ -67,6 +69,7 @@ if "_ATOMGIT_COMPLETE" not in os.environ:
         from .compatibility.legacy_packages import install_legacy_package_aliases
 
         install_legacy_package_aliases()
+        import_module(".utils", __name__)
         from .config import config
         from .api import api
         from .cli import cli
@@ -82,6 +85,7 @@ if "_ATOMGIT_COMPLETE" not in os.environ:
         from compatibility.legacy_packages import install_legacy_package_aliases
 
         install_legacy_package_aliases()
+        import_module("utils")
         from config import config
         from api import api
         from cli import cli

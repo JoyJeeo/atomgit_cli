@@ -26,7 +26,7 @@ LFS_OWNER_MODULES = (
     "adapters.lfs.service",
 )
 LFS_RUNTIME_ALIAS_MODULES = ("lfs.__init__", "lfs.service")
-LFS_COMPATIBILITY_MODULES = ("lfs_pointer",)
+LFS_COMPATIBILITY_MODULES = ("compatibility.lfs_pointer",)
 LFS_DEFINITIONS = {
     "_slow_flow_stable_baseline",
     "_slow_flow_peer_baseline",

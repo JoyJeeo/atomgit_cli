@@ -197,11 +197,12 @@ def main():
     )
 
     check(
-        "lazy runtime resolution targets the parent package and historical context",
+        "lazy runtime resolution targets canonical owners and historical context",
         cli_module._COMMAND_CONTEXT is owner_module
         and cli_module._import_runtime_module("api").__name__
         == "atomgit.compatibility.api"
-        and cli_module._import_runtime_module("utils").__name__ == "atomgit.utils"
+        and cli_module._import_runtime_module("utils").__name__
+        == "atomgit.infrastructure.utils"
         and cli_module.api._resolve() is importlib.import_module("atomgit.api").api,
     )
 

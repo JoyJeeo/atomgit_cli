@@ -1,7 +1,7 @@
 """Stable, credential-safe error conversion for historical SDK adapters."""
 
 from ..adapters.lfs.pointer import CanonicalLfsPointerError
-from ..exceptions import (
+from ..core.errors import (
     AtomGitAuthenticationError,
     AtomGitError,
     AtomGitNetworkError,

@@ -41,10 +41,14 @@ src/atomgit/
 └── infrastructure/ config, runtime, filesystem, cache, Git, and technical distribution
 ```
 
-The historical `atomgit.cli`, `atomgit.api`, and `atomgit_hub` paths remain
-thin facades. `compatibility.cli` and `compatibility.api` own the CLI/API
-assembly, while root `cli.py` and `api.py` are the final import shims. Historical
-package paths are registered as runtime aliases without physical directories. Existing
+The package root contains exactly `__init__.py`, `__main__.py`, `api.py`,
+`atomgit_hub.py`, and `cli.py`. The historical `atomgit.cli`, `atomgit.api`, and
+`atomgit_hub` paths remain thin facades. `compatibility.cli` and
+`compatibility.api` own the CLI/API assembly, while root `cli.py` and `api.py`
+are final import shims. Ten other historical root-module paths are served by a
+finite loader whose sources live in `compatibility`, `adapters`, or
+`infrastructure`; no corresponding root files remain. Historical package paths
+are likewise registered as runtime aliases without physical directories. Existing
 command names, Click objects, Python imports, function
 identities, signatures, return conventions, exception behavior, entry paths,
 and monkeypatch seams are tested compatibility contracts.
@@ -80,8 +84,8 @@ destination safety, transport, checksum, resume, manifest, and prune behavior;
 `adapters.upload` owns file, ordinary-directory, resumable, projection, retry,
 and HF technical transfer behavior; `adapters.lfs` owns LFS protocol, pointer,
 attributes, and recovery behavior; and `adapters.sdk_uploads` owns the legacy
-SDK upload implementation. Historical `upload/`, `lfs/`, `lfs_pointer.py`, and
-`sdk/uploads.py` paths are module aliases that retain signatures, identities,
+SDK upload implementation. Historical `upload/`, `lfs/`, `atomgit.lfs_pointer`,
+and `sdk/uploads.py` paths are finite module routes that retain signatures, identities,
 and patch seams only. The remaining historical SDK download, dataset,
 repository, common-policy, and error-conversion implementations live in
 `adapters.sdk_*`; every `sdk/` module is now an alias. `infrastructure` owns completion, installation
@@ -146,19 +150,21 @@ The project uses the explicit `src/` layout declared by both `pyproject.toml`
 and `setup.py`. Source, PEP 660 editable, wheel, and sdist contracts preserve
 the historical package/module set, the `atomgit` console entry point, both
 Python module entry paths, and the top-level `atomgit_hub` compatibility module.
-The distribution version is read from the single `version.py` authority.
+The distribution version is read from the single
+`src/atomgit/infrastructure/version.py` authority. Wheels and sdists contain
+exactly the five approved package-root Python files while preserving all ten
+removed historical root imports through the finite loader.
 
 ## Verified Status And Residual Risk
 
-The complete offline baseline is the mandatory gate:
-After the separately authorized legacy-directory deletion, the focused layout,
-structure, packaging, import, facade, and ownership checks pass against the
-exact seven-directory tree. The complete offline baseline passes 92/92 in
-85.39s, and the wheel/sdist/editable smoke gate passes 38/38, including the
-installed private `python -m atomgit.cli.__main__` compatibility entry. Compile,
-dependency, packaging, import, security, portability, structure, and parity
-contracts are included in that matrix; no live remote write is required for
-the offline architecture and compatibility claims.
+The complete offline baseline is the mandatory gate. The exact seven-directory,
+five-root-file layout is enforced by the structure, source-layout, packaging,
+wheel, sdist, and editable-install contracts. Post-deletion focused structure,
+layout, packaging, public-import, owner, lifecycle, LFS, and CLI gates pass; the
+artifact smoke passes 49/49 and the complete offline baseline passes 92/92 in
+96.34s. The independent review verdict is `APPROVED` with no findings. No live
+remote write is required for these offline architecture and compatibility
+claims.
 
 Controlled remote upload/download/checksum/LFS evidence is intentionally not
 claimed in the local acceptance checkpoint. Multi-level namespace writes and

@@ -16,10 +16,12 @@ from structure_contract import (  # noqa: E402
     LEGACY_FACADE_DEBT,
     LEGACY_FORBIDDEN_EDGES,
     PRODUCTION_MODULE_OWNERS,
+    TARGET_ROOT_PYTHON_FILES,
     discover_internal_edges,
     discover_source_texts,
     validate_artifact_contract,
     validate_physical_layout,
+    validate_root_python_files,
     validate_structure,
 )
 
@@ -39,6 +41,26 @@ def main():
         "the source tree is closed to the seven canonical responsibility directories",
         not physical_errors,
         repr(physical_errors),
+    )
+    check(
+        "the root contract names exactly the five approved entry files",
+        not validate_root_python_files(TARGET_ROOT_PYTHON_FILES),
+    )
+    sixth_root_errors = validate_root_python_files(
+        TARGET_ROOT_PYTHON_FILES | {"future.py"},
+    )
+    check(
+        "a sixth target-state root Python file fails closed",
+        any("future.py" in error for error in sixth_root_errors),
+        repr(sixth_root_errors),
+    )
+    missing_entry_errors = validate_root_python_files(
+        TARGET_ROOT_PYTHON_FILES - {"cli.py"},
+    )
+    check(
+        "a missing required root entry file fails closed",
+        any("cli.py" in error for error in missing_entry_errors),
+        repr(missing_entry_errors),
     )
     source_texts = discover_source_texts(REPOSITORY_ROOT)
     current_edges = discover_internal_edges(source_texts)
@@ -79,7 +101,7 @@ def main():
     )
 
     forbidden = dict(source_texts)
-    forbidden["runtime"] += "\nfrom .compatibility.cli import cli\n"
+    forbidden["infrastructure.runtime"] += "\nfrom ..compatibility.cli import cli\n"
     errors = validate_structure(forbidden)
     check(
         "a new infrastructure-to-CLI edge fails closed",
@@ -133,7 +155,7 @@ def main():
     )
 
     empty = dict(source_texts)
-    empty["runtime"] = '"""Placeholder."""\npass\n'
+    empty["infrastructure.runtime"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(empty)
     check(
         "empty placeholder production modules fail closed",
@@ -150,11 +172,11 @@ def main():
     )
 
     incomplete_wheel = set(EXPECTED_WHEEL_FILES)
-    incomplete_wheel.remove("atomgit/release.py")
+    incomplete_wheel.remove("atomgit/compatibility/release.py")
     artifact_errors = validate_artifact_contract(wheel_files=incomplete_wheel)
     check(
         "omitting an owned runtime module from the wheel contract fails closed",
-        any("atomgit/release.py" in error for error in artifact_errors),
+        any("atomgit/compatibility/release.py" in error for error in artifact_errors),
         repr(artifact_errors),
     )
 
