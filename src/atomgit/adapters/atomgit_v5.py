@@ -1,8 +1,8 @@
 """Canonical AtomGit V5 and identity adapter.
 
 This module owns the transport and Hugging Face boundary used by the shared
-authentication and repository usecases. Historical ``services`` modules
-delegate here so their public methods and patch seams remain compatible.
+authentication and repository usecases. Compatibility API methods delegate
+here, while historical ``services`` paths alias those compatibility owners.
 """
 
 import json

@@ -8,6 +8,20 @@ from .runtime import configure_hf_environment
 configure_hf_environment()
 
 
+from .adapters.sdk_datasets import (  # noqa: E402,F401
+    DATASET_SUPPORT,
+    HF_DATASETS_CACHE,
+    ds_load_dataset,
+    load_dataset,
+)
+from .adapters.sdk_downloads import (  # noqa: E402,F401
+    download_file,
+    hf_hub_download,
+    hf_snapshot_download,
+    hub_download_url,
+    snapshot_download,
+)
+from .adapters.sdk_repositories import create_repo, create_repository  # noqa: E402,F401
 from .adapters.sdk_uploads import hf_upload_folder, upload_folder  # noqa: E402,F401
 from .exceptions import (  # noqa: E402
     AtomGitAuthenticationError,
@@ -19,20 +33,6 @@ from .exceptions import (  # noqa: E402
     AtomGitTimeoutError,
     AtomGitUnsupportedError,
 )
-from .sdk.datasets import (  # noqa: E402,F401
-    DATASET_SUPPORT,
-    HF_DATASETS_CACHE,
-    ds_load_dataset,
-    load_dataset,
-)
-from .sdk.downloads import (  # noqa: E402,F401
-    download_file,
-    hf_hub_download,
-    hf_snapshot_download,
-    hub_download_url,
-    snapshot_download,
-)
-from .sdk.repositories import create_repo, create_repository  # noqa: E402,F401
 
 _sdk_datasets = sys.modules[load_dataset.__module__]
 _sdk_downloads = sys.modules[snapshot_download.__module__]

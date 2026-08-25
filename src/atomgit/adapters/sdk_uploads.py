@@ -36,7 +36,7 @@ def _get_token() -> Optional[str]:
 
 
 def _sdk_error(error, operation: str, repo_id: str = None):
-    from ..sdk.errors import _sdk_error as classify
+    from .sdk_errors import _sdk_error as classify
 
     return classify(error, operation, repo_id)
 

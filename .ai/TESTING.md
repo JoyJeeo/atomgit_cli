@@ -68,7 +68,96 @@ token must never be printed or copied into test output.
 Live coverage should separately verify model and dataset creation, privacy,
 upload/download checksums, repository paths, ignore rules, revisions, resumable
 interruption/restart, anonymous public download, and authenticated private
-download.
+download when those operations are separately authorized. The pending R7 plan
+below is narrower; its explicit exclusions control that run.
+
+## Pending Comprehensive Acceptance Plan
+
+This plan is recorded but must not start until the maintainer explicitly asks
+to begin the comprehensive test run. That start instruction authorizes only the
+operations listed here and does not broaden the standing remote permissions.
+
+### Scope And Safety
+
+- Activate the `atomgit_cli` conda environment and record branch, HEAD,
+  worktree status, dependency versions, and the exact diff before testing.
+- Use isolated HOME, Git configuration, cache, download, and temporary
+  directories. Supply the dedicated test token only through an environment
+  variable; never print it or read `~/.atomgit/config.json`.
+- Permit remote access only when the resolved repository ID is exactly
+  `weixin_52273949/test_model` or `weixin_52273949/test_datasets`. Abort before
+  any request when a URL, SSH target, or normalized ID resolves elsewhere.
+- Store remote fixtures under unique `e2e/<run-id>/{cli,sdk,legacy}/` prefixes.
+  Do not delete or overwrite content outside that run prefix.
+- Record every command or SDK operation, exit/result status, remote commit or
+  revision where available, and independent readback SHA-256 evidence. Success
+  output alone is not acceptance evidence.
+
+### Ordered Gates
+
+1. Run source-layout, structure, architecture parity, and development-floor
+   checks. Require exactly seven first-level responsibility directories, one
+   owner per production module, registered dependency edges, no cycles or
+   placeholders, and complete CLI/native-SDK parity routes.
+2. Run `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
+   `python -m pip check`, and `git diff 23c6d7d --check`. Require all 92
+   isolated cases, 27 capabilities, and 116 invariants to pass.
+3. Run isolated source/editable/wheel/sdist packaging smoke. Verify console and
+   Python module entry points, historical imports, artifact contents, and that
+   installed imports never fall back to the working tree.
+4. Exercise each parity-required capability through strict offline CLI and
+   native-SDK paths. Compare usecase/adapter selection, arguments, token and
+   revision policy, results, errors, state restoration, and cleanup. Preserve
+   the explicit CLI-only classification for presentation, lifecycle, shell
+   hooks, and configuration display.
+5. Perform read-only live preflight against both authorized repositories.
+   Record type, visibility, current revision/commit, file inventory, CLI and
+   SDK identity, and repository listing without changing remote state.
+6. Run the controlled live transfer matrix below independently for the model
+   and dataset repositories. A failure in one row must not suppress evidence
+   collection for unrelated rows when continuing is safe.
+7. Rerun the complete offline baseline and diff/artifact/security checks after
+   live testing. Confirm that no token, signed URL, generated package, cache,
+   bytecode, or remote fixture entered the repository worktree.
+
+### Controlled Live Transfer Matrix
+
+For both authorized repositories, verify CLI and native SDK single-file upload,
+ordinary folder upload, `path_in_repo`, ignore rules, resumable upload with an
+intentional interruption/restart, single-file download, whole-repository
+download, checksum validation, resumable download, and manifest-scoped local
+prune. Validate every transferred payload by remote readback and SHA-256.
+
+Also verify these cross-surface and compatibility paths:
+
+- CLI upload followed by native SDK download, and native SDK upload followed
+  by CLI download, with identical bytes and metadata.
+- Canonical LFS pointer bytes, OID, size, and final LF for applicable uploaded
+  content, without changing repository-level `.gitattributes`.
+- The historical `atomgit_hub` download, folder-upload, direct-URL, and dataset
+  loading surfaces against their applicable authorized repository.
+- Anonymous download for an authorized repository that is already public, and
+  authenticated download for one that is already private. Do not change
+  visibility to manufacture either condition.
+
+### Explicit Exclusions
+
+The pending run does not create or delete repositories, verify post-deletion
+absence, change repository visibility, create or delete remote branches, run
+`--auto-configure-lfs`, change repository-level `.gitattributes`, publish or
+release artifacts, uninstall the real environment, clean remote fixtures, or
+touch any repository outside the two-item allowlist. These exclusions are
+reported as `not run by scope`, not as failures and not as passing remote
+evidence.
+
+### Acceptance Report
+
+Report results in three groups: passed, failed, and not run by scope. For each
+live row include the interface, repository, operation, exit code or structured
+SDK result, revision/commit, and readback checksum. Offline mocks may support a
+capability but must never be reported as live evidence. Acceptance requires all
+in-scope offline, packaging, parity, and controlled live rows to pass; any
+remaining limitation or test not run must be explicit.
 
 ## Current Repository Tests
 
@@ -93,7 +182,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 27 capabilities, 115 invariants, and 92
+The current monotonic ledger has 27 capabilities, 116 invariants, and 92
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.

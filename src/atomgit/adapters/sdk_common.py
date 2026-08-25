@@ -1,4 +1,4 @@
-"""Shared authentication and repository policy for the public Python SDK."""
+"""Shared authentication and repository policy for historical SDK adapters."""
 
 from typing import Optional
 

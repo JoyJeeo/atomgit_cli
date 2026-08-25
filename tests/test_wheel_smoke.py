@@ -232,6 +232,11 @@ def main():
                 "Commands:",
             ),
             (
+                "CLI package __main__ help",
+                [venv_python, "-m", "atomgit.cli.__main__", "--help"],
+                "Commands:",
+            ),
+            (
                 "installed imports",
                 [
                     venv_python,
@@ -243,6 +248,19 @@ def main():
                         "for n in ('atomgit.api', 'atomgit.cli', 'atomgit.cli.__main__', 'atomgit.utils', "
                         "'atomgit.completion', 'atomgit.uninstaller', "
                         "'atomgit.release', 'atomgit.lfs_pointer', "
+                        "'atomgit.compatibility.authentication', "
+                        "'atomgit.compatibility.download', "
+                        "'atomgit.compatibility.repositories', "
+                        "'atomgit.adapters.sdk_common', "
+                        "'atomgit.adapters.sdk_datasets', "
+                        "'atomgit.adapters.sdk_downloads', "
+                        "'atomgit.adapters.sdk_errors', "
+                        "'atomgit.adapters.sdk_repositories', "
+                        "'atomgit.adapters.sdk_uploads', "
+                        "'atomgit.infrastructure.completion', "
+                        "'atomgit.infrastructure.environment', "
+                        "'atomgit.infrastructure.managed_paths', "
+                        "'atomgit.infrastructure.uninstall', "
                         "'atomgit.infrastructure.validation', "
                         "'atomgit.infrastructure.git_credentials', "
                         "'atomgit.lifecycle.completion', "
@@ -287,7 +305,12 @@ def main():
             result = run(command, root, environment)
             check(
                 f"{name} succeeds",
-                result.returncode == 0 and marker in result.stdout,
+                result.returncode == 0
+                and marker in result.stdout
+                and (
+                    name != "CLI package __main__ help"
+                    or "RuntimeWarning" not in result.stderr
+                ),
                 (result.stdout + result.stderr)[-500:],
             )
 
@@ -341,6 +364,19 @@ def main():
                     "root=pathlib.Path(%r).resolve(); "
                     "modules=(atomgit, atomgit_hub, importlib.import_module('atomgit.release'), "
                     "importlib.import_module('atomgit.lfs_pointer'), "
+                    "importlib.import_module('atomgit.compatibility.authentication'), "
+                    "importlib.import_module('atomgit.compatibility.download'), "
+                    "importlib.import_module('atomgit.compatibility.repositories'), "
+                    "importlib.import_module('atomgit.adapters.sdk_common'), "
+                    "importlib.import_module('atomgit.adapters.sdk_datasets'), "
+                    "importlib.import_module('atomgit.adapters.sdk_downloads'), "
+                    "importlib.import_module('atomgit.adapters.sdk_errors'), "
+                    "importlib.import_module('atomgit.adapters.sdk_repositories'), "
+                    "importlib.import_module('atomgit.adapters.sdk_uploads'), "
+                    "importlib.import_module('atomgit.infrastructure.completion'), "
+                    "importlib.import_module('atomgit.infrastructure.environment'), "
+                    "importlib.import_module('atomgit.infrastructure.managed_paths'), "
+                    "importlib.import_module('atomgit.infrastructure.uninstall'), "
                     "importlib.import_module('atomgit.infrastructure.validation'), "
                     "importlib.import_module('atomgit.lifecycle.completion'), "
                     "importlib.import_module('atomgit.lifecycle.environment'), "

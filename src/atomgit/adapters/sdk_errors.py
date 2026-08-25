@@ -1,4 +1,4 @@
-"""Stable, credential-safe Python SDK error policy."""
+"""Stable, credential-safe error conversion for historical SDK adapters."""
 
 from ..adapters.lfs.pointer import CanonicalLfsPointerError
 from ..exceptions import (

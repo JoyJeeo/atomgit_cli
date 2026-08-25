@@ -9,8 +9,8 @@ from ..exceptions import (
     AtomGitRepositoryExistsError,
     AtomGitUnsupportedError,
 )
-from .common import _atomgit_repo_type, _get_token, _normalize_repo_id
-from .errors import _sdk_error
+from .sdk_common import _atomgit_repo_type, _get_token, _normalize_repo_id
+from .sdk_errors import _sdk_error
 
 
 def create_repository(

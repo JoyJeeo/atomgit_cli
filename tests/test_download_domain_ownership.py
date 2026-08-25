@@ -34,6 +34,7 @@ ADAPTER_DOWNLOAD_MODULES = tuple(
     name.replace("download.", "adapters.download.", 1)
     for name in LEGACY_DOWNLOAD_MODULES
 )
+COMPATIBILITY_DOWNLOAD_MODULE = "compatibility.download"
 
 HISTORICAL_HELPER_OWNERS = {
     "_atomgit_hf_endpoint": "adapters.download.transport",
@@ -94,7 +95,8 @@ def main():
         return 1
 
     api_module = importlib.import_module("atomgit.api")
-    download_service = importlib.import_module("atomgit.download.service")
+    download_service = importlib.import_module("atomgit.compatibility.download")
+    historical_download_service = importlib.import_module("atomgit.download.service")
     owner_modules = {
         name: importlib.import_module(f"atomgit.{name}")
         for name in ADAPTER_DOWNLOAD_MODULES
@@ -102,8 +104,12 @@ def main():
     }
 
     check(
+        "historical download service aliases the compatibility owner",
+        historical_download_service is download_service,
+    )
+    check(
         "historical concrete API class and singleton remain at the old path",
-        api_module.HuggingFaceAPI.__module__ == "atomgit.api"
+        api_module.HuggingFaceAPI.__module__ == "atomgit.compatibility.api"
         and type(api_module.api) is api_module.HuggingFaceAPI,
     )
     check(
@@ -182,26 +188,24 @@ def main():
     check(
         "the historical API class contains no moved download method definitions",
         not (
-            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            _class_methods(source_texts["compatibility.api"], "HuggingFaceAPI")
             & {"download_repo", "download_file"}
         ),
     )
     check(
-        "every nested download module has exact transfer ownership",
+        "canonical download modules replace physically absent historical aliases",
         all(
             PRODUCTION_MODULE_OWNERS[name] == "adapters"
             for name in ADAPTER_DOWNLOAD_MODULES
         )
-        and all(
-            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
-            for name in LEGACY_DOWNLOAD_MODULES
-        ),
+        and all(name not in source_texts for name in LEGACY_DOWNLOAD_MODULES)
+        and PRODUCTION_MODULE_OWNERS[COMPATIBILITY_DOWNLOAD_MODULE] == "compatibility",
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 5074
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 110
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] < 21,
+        LEGACY_FACADE_DEBT["compatibility.api"]["max_lines"] < 5074
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_functions"] < 110
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_classes"] < 21,
     )
 
     placeholder = dict(source_texts)
@@ -224,7 +228,7 @@ def main():
         repr(errors),
     )
 
-    sdk_download_source = source_texts["sdk.downloads"]
+    sdk_download_source = source_texts["adapters.sdk_downloads"]
     download_definitions = set().union(
         *(
             _top_level_definitions(source_texts[name])
@@ -276,6 +280,14 @@ def main():
             for node in ast.walk(canonical_service_tree)
         )
         and "sanitized_download_error" not in canonical_service_source,
+    )
+    check(
+        "historical download paths are runtime aliases rather than source modules",
+        all(name not in source_texts for name in LEGACY_DOWNLOAD_MODULES)
+        and {
+            "DownloadServiceMixin",
+        }
+        <= _top_level_definitions(source_texts[COMPATIBILITY_DOWNLOAD_MODULE]),
     )
 
     passed = sum(condition for _, condition, _ in results)

@@ -29,7 +29,7 @@ token 校验、持久化、损坏配置恢复、logout、配置权限、Git cred
 
 能力 ID、行为不变量、证据映射和完整阻断规则见
 [开发底线](development_floor.md)。`tests/development_floor_contract.py` 登记
-27 个能力和 115 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
+27 个能力和 116 条不变量，`tests/test_development_floor.py` 验证每个离线测试、
 文档和工作流标记都保持关联。
 
 ## 环境
@@ -166,27 +166,78 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 - 私有 model 与 dataset 均以 399,300,506 字节文件完成 CLI 超时中断、恢复、
   下载与 SHA-256 一致性验证；
 - HF `private=False` 创建会假成功为私有仓库；CLI 公开建仓因此先按私有创建，
-  再通过 V5 PATCH 和 GET 校验可见性。Python SDK 仍拒绝公开建仓；
+  再通过 V5 PATCH 和 GET 校验可见性。历史 `atomgit_hub` SDK 仍拒绝公开建仓，
+  原生 `AtomGitClient` 使用与 CLI 相同的收敛与验证 usecase；
 - 多层 ID 被正确转换，但测试账号缺少转换后命名空间权限，create/upload 均以
   401 非零退出且未留下仓库；
 - 固定测试仓库与多层物理 ID 最终在 model/dataset 路由均为 404。
 
 ## 远程测试矩阵
 
-每项应独立执行，避免一个失败使多个能力都无法判断：
+以下全面测试方案已经登记，等待维护者明确通知开始后执行；登记方案本身不代表已
+执行远程测试，也不会扩大现有授权。
 
-| 能力 | 最低证据 |
-|---|---|
-| model 建仓 | 新唯一仓库存在且类型正确 |
-| dataset 私有建仓 | 仓库存在、类型和私有属性正确 |
-| 单文件上传 | 下载回读校验和一致 |
-| 目录上传 | 多个文件下载回读一致 |
-| path-in-repo | 目标路径存在，仓库根目录没有误放文件 |
-| ignore | 保留文件存在，被忽略文件不存在 |
-| revision | 远端分支可查询，目标文件只在预期 revision |
-| resumable | 首次中断，第二次恢复，最终校验和一致 |
-| 公开下载 | 无 token 环境可以下载 |
-| 私有下载 | 无 token 失败，有 token 成功 |
+### 范围与安全前提
+
+- 只允许 `weixin_52273949/test_model` 和
+  `weixin_52273949/test_datasets`。URL、SSH 地址和规范化 repo ID 必须解析到
+  这两个仓库之一，否则在请求前终止。
+- 使用隔离 HOME、Git 配置、缓存、下载目录和临时目录；token 只能来自环境变量，
+  不得读取真实配置或出现在命令、日志和报告中。
+- 远端测试文件统一放在唯一的 `e2e/<run-id>/{cli,sdk,legacy}/` 前缀下，不覆盖
+  前缀以外的内容。
+- 每项独立执行并记录 CLI 退出码或 SDK 结构化结果、远端 commit/revision、远端
+  回读和 SHA-256；成功文案不能单独作为证据。
+
+### 执行顺序
+
+1. 记录分支、HEAD、工作树、完整 diff、Python 和锁定依赖版本。
+2. 执行七目录、模块所有权、依赖边、循环依赖、parity registry 和 development
+   floor 门禁。
+3. 执行 92 case 完整离线基线、`compileall`、`pip check` 和
+   `git diff 23c6d7d --check`，核对 27 项能力和 116 条不变量。
+4. 在隔离环境核对 source、editable、wheel 和 sdist 内容及所有 console、模块、
+   公共和历史兼容导入入口。
+5. 使用同一组严格 fake 比较 CLI 与原生 `AtomGitClient` 的 usecase、adapter、参数、
+   token/revision 策略、结果、错误和全局状态恢复。
+6. 对两个授权仓库做只读预检，记录类型、可见性、当前 revision/commit、文件清单、
+   CLI/SDK 身份和仓库列表。
+7. 对 model 和 dataset 仓库分别执行下表中的受控远程传输矩阵。
+8. 远程测试结束后重跑完整离线基线、diff、凭据和构件检查。
+
+### 受控远程传输矩阵
+
+| 场景 | CLI | 原生 SDK | 最低远端证据 |
+|---|---:|---:|---|
+| 单文件上传 | 是 | 是 | 路径、大小、远端回读 SHA-256 |
+| 普通目录上传 | 是 | 是 | 嵌套清单和逐文件 SHA-256 |
+| `path_in_repo` | 是 | 是 | 目标前缀准确且根目录无误放 |
+| ignore 规则 | 是 | 是 | 保留文件存在且哨兵文件不存在 |
+| resumable 上传 | 是 | 是 | 中断、恢复和最终 SHA-256 |
+| 单文件下载 | 是 | 是 | 与远端内容逐字节一致 |
+| 仓库下载 | 是 | 是 | 文件清单和内容一致 |
+| checksum | 是 | 是 | 正确内容通过且破坏内容失败 |
+| resumable 下载 | 是 | 是 | 从中断偏移恢复并最终一致 |
+| manifest prune | 是 | 是 | 只删除本地 manifest 管理文件 |
+| LFS pointer | 是 | 是 | raw blob、OID、size 和结尾 LF |
+| CLI 上传、SDK 下载 | 交叉 | 交叉 | 内容及元数据一致 |
+| SDK 上传、CLI 下载 | 交叉 | 交叉 | 内容及元数据一致 |
+
+历史 `atomgit_hub` 还要验证适用的下载、目录上传、直接 URL 和 `load_dataset`
+接口。已有公开仓库验证匿名下载，已有私有仓库验证认证下载；不为测试改变可见性。
+
+### 本轮明确不执行
+
+- 创建或删除仓库，以及删除后不存在验证；
+- 修改仓库可见性；
+- 创建或删除远程分支；
+- `--auto-configure-lfs` 或仓库级 `.gitattributes` 修改；
+- 发布、真实环境卸载、远程测试文件清理；
+- 访问两个授权仓库之外的任何仓库。
+
+这些项目在报告中记为“按范围未执行”，不能登记为失败，也不能登记为已通过远程
+验证。最终报告分为通过、失败、按范围未执行三组；每项远程通过必须带接口、仓库、
+操作结果、revision/commit 和回读校验和。
 
 ## 已知测试风险
 

@@ -64,6 +64,9 @@ def __getattr__(name):
 # high-frequency schema-only path free of business and SDK imports.
 if "_ATOMGIT_COMPLETE" not in os.environ:
     try:
+        from .compatibility.legacy_packages import install_legacy_package_aliases
+
+        install_legacy_package_aliases()
         from .config import config
         from .api import api
         from .cli import cli
@@ -76,6 +79,9 @@ if "_ATOMGIT_COMPLETE" not in os.environ:
             AtomGitNetworkError, AtomGitUnsupportedError,
         )
     except ImportError:
+        from compatibility.legacy_packages import install_legacy_package_aliases
+
+        install_legacy_package_aliases()
         from config import config
         from api import api
         from cli import cli

@@ -1,4 +1,4 @@
-"""Historical repository compatibility methods.
+"""Historical repository API compatibility methods.
 
 The V5 transport, response validation, and Hugging Face boundary are owned by
 ``adapters.atomgit_v5``. These wrappers preserve the old API's signatures,

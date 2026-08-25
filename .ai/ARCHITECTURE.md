@@ -28,7 +28,7 @@ python users
 Zsh completion -> lightweight CLI schema only
 ```
 
-The seven responsibility directories are the target business architecture:
+The seven responsibility directories are the current physical architecture:
 
 ```text
 src/atomgit/
@@ -42,7 +42,10 @@ src/atomgit/
 ```
 
 The historical `atomgit.cli`, `atomgit.api`, and `atomgit_hub` paths remain
-thin facades. Existing command names, Click objects, Python imports, function
+thin facades. `compatibility.cli` and `compatibility.api` own the CLI/API
+assembly, while root `cli.py` and `api.py` are the final import shims. Historical
+package paths are registered as runtime aliases without physical directories. Existing
+command names, Click objects, Python imports, function
 identities, signatures, return conventions, exception behavior, entry paths,
 and monkeypatch seams are tested compatibility contracts.
 
@@ -65,19 +68,25 @@ fail closed on unowned modules, new forbidden edges, cycles, facade growth,
 empty placeholders, stale artifact declarations, and missing parity metadata.
 
 The extracted technical owners remain explicit and are not additional business
-layers: `commands/` owns CLI command implementations, `adapters.atomgit_v5`
+layers: `interfaces.cli` owns the Click schema and command presentation,
+while `commands/` is only a historical module alias. `adapters.atomgit_v5`
 owns the V5 authentication/repository transport and response boundaries, and
-`services/` keeps only the historical authentication/repository wrappers,
-output, identities, and patch seams. `adapters.download` owns repository
-enumeration, destination safety, transport, checksum, resume, manifest, and
-prune behavior; `download/` keeps only historical method/export compatibility.
+`compatibility.authentication` plus `compatibility.repositories` own the
+historical API output, signatures, identities, and patch seams; `services/`
+contains aliases only. `adapters.download` owns repository enumeration,
+destination safety, transport, checksum, resume, manifest, and prune behavior;
+`compatibility.download` owns historical API result/output conversion and
+`download/` contains module aliases only.
 `adapters.upload` owns file, ordinary-directory, resumable, projection, retry,
 and HF technical transfer behavior; `adapters.lfs` owns LFS protocol, pointer,
 attributes, and recovery behavior; and `adapters.sdk_uploads` owns the legacy
 SDK upload implementation. Historical `upload/`, `lfs/`, `lfs_pointer.py`, and
 `sdk/uploads.py` paths are module aliases that retain signatures, identities,
-and patch seams only. `lifecycle/` owns completion, installation provenance,
-managed paths, and uninstall policy. `infrastructure.release` owns release and
+and patch seams only. The remaining historical SDK download, dataset,
+repository, common-policy, and error-conversion implementations live in
+`adapters.sdk_*`; every `sdk/` module is now an alias. `infrastructure` owns completion, installation
+provenance, managed paths, and uninstall policy; `lifecycle/` contains module
+aliases only. `infrastructure.release` owns release and
 update validation, bounded asset transport, installation, and post-install
 verification; historical `atomgit.release` forwards symbols and patch seams to
 that owner. These owners are connected through the registered compatibility and
@@ -142,7 +151,11 @@ The distribution version is read from the single `version.py` authority.
 ## Verified Status And Residual Risk
 
 The complete offline baseline is the mandatory gate:
-`python tests/run_cli_baseline.py` currently passes 92 isolated cases. Compile,
+After the separately authorized legacy-directory deletion, the focused layout,
+structure, packaging, import, facade, and ownership checks pass against the
+exact seven-directory tree. The complete offline baseline passes 92/92 in
+85.39s, and the wheel/sdist/editable smoke gate passes 38/38, including the
+installed private `python -m atomgit.cli.__main__` compatibility entry. Compile,
 dependency, packaging, import, security, portability, structure, and parity
 contracts are included in that matrix; no live remote write is required for
 the offline architecture and compatibility claims.

@@ -8,8 +8,8 @@ from huggingface_hub import hf_hub_download
 from huggingface_hub import snapshot_download as hf_snapshot_download
 
 from ..infrastructure.utils import run_download_with_retry
-from .common import _get_token, _normalize_repo_id
-from .errors import _sdk_error
+from .sdk_common import _get_token, _normalize_repo_id
+from .sdk_errors import _sdk_error
 
 
 def snapshot_download(

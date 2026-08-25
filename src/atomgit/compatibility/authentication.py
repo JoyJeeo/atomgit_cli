@@ -1,4 +1,4 @@
-"""Historical authentication compatibility methods.
+"""Historical authentication API compatibility methods.
 
 The transport and identity parsing live in ``adapters.atomgit_v5``. This
 module keeps the old API method signatures, output, and patchable names.

@@ -384,12 +384,13 @@ def main():
         ),
     )
 
-    cli_source = inspect.getsource(cli_module)
+    cli_source = inspect.getsource(importlib.import_module("atomgit.compatibility.cli"))
     check(
         "API and CLI facades retain their separate compatibility boundaries",
-        (SRC_DIRECTORY / "atomgit" / "api" / "__init__.py").is_file()
-        and (SRC_DIRECTORY / "atomgit" / "cli" / "__init__.py").is_file()
-        and not (SRC_DIRECTORY / "atomgit" / "cli.py").exists()
+        not (SRC_DIRECTORY / "atomgit" / "api").exists()
+        and not (SRC_DIRECTORY / "atomgit" / "cli").exists()
+        and (SRC_DIRECTORY / "atomgit" / "api.py").is_file()
+        and (SRC_DIRECTORY / "atomgit" / "cli.py").is_file()
         and 'api = _LazyObject("api", "api")' in cli_source,
     )
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock the historical CLI path as a package-only compatibility facade."""
+"""Lock historical CLI paths to one canonical compatibility facade."""
 
 import ast
 import importlib
@@ -52,6 +52,30 @@ EXPECTED_CALLBACK_SIGNATURES = {
     "completion show": "(shell)",
     "completion install": "(shell)",
     "completion uninstall": "(shell)",
+}
+EXPECTED_COMMAND_EXPORTS = {
+    "update",
+    "uninstall",
+    "completion",
+    "show_completion",
+    "install_shell_completion",
+    "uninstall_shell_completion",
+    "login",
+    "logout",
+    "whoami",
+    "repo",
+    "cache",
+    "clear_cache",
+    "create",
+    "list_repositories",
+    "set_repository_visibility",
+    "delete_repository",
+    "branch_commands",
+    "create_branch",
+    "upload",
+    "download",
+    "download_file",
+    "config_show",
 }
 FORBIDDEN_FACADE_CALLS = {
     "open",
@@ -111,31 +135,41 @@ def main():
     flat_path = PACKAGE_DIRECTORY / "cli.py"
     facade_path = PACKAGE_DIRECTORY / "cli" / "__init__.py"
     executable_path = PACKAGE_DIRECTORY / "cli" / "__main__.py"
+    owner_path = PACKAGE_DIRECTORY / "compatibility" / "cli.py"
     check(
-        "the historical CLI path is represented only by a package facade",
-        facade_path.is_file() and executable_path.is_file() and not flat_path.exists(),
+        "root CLI shim and canonical facade replace the historical package",
+        not facade_path.exists()
+        and not executable_path.exists()
+        and flat_path.is_file()
+        and owner_path.is_file(),
         repr(
             {
                 "flat": flat_path.exists(),
                 "facade": facade_path.is_file(),
                 "executable": executable_path.is_file(),
+                "owner": owner_path.is_file(),
             }
         ),
     )
-    if not facade_path.is_file() or not executable_path.is_file():
+    if not owner_path.is_file() or not flat_path.is_file():
         return 1
 
-    source = facade_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(facade_path))
+    source = owner_path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(owner_path))
     cli_module = importlib.import_module("atomgit.cli")
+    owner_module = importlib.import_module("atomgit.compatibility.cli")
     atomgit_package = importlib.import_module("atomgit")
+    schema_module = importlib.import_module("atomgit.interfaces.cli.schema")
+    executable_module = importlib.import_module("atomgit.cli.__main__")
 
     check(
-        "source imports resolve the package facade with historical provenance",
+        "historical CLI import forwards through the root shim",
         cli_module.__name__ == "atomgit.cli"
-        and Path(cli_module.__file__).resolve() == facade_path.resolve()
-        and cli_module.__package__ == "atomgit.cli"
-        and tuple(cli_module.__path__) == (str(facade_path.parent),),
+        and Path(cli_module.__file__).resolve() == flat_path.resolve()
+        and cli_module.__package__ == "atomgit"
+        and tuple(cli_module.__path__) == ()
+        and executable_module.__name__ == "atomgit.cli.__main__"
+        and executable_module.cli is owner_module.cli,
         repr(
             {
                 "name": cli_module.__name__,
@@ -155,7 +189,8 @@ def main():
         discover_public_schema(cli_module.cli) == EXPECTED_PUBLIC_SCHEMA
         and callback_signatures == EXPECTED_CALLBACK_SIGNATURES
         and all(
-            command.callback.__module__ == "atomgit.cli" for command in leaves.values()
+            command.callback.__module__ == "atomgit.compatibility.cli"
+            for command in leaves.values()
         )
         and atomgit_package.cli is cli_module.cli,
         repr(callback_signatures),
@@ -163,8 +198,9 @@ def main():
 
     check(
         "lazy runtime resolution targets the parent package and historical context",
-        cli_module._COMMAND_CONTEXT is cli_module
-        and cli_module._import_runtime_module("api").__name__ == "atomgit.api"
+        cli_module._COMMAND_CONTEXT is owner_module
+        and cli_module._import_runtime_module("api").__name__
+        == "atomgit.compatibility.api"
         and cli_module._import_runtime_module("utils").__name__ == "atomgit.utils"
         and cli_module.api._resolve() is importlib.import_module("atomgit.api").api,
     )
@@ -192,14 +228,32 @@ def main():
         ),
     )
 
+    check(
+        "the Click schema has one canonical interface owner",
+        cli_module.cli is not None
+        and schema_module.build_cli.__module__ == "atomgit.interfaces.cli.schema"
+        and all(
+            command.callback.__module__ == "atomgit.compatibility.cli"
+            for command in leaves.values()
+        ),
+    )
+    check(
+        "historical command objects remain importable from atomgit.cli",
+        all(hasattr(cli_module, name) for name in EXPECTED_COMMAND_EXPORTS)
+        and cli_module.login is leaves["login"]
+        and cli_module.upload is leaves["upload"]
+        and cli_module.repo is cli_module.cli.commands["repo"],
+    )
+
     module_results = {
         module_name: _module_help(module_name)
-        for module_name in ("atomgit", "atomgit.cli")
+        for module_name in ("atomgit", "atomgit.cli", "atomgit.cli.__main__")
     }
     check(
         "both historical Python module entry paths retain executable help",
         all(result.returncode == 0 for result in module_results.values())
-        and all("Usage:" in result.stdout for result in module_results.values()),
+        and all("Usage:" in result.stdout for result in module_results.values())
+        and "RuntimeWarning" not in module_results["atomgit.cli.__main__"].stderr,
         repr(
             {
                 name: (result.returncode, result.stdout, result.stderr)
@@ -208,11 +262,11 @@ def main():
         ),
     )
 
-    api_facade = PACKAGE_DIRECTORY / "api" / "__init__.py"
+    api_facade = PACKAGE_DIRECTORY / "compatibility" / "api.py"
     check(
         "the completed API facade remains outside the CLI migration",
         api_facade.is_file()
-        and not (PACKAGE_DIRECTORY / "api.py").exists()
+        and (PACKAGE_DIRECTORY / "api.py").is_file()
         and importlib.import_module("atomgit.api").__file__ == str(api_facade),
     )
 

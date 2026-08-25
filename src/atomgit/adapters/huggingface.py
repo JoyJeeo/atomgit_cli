@@ -8,10 +8,26 @@ seam requires it.
 from pathlib import Path
 
 
+class _LegacySdkProxy:
+    """Resolve historical SDK adapter functions at each call site."""
+
+    @staticmethod
+    def create_repository(*args, **kwargs):
+        from .sdk_repositories import create_repository
+
+        return create_repository(*args, **kwargs)
+
+    @staticmethod
+    def upload_folder(*args, **kwargs):
+        from .sdk_uploads import upload_folder
+
+        return upload_folder(*args, **kwargs)
+
+
 class HuggingFaceAdapter:
     def __init__(self, *, sdk_module=None, api_module=None, download_adapter=None):
         if sdk_module is None:
-            from .. import sdk as sdk_module
+            sdk_module = _LegacySdkProxy()
         self.sdk = sdk_module
         self._api = api_module
         if download_adapter is None:

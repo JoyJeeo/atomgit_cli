@@ -1,4 +1,8 @@
-"""Upload defaults owned by the canonical outbound adapter."""
+"""Adapter import path for shared upload defaults."""
 
-_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
-DEFAULT_UPLOAD_BATCH_SIZE = 20
+from ...core.contracts import (
+    _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+    DEFAULT_UPLOAD_BATCH_SIZE,
+)
+
+__all__ = ("_RESUMABLE_DEFAULT_REQUEST_TIMEOUT", "DEFAULT_UPLOAD_BATCH_SIZE")

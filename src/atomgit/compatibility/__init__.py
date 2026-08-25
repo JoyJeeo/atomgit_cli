@@ -1,4 +1,4 @@
-"""Historical paths, signatures, and the parity delivery registry."""
+"""Historical paths, signatures, patch seams, and parity registry."""
 
 from .registry import CAPABILITY_REGISTRY, validate_parity_registry
 

@@ -4,7 +4,8 @@
 
 - Distribution name: `atomgit`
 - CLI command: `atomgit`
-- Python imports: `atomgit` and compatibility module `atomgit_hub`
+- Native Python interface: `atomgit.interfaces.sdk.AtomGitClient`
+- Legacy HF-style imports: `atomgit` and compatibility module `atomgit_hub`
 - Development mainline: `yuto`
 - Current package version: `1.1.1`
 
@@ -54,7 +55,25 @@ every remote path is verified; known status follows the interface list.
 - Confirmed current-interpreter package uninstall plus an official curl cleanup
   path that preserves user configuration and handles prior direct pip removal
 
-### Python SDK
+### Native Python SDK
+
+`atomgit.interfaces.sdk.AtomGitClient` is the parity-oriented interface for
+general CLI remote capabilities. It exposes:
+
+- Login, logout, and current-user lookup
+- Repository creation, listing, visibility, branch creation, and confirmed
+  deletion
+- Single-file and folder upload, including resumable and LFS policy, revision,
+  worker, batch, timeout, progress, and path controls as applicable
+- Snapshot and single-file download, including checksum, resume, prune,
+  revision, and file-selection controls
+- Structured `OperationResult` values over the shared usecases
+
+### Legacy HF-Style Python SDK
+
+`atomgit_hub`, `atomgit.atomgit_hub`, and the matching `atomgit` exports retain
+the established function signatures, return values, exceptions, and patch
+seams for compatibility. This narrower surface exposes:
 
 - Snapshot and single-file download
 - Direct download URL construction
@@ -73,13 +92,14 @@ every remote path is verified; known status follows the interface list.
   399,300,506-byte checksum readback, dataset creation and transfer through the
   AtomGit-compatible model route, credential permissions, `load_dataset`, and
   interrupted-download recovery.
-- Non-default revision behavior is explicitly rejected because AtomGit does
-  not expose the requested branch. Multi-level ID mapping is shared across
-  operations; live create/upload returned 401 without false success when the
-  test account lacked the mapped physical namespaces.
-- The previously known SDK upload lifetime, parameter-forwarding, and timeout
-  state defects are covered by offline regressions on the yuto development
-  line.
+- The legacy `atomgit_hub` upload rejects non-default revisions rather than
+  implicitly creating a branch. The native SDK shares the CLI revision policy
+  and accepts an explicitly created, verified branch. Multi-level ID mapping is
+  shared across operations; live create/upload returned 401 without false
+  success when the test account lacked the mapped physical namespaces.
+- The previously known legacy SDK upload lifetime, parameter-forwarding, and
+  timeout state defects are covered by offline regressions on the yuto
+  development line.
 - A controlled upload to `weixin_52273949/test_datasets` proved that replacing
   AtomGit's noncanonical `lfsFile` materialization with the exact canonical
   pointer payload preserves LFS OID and size, ends in one LF, and passes
@@ -88,7 +108,8 @@ every remote path is verified; known status follows the interface list.
 
 ## Product Contracts
 
-- CLI and SDK share credentials from `~/.atomgit/config.json`.
+- CLI, the native SDK, and the legacy SDK share credentials from
+  `~/.atomgit/config.json`.
 - Public downloads should work without login; private operations use explicit
   or stored credentials.
 - The HF API endpoint is `https://hub.atomgit.com`.
@@ -112,11 +133,14 @@ every remote path is verified; known status follows the interface list.
 - Repository pruning is explicit and may delete only regular files previously
   written and recorded by successful whole-repository CLI downloads; it must
   not scan or adopt unrelated local content.
-- Remote repository deletion is CLI-only, requires an exact repeated repository
-  ID, and may report success only after a post-delete detail request proves the
-  target is no longer accessible.
-- SDK failures expose stable `AtomGitError` subclasses while remaining
-  compatible with callers that catch `Exception` or validation `ValueError`.
+- Remote repository deletion is exposed by the CLI and native SDK, requires an
+  exact repeated repository ID, and may report success only after a post-delete
+  detail request proves the target is no longer accessible. The legacy
+  `atomgit_hub` surface intentionally has no deletion function.
+- Native SDK operations return structured `OperationResult` values and stable
+  `AtomGitError` mappings. Legacy SDK failures retain their established
+  `AtomGitError` subclasses and compatibility with callers that catch
+  `Exception` or validation `ValueError`.
 
 ## Boundaries
 

@@ -1,3 +1,5 @@
+"""Historical API compatibility assembly and patch surface."""
+
 # ruff: noqa: F401 -- historical dependency and monkeypatch surface
 import errno  # noqa: F401 -- historical upload patch surface
 import hashlib  # noqa: F401 -- historical transfer patch surface
@@ -81,16 +83,15 @@ try:
         verify_canonical_lfs_pointers,
     )
     from ..adapters.lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
-    from ..config import config  # noqa: F401
-    from ..download.service import DownloadServiceMixin
-    from ..services import _delete_legacy_patch, _forward_legacy_patch
-    from ..services import authentication as _authentication_service
-    from ..services import repositories as _repository_service
-    from ..services.authentication import (  # noqa: F401
+    from ..compatibility import authentication as _authentication_service
+    from ..compatibility import repositories as _repository_service
+    from ..compatibility.authentication import (  # noqa: F401
         _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
         AuthenticationServiceMixin,
     )
-    from ..services.repositories import (  # noqa: F401
+    from ..compatibility.download import DownloadServiceMixin
+    from ..compatibility.facade import _delete_legacy_patch, _forward_legacy_patch
+    from ..compatibility.repositories import (  # noqa: F401
         _ATOMGIT_V5_API_BASE,
         _ATOMGIT_V5_MAX_JSON_BYTES,
         RepositoryServiceMixin,
@@ -106,6 +107,7 @@ try:
         _repo_private_state,
         _sanitized_v5_api_error,
     )
+    from ..config import config  # noqa: F401
     from ..utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,
@@ -132,16 +134,15 @@ except ImportError:
         verify_canonical_lfs_pointers,
     )
     from adapters.lfs.service import _SlowFlowCoordinator as _LFS_SERVICE_IMPORT
-    from config import config  # noqa: F401
-    from download.service import DownloadServiceMixin
-    from services import _delete_legacy_patch, _forward_legacy_patch
-    from services import authentication as _authentication_service
-    from services import repositories as _repository_service
-    from services.authentication import (  # noqa: F401
+    from compatibility import authentication as _authentication_service
+    from compatibility import repositories as _repository_service
+    from compatibility.authentication import (  # noqa: F401
         _ATOMGIT_IDENTITY_MAX_JSON_BYTES,
         AuthenticationServiceMixin,
     )
-    from services.repositories import (  # noqa: F401
+    from compatibility.download import DownloadServiceMixin
+    from compatibility.facade import _delete_legacy_patch, _forward_legacy_patch
+    from compatibility.repositories import (  # noqa: F401
         _ATOMGIT_V5_API_BASE,
         _ATOMGIT_V5_MAX_JSON_BYTES,
         RepositoryServiceMixin,
@@ -157,6 +158,7 @@ except ImportError:
         _repo_private_state,
         _sanitized_v5_api_error,
     )
+    from config import config  # noqa: F401
     from utils import (  # noqa: F401
         auth_error_kind,
         is_auth_error,

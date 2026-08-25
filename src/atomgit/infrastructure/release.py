@@ -21,9 +21,9 @@ from email.parser import Parser
 from pathlib import Path
 
 try:
-    from ..lifecycle.environment import is_source_or_editable_install
+    from .environment import is_source_or_editable_install
 except ImportError:
-    from lifecycle.environment import is_source_or_editable_install
+    from environment import is_source_or_editable_install
 
 
 PROJECT = "JoyJeeo/atomgit_cli"

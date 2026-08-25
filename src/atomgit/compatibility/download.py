@@ -1,5 +1,5 @@
 # ruff: noqa: F401 -- historical private import surface
-"""Historical download API methods backed by the canonical adapter."""
+"""Historical download API methods backed by canonical adapters."""
 
 from pathlib import Path
 
