@@ -1,28 +1,28 @@
 # Current Issue Contract
 
-Status: inactive
+Status: completed
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R5 implementation, offline verification, independent review approved, human acceptance granted, and delivery completed`
+- Phase: `R6 implementation, offline verification, independent review approved, human acceptance granted, and delivery authorized`
 - Base branch: `yuto`
 - Base commit: `25fe93b docs(ai): record architecture delivery`
-- Task branch: `codex/upload-lfs-owner-migration` (local only; not pushed)
-- Historical closure: `LOCAL-ARCH-CLI-SDK-PARITY-RECOVERY` R4 delivery remains completed; R5 is activated as a new independently accepted local Issue by the maintainer's request to continue development
+- Task branch: `codex/lifecycle-facade-closure` (local only; not pushed)
+- Historical closure: R5 upload/LFS ownership migration was delivered and accepted; this request explicitly activates the pending local R6 package
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `clean after task commit 51d7410, local no-ff merge 097a5bb, yuto push, and remote equality verification; no credentials or generated artifacts`
-- Last completed action: `created 51d7410, merged it into yuto as 097a5bb, pushed github/yuto, fetched, and verified local yuto and github/yuto at 097a5bb1f507adac346bfad60bcc5fb198b80e46`
-- Next exact action: `none; activate a new Issue explicitly before further development`
+- Worktree state: `dirty with R6 source, contract, test, and documentation edits; no credentials or generated artifacts`
+- Last completed action: `migrated release/update implementation, ran independent review, and passed the final complete baseline`
+- Next exact action: `commit R6, merge locally into yuto, push yuto, and verify remote equality`
 - Blockers: `none`
-- Tests for this phase so far: `upload ownership 17/17; LFS ownership 14/14; SDK ownership 19/19; repository ownership 24/24; download ownership 18/18; structure 14/14; HF contract 16/16; packaging 13/13; src-layout 6/6; import-order 5/5; completion 19/19; wheel/sdist smoke 37/37; complete baseline 92/92 in 81.03s; compileall, pip check, and diff check passed`
-- Residual risk: `controlled remote upload/LFS behavior remains unverified; R6 lifecycle and complete compatibility closure remain outside this delivered Issue`
+- Tests for this phase so far: `release workflow 27/27; lifecycle ownership 25/25; infrastructure ownership 17/17; structure 14/14; packaging 13/13; src-layout 6/6; deploy 8/8; public imports 8/8; complete baseline 92/92 in 86.06s; compileall, pip check, Ruff, Black/isort checks, and diff check passed`
+- Residual risk: `release/update remote downloads and publication remain offline-only; lifecycle facade migration has not yet been implemented`
 
 ## Active Issue
 
 - Remote Issue: `none; do not create one without explicit authorization`
-- ID: `LOCAL-R5-UPLOAD-LFS-OWNER-MIGRATION`
-- Title: `Migrate upload and LFS technical ownership into canonical adapters`
+- ID: `LOCAL-R6-LIFECYCLE-FACADE-CLOSURE`
+- Title: `Move release/update technical ownership behind infrastructure while preserving the historical facade`
 - Primary type: `refactoring`
 - Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`
 - Priority: `P1`
@@ -30,118 +30,117 @@ Status: inactive
 
 ### Objective
 
-Make the seven-directory architecture the real technical owner of file,
-ordinary-directory, resumable-directory, and LFS upload behavior. Canonical
-adapter modules must own Hugging Face and AtomGit protocol calls, projection,
-retry/reconciliation, pointer verification, and technical state handling.
-Historical `upload/`, `lfs/`, `sdk/uploads.py`, `atomgit.api`, and top-level SDK
-paths must retain only their established compatibility signatures, identities,
-returns, exception mapping, and patch seams.
+Make `infrastructure.release` the canonical technical owner of release/update
+validation, bounded downloads, installation, and post-install verification.
+Keep historical `atomgit.release` as a compatibility facade with the exact
+existing exports, identities, signatures, returns, errors, and monkeypatch
+seams. The migration must preserve CLI update behavior and package artifacts.
 
 ### User Impact
 
-No intended user-visible behavior change. Existing CLI commands/options/output,
-legacy SDK signatures and returns, native SDK structured results, upload target
-selection, LFS semantics, temporary-resource lifetime, and global-state
-restoration remain exact.
+No intended user-visible behavior change. Existing update/uninstall/completion
+commands, release helper imports, signatures, error categories, temporary
+resource lifetime, bounded network behavior, and package entry points remain
+exact.
 
 ### Affected Capability IDs
 
-`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-DISPATCH`, `REVISION`, `UPLOAD-FILE`,
-`UPLOAD-FOLDER`, `UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`,
-`SDK-UPLOAD`, `REPO-ID`, `RUNTIME`, `DEPENDENCY-CONTRACT`, `PACKAGING`,
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-DISPATCH`, `RUNTIME`, `PACKAGING`,
 `PORTABILITY`, `ERROR-REDACTION`.
 
 ### Protected Existing Invariants
 
-- CLI schema, defaults, Chinese output, progress, exit codes, and command
-  callback identities remain unchanged.
-- Historical API/SDK imports, function/class identities, signatures, return
-  values, error categories, assignment/deletion patch propagation, and lazy
-  import behavior remain unchanged.
-- Model/dataset routing, repository ID normalization, revision validation,
-  ignore/path-prefix policy, batch/worker behavior, and exact HF 1.1.7 keyword
-  contracts remain unchanged.
-- Temporary projections and fallback directories remain alive through their
-  dependent calls and are cleaned afterward; timeout, progress, environment,
-  context variables, and patched HF globals restore on success and failure.
-- LFS preupload classification, bounded retry/recovery, automatic attributes
-  transaction, canonical pointer bytes, raw V5 verification, and credential
-  redaction remain unchanged.
+- CLI schema, defaults, Chinese output, exit codes, and callback identities
+  remain unchanged.
+- Historical `atomgit.release` imports, symbol identities, signatures, return
+  values, errors, assignment/deletion patch propagation, and lazy imports
+  remain unchanged.
+- Release validation, bounded response/asset sizes, redirect origin policy,
+  temporary wheel lifetime, subprocess ordering, and source/editable install
+  detection remain unchanged.
 
 ### New Or Changed Invariants
 
-- `adapters` is the sole technical implementation owner for upload and LFS
-  protocol behavior; historical upload/LFS/SDK modules are compatibility
-  facades with no duplicate orchestration or direct external transport calls.
-- Structure and ownership tests fail closed if upload/LFS business definitions
-  or locked dependency calls return to a historical facade.
-- CLI and native SDK upload routes continue to reach the same registered
-  `UploadUseCase` and canonical adapter boundary.
+- `infrastructure.release` is the sole technical owner of release/update
+  behavior; historical `atomgit.release` contains only forwarding and seam
+  registration.
+- Structure and ownership tests fail closed if release business definitions or
+  direct release transport calls return to the historical facade.
 
 ### In Scope
 
-- upload/LFS adapter owner modules and imports;
-- historical facade/export/patch-seam forwarding required by the migration;
-- exact owner, dependency-edge, packaging, parity, and facade-debt contracts;
-- focused offline regressions, affected architecture documentation, complete
-  baseline, DoD checks, and independent review.
+- release owner module, historical facade/export/patch-seam forwarding, owner
+  and dependency contracts, packaging/artifact declarations, focused offline
+  regressions, architecture documentation, complete baseline, DoD checks, and
+  independent review.
 
 ### Out Of Scope
 
-- new upload features or public parameter changes;
-- lifecycle/R6 migration, dependency upgrades, broad formatting, or release;
+- new release features or public parameter changes;
+- upload/LFS behavior, dependency upgrades, broad formatting, or publication;
 - live upload, repository/branch creation or deletion, credential mutation,
   publication, remote Issue/PR actions, commit, merge, or push.
 
 ### Focused Tests And Evidence
 
-- fail-closed upload and LFS owner/facade tests;
-- upload file, ordinary, resumable, LFS, SDK lifetime/timeout/parameters,
-  global-state, parity, API facade, structure, packaging, and installed artifact
+- fail-closed release owner/facade and lifecycle tests;
+- release workflow, installer, structure, packaging, and installed artifact
   suites;
-- real installed HF/datasets versions and callable signatures;
 - `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
   `python -m pip check`, formatting/static debt audit, and `git diff --check`.
 
 ### Acceptance Criteria
 
-1. Canonical adapter modules own all direct HF/V5 upload and LFS technical
-   behavior, with no historical business owner remaining.
-2. Historical API/CLI/SDK paths preserve every registered identity, signature,
-   return, error, lazy-import, assignment/deletion, and monkeypatch seam.
-3. All protected upload/LFS/state/security/dependency/packaging behavior passes
-   focused regressions and the complete offline baseline.
-4. Structure gates fail closed on reintroduced facade business logic, direct
-   historical dependency calls, missing owners, stale artifacts, or bypassed
-   CLI/native SDK usecase routes.
-5. Architecture and durable task evidence match the actual source and Git
-   state; independent review has no open blocking finding before acceptance.
+1. `infrastructure.release` owns all release/update technical behavior.
+2. `atomgit.release` preserves every registered identity, signature, return,
+   error, lazy-import, assignment/deletion, and monkeypatch seam.
+3. Lifecycle, packaging, artifact, and security contracts pass the focused and
+   complete offline suites.
+4. Structure gates fail closed on facade business logic, forbidden dependency
+   edges, missing owners, or stale artifacts.
+5. Architecture and durable task evidence match the source and Git state;
+   independent review has no open blocking finding before acceptance.
 
 ### Authorization
 
-The maintainer's `继续开发` request activated this R5 package. The subsequent
-request to commit and push authorized one cohesive task commit, local no-ff
-merge into `yuto`, push of `yuto`, and remote equality verification. It did not
-authorize pushing the task branch, live remote operations, credential changes,
-Issue/PR changes, release, or publication.
+The maintainer's explicit `继续按照本地开发 issue 进行开发` request activates
+this local R6 package. Commit, merge, push, remote Issue/PR changes, live
+remote operations, credential changes, release, and publication remain
+unauthorized.
 
 ### Complete Baseline Evidence
 
-`python tests/run_cli_baseline.py` passed 92/92 in 81.03s in the
-`atomgit_cli` environment (offline). Compileall, pip check, diff check,
-packaging metadata, source-layout, wheel/sdist, structure, import-order,
-completion, ownership, dependency signature, upload/LFS, SDK lifetime/timeout,
-pointer, progress, and global-state checks passed. No live remote upload/LFS or
-credential mutation was run.
+`python tests/run_cli_baseline.py` passed 92/92 in 86.06s in the `atomgit_cli`
+environment (offline). Compileall, pip check, diff check, packaging metadata,
+source-layout, wheel/sdist, structure, import-order, completion, lifecycle and
+release ownership, dependency signature, and public import checks passed. No
+live release download/publication or credential mutation was run.
 
 ### Independent Review
 
-`APPROVED` on 2026-08-25. Independent review of the full R5 diff found no
-open P0/P1/P2/P3 findings. Review covered canonical owner edges, historical
-module identity and patch propagation, locked HF 1.1.7 signatures, lazy
-completion imports, source/editable/wheel/sdist artifacts, security/state
-restoration, and the complete offline evidence.
+`APPROVED` on 2026-08-25. Independent review of the R6 diff found no open
+P0/P1/P2/P3 findings. Review covered release owner edges, historical module
+identity and patch propagation, module execution compatibility, source/editable/
+wheel/sdist artifacts, security/state behavior, and the complete offline
+evidence.
+
+### R6 Exit-Gate Evidence
+
+- `infrastructure.release` owns release/update validation, bounded asset
+  transport, installation, and post-install verification; `atomgit.release`
+  is a forwarding facade with preserved identities and patch seams.
+- Structure, lifecycle ownership, source-layout, packaging, release workflow,
+  deploy, public import, and complete baseline checks passed.
+- Residual risk: release downloads/publication and remote update behavior remain
+intentionally unrun; no credentials or remote state were changed.
+
+### Human Acceptance And Delivery
+
+Human acceptance and explicit commit/push authorization were granted in the
+current conversation. Authorized delivery is one cohesive local task commit,
+local no-ff merge into `yuto`, push of `yuto`, and remote equality verification.
+The task branch remains local-only; no live release operation, credential
+mutation, remote Issue/PR change, or publication is authorized.
 
 ### R5 Exit-Gate Evidence
 

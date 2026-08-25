@@ -121,6 +121,7 @@ def main():
     managed_paths_owner = importlib.import_module("atomgit.lifecycle.managed_paths")
     uninstall_owner = importlib.import_module("atomgit.lifecycle.uninstall")
     release = importlib.import_module("atomgit.release")
+    release_owner = importlib.import_module("atomgit.infrastructure.release")
 
     check(
         "historical completion symbols remain exact owner identities",
@@ -174,12 +175,25 @@ def main():
         is environment_owner.is_source_or_editable_install,
     )
     check(
+        "release facade forwards implementation identities",
+        release.is_stable_version is release_owner.is_stable_version
+        and release.validate_release_assets is release_owner.validate_release_assets
+        and release._main is release_owner._main
+        and release._is_source_or_editable_install
+        is release_owner._is_source_or_editable_install,
+    )
+    check(
         "managed completion manifest has one lifecycle identity",
         uninstaller.MANAGED_COMPLETION_RELATIVE_PATHS
         is managed_paths_owner.MANAGED_COMPLETION_RELATIVE_PATHS,
     )
 
     replacement = object()
+    with patch.object(release, "MAX_RESPONSE_BYTES", replacement):
+        check(
+            "patching historical release seam reaches infrastructure owner",
+            release_owner.MAX_RESPONSE_BYTES is replacement,
+        )
     with patch.object(completion, "_active_conda_prefix", replacement):
         check(
             "patching historical completion environment seam reaches its owner",

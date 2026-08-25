@@ -38,7 +38,7 @@ src/atomgit/
 ├── interfaces/      CLI presentation and native SDK request/result mapping
 ├── adapters/        Hugging Face, AtomGit V5, and outbound technical ports
 ├── compatibility/  historical paths, identities, signatures, and seams
-└── infrastructure/ config, runtime, filesystem, cache, Git, and lifecycle
+└── infrastructure/ config, runtime, filesystem, cache, Git, and technical distribution
 ```
 
 The historical `atomgit.cli`, `atomgit.api`, and `atomgit_hub` paths remain
@@ -77,8 +77,11 @@ attributes, and recovery behavior; and `adapters.sdk_uploads` owns the legacy
 SDK upload implementation. Historical `upload/`, `lfs/`, `lfs_pointer.py`, and
 `sdk/uploads.py` paths are module aliases that retain signatures, identities,
 and patch seams only. `lifecycle/` owns completion, installation provenance,
-managed paths, and uninstall policy. These owners are connected through the
-registered compatibility and adapter boundaries.
+managed paths, and uninstall policy. `infrastructure.release` owns release and
+update validation, bounded asset transport, installation, and post-install
+verification; historical `atomgit.release` forwards symbols and patch seams to
+that owner. These owners are connected through the registered compatibility and
+adapter boundaries.
 
 ## Public Surfaces
 

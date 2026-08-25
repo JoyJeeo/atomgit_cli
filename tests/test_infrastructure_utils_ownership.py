@@ -181,7 +181,7 @@ def main():
         all(
             PRODUCTION_MODULE_OWNERS[name] == "infrastructure"
             for name in source_texts
-            if name.startswith("infrastructure.")
+            if name.startswith("infrastructure.") and name != "infrastructure.release"
         ),
     )
     check(

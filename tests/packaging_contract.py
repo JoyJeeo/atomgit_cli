@@ -88,9 +88,9 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 79,
-        "changes": 437,
-        "digest": "af46ab23609d11018974ae14ce0af17985827049a3f7d88036df96e8ad8107ac",
+        "files": 78,
+        "changes": 420,
+        "digest": "31f8b6ef393d8df0074a922ffd575b6095b859c093de8ead3094b1196bcde1aa",
     },
     "isort": {
         "files": 81,
@@ -98,9 +98,9 @@ LEGACY_TOOL_DEBT = {
         "digest": "abff549164fcbfdca3c7cdd7e3416ac7fadb16d06e6af1ef9e5104858f09078e",
     },
     "ruff": {
-        "files": 16,
-        "changes": 46,
-        "digest": "6a91048c91e998221db9f25380b9b2676e024edaf2c92b588ac6f5644db4620a",
+        "files": 15,
+        "changes": 44,
+        "digest": "fcc66f01cbc5de1c9157e0ae3645e78645994645eb4f7446cfc55f9b2cc27193",
     },
 }
 
@@ -157,6 +157,8 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/infrastructure/cache.py",
     "src/atomgit/infrastructure/filesystem.py",
     "src/atomgit/infrastructure/output.py",
+    "src/atomgit/infrastructure/release.py",
+    "src/atomgit/release.py",
     "src/atomgit/infrastructure/utils.py",
     "src/atomgit/infrastructure/validation.py",
     "src/atomgit/domain/__init__.py",

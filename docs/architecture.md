@@ -76,6 +76,8 @@ owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeyp
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
 实现也已下沉到 `atomgit.lifecycle` 的 environment、managed_paths、completion 和
 uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
+patch 接缝。Release/update 的校验、受限下载、安装和安装后验证已下沉到
+`atomgit.infrastructure.release`；历史 `atomgit.release` 仅保留符号转发和旧路径
 patch 接缝。认证和仓库 V5 管理的技术 owner 已下沉到 `atomgit.adapters.atomgit_v5`；
 `atomgit.services.authentication` 与 `repositories` 只作为历史兼容 wrapper，
 `HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api` 身份。下载实现已下沉到
