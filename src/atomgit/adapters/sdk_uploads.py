@@ -35,6 +35,14 @@ def _get_token() -> Optional[str]:
     return None
 
 
+def _project_ignore_patterns(ignore_patterns, path_in_repo: str):
+    """Keep source-relative ignores aligned with a staged remote prefix."""
+    if not ignore_patterns or path_in_repo in ("./", ".", ""):
+        return ignore_patterns
+    prefix = path_in_repo.strip("./")
+    return [f"{prefix}/{pattern}" for pattern in ignore_patterns]
+
+
 def _sdk_error(error, operation: str, repo_id: str = None):
     from .sdk_errors import _sdk_error as classify
 
@@ -106,7 +114,9 @@ def upload_folder(
             if commit_description is not None:
                 upload_kwargs["commit_description"] = commit_description
             if ignore_patterns:
-                upload_kwargs["ignore_patterns"] = ignore_patterns
+                upload_kwargs["ignore_patterns"] = _project_ignore_patterns(
+                    ignore_patterns, path_in_repo
+                )
             return run_canonical_lfs_upload(
                 lambda: hf_upload_folder(**upload_kwargs),
                 token=token,

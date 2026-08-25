@@ -46,7 +46,7 @@ def main():
                 commit_message="upload data",
                 commit_description="offline parameter contract",
                 path_in_repo="records/",
-                ignore_patterns=["*.tmp"],
+                ignore_patterns=["*.tmp", "logs/"],
             )
             check("SDK result preserved", result == "commit-url")
             call = calls[-1]
@@ -59,7 +59,11 @@ def main():
                 "commit description forwarded",
                 call.get("commit_description") == "offline parameter contract",
             )
-            check("ignore patterns forwarded", call.get("ignore_patterns") == ["*.tmp"])
+            check(
+                "source-relative ignores follow the staged repository prefix",
+                call.get("ignore_patterns") == ["records/*.tmp", "records/logs/"],
+                repr(call.get("ignore_patterns")),
+            )
             check("commit message forwarded", call.get("commit_message") == "upload data")
 
             atomgit_hub.upload_folder(

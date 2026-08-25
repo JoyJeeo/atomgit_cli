@@ -146,8 +146,10 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 
 - `weixin_52273949/test_model`；
 - `weixin_52273949/test_datasets`。
+- `weixin_52273949/atomgit-cli-dataset-20260804-003221`（正向 dataset 写入目标）。
 
-该授权不包括其他仓库、删除、发布或输出 token。连线测试必须使用：
+该授权不包括其他仓库、删除、发布或输出 token。`test_datasets` 仅保留为只读诊断
+样本；正向 dataset 写入使用新增的固定仓库。连线测试必须使用：
 
 - 专用测试 token；
 - 唯一且可识别的一次性仓库名，或上述明确授权的固定仓库；
@@ -157,7 +159,7 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 
 不能因为 CLI 打印“上传成功”就判定端到端通过。
 
-2026-08-04 的授权验收使用隔离 HOME 和环境变量 token，验证了：
+截至 R8（2026-08-25）的既有授权验收使用隔离 HOME 和环境变量 token，验证了：
 
 - 公开 model 内容匿名下载成功并与上传源 SHA-256 一致；
 - 私有 dataset 匿名下载失败、认证下载成功且 SHA-256 一致；
@@ -174,18 +176,22 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 
 ## 远程测试矩阵
 
-以下全面测试方案已经登记，等待维护者明确通知开始后执行；登记方案本身不代表已
-执行远程测试，也不会扩大现有授权。
+以下为 R8 后综合验收方案。本轮由维护者明确授权启动，执行结果必须在
+`.ai/TASK.md` 中记录；方案不扩大两个固定测试仓库之外的授权。
 
 ### 范围与安全前提
 
-- 只允许 `weixin_52273949/test_model` 和
-  `weixin_52273949/test_datasets`。URL、SSH 地址和规范化 repo ID 必须解析到
-  这两个仓库之一，否则在请求前终止。
+- 只允许 `weixin_52273949/test_model`、`weixin_52273949/test_datasets` 和
+  `weixin_52273949/atomgit-cli-dataset-20260804-003221`。URL、SSH 地址和规范化
+  repo ID 必须解析到这三个仓库之一，否则在请求前终止。正向 dataset 写入只使用
+  新增仓库，旧 `test_datasets` 不执行写入。
 - 使用隔离 HOME、Git 配置、缓存、下载目录和临时目录；token 只能来自环境变量，
   不得读取真实配置或出现在命令、日志和报告中。
 - 远端测试文件统一放在唯一的 `e2e/<run-id>/{cli,sdk,legacy}/` 前缀下，不覆盖
   前缀以外的内容。
+- 每轮每仓库最多读取一次完整文件树并缓存；上传后对已知目标文件做直接 resolve
+  回读，不重复刷新 tree/list。CLI、原生 SDK 和历史接口串行执行，遇到 429 或连续
+  超时即停止当前仓库。
 - 每项独立执行并记录 CLI 退出码或 SDK 结构化结果、远端 commit/revision、远端
   回读和 SHA-256；成功文案不能单独作为证据。
 
@@ -194,15 +200,16 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 1. 记录分支、HEAD、工作树、完整 diff、Python 和锁定依赖版本。
 2. 执行七目录、模块所有权、依赖边、循环依赖、parity registry 和 development
    floor 门禁。
-3. 执行 92 case 完整离线基线、`compileall`、`pip check` 和
-   `git diff 23c6d7d --check`，核对 27 项能力和 116 条不变量。
+3. 执行 92 case 完整离线基线、`compileall`、`pip check` 和当前工作树的
+   `git diff --check`，核对 27 项能力和 116 条不变量。
 4. 在隔离环境核对 source、editable、wheel 和 sdist 内容及所有 console、模块、
    公共和历史兼容导入入口。
 5. 使用同一组严格 fake 比较 CLI 与原生 `AtomGitClient` 的 usecase、adapter、参数、
    token/revision 策略、结果、错误和全局状态恢复。
 6. 对两个授权仓库做只读预检，记录类型、可见性、当前 revision/commit、文件清单、
    CLI/SDK 身份和仓库列表。
-7. 对 model 和 dataset 仓库分别执行下表中的受控远程传输矩阵。
+7. 对 model 和 dataset 仓库分别执行下表中的受控远程传输矩阵；R8 后新增的
+   历史导入、compatibility facade、wheel/sdist/editable 来源检查也必须保留。
 8. 远程测试结束后重跑完整离线基线、diff、凭据和构件检查。
 
 ### 受控远程传输矩阵
@@ -237,7 +244,60 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 
 这些项目在报告中记为“按范围未执行”，不能登记为失败，也不能登记为已通过远程
 验证。最终报告分为通过、失败、按范围未执行三组；每项远程通过必须带接口、仓库、
-操作结果、revision/commit 和回读校验和。
+操作结果、revision/commit 和回读校验和。Python 3.9 若环境没有独立解释器，
+记录为按环境未执行，不以 Python 3.10 结果替代。
+
+## R8 后执行记录（2026-08-25）
+
+本轮在 `yuto` / `fdaf572`、Python 3.10.20、`huggingface_hub==1.1.7`、
+`datasets==4.4.1` 环境执行。离线基线前后均为 `92 passed`；结构 18/18、源布局
+11/11、打包元数据 13/13、架构 parity 21/21、wheel/sdist/editable artifact
+smoke 49/49，`compileall`、`pip check` 和 `git diff --check` 均通过。
+
+受控远程结果：
+
+- 通过：只读预检确认两个固定仓库均为私有、默认分支为 `main`；model 仓库文件清单
+  读取成功；原生 SDK 向 `weixin_52273949/test_model` 的唯一
+  `e2e/r8-accept-20260825/` 前缀上传单文件并完成远端回读，40 字节 SHA-256 为
+  `fbef9c3d…e0ac060b`；认证 resolve 下载成功（77 字节，SHA-256
+  `789192e8…e56946`）。匿名访问同一私有文件按预期返回 HTTP 403。
+- 失败：后续文件树查询收到服务端 HTTP 429（Too Many Requests）；没有将限流误判为
+  客户端功能失败，也未继续高频重试。
+- 按范围未执行：因 429 未完成剩余目录上传、CLI/SDK 交叉传输、resumable 上传/下载、
+  checksum/prune、LFS pointer、历史 `atomgit_hub` 远程路径和 dataset 内容传输；
+  本轮未改变仓库可见性、分支、`.gitattributes`，也未创建、删除或清理仓库内容。
+
+Python 3.9 未执行：当前环境没有独立 Python 3.9 解释器；wheel 元数据和工具目标仍已
+验证 `>=3.9`。
+
+### R8 远程重试记录（2026-08-25）
+
+- `test_model`：低频退避三次后仍出现超时和 HTTP 429，未继续请求。
+- `test_datasets`：低频预检第二次成功并确认远端仍为空；随后 SDK 单文件、SDK 目录
+  （ignore）和 CLI 单文件上传分别以 `BadRequestError`、结构化 `AtomGitError` 和
+  退出码 1 失败，远端文件数保持 0。由于没有成功写入文件，认证下载、checksum、
+  resumable、prune 和交叉接口项目没有可验证对象，均按范围未执行。
+- 重试后 `python tests/run_cli_baseline.py` 仍为 `92 passed`（105.50s），
+  `compileall`、`pip check` 和 `git diff --check` 通过。
+
+上述远程失败保留为服务端限流/固定 dataset 仓库写入约束证据，不作为客户端实现回归
+结论；本轮没有创建、删除、清理或改变任何远端仓库状态。
+
+低请求策略重试后，model 仓库单次 SDK 目录上传并对已知目标直接回读通过，22 字节
+SHA-256 为 `2bb82b98…f7ad1c5`；dataset 目录上传仍返回 `BadRequestError`，远端没有
+新增文件。该次重试后的离线基线为 `92 passed`（94.93s）。
+
+进一步诊断确认客户端的 dataset 兼容路由有效：使用 `repo_type="dataset"` 向可写的
+授权 model 仓库执行一次 SDK 目录上传，直接回读 25 字节内容成功，SHA-256 为
+`393dacd4…c5bc2e1`。因此固定 `test_datasets` 的 `BadRequestError` 属于该仓库/服务端
+状态限制，而非 dataset 到 model 传输映射缺陷。
+
+### 低请求重试策略
+
+为避免测试本身放大服务端限流，后续重试采用以下本地策略：每个仓库最多一次清单
+读取并在本轮缓存；上传后只对已知目标文件做直接 resolve 回读；目录场景合并为一次
+上传；失败后使用有限指数退避，收到 429 或连续超时即停止该仓库，不重复刷新 tree
+清单。该策略只改变测试请求编排，不绕过服务端限额，也不扩大仓库和操作授权范围。
 
 ## 已知测试风险
 
@@ -262,3 +322,19 @@ AI 专用测试要求见 `.ai/TESTING.md`。
 
 “全部通过”不能替代分层证据。远程能力还必须记录仓库状态、revision、隐私属性
 或回读校验和，不能只引用 CLI 成功文案。
+本轮正向 dataset 验收目标固定为
+`weixin_52273949/atomgit-cli-dataset-20260804-003221`；旧
+`weixin_52273949/test_datasets` 仅用于记录服务端拒绝写入，不再计入正向成功率。
+
+## R8 最终执行记录（2026-08-25）
+
+- 发现并修复 SDK 目录上传在 `path_in_repo` 下的目录忽略缺陷：`logs/` 原先按源目录
+  相对路径传给 HF，临时投影后无法匹配 `e2e/.../logs/x.log`；现在忽略模式会随投影
+  前缀规范化。专项回归 `14/14`，repo type `17/17`，依赖契约 `16/16`。
+- 新 dataset 仓库正向远程验证通过：CLI 单文件上传回读 21 字节，SDK 目录上传回读
+  并正确排除 `skip.tmp` 与 `logs/x.log`，历史 `atomgit_hub` 目录上传回读成功。
+- 下载矩阵通过：CLI 上传到 SDK 下载、CLI checksum、CLI resume、SDK snapshot
+  allow-pattern、manifest prune 保留非托管文件、历史 `download_file`、历史
+  `snapshot_download` 和 `load_dataset`（1 条记录）均通过。
+- 最终离线基线 `92 passed`（103.51s），`compileall`、`pip check`、`git diff --check`
+  通过。dataset 正向目标为新仓库；旧 `test_datasets` 不再计入正向验收。

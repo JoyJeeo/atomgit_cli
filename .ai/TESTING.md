@@ -65,6 +65,12 @@ without repeated approval only against
 not authorize any other repository, deletion, release, or publication, and the
 token must never be printed or copied into test output.
 
+The maintainer explicitly added
+`weixin_52273949/atomgit-cli-dataset-20260804-003221` on 2026-08-25 as the
+positive dataset transfer target. The historical `test_datasets` repository is
+read-only diagnostic evidence because it rejects writes with `BadRequestError`;
+it is not a positive upload fixture.
+
 Live coverage should separately verify model and dataset creation, privacy,
 upload/download checksums, repository paths, ignore rules, revisions, resumable
 interruption/restart, anonymous public download, and authenticated private
@@ -85,10 +91,17 @@ operations listed here and does not broaden the standing remote permissions.
   directories. Supply the dedicated test token only through an environment
   variable; never print it or read `~/.atomgit/config.json`.
 - Permit remote access only when the resolved repository ID is exactly
-  `weixin_52273949/test_model` or `weixin_52273949/test_datasets`. Abort before
-  any request when a URL, SSH target, or normalized ID resolves elsewhere.
+  `weixin_52273949/test_model`, `weixin_52273949/test_datasets`, or
+  `weixin_52273949/atomgit-cli-dataset-20260804-003221`. Abort before any
+  request when a URL, SSH target, or normalized ID resolves elsewhere. Use the
+  last repository for positive dataset writes and keep `test_datasets`
+  read-only.
 - Store remote fixtures under unique `e2e/<run-id>/{cli,sdk,legacy}/` prefixes.
   Do not delete or overwrite content outside that run prefix.
+- Read each repository tree at most once per run and cache it. Verify known
+  uploaded targets by direct resolve readback rather than refreshing the full
+  tree. Run CLI, native SDK, and legacy paths serially; 429 and consecutive
+  timeouts stop that repository's live rows.
 - Record every command or SDK operation, exit/result status, remote commit or
   revision where available, and independent readback SHA-256 evidence. Success
   output alone is not acceptance evidence.

@@ -1,6 +1,94 @@
 # Current Issue Contract
 
-Status: inactive (R8 completed, accepted, merged, and pushed)
+Status: active (R8 post-delivery comprehensive acceptance testing)
+
+## Active Test Issue
+
+- Updated: `2026-08-25`
+- ID: `LOCAL-R8-POST-ACCEPTANCE-TEST`
+- Title: `Update and execute the R8 post-delivery comprehensive acceptance plan`
+- Type: `testing`, `compatibility`, `packaging`, `security`, `portability`
+- Priority: `P1` (acceptance evidence gap; no implementation change authorized)
+- User authorization: explicit request on `2026-08-25` to update and execute the plan
+- Delivery mode: local evidence and documentation only; no commit, push, Issue transition,
+  release, publication, or unrelated remote write authorized by this task
+- Remote scope: only `weixin_52273949/test_model` and
+  `weixin_52273949/test_datasets`, plus the explicitly supplied positive dataset target
+  `weixin_52273949/atomgit-cli-dataset-20260804-003221`, using
+  `ATOMGIT_TEST_TOKEN` without printing it. The old `test_datasets` target is read-only.
+- Explicit remote exclusions: repository create/delete, visibility changes, remote branch
+  create/delete, `.gitattributes` mutation, `--auto-configure-lfs`, cleanup, publication,
+  release, and any repository outside the two-item allowlist
+- Affected Capability IDs: `FLOOR-REGISTRY`, `PACKAGING`, `PORTABILITY`, `AUTH-CONFIG`,
+  `REPO-MANAGEMENT`, `REVISION`, `UPLOAD-FILE`, `UPLOAD-FOLDER`, `UPLOAD-RESUMABLE`,
+  `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`, `DOWNLOAD-SNAPSHOT`, `DOWNLOAD-FILE`,
+  `DOWNLOAD-INTEGRITY`, `DOWNLOAD-SECURITY`, `SDK-DOWNLOAD`, `SDK-UPLOAD`, `SDK-REPO`,
+  `REPO-ID`, `ARCHITECTURE`
+- Protected Existing Invariants: all 27 registered capabilities, 116 invariants, 92-case
+  offline baseline, locked `huggingface-hub==1.1.7` and `datasets==4.4.1`, exact R8
+  five-root source layout, historical imports, credential redaction, and artifact provenance
+- New Or Changed Invariants: none; this task adds evidence only and must not weaken or relabel
+  an existing invariant
+- Required evidence: R8 source/structure/ownership/parity checks, complete offline baseline,
+  compileall, pip check, diff check, source/editable/wheel/sdist smoke, strict offline parity,
+  read-only remote preflight, and the in-scope controlled remote matrix
+- Acceptance criteria: update `docs/testing.md` from the stale pre-R8 wording; record every
+  test as passed, failed, or not run by scope; rerun the offline baseline after remote tests;
+  leave no token, cache, artifact, or fixture in the worktree; explicitly report Python 3.9
+  status and all residual remote limitations
+- Current phase: execution complete; evidence recorded; awaiting human review of the
+  rate-limited remote remainder
+- Verification evidence: pre-remote and post-remote `python tests/run_cli_baseline.py`
+  both passed `92/92` (108.11s and 95.35s); structure `18/18`, source layout `11/11`,
+  packaging metadata `13/13`, architecture parity `21/21`, artifact smoke `49/49`,
+  `python -m compileall -q .`, `python -m pip check`, and `git diff --check` passed.
+- Remote evidence: read-only preflight succeeded for both authorized private repositories;
+  SDK single-file upload/readback to model passed with 40-byte SHA-256
+  `fbef9c3d…e0ac060b`; authenticated resolve read 77 bytes with SHA-256
+  `789192e8…e56946`; anonymous private resolve returned HTTP 403 as expected.
+- Remote limitation: subsequent file-tree access returned HTTP 429 Too Many Requests.
+  Remaining directory, CLI/SDK cross-surface, resumable, checksum/prune, LFS, legacy
+  `atomgit_hub`, and dataset transfer rows are recorded as not run by scope after the
+  rate limit; no high-frequency retry was attempted.
+- Portability limitation: no separate Python 3.9 interpreter is installed; Python 3.10.20
+  was used, while package metadata and tool targets continue to assert Python `>=3.9`.
+- Worktree changes: `.ai/TASK.md` and `docs/testing.md` only; no generated artifact,
+  token, cache, or remote fixture entered the tracked worktree.
+- Independent review: `APPROVED` for the documentation and evidence diff; no source,
+  credential, scope, or test-integrity finding. Human acceptance remains pending for the
+  explicit 429-limited remote remainder.
+- Retry evidence (`2026-08-25`): model preflight exhausted low-frequency backoff with
+  timeout/HTTP 429; dataset preflight recovered on attempt 2 but SDK single-file and folder
+  uploads returned `BadRequestError`/`AtomGitError`, CLI upload exited 1, and remote file count
+  remained 0. No dataset download or checksum row was claimed because no file was created.
+- Retry post-gate: `python tests/run_cli_baseline.py` passed `92/92` in 105.50s;
+  `compileall`, `pip check`, and `git diff --check` passed again. The remote failures are
+  recorded as service-side rate-limit/fixed-repository constraints, not client regressions.
+- Test strategy adjustment authorized by the latest user request: future remote retries use
+  one cached manifest per repository, direct resolve readback for known targets, one batched
+  directory operation, and finite exponential backoff; repeated tree/list refreshes stop on
+  429 or consecutive timeouts.
+- Low-request retry evidence: after a 30-second cooldown, one SDK directory upload to
+  `weixin_52273949/test_model` and one direct readback passed (22 bytes, SHA-256
+  `2bb82b98…f7ad1c5`); the equivalent dataset upload still returned `BadRequestError` with
+  no new remote files. Final post-retry baseline passed `92/92` in 94.93s.
+- Dataset-route diagnosis: `repo_type="dataset"` through the shared model-compatible route
+  succeeded against the writable authorized model repository; direct readback passed for
+  25 bytes with SHA-256 `393dacd4…c5bc2e1`. This preserves evidence that the client mapping
+  is correct; the fixed dataset repository's `BadRequestError` remains a service-side state
+  limitation.
+- Maintainer decision: positive dataset transfer acceptance now uses
+  `weixin_52273949/atomgit-cli-dataset-20260804-003221`; the old `test_datasets`
+  repository is excluded from positive write assertions. Remote execution uses one cached
+  tree per repository and direct known-target readback.
+- Implementation fix: SDK `path_in_repo` directory uploads now prefix source-relative
+  ignore patterns before passing them to HF, so `logs/` excludes projected nested files.
+  Regression `14/14`, repo type `17/17`, and HF contract `16/16` passed.
+- Final remote evidence: new dataset target passed CLI single upload/readback, SDK folder
+  upload with `*.tmp` and `logs/` exclusions, historical folder upload, CLI checksum/resume,
+  SDK snapshot and cross-surface downloads, manifest prune safety, legacy downloads, and
+  `load_dataset` (1 row). Final baseline passed `92/92` in 103.51s; compileall, pip check,
+  and diff check passed.
 
 ## Handoff Snapshot
 
