@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 27
-BASELINE_INVARIANT_COUNT = 115
+BASELINE_INVARIANT_COUNT = 116
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -1232,10 +1232,17 @@ CAPABILITY_REGISTRY = {
                 "test_architecture_parity.py",
                 "test_sdk_domain_ownership.py",
             ),
+            _invariant(
+                "ARCH-004",
+                "The physical src/atomgit tree contains exactly the seven canonical responsibility directories and only the frozen root compatibility Python allowlist.",
+                "test_src_layout_migration.py",
+                "test_structure_guard.py",
+            ),
         ),
         (
             "test_architecture_parity.py",
             "test_sdk_domain_ownership.py",
+            "test_src_layout_migration.py",
             "test_structure_guard.py",
         ),
         ("docs/architecture.md", "docs/development_floor.md", ".ai/TASK.md"),
@@ -1303,7 +1310,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "27 个稳定能力 ID",
-        "115 条可观察行为不变量",
+        "116 条可观察行为不变量",
         "92 个隔离 pytest case",
     ),
     "docs/testing.md": ("92 个 pytest case", "development_floor.md"),

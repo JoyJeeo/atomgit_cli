@@ -5,6 +5,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Generic, Optional, Tuple, TypeVar, Union
 
+_RESUMABLE_DEFAULT_REQUEST_TIMEOUT = 300.0
+DEFAULT_UPLOAD_BATCH_SIZE = 20
+
 
 class Visibility(str, Enum):
     """Repository visibility understood by both CLI and native SDK."""
@@ -64,8 +67,8 @@ class UploadRequest:
     message: Optional[str] = None
     resumable: bool = False
     num_workers: int = 5
-    batch_size: int = 20
-    timeout: float = 300.0
+    batch_size: int = DEFAULT_UPLOAD_BATCH_SIZE
+    timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
     progress: bool = True
     checksum: bool = False
     auto_configure_lfs: bool = False

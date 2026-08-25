@@ -134,7 +134,7 @@ def main():
 
     check(
         "historical concrete API class and singleton remain at the old path",
-        api_module.HuggingFaceAPI.__module__ == "atomgit.api"
+        api_module.HuggingFaceAPI.__module__ == "atomgit.compatibility.api"
         and type(api_module.api) is api_module.HuggingFaceAPI,
     )
     check(
@@ -236,7 +236,7 @@ def main():
     check(
         "the historical API class contains no moved upload method definitions",
         not (
-            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            _class_methods(source_texts["compatibility.api"], "HuggingFaceAPI")
             & {"upload_folder", "upload_directory"}
         ),
     )
@@ -253,9 +253,9 @@ def main():
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 3715
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 60
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] < 17,
+        LEGACY_FACADE_DEBT["compatibility.api"]["max_lines"] < 3715
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_functions"] < 60
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_classes"] < 17,
     )
 
     placeholder = dict(source_texts)

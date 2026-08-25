@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail closed on lifecycle ownership and historical module seams."""
+"""Fail closed on infrastructure lifecycle ownership and historical seams."""
 
 import ast
 import importlib
@@ -28,6 +28,12 @@ LIFECYCLE_MODULES = (
     "lifecycle.environment",
     "lifecycle.managed_paths",
     "lifecycle.uninstall",
+)
+INFRASTRUCTURE_LIFECYCLE_MODULES = (
+    "infrastructure.completion",
+    "infrastructure.environment",
+    "infrastructure.managed_paths",
+    "infrastructure.uninstall",
 )
 
 HISTORICAL_COMPLETION_SYMBOLS = (
@@ -104,9 +110,11 @@ def _top_level_definitions(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in LIFECYCLE_MODULES if name not in source_texts)
+    missing = tuple(
+        name for name in INFRASTRUCTURE_LIFECYCLE_MODULES if name not in source_texts
+    )
     check(
-        "all approved lifecycle owner modules contain real implementation",
+        "all approved infrastructure lifecycle owners contain real implementation",
         not missing,
         repr(missing),
     )
@@ -116,13 +124,30 @@ def main():
 
     completion = importlib.import_module("atomgit.completion")
     uninstaller = importlib.import_module("atomgit.uninstaller")
-    completion_owner = importlib.import_module("atomgit.lifecycle.completion")
-    environment_owner = importlib.import_module("atomgit.lifecycle.environment")
-    managed_paths_owner = importlib.import_module("atomgit.lifecycle.managed_paths")
-    uninstall_owner = importlib.import_module("atomgit.lifecycle.uninstall")
+    completion_owner = importlib.import_module("atomgit.infrastructure.completion")
+    environment_owner = importlib.import_module("atomgit.infrastructure.environment")
+    managed_paths_owner = importlib.import_module(
+        "atomgit.infrastructure.managed_paths"
+    )
+    uninstall_owner = importlib.import_module("atomgit.infrastructure.uninstall")
+    historical_owners = tuple(
+        (
+            importlib.import_module(f"atomgit.{name.rsplit('.', 1)[0]}")
+            if name.endswith(".__init__")
+            else importlib.import_module(f"atomgit.{name}")
+        )
+        for name in LIFECYCLE_MODULES
+    )
     release = importlib.import_module("atomgit.release")
     release_owner = importlib.import_module("atomgit.infrastructure.release")
 
+    check(
+        "historical lifecycle modules alias infrastructure owners",
+        historical_owners[1] is completion_owner
+        and historical_owners[2] is environment_owner
+        and historical_owners[3] is managed_paths_owner
+        and historical_owners[4] is uninstall_owner,
+    )
     check(
         "historical completion symbols remain exact owner identities",
         all(hasattr(completion, name) for name in HISTORICAL_COMPLETION_SYMBOLS)
@@ -266,9 +291,14 @@ def main():
         and LEGACY_FACADE_DEBT["uninstaller"]["max_classes"] == 0,
     )
     check(
-        "every nested lifecycle module has exact lifecycle ownership",
+        "infrastructure owners and lifecycle aliases have exact ownership",
         all(
-            PRODUCTION_MODULE_OWNERS[name] == "lifecycle" for name in LIFECYCLE_MODULES
+            PRODUCTION_MODULE_OWNERS[name] == "infrastructure"
+            for name in INFRASTRUCTURE_LIFECYCLE_MODULES
+        )
+        and all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
+            for name in LIFECYCLE_MODULES
         ),
     )
     check(
@@ -289,7 +319,7 @@ def main():
         repr(errors),
     )
     placeholder = dict(source_texts)
-    placeholder["lifecycle.environment"] = '"""Placeholder."""\npass\n'
+    placeholder["infrastructure.environment"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(placeholder)
     check(
         "lifecycle placeholder replacement fails closed",

@@ -1,24 +1,344 @@
 # Current Issue Contract
 
-Status: completed
+Status: active (R7 non-destructive migration complete; paused at WP-06 deletion gate)
 
 ## Handoff Snapshot
 
 - Updated: `2026-08-25`
-- Phase: `R6 implementation, offline verification, independent review approved, human acceptance granted, and delivery authorized`
+- Phase: `R7 WP-00 through WP-05 complete; WP-06 compatibility cutover and physical-absence proof complete; exact old-directory deletion awaits separate maintainer confirmation`
 - Base branch: `yuto`
-- Base commit: `25fe93b docs(ai): record architecture delivery`
-- Task branch: `codex/lifecycle-facade-closure` (local only; not pushed)
-- Historical closure: R5 upload/LFS ownership migration was delivered and accepted; this request explicitly activates the pending local R6 package
+- Base commit: `23c6d7d merge: close lifecycle facade ownership`
+- Task branch: `codex/r7-seven-directory-physical-closure` (pre-deletion checkpoint push explicitly authorized on `2026-08-25`)
+- Historical closure: R1-R6 architecture and ownership packages were delivered; their physical source-tree outcome does not satisfy the maintainer's newly clarified seven-directory requirement
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `dirty with R6 source, contract, test, and documentation edits; no credentials or generated artifacts`
-- Last completed action: `migrated release/update implementation, ran independent review, and passed the final complete baseline`
-- Next exact action: `commit R6, merge locally into yuto, push yuto, and verify remote equality`
-- Blockers: `none`
-- Tests for this phase so far: `release workflow 27/27; lifecycle ownership 25/25; infrastructure ownership 17/17; structure 14/14; packaging 13/13; src-layout 6/6; deploy 8/8; public imports 8/8; complete baseline 92/92 in 86.06s; compileall, pip check, Ruff, Black/isort checks, and diff check passed`
-- Residual risk: `release/update remote downloads and publication remain offline-only; lifecycle facade migration has not yet been implemented`
+- Worktree state: `the pre-deletion checkpoint contains only R7 owner migration, compatibility cutover, contracts, packaging, documentation, tests, and handoff edits; no credentials or generated artifacts`
+- Last completed action: `registered deletion-safe historical package aliases, proved all historical imports and python -m atomgit.cli in a temporary source copy with the nine old directories absent, and reran packaging plus the complete offline baseline`
+- Next exact action: `request the separate WP-06 confirmation to delete exactly api, cli, commands, download, lfs, lifecycle, sdk, services, and upload under src/atomgit; after approval remove their on-disk owner/artifact declarations, retain runtime aliases, and run the final 92-case gate`
+- Blockers: `the separate destructive old-directory deletion gate, merge into yuto, yuto push, and live remote operations remain unauthorized; the maintainer separately authorized one pre-deletion checkpoint commit and current task-branch push`
+- Tests for this phase so far: `pre-change baseline 92/92; CLI ownership 13/13; CLI facade 9/9; API facade 8/8; auth/repository ownership 25/25; download ownership 20/20; upload ownership 17/17; LFS ownership 14/14; SDK ownership 20/20; lifecycle ownership 26/26; import-order 5/5; shell completion 19/19; packaging metadata 13/13; wheel/editable smoke 37/37; temporary seven-directory import/module probe passed; final complete baseline 90/92 with only the intentional physical-layout failures; python -m compileall -q ., python -m pip check, and git diff --check pass`
+- Residual risk: `src/atomgit still has 16 first-level directories because the nine exact deletion targets remain present; the mandatory baseline cannot pass 92/92 until the separately authorized deletion and artifact-contract cleanup occur`
 
-## Active Issue
+### WP-00/WP-01 Evidence
+
+- Authorization: `the maintainer explicitly authorized implementation in the current conversation`
+- Frozen canonical directories: `adapters`, `compatibility`, `core`, `domain`, `infrastructure`, `interfaces`, `usecases`
+- Frozen root Python compatibility allowlist: `__init__.py`, `__main__.py`, `api.py`, `atomgit_hub.py`, `cli.py`, `cli_contracts.py`, `completion.py`, `config.py`, `exceptions.py`, `lfs_pointer.py`, `release.py`, `runtime.py`, `uninstaller.py`, `utils.py`, `version.py`
+- Current physical delta: `legacy first-level directories api, cli, commands, download, lfs, lifecycle, sdk, services, and upload remain and are the only physical-layout contract failures`
+- Contract changes: `tests/structure_contract.py`, `tests/test_src_layout_migration.py`, and `tests/test_structure_guard.py` now fail closed on an eighth directory or an unlisted root Python file; ARCH-004 is registered in the development-floor ledger
+- Verification: `python tests/test_development_floor.py` passed 15/15; pre-change `python tests/run_cli_baseline.py` passed 92/92; focused physical-layout checks fail only on the known legacy directories
+
+### WP-02 CLI Slice Evidence
+
+- Canonical owner: `src/atomgit/interfaces/cli/commands/{authentication,lifecycle,repositories,transfers}.py`
+- Compatibility surface: `src/atomgit/commands/*.py` dynamically aliases canonical modules and preserves historical module identities and patch seams
+- Lazy boundary: `src/atomgit/interfaces/cli/__init__.py` exposes only a deferred `run`; native adapters now live in `interfaces/cli/runner.py`, keeping completion schema paths free of Hugging Face imports
+- Packaging: `pyproject.toml`, `setup.py`, source-layout, structure ownership, wheel, and sdist contracts include the new nested interface package
+- Remaining risk: `api`, `cli`, `download`, `lfs`, `lifecycle`, `sdk`, `services`, `upload`, and compatibility `commands` directory still physically exist until later migration slices and the separately authorized deletion gate
+
+### WP-02 SDK And Facade Cutover Evidence
+
+- Canonical SDK owners: `adapters.sdk_common`, `sdk_datasets`, `sdk_downloads`, `sdk_errors`, `sdk_repositories`, and `sdk_uploads`; every `sdk/*` module is a compatibility alias
+- Canonical API/CLI assembly: `compatibility.api` and `compatibility.cli`; frozen root `api.py` and `cli.py` shims preserve imports and module execution, while the old package directories contain deletion-pending aliases/proxies
+- Compatibility proof: SDK ownership 20/20, API facade 8/8, CLI facade 9/9, CLI command ownership 13/13, public imports 8/8, and import-order 5/5
+
+### WP-03 Authentication And Repository Evidence
+
+- Canonical owners: `compatibility.authentication`, `compatibility.repositories`, and `adapters.atomgit_v5`; `services/*` contains aliases only and no services ownership domain remains
+- Locked dependency evidence: installed `huggingface_hub==1.1.7` `create_repo` and `HfApi.__init__` signatures match every changed call site
+- Verification: authentication/repository ownership 25/25 and API facade 8/8
+
+### WP-04 Transfer Evidence
+
+- Canonical owners: `adapters.download`, `compatibility.download`, `adapters.upload`, `adapters.lfs`, and `adapters.sdk_uploads`; historical download/upload/LFS modules contain aliases only
+- Upload defaults now have one `core.contracts` authority and are forwarded by adapter/root compatibility contracts
+- Verification: download ownership 20/20, upload ownership 17/17, LFS ownership 14/14, packaging metadata 13/13, and wheel/editable smoke 37/37
+
+### WP-05 Lifecycle Evidence
+
+- Canonical owners: `infrastructure.completion`, `environment`, `managed_paths`, `uninstall`, and `release`; `lifecycle/*`, root completion/uninstaller, and release paths preserve identities and patch seams through compatibility forwarding
+- Verification: lifecycle ownership 26/26, shell completion 19/19, uninstaller 14/14, release/update focused suites, import-order 5/5, packaging 13/13, and wheel/editable smoke 37/37
+
+### WP-06 Non-Destructive Cutover Evidence
+
+- `compatibility.legacy_packages` registers historical commands/download/LFS/lifecycle/SDK/services/upload packages and child modules directly against canonical owners during normal imports without loading them on completion-only paths
+- A temporary source copy containing only the seven canonical directories and frozen root Python shims passed all representative historical imports and `python -m atomgit.cli --help`
+- The real tree intentionally retains the nine exact old directories until separate deletion confirmation; `test_src_layout_migration.py` is 8/9 and `test_structure_guard.py` is 14/15 solely for that physical delta
+
+## Pending Issue
+
+- Remote Issue: `none; do not create one without explicit authorization`
+- ID: `LOCAL-R7-SEVEN-DIRECTORY-PHYSICAL-CLOSURE`
+- Title: `Migrate the source tree to exactly seven responsibility directories without losing existing capabilities`
+- Primary type: `refactoring`
+- Secondary types: `architecture`, `compatibility`, `cli`, `sdk`, `testing`, `packaging`, `documentation`, `portability`
+- Priority: `P1`
+- Status: `active; implementation explicitly authorized by the maintainer in the current conversation`
+- Delivery: `read-only inventory -> explicit implementation activation -> focused migration slices -> complete offline verification -> independent review -> human acceptance -> separately authorized old-directory deletion -> final verification -> separately authorized commit/merge/push`
+
+### Objective
+
+Make the physical source layout under `src/atomgit` converge to exactly these
+seven first-level responsibility directories and no others:
+
+```text
+src/atomgit/
+├── core/
+├── domain/
+├── usecases/
+├── interfaces/
+├── adapters/
+├── compatibility/
+└── infrastructure/
+```
+
+These are the permanent architecture standard for all future CLI and SDK
+development. New business or technical implementation must be added under one
+of these seven directories according to its layer; historical paths may remain
+only as explicitly listed root-level `.py` entry shims or as runtime aliases
+registered by `compatibility`, never as additional first-level directories.
+
+The migration is behavior-preserving. Existing user-visible capabilities must
+not be removed; their implementation is moved to the appropriate canonical
+layer, while public CLI/SDK/API entry behavior remains available through the
+new interfaces and compatibility conversion.
+
+### Current Evidence And Problem Statement
+
+- The current tree still has 16 first-level directories under `src/atomgit`;
+  the nine noncanonical directories contain deletion-pending aliases/proxies.
+- Canonical implementation ownership has moved into the seven target
+  directories, and legacy services, SDK, lifecycle, transfer, command, API,
+  and CLI paths no longer own business implementation.
+- `tests/test_src_layout_migration.py` and `tests/test_structure_guard.py` now
+  enforce the exact seven-directory allowlist and are the only failing baseline
+  cases before the separately authorized physical deletion.
+- The prior R1-R6 packages proved runtime ownership and compatibility slices,
+  but did not satisfy this newly clarified physical layout requirement.
+
+### User Impact
+
+No intended loss of existing capability. Preserve the CLI schema, defaults,
+Chinese output, prompts, progress, exits, public SDK/API functions, signatures,
+returns, error categories, package entry paths, token safety, temporary-resource
+lifetime, global-state restoration, and supported upload/download/repository/
+lifecycle behavior. Physical module identity may change where required by the
+strict seven-directory target; any public or tested private path that cannot be
+preserved must be reported before deletion rather than silently broken.
+
+### Affected Capability IDs
+
+`FLOOR-REGISTRY`, `ARCHITECTURE`, `CLI-SURFACE`, `CLI-DISPATCH`, `AUTH-CONFIG`,
+`GIT-CREDENTIAL`, `REPO-MANAGEMENT`, `REVISION`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
+`UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`, `DOWNLOAD-SNAPSHOT`,
+`DOWNLOAD-FILE`, `DOWNLOAD-INTEGRITY`, `DOWNLOAD-SECURITY`, `SDK-DOWNLOAD`,
+`SDK-UPLOAD`, `SDK-REPO`, `REPO-ID`, `RUNTIME`, `CACHE`, `PACKAGING`,
+`PORTABILITY`, `DEPENDENCY-CONTRACT`, `ERROR-REDACTION`.
+
+### Protected Existing Invariants
+
+- CLI command names, options, defaults, output, prompts, progress behavior,
+  callback identities, exit codes, and both Python/console entry paths remain
+  compatible.
+- Public imports and symbols from `atomgit`, `atomgit.api`, `atomgit.cli`,
+  `atomgit_hub`, completion, uninstall, and legacy HF-style SDK functions keep
+  their signatures, primary returns, exception mapping, and patch behavior.
+- Shared usecase routing, repository/revision/type/token policies, upload/LFS
+  pointer verification, download checksum/resume/prune/path safety, release and
+  lifecycle state restoration, and locked HF Hub/datasets call signatures remain
+  unchanged.
+- No token, signed URL, secret-bearing cause, generated artifact, or real
+  credential content enters source, tests, documentation, logs, or handoff.
+
+### New Or Changed Invariants
+
+- `src/atomgit` contains exactly seven first-level directories listed above;
+  any eighth directory fails the structure gate.
+- Every production `.py` file belongs to one of the seven directories or to an
+  explicit, finite root-file compatibility allowlist; unlisted files fail
+  source-layout, packaging, and artifact checks.
+- `core`, `domain`, `usecases`, `interfaces`, `adapters`, and `infrastructure`
+  contain canonical implementation only; `compatibility` contains historical
+  path/signature/identity/patch conversion only and no business orchestration.
+- All future CLI and SDK capability work enters through `interfaces`, shared
+  `usecases`, `domain`, `core`, `adapters`, and `infrastructure`; no new
+  implementation may be added to a historical root shim.
+- Existing public capabilities remain reachable after physical directory
+  removal; compatibility tests compare observable behavior and canonical owner
+  identity rather than requiring legacy directory identity.
+- Structure, source-layout, package artifact, import, and ownership tests fail
+  closed on legacy directory reintroduction, duplicate implementations, stale
+  artifact declarations, unowned files, forbidden edges, or facade business
+  logic.
+
+### Layer Responsibilities
+
+- `core/`: stable contracts, ports, errors, policies, parity and shared
+  low-level invariants; no Click, HF, V5, or concrete transport calls.
+- `domain/`: pure authentication, repository, transfer, revision, and success
+  rules; no UI, filesystem side effects, or concrete network calls.
+- `usecases/`: ordered business workflows, reconciliation, rollback, and final
+  state verification; no printing or process exits.
+- `interfaces/`: CLI presentation/Click dispatch and native SDK request/result
+  mapping; no duplicated remote business rules.
+- `adapters/`: HF 1.1.7, AtomGit V5, upload/download/LFS transport, filesystem,
+  checksum, manifest, cache, and other external technical boundaries.
+- `compatibility/`: historical imports, signatures, defaults, returns,
+  exception conversion, identities, and patch seams; no new implementation.
+- `infrastructure/`: configuration, credentials persistence, runtime state,
+  filesystem facilities, Git helpers, completion, installation, update,
+  uninstall, and distribution/lifecycle technical facilities.
+
+### Migration Map
+
+The following is the required default destination map. WP-00 may refine a
+specific file's destination only with a recorded owner rationale; it may not
+create another first-level directory.
+
+| Current path | Canonical destination | Required treatment |
+|---|---|---|
+| `commands/` | `interfaces/cli/` | Move Click command implementations and presentation; keep no business owner here. |
+| `sdk/` | `interfaces/sdk/` plus `compatibility/` | Native SDK mapping belongs in `interfaces/sdk`; legacy HF-style conversion belongs in `compatibility`. |
+| `download/` | `adapters/download/` plus `compatibility/` | Move technical download behavior to adapters; preserve public legacy conversion without the old directory. |
+| `upload/` | `adapters/upload/` plus `compatibility/` | Move ordinary/resumable/projection/error behavior to adapters; preserve old calls through compatibility. |
+| `lfs/`, `lfs_pointer.py` | `adapters/lfs/` plus `compatibility/` | Move protocol, pointer, attributes, and recovery ownership to adapters. |
+| `services/` | `domain/`, `usecases/`, `adapters/`, `compatibility/` | Split rules, orchestration, V5 transport, and historical wrappers by layer; no services owner remains. |
+| `lifecycle/` | `infrastructure/` | Move completion, environment, managed paths, uninstall, and installation provenance. |
+| `api/` | `compatibility/` plus an approved root shim | Keep `HuggingFaceAPI` and singleton compatibility assembly only; implementation resolves to canonical owners. |
+| `cli/` | `interfaces/cli/` plus an approved root shim | Keep Click schema/module execution compatibility while implementation lives in the interface layer. |
+| `atomgit_hub.py` | `compatibility/` plus the top-level package shim | Keep the existing top-level SDK entry, forwarding only to canonical owners. |
+| `release.py` | `infrastructure/release.py` plus an approved root shim | Preserve historical release imports and patch seams while infrastructure owns behavior. |
+| root `config.py`, `runtime.py`, `utils.py`, `completion.py`, `uninstaller.py`, `version.py`, `exceptions.py`, `cli_contracts.py` | `infrastructure/`, `core/`, or `interfaces/cli/` by responsibility | Move implementation first; retain only explicitly approved root shims required by public imports. |
+
+### Compatibility And Root-File Rules
+
+- Public compatibility is defined by observable imports, symbols, signatures,
+  returns, errors, entry paths, and documented patch seams, not by retaining an
+  old directory.
+- The root `.py` allowlist must be frozen during WP-00 after auditing public
+  imports, console/module entry paths, packaging, and lazy-import behavior. No
+  generic or unbounded shim set is permitted.
+- The draft allowlist must explicitly account for `atomgit`, `python -m atomgit`,
+  `python -m atomgit.cli`, the console script, `atomgit.api`, `atomgit_hub`,
+  completion/uninstall/config/utils imports, and any release or pointer path
+  proven public by tests or documentation.
+- Private paths such as `atomgit.download.service`, `atomgit.upload.service`,
+  `atomgit.lfs.service`, `atomgit.services.repositories`, `atomgit.sdk.uploads`,
+  and `atomgit.cli.__main__` must be inventoried. Preserve them only when a
+  strict seven-directory layout permits a real alias; otherwise report the
+  exact path, callers, and break risk before deletion.
+- No compatibility shim may import heavy HF dependencies on schema-only paths,
+  contain a second implementation, or grow without an owner and test.
+
+### Work Packages And Authorization Gates
+
+Only one package may be active at a time.
+
+1. **WP-00: read-only inventory and migration freeze**. Record every current
+   file, import, public/private path, owner, caller, test, artifact, and root
+   shim candidate. Produce the final seven-directory map and root-file allowlist.
+   This package does not edit source and is the next action after implementation
+   is explicitly activated.
+2. **WP-01: executable physical-layout contract**. Add/update the exact
+   first-level directory allowlist, root-file allowlist, owner map, dependency
+   edges, duplicate-definition checks, and wheel/sdist expectations. Register
+   every new test in the development floor and baseline inventory.
+3. **WP-02: interface and compatibility migration**. Move command and SDK
+   presentation/mapping code into `interfaces`; build compatibility conversion
+   and patch-seam registration without changing observable behavior.
+4. **WP-03: authentication and repository migration**. Split old services into
+   domain rules, usecase orchestration, V5 adapters, infrastructure config/Git,
+   and compatibility wrappers. Re-run focused ownership and behavior suites.
+5. **WP-04: download, upload, and LFS migration**. Move all technical transfer
+   code to adapters, preserve request keywords, temporary lifetimes, global
+   state, checksums, resume/prune, pointer verification, and legacy conversions.
+6. **WP-05: lifecycle and distribution migration**. Move completion, uninstall,
+   runtime, release, and installation facilities to infrastructure and verify
+   console/module entry behavior.
+7. **WP-06: compatibility cutover and old-directory deletion**. First prove all
+   capabilities and artifacts pass with the old directories unused. Then stop
+   and request the separate destructive deletion confirmation. Delete only the
+   exact old-directory targets approved by the migration map; do not use broad
+   recursive deletion.
+8. **WP-07: final gate and handoff**. Run the complete offline baseline and all
+   structural, import, packaging, installed-entry, security, portability,
+   compile, dependency, and diff checks; obtain independent review and human
+   acceptance. Commit, merge, and push remain separate authorizations.
+
+### Focused Tests And Evidence
+
+- Add a fail-closed physical-tree test that compares actual first-level
+  directories and root files with the frozen allowlists.
+- Update `tests/structure_contract.py`, `tests/test_structure_guard.py`,
+  `tests/test_src_layout_migration.py`, packaging contracts, and artifact tests
+  so legacy directories cannot be accepted merely because they are registered.
+- Add AST/import tests for one canonical owner per implementation, no duplicate
+  business definitions, no direct external calls from interfaces/domain, no
+  compatibility business orchestration, and no future legacy-directory growth.
+- Preserve and extend CLI schema/dispatch, public import/signature/identity,
+  patch/lazy-import, upload/LFS, download, lifecycle, dependency-signature,
+  security, source/editable/wheel/sdist, and installed-entry regressions.
+- Every new `test_*.py` must be registered exactly once in the development-floor
+  ledger and `tests/run_cli_baseline.py` inventory.
+- Required final offline commands, in the `atomgit_cli` environment:
+  `python tests/run_cli_baseline.py`, `python -m compileall -q .`,
+  `python -m pip check`, and `git diff --check`; run applicable Black, isort,
+  Ruff, artifact/credential scans, and package smoke tests.
+- Live repository operations, credential mutation, publication, and remote
+  writes are not part of this Issue unless separately authorized.
+
+### Out Of Scope
+
+- New CLI/SDK product capabilities, dependency upgrades, broad formatting debt,
+  publication, or unrelated roadmap work.
+- Silent removal of public behavior or private paths without the WP-00 audit and
+  maintainer decision.
+- Remote repository creation/deletion, live upload/download, credential helper
+  mutation, remote Issue/PR changes, commit, merge, or push without separate
+  authorization.
+
+### Acceptance Criteria
+
+The Issue cannot close until all of the following are true:
+
+1. The actual `src/atomgit` tree contains exactly the seven target directories,
+   and every root `.py` file is on the approved finite allowlist.
+2. All old first-level directories are removed only after the separate deletion
+   gate, and no production import or package artifact depends on them.
+3. Every existing capability has one canonical owner in the seven-layer model;
+   compatibility contains forwarding/conversion only.
+4. Public CLI, SDK/API, entry, signature, return, exception, patch, security,
+   temporary-resource, global-state, packaging, and locked-dependency contracts
+   pass focused regressions and the complete baseline.
+5. Structure and artifact tests fail closed on an eighth directory, an unlisted
+   root file, a duplicate implementation, a stale path, or a new legacy owner.
+6. `.ai/ARCHITECTURE.md`, `docs/architecture.md`, the development-floor ledger,
+   and this handoff describe the verified current tree rather than the former
+   transitional layout.
+7. Compile, dependency, diff, packaging, installed-entry, security,
+   portability, independent review, and human acceptance gates pass; remaining
+   unrun remote evidence is recorded explicitly.
+
+### Authorization And Handoff
+
+- The maintainer authorized the seven-directory target, capability-preserving
+  migration, physical identity changes where necessary, replacement of stale
+  structure/packaging/documentation contracts, and eventual old-directory
+  removal as the scope of this Issue.
+- Implementation start was explicitly authorized; WP-00 through WP-05 and the
+  non-destructive WP-06 compatibility cutover are complete.
+- Old-directory deletion requires a separate explicit confirmation immediately
+  before WP-06; resolve the exact targets from the approved migration map.
+- The maintainer explicitly authorized one pre-deletion checkpoint commit and
+  push of the current task branch on `2026-08-25`. Local merge, `yuto` push,
+  remote Issue/PR changes, publication, credential mutation, and live remote
+  tests still require separate explicit authorization.
+- A future AI taking over must read `AGENTS.md`, `.ai/README.md`, this Issue,
+  `.ai/ARCHITECTURE.md`, `.ai/DEVELOPMENT_FLOOR.md`, `.ai/DEVELOPMENT_RULES.md`,
+  `.ai/DOD.md`, and `.ai/WORKFLOW.md`; verify Git/worktree state; report the
+  recovered objective and blockers; then request the separate deletion
+  confirmation before changing any of the nine exact old-directory targets.
+
+## Historical Completed Issue: R6 Lifecycle Facade Closure
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-R6-LIFECYCLE-FACADE-CLOSURE`
@@ -278,7 +598,7 @@ acceptance purposes by this corrective Issue. The authoritative source state at
 audit entry was clean `yuto` at `8d9490d`, equal to `github/yuto`; the current
 task branch contains only this TASK activation change.
 
-## Active Corrective Issue
+## Historical Completed Issue: R1-R5 Architecture Recovery
 
 - Remote Issue: `none; do not create one without explicit authorization`
 - ID: `LOCAL-ARCH-CLI-SDK-PARITY-RECOVERY`

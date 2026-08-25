@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lock the historical API path as a package-only compatibility facade."""
+"""Lock the historical API paths to one canonical compatibility facade."""
 
 import ast
 import importlib
@@ -65,26 +65,32 @@ def _class_node(tree, name):
 def main():
     flat_path = PACKAGE_DIRECTORY / "api.py"
     facade_path = PACKAGE_DIRECTORY / "api" / "__init__.py"
+    owner_path = PACKAGE_DIRECTORY / "compatibility" / "api.py"
     check(
-        "the historical API path is represented only by a package facade",
-        facade_path.is_file() and not flat_path.exists(),
-        repr({"flat": flat_path.exists(), "facade": facade_path.is_file()}),
+        "root and package API paths resolve one canonical facade",
+        facade_path.is_file() and flat_path.is_file() and owner_path.is_file(),
+        repr(
+            {
+                "flat": flat_path.exists(),
+                "facade": facade_path.is_file(),
+                "owner": owner_path.is_file(),
+            }
+        ),
     )
-    if not facade_path.is_file():
+    if not owner_path.is_file():
         return 1
 
-    source = facade_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(facade_path))
+    source = owner_path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(owner_path))
     api_module = importlib.import_module("atomgit.api")
     atomgit_package = importlib.import_module("atomgit")
     cli_module = importlib.import_module("atomgit.cli")
 
     check(
-        "source imports resolve the package facade with historical provenance",
-        api_module.__name__ == "atomgit.api"
-        and Path(api_module.__file__).resolve() == facade_path.resolve()
-        and api_module.__package__ == "atomgit.api"
-        and tuple(api_module.__path__) == (str(facade_path.parent),),
+        "historical API import resolves the canonical owner",
+        api_module.__name__ == "atomgit.compatibility.api"
+        and Path(api_module.__file__).resolve() == owner_path.resolve()
+        and api_module.__package__ == "atomgit.compatibility",
         repr(
             {
                 "name": api_module.__name__,
@@ -105,7 +111,7 @@ def main():
         "the facade owns only historical class composition and singleton identity",
         bases == EXPECTED_BASES
         and class_methods == {"__init__"}
-        and api_module.HuggingFaceAPI.__module__ == "atomgit.api"
+        and api_module.HuggingFaceAPI.__module__ == "atomgit.compatibility.api"
         and type(api_module.api) is api_module.HuggingFaceAPI
         and atomgit_package.api is api_module.api,
         repr(
@@ -128,8 +134,9 @@ def main():
     )
 
     owner_modules = {
-        importlib.import_module("atomgit.services.authentication"),
-        importlib.import_module("atomgit.services.repositories"),
+        importlib.import_module("atomgit.compatibility.authentication"),
+        importlib.import_module("atomgit.compatibility.download"),
+        importlib.import_module("atomgit.compatibility.repositories"),
         importlib.import_module("atomgit.download.service"),
         importlib.import_module("atomgit.upload.service"),
     }
@@ -165,7 +172,7 @@ def main():
     )
 
     patch_cases = {
-        "service": ("config", "atomgit.services.authentication"),
+        "service": ("config", "atomgit.compatibility.authentication"),
         "download": ("hf_http_get", "atomgit.adapters.download.resume"),
         "upload": ("hf_upload_file", "atomgit.upload.service"),
         "lfs": ("math", "atomgit.lfs.service"),
@@ -202,7 +209,8 @@ def main():
     check(
         "the separate CLI facade remains compatible after its own conversion",
         (PACKAGE_DIRECTORY / "cli" / "__init__.py").is_file()
-        and not (PACKAGE_DIRECTORY / "cli.py").exists()
+        and (PACKAGE_DIRECTORY / "cli.py").is_file()
+        and (PACKAGE_DIRECTORY / "compatibility" / "cli.py").is_file()
         and cli_module.api._module_name == "api"
         and cli_module.api._attribute_name == "api",
     )

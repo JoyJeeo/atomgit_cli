@@ -104,7 +104,7 @@ def main():
     historical_lfs_service = importlib.import_module("atomgit.lfs.service")
     check(
         "historical API class and singleton remain concrete and unchanged",
-        api_module.HuggingFaceAPI.__module__ == "atomgit.api"
+        api_module.HuggingFaceAPI.__module__ == "atomgit.compatibility.api"
         and type(api_module.api) is api_module.HuggingFaceAPI,
     )
     check(
@@ -171,7 +171,7 @@ def main():
         repr(restoration_mismatches),
     )
 
-    api_definitions = _top_level_definitions(source_texts["api.__init__"])
+    api_definitions = _top_level_definitions(source_texts["compatibility.api"])
     lfs_definitions = _top_level_definitions(source_texts["adapters.lfs.service"])
     upload_definitions = set().union(
         *(

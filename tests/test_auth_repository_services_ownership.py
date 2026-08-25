@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail closed on service ownership and historical API seams."""
+"""Fail closed on compatibility ownership and historical API seams."""
 
 import ast
 import importlib
@@ -20,7 +20,12 @@ from structure_contract import (  # noqa: E402
     validate_structure,
 )
 
-SERVICE_MODULES = (
+COMPATIBILITY_OWNER_MODULES = (
+    "compatibility.authentication",
+    "compatibility.facade",
+    "compatibility.repositories",
+)
+SERVICE_ALIAS_MODULES = (
     "services.__init__",
     "services.authentication",
     "services.repositories",
@@ -79,20 +84,34 @@ def _class_methods(source, class_name):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(name for name in SERVICE_MODULES if name not in source_texts)
-    check("all approved service owner modules contain real implementation", not missing)
+    missing = tuple(
+        name for name in COMPATIBILITY_OWNER_MODULES if name not in source_texts
+    )
+    check(
+        "all approved compatibility owner modules contain real implementation",
+        not missing,
+    )
     if missing:
         print(f"summary: 0/{len(results)} passed")
         return 1
 
     api_module = importlib.import_module("atomgit.api")
-    authentication = importlib.import_module("atomgit.services.authentication")
-    repositories = importlib.import_module("atomgit.services.repositories")
+    authentication = importlib.import_module("atomgit.compatibility.authentication")
+    repositories = importlib.import_module("atomgit.compatibility.repositories")
+    historical_authentication = importlib.import_module(
+        "atomgit.services.authentication"
+    )
+    historical_repositories = importlib.import_module("atomgit.services.repositories")
     adapter = importlib.import_module("atomgit.adapters.atomgit_v5")
 
     check(
+        "historical service paths alias the canonical compatibility owners",
+        historical_authentication is authentication
+        and historical_repositories is repositories,
+    )
+    check(
         "historical concrete API class and singleton remain at the old path",
-        api_module.HuggingFaceAPI.__module__ == "atomgit.api"
+        api_module.HuggingFaceAPI.__module__ == "atomgit.compatibility.api"
         and type(api_module.api) is api_module.HuggingFaceAPI,
     )
     check(
@@ -235,35 +254,38 @@ def main():
     check(
         "the historical API class contains no moved method definitions",
         not (
-            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            _class_methods(source_texts["compatibility.api"], "HuggingFaceAPI")
             & moved_methods
         ),
     )
     check(
-        "every nested services module has exact services ownership",
-        all(PRODUCTION_MODULE_OWNERS[name] == "services" for name in SERVICE_MODULES),
+        "compatibility owners and historical aliases have exact ownership",
+        all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
+            for name in (*COMPATIBILITY_OWNER_MODULES, *SERVICE_ALIAS_MODULES)
+        ),
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
-        LEGACY_FACADE_DEBT["api.__init__"]["max_lines"] < 5496
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_functions"] < 121
-        and LEGACY_FACADE_DEBT["api.__init__"]["max_classes"] <= 21,
+        LEGACY_FACADE_DEBT["compatibility.api"]["max_lines"] < 5496
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_functions"] < 121
+        and LEGACY_FACADE_DEBT["compatibility.api"]["max_classes"] <= 21,
     )
 
     placeholder = dict(source_texts)
-    placeholder["services.authentication"] = '"""Placeholder."""\npass\n'
+    placeholder["compatibility.authentication"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(placeholder)
     check(
-        "a service placeholder replacement fails closed",
+        "a compatibility owner placeholder replacement fails closed",
         any("empty placeholder" in error for error in errors),
         repr(errors),
     )
     unowned = dict(source_texts)
-    unowned["services.future"] = "VALUE = 1\n"
+    unowned["compatibility.future"] = "VALUE = 1\n"
     errors = validate_structure(unowned)
     check(
-        "an unowned service implementation fails closed",
-        any("services.future" in error and "unowned" in error for error in errors),
+        "an unowned compatibility implementation fails closed",
+        any("compatibility.future" in error and "unowned" in error for error in errors),
         repr(errors),
     )
 
@@ -271,7 +293,7 @@ def main():
     check(
         "upload methods remain outside repository service ownership",
         not (
-            _class_methods(source_texts["api.__init__"], "HuggingFaceAPI")
+            _class_methods(source_texts["compatibility.api"], "HuggingFaceAPI")
             & transfer_definitions
         )
         and transfer_definitions
@@ -279,7 +301,10 @@ def main():
         and not any(
             transfer_definitions
             & _class_methods(source_texts[name], "RepositoryServiceMixin")
-            for name in ("services.authentication", "services.repositories")
+            for name in (
+                "compatibility.authentication",
+                "compatibility.repositories",
+            )
         ),
     )
 

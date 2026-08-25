@@ -6,11 +6,11 @@ import os
 import sys
 import types
 
-from .lifecycle import _delete_legacy_patch, _forward_legacy_patch
-from .lifecycle import completion as _implementation
-from .lifecycle import environment as _environment
-from .lifecycle import managed_paths as _managed_paths
-from .lifecycle.completion import *  # noqa: F401,F403
+from .compatibility.facade import _delete_legacy_patch, _forward_legacy_patch
+from .infrastructure import completion as _implementation
+from .infrastructure import environment as _environment
+from .infrastructure import managed_paths as _managed_paths
+from .infrastructure.completion import *  # noqa: F401,F403
 
 _COMPLETE_VAR = _implementation._COMPLETE_VAR
 _PROGRAM_NAME = _implementation._PROGRAM_NAME

@@ -1,6 +1,6 @@
-"""Execute the historical CLI package through its Click root."""
+"""Execute the historical CLI package through its canonical facade."""
 
-from . import cli
+from ..compatibility.cli import cli
 
 if __name__ == "__main__":
     cli()

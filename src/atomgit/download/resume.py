@@ -1,16 +1,6 @@
-# ruff: noqa: F401,F403 -- historical private import surface
-"""Historical resume helper path backed by the canonical adapter."""
+"""Compatibility alias for canonical download resume helpers."""
 
-from ..adapters.download.resume import *  # noqa: F401,F403
-from ..adapters.download.resume import (
-    _atomgit_resume_raw,
-    _copy_resumed_file_to_destination,
-    _download_atomgit_file_resumable,
-    _parse_content_range,
-    _process_is_running,
-    _resume_cache_identity,
-    _resume_cache_root,
-    _resume_download_lock,
-)
+import importlib
+import sys
 
-__all__ = ()
+sys.modules[__name__] = importlib.import_module("atomgit.adapters.download.resume")

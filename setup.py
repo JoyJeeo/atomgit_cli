@@ -71,6 +71,7 @@ setup(
         "atomgit.infrastructure",
         "atomgit.interfaces",
         "atomgit.interfaces.cli",
+        "atomgit.interfaces.cli.commands",
         "atomgit.interfaces.sdk",
         "atomgit.lifecycle",
         "atomgit.lfs",

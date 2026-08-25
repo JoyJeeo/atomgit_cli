@@ -10,24 +10,22 @@ AtomGit CLI 同时提供命令行和 Python SDK：
 ```text
 安装入口
   |
-  +-- atomgit 命令 -----> cli/__init__.py schema -> commands/ -> api/__init__.py
-  |                               |                    |               |
-  |                               v                    v               v
-  |                          compatibility facades  command owners  huggingface_hub
+  +-- atomgit 命令 -----> cli.py shim -> compatibility.cli -> interfaces/cli
   |
-  +-- python -m atomgit -----> __main__.py -----> cli/__init__.py
+  +-- python -m atomgit -----> __main__.py -----> cli.py shim
   |
-  +-- import atomgit_hub ----> atomgit_hub.py ---> sdk/ ---> huggingface_hub/datasets
+  +-- import atomgit_hub ----> atomgit_hub.py ---> adapters.sdk_* ---> HF/datasets
   |
   +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
 ```
 
 CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；通用远程能力现在通过
 `context.run_usecase -> AtomGitClient -> usecase -> adapter` 共享链路装配。认证和
-仓库的 V5/身份技术调用已经由 `adapters.atomgit_v5` 直接持有，历史 `services`
-只保留输出、返回值、方法身份和 monkeypatch 接缝。下载的枚举、路径安全、传输、
+仓库的 V5/身份技术调用已经由 `adapters.atomgit_v5` 直接持有，
+`compatibility.authentication` 与 `compatibility.repositories` 保留历史输出、
+返回值、方法身份和 monkeypatch 接缝，`services` 仅为模块别名。下载的枚举、路径安全、传输、
 checksum、resume、manifest 和 prune 技术实现也已迁入 `adapters.download`；
-`atomgit.download` 只保留历史 API 方法和 helper 路径；上传/LFS 的 file、folder、
+`compatibility.download` 保留历史 API 转换，`atomgit.download` 仅为 helper 模块别名；上传/LFS 的 file、folder、
 resumable、projection、LFS pointer、attributes 和 recovery 技术实现已迁入
 `adapters.upload`、`adapters.lfs` 与 `adapters.sdk_uploads`，历史路径只保留兼容 alias。
 每个 parity-required 能力的可导入符号和实际委派由 `validate_runtime_routes()`
@@ -51,8 +49,10 @@ atomgit_cli/
 │   │   ├── interfaces/   # CLI/原生 SDK 用户接口
 │   │   ├── adapters/     # HF、AtomGit V5 和配置 outbound 边界
 │   │   ├── compatibility/# 历史路径/签名/接缝及兼容注册
-│   │   ├── cli/          # 历史 Click schema、交互边界和兼容装配
-│   │   ├── commands/     # CLI 命令实现 owner
+│   │   ├── api.py        # 历史 API 根 shim
+│   │   ├── cli.py        # 历史 CLI 根 shim 与模块执行入口
+│   │   ├── cli/          # 历史 Click 入口兼容 facade
+│   │   ├── commands/     # interfaces.cli.commands 的历史模块别名
 │   │   ├── api/__init__.py # CLI 使用的 AtomGit/HF 兼容 facade
 │   │   └── ...           # 其余已登记生产模块
 │   └── atomgit_hub.py    # 顶层 SDK 兼容代理
@@ -62,27 +62,31 @@ atomgit_cli/
 └── deploy.sh             # 本地构建、安装和 checksum 脚本
 ```
 
-仓库采用标准 `src/` 布局。SDK 实现位于 `src/atomgit/sdk/` 的 common、errors、
-downloads、uploads、repositories 和 datasets owner；
+仓库采用标准 `src/` 布局。历史 HF 风格 SDK 的 common、errors、downloads、
+uploads、repositories 和 datasets 技术 owner 位于 `src/atomgit/adapters/sdk_*`；
+`src/atomgit/sdk/` 只保留删除前的模块别名。
 `src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
 facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
-`api/__init__.py` 是历史具体客户端和全局单例所在的兼容 facade；
-`cli/__init__.py` 是历史 `atomgit.cli` package facade，
-保留 Click decorators、命令树、提示、输出、退出转换和懒加载装配。认证/配置、
-仓库/缓存、上传下载、更新/卸载及补全命令实现已迁入 `atomgit.commands`；
+`compatibility.api` 是历史具体客户端和全局单例所在的兼容 facade，根 `api.py`
+是最终导入 shim；`compatibility.cli` 是历史 Click context facade，根 `cli.py` 是
+最终导入和模块执行 shim。删除前的 `api/` 与 `cli/` 包仅保留 alias/proxy；Click schema、提示、输出和
+退出转换由 `atomgit.interfaces.cli` 持有。认证/配置、仓库/缓存、上传下载、
+更新/卸载及补全命令实现已迁入 `atomgit.interfaces.cli.commands`；
 owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
 `utils.py`、`config.py` 和 `runtime.py`
 保留历史导入路径，但实现已分别下沉到 `atomgit.infrastructure` 的 validation、
 output、filesystem、cache、git_credentials、config 和 runtime owner。补全与卸载
-实现也已下沉到 `atomgit.lifecycle` 的 environment、managed_paths、completion 和
-uninstall owner；历史 `completion.py` 与 `uninstaller.py` 只保留兼容转发和旧路径
-patch 接缝。Release/update 的校验、受限下载、安装和安装后验证已下沉到
+实现也已下沉到 `atomgit.infrastructure` 的 environment、managed_paths、completion
+和 uninstall owner；`atomgit.lifecycle` 仅保留模块别名，历史 `completion.py` 与
+`uninstaller.py` 只保留兼容转发和旧路径 patch 接缝。Release/update 的校验、受限下载、安装和安装后验证已下沉到
 `atomgit.infrastructure.release`；历史 `atomgit.release` 仅保留符号转发和旧路径
 patch 接缝。认证和仓库 V5 管理的技术 owner 已下沉到 `atomgit.adapters.atomgit_v5`；
-`atomgit.services.authentication` 与 `repositories` 只作为历史兼容 wrapper，
+`atomgit.compatibility.authentication` 与 `repositories` 持有历史兼容 wrapper，
+`atomgit.services.authentication` 与 `repositories` 是其模块别名，
 `HuggingFaceAPI` 通过 mixin 保留原类、方法签名和全局 `api` 身份。下载实现已下沉到
 `atomgit.adapters.download` 的 service、transport、integrity、manifest、resume
-和 prune owner；`atomgit.download` 仅保留历史 wrapper/export，历史下载 helper、
+和 prune owner；`atomgit.compatibility.download` 持有历史 wrapper，
+`atomgit.download` 仅保留模块别名，历史下载 helper、
 方法签名和 patch 接缝仍位于 `atomgit.api`。CLI/API upload 的 service、ordinary、
 resumable、projection、errors 和 contracts 已迁入 `atomgit.adapters.upload`；
 历史 `atomgit.upload` 路径只是 module alias，`atomgit.api` 仍保留原 helper、
@@ -98,8 +102,9 @@ protocol、pointer、attributes 和 recovery 由 `atomgit.adapters.lfs` 持有�
 声明收紧必须在同一变更完成，不能保留可回长的旧上限。CLI facade 转换已移除
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
-lifecycle 源码/可编辑安装策略移除。最终七目录责任架构已建立；现有
-`services/`、`download/`、`upload/`、`lfs/` 和 `sdk/` 现在都是已验证的兼容边界；认证/仓库
+lifecycle 源码/可编辑安装策略移除。七目录责任和 owner 架构已建立，但物理删除尚待
+单独授权；现有九个旧一级目录都是已验证的兼容 alias/proxy，物理布局测试会继续
+失败关闭。认证/仓库
 与下载 slice 已保持历史身份和 patch seam，并由 CLI 与原生 SDK 经共享 usecase 调用
 canonical adapter。上传/LFS slice 也已完成同样的技术 owner 下沉；受控远程上传、LFS
 恢复和 checksum 证据仍未在本地门禁中宣称。
@@ -111,9 +116,9 @@ canonical adapter。上传/LFS slice 也已完成同样的技术 owner 下沉；
 测试替身会被结构契约拒绝为绕行路径。
 `tests/test_infrastructure_utils_ownership.py` 另外锁定 owner provenance、共享 config
 对象、runtime 身份、旧 `os.walk`/`subprocess.run` patch 接缝和 facade 不回长。
-`tests/test_environment_lifecycle_ownership.py` 锁定生命周期 owner provenance、历史
-补全/卸载符号与 patch 接缝、精确受控路径，以及包缺失时 POSIX fallback 的安全
-策略等价性。
+`tests/test_environment_lifecycle_ownership.py` 锁定 infrastructure 生命周期 owner
+provenance、历史模块别名、补全/卸载符号与 patch 接缝、精确受控路径，以及包缺失时
+POSIX fallback 的安全策略等价性。
 `tests/test_auth_repository_services_ownership.py` 锁定认证/仓库 owner provenance、
 历史 `HuggingFaceAPI` 类和全局 `api` 身份、方法/私有 helper 签名与旧路径 patch
 传播，并明确阻止传输实现进入 services。
@@ -390,8 +395,9 @@ URL 或其查询参数。
 `atomgit download-file` 调用 `api.download_file`；它与整仓下载一样先列文件、
 校验安全目标路径，再直连 resolve。SDK `download_file` 使用 HF
 `hf_hub_download`，因此缓存路径和异常类型与 CLI API 不同。
-这些 CLI API 下载职责现在由 `atomgit.download` 内的真实 owner 模块实现；
-LFS 职责由 `atomgit.lfs` 内的真实 owner 模块实现。`atomgit.api` 仅保留历史
+这些 CLI API 下载职责现在由 `atomgit.adapters.download` 内的真实 owner 模块实现，
+历史结果转换位于 `atomgit.compatibility.download`；LFS 职责由
+`atomgit.adapters.lfs` 内的真实 owner 模块实现。`atomgit.api` 仅保留历史
 符号和 mixin 组合，不改变上述行为。
 
 ## 8. Python SDK

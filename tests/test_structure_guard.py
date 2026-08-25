@@ -19,6 +19,7 @@ from structure_contract import (  # noqa: E402
     discover_internal_edges,
     discover_source_texts,
     validate_artifact_contract,
+    validate_physical_layout,
     validate_structure,
 )
 
@@ -33,6 +34,12 @@ def check(name, condition, detail=""):
 
 
 def main():
+    physical_errors = validate_physical_layout(REPOSITORY_ROOT)
+    check(
+        "the source tree is closed to the seven canonical responsibility directories",
+        not physical_errors,
+        repr(physical_errors),
+    )
     source_texts = discover_source_texts(REPOSITORY_ROOT)
     current_edges = discover_internal_edges(source_texts)
     current_errors = validate_structure(source_texts)
@@ -48,7 +55,7 @@ def main():
     )
     check(
         "package execution adapters register their package-facade dependency",
-        ("cli.__main__", "cli.__init__") in current_edges,
+        ("cli.__main__", "compatibility.cli") in current_edges,
         repr(sorted(current_edges)),
     )
     check(
@@ -72,7 +79,7 @@ def main():
     )
 
     forbidden = dict(source_texts)
-    forbidden["runtime"] += "\nfrom .cli import cli\n"
+    forbidden["runtime"] += "\nfrom .compatibility.cli import cli\n"
     errors = validate_structure(forbidden)
     check(
         "a new infrastructure-to-CLI edge fails closed",
@@ -86,19 +93,21 @@ def main():
     )
 
     growing = dict(source_texts)
-    growing["api.__init__"] += "\n\ndef future_unowned_behavior():\n    return None\n"
+    growing[
+        "compatibility.api"
+    ] += "\n\ndef future_unowned_behavior():\n    return None\n"
     errors = validate_structure(growing)
     check(
         "legacy facade function or line growth fails closed",
         any(
-            "legacy facade debt contract is stale in api.__init__" in error
+            "legacy facade debt contract is stale in compatibility.api" in error
             for error in errors
         ),
         repr(errors),
     )
 
     growing_edge = dict(source_texts)
-    growing_edge["cli.__init__"] = growing_edge["cli.__init__"].replace(
+    growing_edge["compatibility.cli"] = growing_edge["compatibility.cli"].replace(
         'api = _LazyObject("api", "api")',
         'api = _LazyObject("api", "api")\n_import_runtime_module("atomgit_hub")',
     )
@@ -110,14 +119,14 @@ def main():
     )
 
     shrinking_facade = dict(source_texts)
-    shrinking_facade["api.__init__"] = shrinking_facade["api.__init__"].replace(
-        "\n\n", "\n", 1
-    )
+    shrinking_facade["compatibility.api"] = shrinking_facade[
+        "compatibility.api"
+    ].replace("\n\n", "\n", 1)
     errors = validate_structure(shrinking_facade)
     check(
         "reduced facade debt requires its exact ceiling to tighten immediately",
         any(
-            "legacy facade debt contract is stale in api.__init__" in error
+            "legacy facade debt contract is stale in compatibility.api" in error
             for error in errors
         ),
         repr(errors),
@@ -133,8 +142,8 @@ def main():
     )
 
     weakened_debt = copy.deepcopy(LEGACY_FACADE_DEBT)
-    weakened_debt["api.__init__"]["max_functions"] += 1
-    weakened_debt["api.__init__"]["max_lines"] += 4
+    weakened_debt["compatibility.api"]["max_functions"] += 1
+    weakened_debt["compatibility.api"]["max_lines"] += 4
     check(
         "the test fixture demonstrates that relaxing debt would hide growth",
         not validate_structure(growing, legacy_debt=weakened_debt),

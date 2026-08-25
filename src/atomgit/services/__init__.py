@@ -1,19 +1,11 @@
-"""Owned authentication and repository service implementations."""
+"""Compatibility package for historical service import paths."""
 
-import types
+import importlib
+import sys
 
-
-def _forward_legacy_patch(module, name, value):
-    for target in module._PATCH_TARGETS.get(name, ()):
-        setattr(target, name, value)
-    types.ModuleType.__setattr__(module, name, value)
-
-
-def _delete_legacy_patch(module, name):
-    for target in module._PATCH_TARGETS.get(name, ()):
-        if hasattr(target, name):
-            delattr(target, name)
-    types.ModuleType.__delattr__(module, name)
-
+for _name in ("authentication", "repositories"):
+    _module = importlib.import_module(f"atomgit.compatibility.{_name}")
+    sys.modules[f"{__name__}.{_name}"] = _module
+    globals()[_name] = _module
 
 __all__ = ("authentication", "repositories")

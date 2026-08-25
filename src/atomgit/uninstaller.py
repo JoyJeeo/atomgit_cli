@@ -6,11 +6,11 @@ import subprocess
 import sys
 import types
 
-from .lifecycle import _delete_legacy_patch, _forward_legacy_patch
-from .lifecycle import environment as _environment
-from .lifecycle import managed_paths as _managed_paths
-from .lifecycle import uninstall as _implementation
-from .lifecycle.uninstall import *  # noqa: F401,F403
+from .compatibility.facade import _delete_legacy_patch, _forward_legacy_patch
+from .infrastructure import environment as _environment
+from .infrastructure import managed_paths as _managed_paths
+from .infrastructure import uninstall as _implementation
+from .infrastructure.uninstall import *  # noqa: F401,F403
 
 MANAGED_COMPLETION_RELATIVE_PATHS = _managed_paths.MANAGED_COMPLETION_RELATIVE_PATHS
 UninstallError = _managed_paths.UninstallError

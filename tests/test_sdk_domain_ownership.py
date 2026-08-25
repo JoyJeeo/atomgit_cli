@@ -32,22 +32,29 @@ SDK_MODULES = (
     "sdk.uploads",
 )
 
-SDK_UPLOAD_OWNER = "adapters.sdk_uploads"
+SDK_OWNER_MODULES = (
+    "adapters.sdk_datasets",
+    "adapters.sdk_downloads",
+    "adapters.sdk_common",
+    "adapters.sdk_errors",
+    "adapters.sdk_repositories",
+    "adapters.sdk_uploads",
+)
 
 PUBLIC_OWNERS = {
-    "snapshot_download": "sdk.downloads",
-    "hub_download_url": "sdk.downloads",
-    "download_file": "sdk.downloads",
-    "upload_folder": SDK_UPLOAD_OWNER,
-    "create_repository": "sdk.repositories",
-    "load_dataset": "sdk.datasets",
+    "snapshot_download": "adapters.sdk_downloads",
+    "hub_download_url": "adapters.sdk_downloads",
+    "download_file": "adapters.sdk_downloads",
+    "upload_folder": "adapters.sdk_uploads",
+    "create_repository": "adapters.sdk_repositories",
+    "load_dataset": "adapters.sdk_datasets",
 }
 
 PRIVATE_OWNERS = {
-    "_get_token": "sdk.common",
-    "_normalize_repo_id": "sdk.common",
-    "_atomgit_repo_type": "sdk.common",
-    "_sdk_error": "sdk.errors",
+    "_get_token": "adapters.sdk_common",
+    "_normalize_repo_id": "adapters.sdk_common",
+    "_atomgit_repo_type": "adapters.sdk_common",
+    "_sdk_error": "adapters.sdk_errors",
 }
 
 HISTORICAL_PATCH_NAMES = {
@@ -118,10 +125,8 @@ def _loaded_names(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(
-        name for name in (*SDK_MODULES, SDK_UPLOAD_OWNER) if name not in source_texts
-    )
-    check("all approved SDK owner modules contain real implementation", not missing)
+    missing = tuple(name for name in SDK_OWNER_MODULES if name not in source_texts)
+    check("all approved SDK canonical owners contain real implementation", not missing)
     if missing:
         print(f"summary: 0/{len(results)} passed")
         return 1
@@ -130,12 +135,24 @@ def main():
     top_level_facade = importlib.import_module("atomgit_hub")
     package = importlib.import_module("atomgit")
     owner_modules = {
+        name: importlib.import_module(f"atomgit.{name}") for name in SDK_OWNER_MODULES
+    }
+    historical_modules = {
         name: importlib.import_module(f"atomgit.{name}")
         for name in SDK_MODULES
         if name != "sdk.__init__"
     }
-    owner_modules[SDK_UPLOAD_OWNER] = importlib.import_module(
-        f"atomgit.{SDK_UPLOAD_OWNER}"
+
+    check(
+        "historical SDK modules alias canonical owners",
+        historical_modules["sdk.common"] is owner_modules["adapters.sdk_common"]
+        and historical_modules["sdk.errors"] is owner_modules["adapters.sdk_errors"]
+        and historical_modules["sdk.datasets"] is owner_modules["adapters.sdk_datasets"]
+        and historical_modules["sdk.downloads"]
+        is owner_modules["adapters.sdk_downloads"]
+        and historical_modules["sdk.repositories"]
+        is owner_modules["adapters.sdk_repositories"]
+        and historical_modules["sdk.uploads"] is owner_modules["adapters.sdk_uploads"],
     )
 
     check(
@@ -249,7 +266,7 @@ def main():
     with patch.object(top_level_facade, "hf_upload_folder", sentinel):
         check(
             "patch.object on the top-level facade reaches the upload owner",
-            owner_modules[SDK_UPLOAD_OWNER].hf_upload_folder is sentinel,
+            owner_modules["adapters.sdk_uploads"].hf_upload_folder is sentinel,
         )
 
     facade_definitions = _top_level_definitions(source_texts["atomgit_hub"])
@@ -258,14 +275,11 @@ def main():
         not (set(PUBLIC_OWNERS) | set(PRIVATE_OWNERS)) & facade_definitions,
     )
     check(
-        "every nested SDK module has exact SDK ownership",
-        all(
-            PRODUCTION_MODULE_OWNERS[name] == "sdk"
-            for name in SDK_MODULES
-            if name != "sdk.uploads"
-        )
-        and PRODUCTION_MODULE_OWNERS["sdk.uploads"] == "compatibility"
-        and PRODUCTION_MODULE_OWNERS[SDK_UPLOAD_OWNER] == "adapters",
+        "canonical SDK owners and historical aliases have exact ownership",
+        all(PRODUCTION_MODULE_OWNERS[name] == "adapters" for name in SDK_OWNER_MODULES)
+        and all(
+            PRODUCTION_MODULE_OWNERS[name] == "compatibility" for name in SDK_MODULES
+        ),
     )
     check(
         "the historical SDK facade debt ceiling tightens with moved implementation",
@@ -274,7 +288,7 @@ def main():
     )
 
     placeholder = dict(source_texts)
-    placeholder["sdk.downloads"] = '"""Placeholder."""\npass\n'
+    placeholder["adapters.sdk_downloads"] = '"""Placeholder."""\npass\n'
     errors = validate_structure(placeholder)
     check(
         "an SDK placeholder replacement fails closed",
@@ -282,24 +296,28 @@ def main():
         repr(errors),
     )
     unowned = dict(source_texts)
-    unowned["sdk.future"] = "VALUE = 1\n"
+    unowned["adapters.sdk_future"] = "VALUE = 1\n"
     errors = validate_structure(unowned)
     check(
         "an unowned SDK implementation fails closed",
-        any("sdk.future" in error and "unowned" in error for error in errors),
+        any("sdk_future" in error and "unowned" in error for error in errors),
         repr(errors),
     )
 
     check(
         "CLI API and LFS implementation remain outside the SDK package",
-        "class HuggingFaceAPI(" in source_texts["api.__init__"]
+        "class HuggingFaceAPI(" in source_texts["compatibility.api"]
         and "def _configure_remote_lfs_attributes("
         in source_texts["adapters.lfs.service"]
-        and "def cli(" in source_texts["cli.__init__"],
+        and "def cli(" in source_texts["compatibility.cli"],
     )
     check(
-        "historical SDK upload path contains no business definition",
-        "upload_folder" not in _top_level_definitions(source_texts["sdk.uploads"]),
+        "historical SDK paths contain no business definitions",
+        all(
+            not _top_level_definitions(source_texts[name])
+            for name in SDK_MODULES
+            if name != "sdk.__init__"
+        ),
     )
 
     passed = sum(condition for _, condition, _ in results)
