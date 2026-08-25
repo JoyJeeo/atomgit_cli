@@ -369,7 +369,8 @@ atomgit cache clear
 > 399 MB 文件的真实中断、恢复和 SHA-256 校验。AtomGit 不会创建请求的非默认
 > 分支，因此 CLI 不依赖 HF 隐式建分支。先运行
 > `atomgit repo branch create REPO_ID BRANCH --from main`，再使用
-> `upload --revision BRANCH`。Python SDK 仍保持 `main`-only。详见
+> `upload --revision BRANCH`。原生 `AtomGitClient` 可使用同一已验证分支；历史
+> `atomgit_hub.upload_folder` 仍保持 `main`-only。详见
 > [上传实现分析](docs/upload_command_analysis.md)。V5 分支写入若遇到超时、
 > 网络中断或服务端错误，CLI 会读取目标分支恢复结果；4xx 拒绝不会按已有分支
 > 误报成功。创建前会将 `--from` 解析为不可变提交，并在创建后校验目标分支
@@ -571,23 +572,35 @@ atomgit repo delete your-username/your-repo \
 命令会先读取并确认目标仓库，再调用 AtomGit V5 删除接口，最后重新读取同一地址；
 只有远端返回 404 才报告成功。确认值缺失或不完全一致时不会发送 API 请求。若删除
 响应丢失但随后验证仓库已不存在，命令仍可确认成功；无法验证时返回非零并明确提示
-远端状态未知。此功能仅属于 CLI，不新增 Python SDK 删除接口。
+远端状态未知。原生 `AtomGitClient.delete_repository()` 通过同一 usecase 提供相同的
+确认和最终状态验证；历史 `atomgit_hub` 兼容接口不提供删除函数。
 
 ## SDK使用方法
 
-AtomGit除了提供CLI工具外，还提供了类似huggingface_hub的Python SDK接口，让您可以在Python代码中直接使用AtomGit的功能。
+AtomGit 同时提供两种 Python 接口：
+
+- 原生 `atomgit.interfaces.sdk.AtomGitClient` 面向新开发，与 CLI 的通用远程能力
+  共享 usecase，返回结构化 `OperationResult`；
+- 历史 `atomgit_hub` 保留类似 `huggingface_hub` 的函数、签名、返回值和异常，
+  用于兼容既有调用方，其能力面有意小于原生客户端。
 
 ### SDK功能特性
 
-- 🐍 **Python原生接口**：类似huggingface_hub的API设计
-- 🔄 **与CLI共享配置**：使用相同的认证和配置文件
-- 📦 **一键安装**：安装atomgit包即可同时使用CLI和SDK
-- 🚀 **功能齐全**：支持上传、下载、仓库管理等完整功能
+- **原生对称接口**：认证、仓库、上传和下载通过 `AtomGitClient` 与 CLI 共享业务层
+- **历史兼容接口**：`atomgit_hub` 保留已有 HF 风格调用合同
+- **共享配置**：CLI 和两种 SDK 接口使用相同的认证和配置文件
+- **统一安装**：安装 `atomgit` 包即可使用 CLI 和两种 Python 接口
 
 ### 1. SDK导入
 
 ```python
-# 推荐方式：直接从atomgit_hub导入
+# 新功能开发：使用与 CLI 共享 usecase 的原生客户端
+from atomgit.interfaces.sdk import AtomGitClient
+
+client = AtomGitClient()
+result = client.list_repositories()
+
+# 兼容既有 HF 风格代码：从 atomgit_hub 导入
 from atomgit_hub import snapshot_download
 
 # 或者从atomgit包导入
@@ -601,6 +614,10 @@ from atomgit_hub import (
     create_repository    # 创建仓库
 )
 ```
+
+以下函数式示例均属于历史 `atomgit_hub` 兼容接口。原生客户端还提供
+`login/logout/whoami`、仓库列表/可见性/分支/删除、单文件上传以及带
+checksum/resume/prune 的下载方法。
 
 ### 2. SDK下载功能
 

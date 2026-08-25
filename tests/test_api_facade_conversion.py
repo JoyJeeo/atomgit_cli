@@ -67,8 +67,8 @@ def main():
     facade_path = PACKAGE_DIRECTORY / "api" / "__init__.py"
     owner_path = PACKAGE_DIRECTORY / "compatibility" / "api.py"
     check(
-        "root and package API paths resolve one canonical facade",
-        facade_path.is_file() and flat_path.is_file() and owner_path.is_file(),
+        "root API shim and canonical facade replace the historical package",
+        not facade_path.exists() and flat_path.is_file() and owner_path.is_file(),
         repr(
             {
                 "flat": flat_path.exists(),
@@ -208,7 +208,7 @@ def main():
 
     check(
         "the separate CLI facade remains compatible after its own conversion",
-        (PACKAGE_DIRECTORY / "cli" / "__init__.py").is_file()
+        not (PACKAGE_DIRECTORY / "cli").exists()
         and (PACKAGE_DIRECTORY / "cli.py").is_file()
         and (PACKAGE_DIRECTORY / "compatibility" / "cli.py").is_file()
         and cli_module.api._module_name == "api"

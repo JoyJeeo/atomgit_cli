@@ -275,11 +275,9 @@ def main():
         not (set(PUBLIC_OWNERS) | set(PRIVATE_OWNERS)) & facade_definitions,
     )
     check(
-        "canonical SDK owners and historical aliases have exact ownership",
+        "canonical SDK owners replace physically absent historical aliases",
         all(PRODUCTION_MODULE_OWNERS[name] == "adapters" for name in SDK_OWNER_MODULES)
-        and all(
-            PRODUCTION_MODULE_OWNERS[name] == "compatibility" for name in SDK_MODULES
-        ),
+        and all(name not in source_texts for name in SDK_MODULES),
     )
     check(
         "the historical SDK facade debt ceiling tightens with moved implementation",
@@ -312,12 +310,8 @@ def main():
         and "def cli(" in source_texts["compatibility.cli"],
     )
     check(
-        "historical SDK paths contain no business definitions",
-        all(
-            not _top_level_definitions(source_texts[name])
-            for name in SDK_MODULES
-            if name != "sdk.__init__"
-        ),
+        "historical SDK paths contain no physical source modules",
+        all(name not in source_texts for name in SDK_MODULES),
     )
 
     passed = sum(condition for _, condition, _ in results)

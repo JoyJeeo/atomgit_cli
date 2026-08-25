@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # ruff: noqa: F401 -- historical CLI assignment and monkeypatch surface
-
 """Historical CLI compatibility facade and Click context."""
 
 import importlib
@@ -13,7 +11,9 @@ import click
 
 try:
     from ..runtime import configure_hf_environment
+    from .facade import _install_legacy_cli_main
 except ImportError:
+    from compatibility.facade import _install_legacy_cli_main
     from runtime import configure_hf_environment
 
 configure_hf_environment()

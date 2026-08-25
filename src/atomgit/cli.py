@@ -20,8 +20,8 @@ _FacadeModule = type(
     (types.ModuleType,),
     {"__setattr__": _forward_legacy_patch, "__delattr__": _delete_legacy_patch},
 )
-
 if __name__ == "__main__":
     _owner.cli()
 else:
+    _owner._install_legacy_cli_main(__name__, _owner)
     sys.modules[__name__].__class__ = _FacadeModule

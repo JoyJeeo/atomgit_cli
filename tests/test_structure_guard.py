@@ -55,7 +55,7 @@ def main():
     )
     check(
         "package execution adapters register their package-facade dependency",
-        ("cli.__main__", "compatibility.cli") in current_edges,
+        ("cli", "compatibility.__init__") in current_edges,
         repr(sorted(current_edges)),
     )
     check(

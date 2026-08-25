@@ -25,7 +25,8 @@ LFS_OWNER_MODULES = (
     "adapters.lfs.pointer",
     "adapters.lfs.service",
 )
-LFS_COMPATIBILITY_MODULES = ("lfs.__init__", "lfs.service", "lfs_pointer")
+LFS_RUNTIME_ALIAS_MODULES = ("lfs.__init__", "lfs.service")
+LFS_COMPATIBILITY_MODULES = ("lfs_pointer",)
 LFS_DEFINITIONS = {
     "_slow_flow_stable_baseline",
     "_slow_flow_peer_baseline",
@@ -189,12 +190,13 @@ def main():
         not (LFS_DEFINITIONS & upload_definitions),
     )
     check(
-        "canonical LFS modules have adapter ownership and old paths are compatibility",
+        "canonical LFS owners replace physically absent historical aliases",
         all(PRODUCTION_MODULE_OWNERS[name] == "adapters" for name in LFS_OWNER_MODULES)
         and all(
             PRODUCTION_MODULE_OWNERS[name] == "compatibility"
             for name in LFS_COMPATIBILITY_MODULES
-        ),
+        )
+        and all(name not in source_texts for name in LFS_RUNTIME_ALIAS_MODULES),
     )
     errors = validate_structure(source_texts)
     check("structure contract accepts the LFS domain", not errors, repr(errors))
@@ -204,12 +206,14 @@ def main():
         and "upload_folder" not in lfs_definitions,
     )
     check(
-        "historical LFS paths contain no business definitions or dependency calls",
+        "historical LFS paths contain no business definitions or physical package",
         all(
             not _top_level_definitions(source_texts[name])
             and "huggingface_hub" not in source_texts[name]
             for name in LFS_COMPATIBILITY_MODULES
-        ),
+        )
+        and all(name not in source_texts for name in LFS_RUNTIME_ALIAS_MODULES)
+        and not (SOURCE_ROOT / "atomgit" / "lfs").exists(),
     )
 
     passed = sum(results)

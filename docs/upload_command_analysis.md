@@ -261,8 +261,9 @@ worker 捕获异常后立即、无限地把同一对象放回队列。AtomGit �
 SHA-256 均一致。
 
 默认 macOS 排除是 CLI 边界策略。`api.upload_directory` 仍只应用调用方显式
-传入的模式，公开 Python SDK `atomgit_hub.upload_folder(ignore_patterns=...)`
-也保持调用方完全控制，不隐式追加 CLI 默认。
+传入的模式，原生 `AtomGitClient.upload_folder(ignore_patterns=...)` 与历史
+`atomgit_hub.upload_folder(ignore_patterns=...)` 也都保持调用方完全控制，不隐式
+追加 CLI 默认。
 
 ## 6. 进度条和 timeout
 
@@ -323,7 +324,8 @@ CLI 全局状态恢复以及大文件中断恢复。2026-08-11 的受控小型 `
 pointer 没有在该验收中修复。这些测试仍没有证明：
 
 - CLI 先通过 `repo branch create` 的 V5 POST/GET 创建并验证分支，随后
-  revision 才会写入目标远端分支；SDK 仍只支持 main；
+  revision 才会写入目标远端分支；原生 `AtomGitClient` 可使用同一已验证分支，
+  历史 `atomgit_hub` SDK 仍只支持 main；
 - 多层 repo ID 的远程创建和上传成功；
 - ignore 在真实远端确实排除了文件。
 

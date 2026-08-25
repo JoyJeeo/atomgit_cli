@@ -114,12 +114,8 @@ def _loaded_names(source):
 def main():
     results.clear()
     source_texts = discover_source_texts(REPOSITORY_ROOT)
-    missing = tuple(
-        name
-        for name in (*UPLOAD_OWNER_MODULES, *UPLOAD_COMPATIBILITY_MODULES)
-        if name not in source_texts
-    )
-    check("all canonical and compatibility upload modules exist", not missing)
+    missing = tuple(name for name in UPLOAD_OWNER_MODULES if name not in source_texts)
+    check("all canonical upload owner modules exist", not missing)
     if missing:
         print(f"summary: 0/{len(results)} passed")
         return 1
@@ -130,6 +126,11 @@ def main():
         name: importlib.import_module(f"atomgit.{name}")
         for name in UPLOAD_OWNER_MODULES
         if name != "adapters.upload.__init__"
+    }
+    historical_modules = {
+        name: importlib.import_module(f"atomgit.{name}")
+        for name in UPLOAD_COMPATIBILITY_MODULES
+        if name != "upload.__init__"
     }
 
     check(
@@ -241,15 +242,12 @@ def main():
         ),
     )
     check(
-        "canonical upload modules have adapter ownership and old paths are compatibility",
+        "canonical upload owners replace physically absent historical aliases",
         all(
             PRODUCTION_MODULE_OWNERS[name] == "adapters"
             for name in UPLOAD_OWNER_MODULES
         )
-        and all(
-            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
-            for name in UPLOAD_COMPATIBILITY_MODULES
-        ),
+        and all(name not in source_texts for name in UPLOAD_COMPATIBILITY_MODULES),
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",
@@ -292,12 +290,14 @@ def main():
         and "upload_folder" not in upload_definitions,
     )
     check(
-        "historical upload paths contain no business definitions or dependency calls",
-        all(
-            not _top_level_definitions(source_texts[name])
-            and "huggingface_hub" not in source_texts[name]
-            for name in UPLOAD_COMPATIBILITY_MODULES
-        ),
+        "historical upload paths are runtime aliases without physical source",
+        all(name not in source_texts for name in UPLOAD_COMPATIBILITY_MODULES)
+        and all(
+            historical_modules[name]
+            is owner_modules[name.replace("upload.", "adapters.upload.", 1)]
+            for name in historical_modules
+        )
+        and not (SOURCE_ROOT / "atomgit" / "upload").exists(),
     )
 
     passed = sum(condition for _, condition, _ in results)

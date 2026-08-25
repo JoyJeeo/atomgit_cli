@@ -22,7 +22,8 @@ Use the smallest applicable primary type:
 - `compatibility`: HF Hub, datasets, Python, OS, or packaging compatibility;
 - `testing`: missing or unreliable automated verification;
 - `cli`: Click parsing, output, command behavior, or exit codes;
-- `sdk`: public `atomgit_hub` behavior or API contract;
+- `sdk`: native `AtomGitClient` or public legacy `atomgit_hub` behavior and API
+  contracts;
 - `security`: token, configuration, credential helper, or user-state safety;
 - `distribution`: installation, version identity, wheel, or release artifact;
 - `documentation`: user or maintainer documentation only;

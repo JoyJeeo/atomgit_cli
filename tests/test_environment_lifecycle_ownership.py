@@ -291,15 +291,12 @@ def main():
         and LEGACY_FACADE_DEBT["uninstaller"]["max_classes"] == 0,
     )
     check(
-        "infrastructure owners and lifecycle aliases have exact ownership",
+        "infrastructure owners replace physically absent lifecycle aliases",
         all(
             PRODUCTION_MODULE_OWNERS[name] == "infrastructure"
             for name in INFRASTRUCTURE_LIFECYCLE_MODULES
         )
-        and all(
-            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
-            for name in LIFECYCLE_MODULES
-        ),
+        and all(name not in source_texts for name in LIFECYCLE_MODULES),
     )
     check(
         "the legacy uninstaller-to-release edge is removed exactly",

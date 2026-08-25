@@ -193,15 +193,12 @@ def main():
         ),
     )
     check(
-        "every nested download module has exact transfer ownership",
+        "canonical download modules replace physically absent historical aliases",
         all(
             PRODUCTION_MODULE_OWNERS[name] == "adapters"
             for name in ADAPTER_DOWNLOAD_MODULES
         )
-        and all(
-            PRODUCTION_MODULE_OWNERS[name] == "compatibility"
-            for name in LEGACY_DOWNLOAD_MODULES
-        )
+        and all(name not in source_texts for name in LEGACY_DOWNLOAD_MODULES)
         and PRODUCTION_MODULE_OWNERS[COMPATIBILITY_DOWNLOAD_MODULE] == "compatibility",
     )
     check(
@@ -285,12 +282,8 @@ def main():
         and "sanitized_download_error" not in canonical_service_source,
     )
     check(
-        "historical download modules contain aliases rather than implementation",
-        all(
-            not _top_level_definitions(source_texts[name])
-            for name in LEGACY_DOWNLOAD_MODULES
-            if name != "download.__init__"
-        )
+        "historical download paths are runtime aliases rather than source modules",
+        all(name not in source_texts for name in LEGACY_DOWNLOAD_MODULES)
         and {
             "DownloadServiceMixin",
         }

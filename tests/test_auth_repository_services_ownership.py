@@ -259,11 +259,12 @@ def main():
         ),
     )
     check(
-        "compatibility owners and historical aliases have exact ownership",
+        "compatibility owners replace physically absent historical aliases",
         all(
             PRODUCTION_MODULE_OWNERS[name] == "compatibility"
-            for name in (*COMPATIBILITY_OWNER_MODULES, *SERVICE_ALIAS_MODULES)
-        ),
+            for name in COMPATIBILITY_OWNER_MODULES
+        )
+        and all(name not in source_texts for name in SERVICE_ALIAS_MODULES),
     )
     check(
         "the API facade debt ceiling tightens with moved implementation",

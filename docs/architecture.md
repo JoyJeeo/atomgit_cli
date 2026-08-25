@@ -16,10 +16,13 @@ AtomGit CLI 同时提供命令行和 Python SDK：
   |
   +-- import atomgit_hub ----> atomgit_hub.py ---> adapters.sdk_* ---> HF/datasets
   |
+  +-- import AtomGitClient --> interfaces/sdk ---> usecases ---> adapters
+  |
   +-- Zsh Tab ---------------> 轻量 cli package schema -> completion.py
 ```
 
-CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；通用远程能力现在通过
+CLI 和历史 HF 风格 SDK 仍保留原有兼容路径；原生 `AtomGitClient` 是面向新开发的
+parity 接口，通用远程能力通过
 `context.run_usecase -> AtomGitClient -> usecase -> adapter` 共享链路装配。认证和
 仓库的 V5/身份技术调用已经由 `adapters.atomgit_v5` 直接持有，
 `compatibility.authentication` 与 `compatibility.repositories` 保留历史输出、
@@ -30,7 +33,8 @@ resumable、projection、LFS pointer、attributes 和 recovery 技术实现已�
 `adapters.upload`、`adapters.lfs` 与 `adapters.sdk_uploads`，历史路径只保留兼容 alias。
 每个 parity-required 能力的可导入符号和实际委派由 `validate_runtime_routes()`
 fail-closed 校验。CLI presentation（Click、提示、进度和退出码）仍由 CLI 层负责，
-SDK 返回 `OperationResult`，不会打印 CLI 文本。
+原生 SDK 返回 `OperationResult`，不会打印 CLI 文本；历史 SDK 继续保持既有函数返回
+和异常合同。
 
 ## 2. 目录与模块
 
@@ -49,12 +53,10 @@ atomgit_cli/
 │   │   ├── interfaces/   # CLI/原生 SDK 用户接口
 │   │   ├── adapters/     # HF、AtomGit V5 和配置 outbound 边界
 │   │   ├── compatibility/# 历史路径/签名/接缝及兼容注册
+│   │   ├── infrastructure/# 配置、运行时、文件系统和生命周期设施
 │   │   ├── api.py        # 历史 API 根 shim
 │   │   ├── cli.py        # 历史 CLI 根 shim 与模块执行入口
-│   │   ├── cli/          # 历史 Click 入口兼容 facade
-│   │   ├── commands/     # interfaces.cli.commands 的历史模块别名
-│   │   ├── api/__init__.py # CLI 使用的 AtomGit/HF 兼容 facade
-│   │   └── ...           # 其余已登记生产模块
+│   │   └── ...           # 冻结白名单中的其余根兼容 shim
 │   └── atomgit_hub.py    # 顶层 SDK 兼容代理
 ├── tests/                # pytest 隔离矩阵与兼容的自执行回归脚本
 ├── setup.py              # Python 包与 console script
@@ -64,12 +66,12 @@ atomgit_cli/
 
 仓库采用标准 `src/` 布局。历史 HF 风格 SDK 的 common、errors、downloads、
 uploads、repositories 和 datasets 技术 owner 位于 `src/atomgit/adapters/sdk_*`；
-`src/atomgit/sdk/` 只保留删除前的模块别名。
+历史 `atomgit.sdk` 路径由 compatibility 注册为运行时别名，不再有物理目录。
 `src/atomgit/atomgit_hub.py` 与 `src/atomgit_hub.py` 分别保留包内和顶层历史
 facade，因此公开函数身份、签名以及现有 monkeypatch 接缝仍指向同一实现。
 `compatibility.api` 是历史具体客户端和全局单例所在的兼容 facade，根 `api.py`
 是最终导入 shim；`compatibility.cli` 是历史 Click context facade，根 `cli.py` 是
-最终导入和模块执行 shim。删除前的 `api/` 与 `cli/` 包仅保留 alias/proxy；Click schema、提示、输出和
+最终导入和模块执行 shim；旧 `api/` 与 `cli/` 物理包已删除。Click schema、提示、输出和
 退出转换由 `atomgit.interfaces.cli` 持有。认证/配置、仓库/缓存、上传下载、
 更新/卸载及补全命令实现已迁入 `atomgit.interfaces.cli.commands`；
 owner 通过历史模块上下文解析运行时依赖，因此旧路径 monkeypatch 接缝仍有效。
@@ -102,9 +104,9 @@ protocol、pointer、attributes 和 recovery 由 `atomgit.adapters.lfs` 持有�
 声明收紧必须在同一变更完成，不能保留可回长的旧上限。CLI facade 转换已移除
 最后一条登记的禁止方向；API 的懒访问属于 facade 装配，不再归入 CLI 业务域。
 `uninstaller -> release` 已通过共享的
-lifecycle 源码/可编辑安装策略移除。七目录责任和 owner 架构已建立，但物理删除尚待
-单独授权；现有九个旧一级目录都是已验证的兼容 alias/proxy，物理布局测试会继续
-失败关闭。认证/仓库
+lifecycle 源码/可编辑安装策略移除。`src/atomgit` 现仅有七个责任目录；九个旧一级
+目录已按授权物理删除，历史路径由 compatibility 在运行时注册，物理布局与结构门禁
+均通过。认证/仓库
 与下载 slice 已保持历史身份和 patch seam，并由 CLI 与原生 SDK 经共享 usecase 调用
 canonical adapter。上传/LFS slice 也已完成同样的技术 owner 下沉；受控远程上传、LFS
 恢复和 checksum 证据仍未在本地门禁中宣称。
@@ -205,7 +207,8 @@ commit ID，POST 后的分支读取必须同时匹配目标名称和该 commit I
 的 HF 删除接口。CLI 要求 `--confirm` 与输入仓库 ID 完全一致，API 在 DELETE 前
 GET 目标、在 DELETE 后再次 GET；只有后置请求返回 404 才成功。若 DELETE 响应
 不确定，仍通过后置 GET 恢复结果；仓库仍存在或无法验证时返回失败，且错误输出
-不包含 token。该能力不进入公开 Python SDK。
+不包含 token。CLI 与原生 `AtomGitClient.delete_repository()` 进入同一共享 usecase；
+历史 `atomgit_hub` 兼容接口不提供删除函数。
 
 `HuggingFaceAPI.get_repo_info` 是保留的方法兼容面，不对应 CLI 命令。当前版本不
 实现仓库详情读取；调用时固定返回 `None` 和脱敏的不支持提示，不读取凭据、不发
@@ -402,7 +405,25 @@ URL 或其查询参数。
 
 ## 8. Python SDK
 
-`atomgit_hub.py` 导出：
+### 8.1 原生 SDK
+
+`atomgit.interfaces.sdk.AtomGitClient` 面向新功能开发，与 CLI 共享认证、仓库、上传
+和下载 usecase，并以 `OperationResult` 返回结构化成功、值、元数据和错误。当前
+方法包括：
+
+- `login`、`logout`、`whoami`；
+- `create_repository`、`list_repositories`、`set_repository_visibility`、
+  `create_branch`、`delete_repository`；
+- `upload_file`、`upload_folder`；
+- `download_snapshot`、`download_file`。
+
+CLI 仍单独负责 Click 参数、提示、进度和退出码；原生 SDK 不打印 CLI 文本。CLI
+目录上传默认启用 resumable 和 macOS 元数据过滤属于界面策略，原生 SDK 默认普通
+上传且 ignore 完全由调用方控制。
+
+### 8.2 历史 HF 风格兼容 SDK
+
+`atomgit_hub.py` 保留既有函数式接口并导出：
 
 - `snapshot_download`
 - `hub_download_url`
@@ -411,7 +432,7 @@ URL 或其查询参数。
 - `create_repository`
 - `load_dataset`
 
-当前契约：
+历史兼容契约：
 
 - 非根 `path_in_repo` 的临时目录覆盖完整 HF 调用，并在所有路径清理；
 - `repo_type`、`revision`、`commit_description`、`ignore_patterns` 均有严格

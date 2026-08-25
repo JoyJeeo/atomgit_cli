@@ -232,6 +232,11 @@ def main():
                 "Commands:",
             ),
             (
+                "CLI package __main__ help",
+                [venv_python, "-m", "atomgit.cli.__main__", "--help"],
+                "Commands:",
+            ),
+            (
                 "installed imports",
                 [
                     venv_python,
@@ -300,7 +305,12 @@ def main():
             result = run(command, root, environment)
             check(
                 f"{name} succeeds",
-                result.returncode == 0 and marker in result.stdout,
+                result.returncode == 0
+                and marker in result.stdout
+                and (
+                    name != "CLI package __main__ help"
+                    or "RuntimeWarning" not in result.stderr
+                ),
                 (result.stdout + result.stderr)[-500:],
             )
 

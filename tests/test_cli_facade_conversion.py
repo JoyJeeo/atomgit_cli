@@ -137,9 +137,9 @@ def main():
     executable_path = PACKAGE_DIRECTORY / "cli" / "__main__.py"
     owner_path = PACKAGE_DIRECTORY / "compatibility" / "cli.py"
     check(
-        "root and package CLI paths resolve one canonical facade",
-        facade_path.is_file()
-        and executable_path.is_file()
+        "root CLI shim and canonical facade replace the historical package",
+        not facade_path.exists()
+        and not executable_path.exists()
         and flat_path.is_file()
         and owner_path.is_file(),
         repr(
@@ -151,7 +151,7 @@ def main():
             }
         ),
     )
-    if not owner_path.is_file() or not executable_path.is_file():
+    if not owner_path.is_file() or not flat_path.is_file():
         return 1
 
     source = owner_path.read_text(encoding="utf-8")
@@ -160,13 +160,16 @@ def main():
     owner_module = importlib.import_module("atomgit.compatibility.cli")
     atomgit_package = importlib.import_module("atomgit")
     schema_module = importlib.import_module("atomgit.interfaces.cli.schema")
+    executable_module = importlib.import_module("atomgit.cli.__main__")
 
     check(
-        "historical package import forwards the canonical CLI facade",
+        "historical CLI import forwards through the root shim",
         cli_module.__name__ == "atomgit.cli"
-        and Path(cli_module.__file__).resolve() == facade_path.resolve()
-        and cli_module.__package__ == "atomgit.cli"
-        and tuple(cli_module.__path__) == (str(facade_path.parent),),
+        and Path(cli_module.__file__).resolve() == flat_path.resolve()
+        and cli_module.__package__ == "atomgit"
+        and tuple(cli_module.__path__) == ()
+        and executable_module.__name__ == "atomgit.cli.__main__"
+        and executable_module.cli is owner_module.cli,
         repr(
             {
                 "name": cli_module.__name__,
@@ -244,12 +247,13 @@ def main():
 
     module_results = {
         module_name: _module_help(module_name)
-        for module_name in ("atomgit", "atomgit.cli")
+        for module_name in ("atomgit", "atomgit.cli", "atomgit.cli.__main__")
     }
     check(
         "both historical Python module entry paths retain executable help",
         all(result.returncode == 0 for result in module_results.values())
-        and all("Usage:" in result.stdout for result in module_results.values()),
+        and all("Usage:" in result.stdout for result in module_results.values())
+        and "RuntimeWarning" not in module_results["atomgit.cli.__main__"].stderr,
         repr(
             {
                 name: (result.returncode, result.stdout, result.stderr)
