@@ -77,6 +77,7 @@ PACKAGE_MODULES = {
     "infrastructure/filesystem.py",
     "infrastructure/git_credentials.py",
     "infrastructure/output.py",
+    "infrastructure/release.py",
     "infrastructure/runtime.py",
     "infrastructure/utils.py",
     "infrastructure/validation.py",

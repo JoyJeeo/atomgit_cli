@@ -159,6 +159,8 @@ def main():
             "src/atomgit/infrastructure/cache.py",
             "src/atomgit/infrastructure/filesystem.py",
             "src/atomgit/infrastructure/output.py",
+            "src/atomgit/infrastructure/release.py",
+            "src/atomgit/release.py",
             "src/atomgit/infrastructure/utils.py",
             "src/atomgit/infrastructure/validation.py",
             "src/atomgit/domain/__init__.py",
