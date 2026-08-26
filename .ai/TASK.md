@@ -19,9 +19,8 @@ Status: active (R9 upload observability monitor; issue activation only)
 - Canonical design: `docs/features/upload-monitor.md`; it is the feature-level
   source of truth and must be kept consistent with this Issue and the executable
   capability/CLI ledgers.
-- Current phase: implementation complete; review and human acceptance pending.
-- Next exact action: perform independent review, resolve findings, then request human
-  acceptance before any authorized commit or merge.
+- Current phase: implementation complete; human acceptance recorded on `2026-08-26`.
+- Next exact action: none for this Issue; follow-up work requires a new authorized Issue.
 
 ### Objective
 
@@ -338,8 +337,8 @@ reported rather than hidden.
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
 - Worktree state: `uncommitted R9 implementation, tests, registry, and documentation changes; no generated artifact, token, cache, or remote fixture`
 - Last completed action: `completed snapshot publisher/session facade, LFS observer hook, CLI/structure/packaging registrations, and full baseline`
-- Next exact action: `independent review and human acceptance`
-- Blockers: `no implementation blocker; review/acceptance and commit/merge authorization remain pending`
+- Next exact action: `none; Issue delivered on yuto`
+- Blockers: `none; live remote behavior remains outside this Issue`
 - Latest verification: `python tests/run_cli_baseline.py: 93 passed in 109.38s; compileall, pip check, and git diff --check passed`
 - Review status: `finding resolved; follow-up review check passed` — child-process LFS
   observer events now bridge into the UploadSession snapshot path. Human acceptance
