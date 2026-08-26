@@ -7,8 +7,9 @@
 - [cli_feature_baseline.md](cli_feature_baseline.md)：当前公开 CLI 功能清单及不可回退的测试契约。
 - [upload_command_analysis.md](upload_command_analysis.md)：当前 upload 参数、分支和
   已知缺陷。
-- [upload_observability_design.md](upload_observability_design.md)：尚未实现的上传
-  速度、慢流检测和连接替换只读观测窗口设计结论。
+- [features/README.md](features/README.md)：特性文档目录、命名和事实边界规则。
+- [features/upload-monitor.md](features/upload-monitor.md)：尚未实现的上传速度、
+  慢流检测和连接替换只读监控窗口方案。
 - [development.md](development.md)：conda 环境、分支、Issue 开发流程，以及
   Codex 对话切换和 worktree 交接规则。
 - [testing.md](testing.md)：离线、契约、打包和远程测试规范。
@@ -22,6 +23,8 @@
 
 - README 面向首次使用者，保持简洁。
 - `docs/` 解释当前行为和维护流程。
+- `docs/features/` 专门记录单个产品特性的目标、入口、原理、状态模型、日志方案、
+  安全边界和验收重点；新增特性说明必须遵守 [features/README.md](features/README.md)。
 - `.ai/` 是 AI 执行规范，不代替源码和测试。
 - 源码和锁定依赖签名是当前实现事实；远程能力必须有远程测试证据。
 - `ROADMAP.md` 中的内容是计划，不是已经实现或已经授权的任务。
