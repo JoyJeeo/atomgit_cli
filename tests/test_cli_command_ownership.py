@@ -42,6 +42,7 @@ EXPECTED_OWNER_FUNCTIONS = {
         "create_branch",
     ),
     "transfers": ("upload", "download", "download_file"),
+    "monitor": ("status",),
 }
 
 EXPECTED_CALLBACK_SIGNATURES = {
@@ -52,6 +53,7 @@ EXPECTED_CALLBACK_SIGNATURES = {
     "whoami": "()",
     "config-show": "()",
     "cache clear": "()",
+    "monitor upload status": "(session_id, list_only)",
     "repo create": "(repo_name, repo_type, private, public_repo, exist_ok)",
     "repo list": "()",
     "repo visibility": "(repo_id, visibility)",
@@ -196,6 +198,7 @@ def main():
         "whoami": ("authentication", "whoami"),
         "config-show": ("authentication", "config_show"),
         "cache clear": ("repositories", "clear_cache"),
+        "monitor upload status": ("monitor", "status"),
         "repo create": ("repositories", "create"),
         "repo list": ("repositories", "list_repositories"),
         "repo visibility": ("repositories", "set_repository_visibility"),

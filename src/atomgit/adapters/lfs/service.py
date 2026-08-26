@@ -49,6 +49,15 @@ _SLOW_FLOW_SAMPLE_SECONDS = 5.0
 _SLOW_FLOW_WINDOW_SECONDS = 30.0
 _SLOW_FLOW_REQUIRED_WINDOWS = 3
 _SLOW_FLOW_MAX_REPLACEMENTS = 3
+_upload_observer = None
+
+
+def set_upload_observer(callback):
+    """Install an optional non-blocking observer callback for LFS events."""
+    global _upload_observer
+    _upload_observer = callback
+
+
 _SLOW_FLOW_REPLACEMENT_COOLDOWNS = (0.0, 60.0, 180.0)
 _SLOW_FLOW_STREAM_CHUNK_BYTES = 512 * 1024
 # HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
@@ -142,6 +151,11 @@ class _SlowFlowCoordinator:
         self._lock = threading.Lock()
 
     def _emit(self, kind: str, **details) -> None:
+        if _upload_observer is not None:
+            try:
+                _upload_observer({"kind": kind, **details})
+            except Exception:
+                pass
         if self._event_callback is None:
             return
         try:

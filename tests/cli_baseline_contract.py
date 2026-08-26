@@ -96,10 +96,28 @@ MODEL_DATASET_CHOICE = ("choice", ("model", "dataset"), True)
 VISIBILITY_CHOICE = ("choice", ("public", "private"), True)
 ZSH_CHOICE = ("choice", ("zsh",), False)
 EXISTING_PATH = (
-    "path", True, True, True, True, False, False, False, False, None,
+    "path",
+    True,
+    True,
+    True,
+    True,
+    False,
+    False,
+    False,
+    False,
+    None,
 )
 PATH = (
-    "path", False, True, True, True, False, False, False, False, None,
+    "path",
+    False,
+    True,
+    True,
+    True,
+    False,
+    False,
+    False,
+    False,
+    None,
 )
 UPLOAD_BATCH_RANGE = ("int_range", 1, 20)
 
@@ -164,6 +182,21 @@ EXPECTED_PUBLIC_SCHEMA = {
     ("repo",): {"kind": "group", "params": ()},
     ("cache",): {"kind": "group", "params": ()},
     ("cache", "clear"): {"kind": "command", "params": ()},
+    ("monitor",): {"kind": "group", "params": ()},
+    ("monitor", "upload"): {"kind": "group", "params": ()},
+    ("monitor", "upload", "status"): {
+        "kind": "command",
+        "params": (
+            _argument("session_id", required=False),
+            _option(
+                "list_only",
+                "--list",
+                default=False,
+                parameter_type=("bool",),
+                is_flag=True,
+            ),
+        ),
+    },
     ("repo", "create"): {
         "kind": "command",
         "params": (
@@ -210,7 +243,10 @@ EXPECTED_PUBLIC_SCHEMA = {
         "params": (
             _argument("repo_id"),
             _option(
-                "confirm", "--confirm", required=True, metavar="REPO_ID",
+                "confirm",
+                "--confirm",
+                required=True,
+                metavar="REPO_ID",
             ),
         ),
     },
@@ -221,7 +257,10 @@ EXPECTED_PUBLIC_SCHEMA = {
             _argument("repo_id"),
             _argument("branch_name"),
             _option(
-                "source", "--from", default="main", show_default=True,
+                "source",
+                "--from",
+                default="main",
+                show_default=True,
             ),
         ),
     },
@@ -381,9 +420,7 @@ EXPECTED_PUBLIC_SCHEMA = {
     ("completion",): {"kind": "group", "params": ()},
     ("completion", "show"): {
         "kind": "command",
-        "params": (
-            _argument("shell", parameter_type=ZSH_CHOICE),
-        ),
+        "params": (_argument("shell", parameter_type=ZSH_CHOICE),),
     },
     ("completion", "install"): {
         "kind": "command",
@@ -431,6 +468,7 @@ LEAF_DISPATCH_PATHS = (
     ("whoami",),
     ("config-show",),
     ("cache", "clear"),
+    ("monitor", "upload", "status"),
     ("repo", "create"),
     ("repo", "list"),
     ("repo", "visibility"),
@@ -471,9 +509,8 @@ BASELINE_TEST_GROUPS = {
         "test_update.py",
         "test_uninstaller.py",
     ),
-    "cache": (
-        "test_cache_clear.py",
-    ),
+    "cache": ("test_cache_clear.py",),
+    "upload-observability": ("test_upload_observability.py",),
     "authentication-configuration-and-git": (
         "test_anonymous_token_isolation.py",
         "test_auth_status_semantics.py",
@@ -559,10 +596,10 @@ BASELINE_TEST_GROUPS = {
 }
 
 
-BASELINE_PUBLIC_COMMAND_COUNT = 23
-BASELINE_PUBLIC_PARAMETER_COUNT = 48
-BASELINE_LEAF_COMMAND_COUNT = 18
-BASELINE_TEST_SCRIPT_COUNT = 92
+BASELINE_PUBLIC_COMMAND_COUNT = 26
+BASELINE_PUBLIC_PARAMETER_COUNT = 50
+BASELINE_LEAF_COMMAND_COUNT = 19
+BASELINE_TEST_SCRIPT_COUNT = 93
 
 
 def _normalize_default(value):
@@ -668,9 +705,7 @@ def validate_public_schema(actual_schema):
     expected_parameter_count = sum(
         len(spec["params"]) for spec in EXPECTED_PUBLIC_SCHEMA.values()
     )
-    actual_parameter_count = sum(
-        len(spec["params"]) for spec in actual_schema.values()
-    )
+    actual_parameter_count = sum(len(spec["params"]) for spec in actual_schema.values())
     if len(expected_paths) != BASELINE_PUBLIC_COMMAND_COUNT:
         errors.append(
             "registered public command count does not match the monotonic "
@@ -757,9 +792,7 @@ def validate_leaf_dispatches(dispatch_paths, public_schema):
 def validate_test_registry(discovered_scripts):
     errors = []
     registered_entries = [
-        script
-        for scripts in BASELINE_TEST_GROUPS.values()
-        for script in scripts
+        script for scripts in BASELINE_TEST_GROUPS.values() for script in scripts
     ]
     counts = Counter(registered_entries)
     if len(registered_entries) != BASELINE_TEST_SCRIPT_COUNT:
@@ -829,11 +862,7 @@ def validate_test_entrypoints(script_sources):
             and node.name == "main"
             for node in tree.body
         )
-        has_executable_guard = any(
-            _main_guard_calls_main(node) for node in tree.body
-        )
+        has_executable_guard = any(_main_guard_calls_main(node) for node in tree.body)
         if not has_main_function or not has_executable_guard:
-            errors.append(
-                f"test script is not self-executing through main(): {script}"
-            )
+            errors.append(f"test script is not self-executing through main(): {script}")
     return errors

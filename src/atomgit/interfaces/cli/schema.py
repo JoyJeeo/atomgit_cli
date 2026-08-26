@@ -5,6 +5,7 @@ import click
 from ...core.contracts import DEFAULT_UPLOAD_BATCH_SIZE
 from .commands import authentication as _authentication_commands
 from .commands import lifecycle as _lifecycle_commands
+from .commands import monitor as _monitor_commands
 from .commands import repositories as _repositories_commands
 from .commands import transfers as _transfers_commands
 
@@ -132,6 +133,25 @@ def build_cli(context):
     def clear_cache():
         """清理 AtomGit 工具产生的本地缓存"""
         return _repositories_commands.clear_cache(_COMMAND_CONTEXT)
+
+    @cli.group()
+    def monitor():
+        """只读监控上传会话"""
+        pass
+
+    @monitor.group(name="upload")
+    def monitor_upload():
+        """上传监控"""
+        pass
+
+    @monitor_upload.command(name="status")
+    @click.argument("session_id", required=False)
+    @click.option(
+        "--list", "list_only", is_flag=True, default=False, help="一次性列出会话摘要"
+    )
+    def monitor_upload_status(session_id, list_only):
+        """持续监控指定或默认上传会话"""
+        return _monitor_commands.status(_COMMAND_CONTEXT, session_id, list_only)
 
     @repo.command()
     @click.argument("repo_name")
@@ -449,6 +469,9 @@ def build_cli(context):
             "uninstall_shell_completion",
             "update",
             "upload",
+            "monitor",
+            "monitor_upload",
+            "monitor_upload_status",
             "whoami",
         }
     }

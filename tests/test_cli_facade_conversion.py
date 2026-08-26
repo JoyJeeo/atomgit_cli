@@ -31,6 +31,7 @@ EXPECTED_CALLBACK_SIGNATURES = {
     "whoami": "()",
     "config-show": "()",
     "cache clear": "()",
+    "monitor upload status": "(session_id, list_only)",
     "repo create": "(repo_name, repo_type, private, public_repo, exist_ok)",
     "repo list": "()",
     "repo visibility": "(repo_id, visibility)",

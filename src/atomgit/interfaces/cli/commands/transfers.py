@@ -1,5 +1,9 @@
 """Upload and download command implementations."""
 
+import uuid
+
+from ....infrastructure.upload_observe import UploadSession
+
 
 def upload(
     context,
@@ -166,28 +170,62 @@ def upload(
         if not show_progress:
             context.print_info("进度条已禁用")
 
-        result = context.run_usecase(
-            "upload_folder",
-            path,
-            repo_id,
-            repo_type=repo_type,
-            revision=revision,
-            path_in_repo=path_in_repo or "./",
-            ignore_patterns=ignore_patterns,
-            resumable=resumable,
-            num_workers=num_workers,
-            batch_size=batch_size,
-            timeout=request_timeout,
-            progress=show_progress,
-            message=message,
-            auto_configure_lfs=auto_configure_lfs,
-            _cli_repo_type_explicit=repo_type is not None,
-        )
-        if result.ok:
-            context.print_success(f"目录上传成功: {path}")
-        else:
-            context.print_error(f"目录上传失败: {path}")
-            context.sys.exit(1)
+        observe_session = None
+        if resumable:
+            observe_session = UploadSession(
+                uuid.uuid4().hex[:12],
+                repo_name=repo_id,
+                repo_type=repo_type or "model",
+                revision=revision or "main",
+            )
+            observe_session.update(
+                files_total=file_count,
+                bytes_total=upload_size,
+                batch=f"0/{max(1, (file_count + batch_size - 1) // batch_size)}",
+            )
+        try:
+            if observe_session is not None:
+                import importlib
+
+                lfs_service = importlib.import_module("atomgit.adapters.lfs.service")
+                lfs_service.set_upload_observer(
+                    lambda event: observe_session.event(
+                        event.get("kind", "LFS event"), event.get("kind", "lfs")
+                    )
+                )
+            result = context.run_usecase(
+                "upload_folder",
+                path,
+                repo_id,
+                repo_type=repo_type,
+                revision=revision,
+                path_in_repo=path_in_repo or "./",
+                ignore_patterns=ignore_patterns,
+                resumable=resumable,
+                num_workers=num_workers,
+                batch_size=batch_size,
+                timeout=request_timeout,
+                progress=show_progress,
+                message=message,
+                auto_configure_lfs=auto_configure_lfs,
+                _cli_repo_type_explicit=repo_type is not None,
+            )
+            if observe_session is not None:
+                observe_session.finish("finished" if result.ok else "failed")
+            if result.ok:
+                context.print_success(f"目录上传成功: {path}")
+            else:
+                context.print_error(f"目录上传失败: {path}")
+                context.sys.exit(1)
+        except BaseException:
+            if observe_session is not None:
+                observe_session.finish("failed")
+            raise
+        finally:
+            if observe_session is not None:
+                lfs_service.set_upload_observer(None)
+            if observe_session is not None:
+                observe_session.close()
 
 
 def download(

@@ -12,8 +12,8 @@ FORMAL_DEFINITION = (
     "未通过开发底线的变更，不得进入 Issue 完成、合并、发布或继续扩展开发阶段。"
 )
 
-BASELINE_CAPABILITY_COUNT = 27
-BASELINE_INVARIANT_COUNT = 116
+BASELINE_CAPABILITY_COUNT = 28
+BASELINE_INVARIANT_COUNT = 117
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -648,7 +648,11 @@ CAPABILITY_REGISTRY = {
         "DOWNLOAD-FILE",
         "Single-file CLI and SDK download",
         "critical",
-        ("atomgit download-file", "AtomGitAPI.download_file", "atomgit_hub.download_file"),
+        (
+            "atomgit download-file",
+            "AtomGitAPI.download_file",
+            "atomgit_hub.download_file",
+        ),
         (
             _invariant(
                 "DLFILE-001",
@@ -1287,6 +1291,27 @@ CAPABILITY_REGISTRY = {
         ("docs/testing.md", "docs/architecture.md"),
         ("offline-contract", "security-contract"),
     ),
+    "UPLOAD-OBSERVABILITY": _capability(
+        "UPLOAD-OBSERVABILITY",
+        "Read-only upload session monitoring",
+        "high",
+        ("atomgit monitor upload status",),
+        (
+            _invariant(
+                "UPO-001",
+                "Upload monitor sessions are read-only, bounded, atomically persisted, and expose no credentials or source paths.",
+                "test_upload_observability.py",
+            ),
+        ),
+        ("test_upload_observability.py",),
+        ("docs/features/upload-monitor.md", ".ai/TASK.md"),
+        (
+            "offline-contract",
+            "security-contract",
+            "packaging-smoke",
+            "portability-contract",
+        ),
+    ),
 }
 
 
@@ -1310,7 +1335,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "27 个稳定能力 ID",
-        "116 条可观察行为不变量",
+        "117 条可观察行为不变量",
         "92 个隔离 pytest case",
     ),
     "docs/testing.md": ("92 个 pytest case", "development_floor.md"),
@@ -1356,7 +1381,9 @@ def validate_development_floor(registry, baseline_scripts, repository_root):
         capability_id = capability["id"]
         capability_ids.append(capability_id)
         if key != capability_id or not _CAPABILITY_ID.fullmatch(capability_id):
-            errors.append(f"invalid capability identity: key={key!r}, id={capability_id!r}")
+            errors.append(
+                f"invalid capability identity: key={key!r}, id={capability_id!r}"
+            )
         if not isinstance(capability["name"], str) or not capability["name"].strip():
             errors.append(f"capability {key} has no name")
         if capability["risk"] not in _RISKS:
@@ -1387,14 +1414,18 @@ def validate_development_floor(registry, baseline_scripts, repository_root):
         capability_tests = set(capability["tests"])
         for test in capability["tests"]:
             if test not in baseline_scripts:
-                errors.append(f"capability {key} references stale baseline test: {test}")
+                errors.append(
+                    f"capability {key} references stale baseline test: {test}"
+                )
             if not (root / "tests" / test).is_file():
                 errors.append(f"capability {key} references missing test: {test}")
         for document in capability["documents"]:
             if not isinstance(document, str) or not document:
                 errors.append(f"capability {key} has invalid document reference")
             elif not (root / document).is_file():
-                errors.append(f"capability {key} references missing document: {document}")
+                errors.append(
+                    f"capability {key} references missing document: {document}"
+                )
 
         invariant_count += len(capability["invariants"])
         for invariant in capability["invariants"]:
@@ -1409,10 +1440,13 @@ def validate_development_floor(registry, baseline_scripts, repository_root):
             if not isinstance(invariant_id, str) or not _INVARIANT_ID.fullmatch(
                 invariant_id
             ):
-                errors.append(f"capability {key} has invalid invariant ID: {invariant_id!r}")
-            if not isinstance(invariant["statement"], str) or not invariant[
-                "statement"
-            ].strip():
+                errors.append(
+                    f"capability {key} has invalid invariant ID: {invariant_id!r}"
+                )
+            if (
+                not isinstance(invariant["statement"], str)
+                or not invariant["statement"].strip()
+            ):
                 errors.append(f"invariant {invariant_id!r} has no observable statement")
             invariant_tests = invariant["tests"]
             if not isinstance(invariant_tests, tuple) or not invariant_tests:

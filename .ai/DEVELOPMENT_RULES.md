@@ -81,6 +81,30 @@ complete baseline.
 - Validate all Hugging Face calls against the locked dependency, not memory or
   current online documentation.
 
+## Phased Implementation And Verification
+
+- One development Issue may deliver one complete feature, but implementation
+  must be divided into explicit, independently verifiable phases. A phase is a
+  delivery checkpoint within the same Issue, not an untracked half-feature or
+  a new parallel Issue.
+- Each phase must have a concrete boundary, focused tests, and an observable
+  entry and exit condition recorded in the active Issue. Implement only the
+  current phase, run its focused tests immediately, and proceed automatically
+  to the next phase only after those tests pass.
+- Do not implement the entire feature first and postpone all testing until the
+  end. A failed phase gate returns the Issue to that phase for repair; later
+  phases must not conceal or work around the failure.
+- The phase gates do not normally require a separate user approval. Pause and
+  report only when a test exposes a blocker, the approved scope or contract
+  must change, new authority is required, or an external operation needs
+  explicit authorization.
+- After all phase gates pass, run the mandatory complete offline baseline and
+  the applicable compile, dependency, diff, security, packaging, portability,
+  and controlled-remote checks before declaring the Issue complete.
+- The active Issue handoff must record the current phase, the last focused test
+  result, the next exact phase action, and any blocker whenever work pauses or
+  crosses a conversation boundary.
+
 ## Git Discipline
 
 - Start substantial work from `yuto`, normally on a focused task branch.

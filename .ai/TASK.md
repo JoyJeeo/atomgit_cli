@@ -1,6 +1,229 @@
 # Current Issue Contract
 
-Status: active (R8 post-delivery comprehensive acceptance testing)
+Status: active (R9 upload observability monitor; issue activation only)
+
+## Active Development Issue
+
+- Updated: `2026-08-26`
+- ID: `LOCAL-R9-UPLOAD-OBSERVABILITY-MONITOR`
+- Title: `Implement the read-only upload observability monitor window`
+- Type: `cli`, `architecture`, `compatibility`, `security`, `testing`, `packaging`,
+  `portability`, `documentation`
+- Priority: `P1` (new public CLI surface with upload-process isolation and cache safety)
+- User authorization: explicit request on `2026-08-26` to record the approved
+  development plan as a project Issue; this turn does not authorize source edits or
+  implementation execution.
+- Delivery mode: local implementation and acceptance first; commit, push, merge,
+  release, publication, and remote repository mutation require separate explicit
+  authorization.
+- Canonical design: `docs/features/upload-monitor.md`; it is the feature-level
+  source of truth and must be kept consistent with this Issue and the executable
+  capability/CLI ledgers.
+- Current phase: implementation complete; review and human acceptance pending.
+- Next exact action: perform independent review, resolve findings, then request human
+  acceptance before any authorized commit or merge.
+
+### Objective
+
+Add a top-level, read-only monitoring surface for resumable multi-file uploads:
+
+```text
+atomgit monitor upload status
+atomgit monitor upload status --list
+atomgit monitor upload status SESSION_ID
+```
+
+`status` continuously monitors the first session from the deterministic session list;
+`--list` prints session summaries once; `status SESSION_ID` continuously monitors the
+specified session. No `--watch` option and no separate one-shot detailed status command
+are in scope.
+
+The monitor must show complete current-session details by default. LFS files show
+Flow-level speed and slow-flow state; ordinary files show session/batch progress only
+and must not be assigned fabricated precise speeds. The Flow table uses the column
+`文件缩写`; its value is the final ten Unicode characters of the basename by default
+(or the full basename when shorter). The Flow table does not contain a repository
+column; the repository name appears in the session header.
+
+### Approved behavior decisions
+
+- Active sessions sort before finished sessions; within each group, newest update first.
+- If there is no active session, default `status` selects the newest finished session,
+  displays its final state, keeps the final frame and last event for about two seconds,
+  and exits. No sessions produces a clear message and a normal exit.
+- A specified session follows the same two-second final-state behavior.
+- `Ctrl+C` closes only the monitor and never signals or stops the upload process.
+- The first implementation uses Click, ANSI control sequences, and standard-library
+  fallback output only; it does not add curses, rich, textual, or another TUI dependency.
+- The terminal displays the repository's final name component in the session header;
+  the snapshot may store only that display label, not the owner, full repo ID, URL, or
+  remote path. Flow rows omit the repository column.
+- Monitoring persists structured snapshots and a bounded key-event history only; it
+  does not persist a complete raw debug log.
+- Monitor data lives under the AtomGit cache root at
+  `upload-observe/v1/<session-id>.json` and is included in `atomgit cache clear` while
+  preserving all existing cache-cleanup behavior and safety boundaries.
+
+### Scope and data model
+
+- Session fields include session ID, display repository name, repo type, revision,
+  status, timestamps, batch progress, file/byte totals, active/peak Flow counts,
+  replacement totals, improvement totals, auto-replacement-disabled totals, and
+  bounded recent events.
+- Flow fields include anonymous Flow ID, file ID, `文件缩写`, size, type, five-second
+  sample speed, thirty-second formal speed, reliable baseline ratio, slow-window count,
+  replacement count, estimated remaining bytes, trend, phase, update time, and the
+  latest strategy explanation.
+- A Flow never exposes a source path, remote path, full OID, request header, token,
+  signed URL, or response body.
+- Five-second speed is display-only; thirty-second speed is the formal strategy window.
+  Existing self-baseline, peer-baseline, three-window slow-flow, benefit, cooldown,
+  improvement, and three-replacement rules remain authoritative and are not duplicated
+  or changed by the monitor.
+- Every Flow retains a fixed twelve-window trend ring. Events are limited to important
+  transitions such as low-speed observation, replacement approval/start, cooldown,
+  improvement success/failure, disablement, completion, and failure; ordinary samples
+  do not become events and the queue is bounded at approximately 200 entries.
+
+### Runtime and storage design
+
+- Existing upload/LFS recovery code publishes narrow observer updates; it does not
+  depend on the CLI renderer and does not synchronously write to disk.
+- A non-blocking in-memory publisher maintains one latest state per Flow and a bounded
+  event queue. A background publisher writes a versioned JSON snapshot at most once per
+  second (with an idle heartbeat approximately every two seconds).
+- Snapshots are written to a same-directory temporary file and atomically replaced;
+  monitor processes are read-only and never hold upload-worker objects.
+- The cache root, monitor directory, version directory, snapshots, and temporary files
+  use restrictive permissions (`0700` directories, `0600` files).
+- Observer lock contention, serialization failure, monitor crash, snapshot deletion,
+  or an unwritable monitor directory may lose replaceable intermediate display data but
+  must never block, fail, or alter the upload decision.
+- `cache clear` retains its current AtomGit-owned-root cleanup and additionally removes
+  the monitor snapshot subtree and temporary monitor files, without touching source
+  files, upload projections outside the existing managed root, remote content, or any
+  path outside the AtomGit cache root.
+
+### Affected Capability IDs
+
+Existing capabilities affected by the public surface and integration:
+`FLOOR-REGISTRY`, `CLI-SURFACE`, `CLI-DISPATCH`, `UPLOAD-FILE`, `UPLOAD-FOLDER`,
+`UPLOAD-RESUMABLE`, `UPLOAD-LFS`, `UPLOAD-LFS-RECOVERY`, `CACHE`, `RUNTIME`,
+`PACKAGING`, `PORTABILITY`, `ARCHITECTURE`, and `ERROR-REDACTION`.
+
+New capability to register in the same implementation change:
+`UPLOAD-OBSERVABILITY` — read-only upload session selection, Flow monitoring, structured
+snapshot publication, and terminal rendering.
+
+### Protected Existing Invariants
+
+- All existing registered capabilities, invariants, and the complete offline baseline
+  remain intact; no existing upload, LFS, cache, CLI, packaging, or security behavior
+  may be weakened.
+- The existing `atomgit upload` syntax, arguments, output contracts, exit behavior,
+  LFS recovery thresholds, retry limits, cooldowns, and replacement decisions remain
+  unchanged.
+- Locked `huggingface-hub==1.1.7`, `datasets==4.4.1`, Python `>=3.9` metadata, the
+  seven-directory source layout, historical imports, credential redaction, and cache
+  root safety remain unchanged.
+- `atomgit cache clear` continues to remove only AtomGit-owned cache content and
+  preserves the root and all outside paths.
+- Existing cache, upload projection, resumable metadata, and download state cleanup
+  semantics remain compatible; monitoring adds only its own managed subtree.
+
+### New Or Changed Invariants
+
+- The three monitor commands have the exact schema above; `--watch` is rejected.
+- Default session selection is deterministic: active first, then newest update; when
+  no active session exists, the newest retained finished session is selected.
+- `--list` emits session summaries only; detailed commands continuously render one
+  selected session and hold its final frame for approximately two seconds.
+- Flow rows use `文件缩写`, derive it from the basename's final ten Unicode characters,
+  and omit the repository column; the session header displays the repository label.
+- LFS Flow speed and slow-state values come from the existing recovery observations;
+  ordinary files receive no fabricated precise speed.
+- Monitor output and persisted snapshots are read-only with respect to upload behavior;
+  `Ctrl+C`, monitor crash, snapshot loss, lock contention, and observer write failure do
+  not change upload results.
+- State snapshots are versioned, atomically replaced, bounded, permission-restricted,
+  and free of tokens, URLs, request headers, source/remote paths, full OIDs, and response
+  bodies.
+- The event queue and trend history are bounded; repeated samples and stable states do
+  not cause unbounded memory, disk, or terminal output growth.
+- `atomgit cache clear` removes monitor snapshots and temporary files in addition to its
+  existing managed cache contents, while preserving all outside data and remote state.
+- Windows, macOS, Linux, ANSI terminals, non-ANSI terminals, narrow terminals, and
+  redirected output have safe output behavior.
+
+### Focused tests and evidence
+
+The implementation must add executable offline coverage for:
+
+- exact monitor CLI schema, help, dispatch, `--watch` rejection, and legacy upload
+  compatibility;
+- session ordering, default selection, no-session behavior, finished-session display,
+  specified-session monitoring, final-frame delay, and `Ctrl+C` isolation;
+- LFS Flow fields, ordinary-file session/batch accounting, basename abbreviation,
+  repository placement in the header, and omission from Flow rows;
+- five-second and thirty-second speeds, baselines, slow-window counters, replacement
+  explanations, remaining-byte semantics, and twelve-window trends;
+- bounded state/event memory, event filtering, stale heartbeat, malformed snapshots,
+  atomic replacement, concurrent reads/writes, and monitor process failure;
+- cache permissions, expiry, safe cleanup, and `cache clear` removal of the monitor
+  subtree without deleting outside content;
+- token/path/URL/OID/request-header redaction and warning/output stream separation;
+- Windows/ANSI fallback behavior and installed source/editable/wheel/sdist command smoke.
+
+The exact new test scripts must be added to `tests/cli_baseline_contract.py` and mapped
+to the new capability in `tests/development_floor_contract.py`. Required final evidence:
+
+```text
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+Controlled remote testing is not needed to prove the local state protocol, but the
+approved remote matrix may later validate real LFS interruption/recovery and monitor
+readback after separate test execution authorization.
+
+### Approved remote test scope
+
+Only these repository IDs may be used:
+
+- `weixin_52273949/test_model`: model positive upload, large-file, interruption, and
+  resume tests;
+- `weixin_52273949/test_datasets`: read-only diagnostic access only; not a positive
+  write fixture;
+- `weixin_52273949/atomgit-cli-dataset-20260804-003221`: dataset positive upload,
+  large-file, interruption, and resume tests.
+
+Permitted operations after the maintainer's explicit start instruction include real
+uploads, large files, interruption/recovery, readback, and leaving local monitor
+snapshots. Repository creation/deletion, visibility changes, remote branch changes,
+`.gitattributes` mutation, remote cleanup, publication, release, token output, and any
+repository outside this list are excluded.
+
+### Out of scope
+
+- download monitoring;
+- upload pause, cancel, manual reconnect, or concurrency control;
+- complete raw HTTP debug-log persistence;
+- Web UI or a resident background service;
+- new TUI dependencies;
+- remote repository lifecycle changes;
+- changes to the existing upload recovery algorithm;
+- source-path or full-repository identity exposure.
+
+### Acceptance criteria
+
+The Issue is complete only when the command contract, detailed session/Flow rendering,
+speed semantics, cache integration, safe snapshot lifecycle, bounded event logging,
+cross-platform fallback, upload isolation, focused regressions, capability/CLI ledger,
+complete baseline, packaging smoke, security checks, and any explicitly authorized
+remote evidence all agree. Remaining remote or Python-version limitations must be
+reported rather than hidden.
 
 ## Deferred Design Record
 
@@ -12,7 +235,11 @@ Status: active (R8 post-delivery comprehensive acceptance testing)
 - A future conversation must reconcile the design with the then-current CLI and
   activate a separate maintainer-authorized Issue before implementation.
 
-## Active Test Issue
+## Prior R8 Test Issue (inactive for handoff)
+
+- Status: inactive for handoff after explicit activation of
+  `LOCAL-R9-UPLOAD-OBSERVABILITY-MONITOR`; all R8 evidence, remote limitations, and
+  review history below remain preserved as historical record.
 
 - Updated: `2026-08-25`
 - ID: `LOCAL-R8-POST-ACCEPTANCE-TEST`
@@ -102,17 +329,21 @@ Status: active (R8 post-delivery comprehensive acceptance testing)
 
 ## Handoff Snapshot
 
-- Updated: `2026-08-25`
-- Phase: `R8 delivered; no Issue is active`
+- Updated: `2026-08-26`
+- Phase: `R9 issue activated; implementation not started`
 - Base branch: `yuto`
-- Base commit: `8a93aa6 merge: close seven-directory source layout`
-- Task branch: `codex/r8-root-facade-physical-closure (local-only, created from yuto at 8a93aa6 after explicit implementation authorization)`
+- Base commit: `af3a30e docs(features): add upload monitor specification`
+- Task branch: `codex/r9-upload-observability-monitor` (local-only, created from yuto)
 - Prior delivery: `R7 task commit 2e781d9 and yuto merge commit 8a93aa6 were pushed; local yuto, github/yuto, and ls-remote all verified at 8a93aa6d8344f18b1be0edd6a44b6fb46054d3d3`
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `R8 implementation commit bd859b7 was merged locally into yuto as 5c342ce and pushed only on yuto; the final delivery record is committed separately so the worktree remains clean`
-- Last completed action: `pushed github/yuto from 8a93aa6 to merge commit 5c342ce after final acceptance baseline 92/92 in 99.27s and all static/scope/security gates passed`
-- Next exact action: `none; activate at most one new maintainer-authorized Issue before further development`
-- Blockers: `none; live tests, publication, and unrelated remote writes were not authorized or performed`
+- Worktree state: `uncommitted R9 implementation, tests, registry, and documentation changes; no generated artifact, token, cache, or remote fixture`
+- Last completed action: `completed snapshot publisher/session facade, LFS observer hook, CLI/structure/packaging registrations, and full baseline`
+- Next exact action: `independent review and human acceptance`
+- Blockers: `no implementation blocker; review/acceptance and commit/merge authorization remain pending`
+- Latest verification: `python tests/run_cli_baseline.py: 93 passed in 109.38s; compileall, pip check, and git diff --check passed`
+- Review status: `finding resolved; follow-up review check passed` — child-process LFS
+  observer events now bridge into the UploadSession snapshot path. Human acceptance
+  and delivery authorization remain pending.
 - Current evidence: `pre-change baseline 92/92 in 99.84s; pre-deletion rootless artifact smoke 49/49 and baseline 92/92 in 92.13s; post-deletion structure 18/18, source layout 11/11, packaging metadata 13/13, public imports 11/11, utilities 17/17, lifecycle 26/26, completion 19/19, uninstaller 14/14, config permissions 15/15, runtime 9/9, canonical LFS 24/24, LFS ownership 14/14, CLI facade 9/9, architecture parity 21/21, artifact smoke 49/49, independent review APPROVED, and acceptance baseline 92/92 in 99.27s; compileall, pip check, diff check, exact deletion scope, credential-pattern, and generated-artifact checks pass`
 - Residual risk: `live remote behavior is outside this Issue and is not claimed; the active environment did not separately execute a Python 3.9 interpreter, while source/tool policy and the locked dependency contracts retain Python 3.9 support`
 
