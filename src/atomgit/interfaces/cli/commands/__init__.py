@@ -1,5 +1,5 @@
 """CLI command implementation owners."""
 
-from . import authentication, lifecycle, repositories, transfers
+from . import authentication, lifecycle, monitor, repositories, transfers
 
-__all__ = ("authentication", "lifecycle", "repositories", "transfers")
+__all__ = ("authentication", "lifecycle", "monitor", "repositories", "transfers")

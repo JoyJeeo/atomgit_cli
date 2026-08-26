@@ -80,9 +80,9 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 79,
-        "changes": 425,
-        "digest": "45ed782d38389ab5cc4e9b15dca1c683a7b93561167fd3f193bf7f6a76002ea3",
+        "files": 77,
+        "changes": 413,
+        "digest": "4b85ba60b7dbc68496f9a1474d165875b95f697bd7a6a6d4432e65e1f4f629fa",
     },
     "isort": {
         "files": 82,
@@ -153,6 +153,7 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/core/ports.py",
     "src/atomgit/infrastructure/__init__.py",
     "src/atomgit/infrastructure/cache.py",
+    "src/atomgit/infrastructure/upload_observe.py",
     "src/atomgit/infrastructure/completion.py",
     "src/atomgit/infrastructure/environment.py",
     "src/atomgit/infrastructure/filesystem.py",
@@ -176,6 +177,7 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/interfaces/cli/commands/lifecycle.py",
     "src/atomgit/interfaces/cli/commands/repositories.py",
     "src/atomgit/interfaces/cli/commands/transfers.py",
+    "src/atomgit/interfaces/cli/commands/monitor.py",
     "src/atomgit/interfaces/sdk/__init__.py",
     "src/atomgit/interfaces/sdk/client.py",
     "setup.py",
@@ -192,6 +194,7 @@ CLEAN_POLICY_FILES = {
     "tests/test_download_domain_ownership.py",
     "tests/test_upload_domain_ownership.py",
     "tests/test_lfs_domain_ownership.py",
+    "tests/test_upload_observability.py",
     "tests/test_sdk_domain_ownership.py",
     "tests/test_auth_repository_services_ownership.py",
     "tests/test_cli_command_ownership.py",

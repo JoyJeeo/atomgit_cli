@@ -21,7 +21,7 @@ compatibility migration.
 - `docs/development_floor.md` is the human-facing explanation of the same
   contract.
 
-The current ledger contains 27 capability IDs, 116 observable invariants, and
+The current ledger contains 28 capability IDs, 117 observable invariants, and
 92 isolated offline pytest cases. Counts are monotonic ledgers: an authorized
 migration may replace evidence, but it must not silently remove a capability,
 invariant, or regression.

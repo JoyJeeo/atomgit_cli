@@ -10,6 +10,7 @@ LEGACY_PACKAGE_TARGETS = {
         "lifecycle": "atomgit.interfaces.cli.commands.lifecycle",
         "repositories": "atomgit.interfaces.cli.commands.repositories",
         "transfers": "atomgit.interfaces.cli.commands.transfers",
+        "monitor": "atomgit.interfaces.cli.commands.monitor",
     },
     "download": {
         "integrity": "atomgit.adapters.download.integrity",
