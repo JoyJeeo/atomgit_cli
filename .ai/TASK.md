@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D01 accepted and verified; commit/merge/push in progress)
+Status: inactive (D01 delivered on github/yuto; no active implementation)
 
 ## Successor Development Issue
 
@@ -10,7 +10,7 @@ Status: active (D01 accepted and verified; commit/merge/push in progress)
 - Type: `bug`, `cli`, `sdk`, `compatibility`, `testing`, `documentation`
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前仅收录已确认的 `D01 / UPLOAD-01`。
-- Current phase: D01 实现和审查已完成，交付复验 93 项通过；维护者的条件交付授权已满足。
+- Current phase: D01 已完成验收、提交、本地合并及推送，远端合并提交已核验一致。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -18,7 +18,7 @@ Status: active (D01 accepted and verified; commit/merge/push in progress)
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
-- Next exact action: 完成交付复验，提交 D01、本地合入 yuto 并推送，核验远端一致。
+- Next exact action: 继续 D02 讨论；后续开发需确认方案并明确激活。
   后续议题不进入实施，讨论 Issue 不关闭。
 
 ### Repository Reconciliation
@@ -169,7 +169,7 @@ git diff --check
   isort 90 -> 89，Ruff 44 不变；没有放宽既有债务上限。
 - 既有五份规范文档变更通过哈希比对完整保留，新增差异凭证模式与生成物检查通过。
 - 未授权或未运行：真实 AtomGit 上传/下载与服务端写入、PR、标签、发布。
-  Git 提交、本地合并和仅推送 github/yuto 已获本次条件授权，当前执行中。
+  Git 提交、本地合并和仅推送 github/yuto 已按本次条件授权完成。
   未在 Windows/Linux 主机或真实 Python 3.9 解释器执行；本机的启动方式测试和语法
   检查不能代替这些平台实测。请求超时仍不能发现所有内部死锁。
 - 显式参数不再限制整个上传是已接受的兼容变化；帮助、README、FAQ、架构及上传分析
@@ -201,15 +201,20 @@ git diff --check
 - [x] 回归、完整离线基线、编译、依赖及差异检查通过。
 - [x] 独立审查无未解决发现，剩余验证边界已说明。
 - [x] 维护者授权自行复验后提交推送；交付复验通过，满足验收条件。
-- [ ] 按交付权限提交、合并和推送；本轮未执行。
+- [x] 按交付权限提交、本地合入 yuto、仅推送 github/yuto，并核验远端一致。
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，基准分支 `yuto`，基准 HEAD `2c5d351`。
-- 当前任务分支：`codex/d01-upload-request-timeout`，沿用当前 dirty worktree，保留已有规范变更。
-- 续接必须使用当前 worktree；任务分支仅本地存在，未提交或推送。
-- 最近完成：交付复验 93 项通过，条件验收和交付授权已满足。
-- 下一步：提交 D01、本地合入 yuto、只推送 github/yuto 并验证远端。D02–D18 不实施。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`。
+- D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
+- 本地 no-ff 合并并已推送的提交：`720d641a776fae7ff94c786f45fe813530387f25`。
+- `git push github yuto` 成功；`git ls-remote` 已确认远端 yuto 为上述合并提交，
+  远端没有 `codex/d01-upload-request-timeout` 分支。此交付记录另作后续文档提交。
+- 源码与测试等交付树同已验证的任务分支一致；没有修改 main 或 atomgit 远端。
+- 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
+  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留。续接使用当前 worktree。
+- 最近完成：交付复验 93 passed in 105.41s；编译、依赖、差异和审查通过，D01 已交付。
+- 下一步：D02 讨论；讨论 Issue 保持 active，D02–D18 未实施，不自动激活新开发。
 
 # Historical R9 Contract (retained evidence, not current execution authority)
 
