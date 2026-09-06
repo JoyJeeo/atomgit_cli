@@ -1,6 +1,5 @@
 """Canonical AtomGit upload adapter and historical API method boundary."""
 
-import time
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -325,11 +324,6 @@ class UploadServiceMixin:
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     normalized_repo_id = self._normalize_repo_id(repo_id)
-                    upload_deadline = (
-                        None
-                        if upload_timeout is None
-                        else time.monotonic() + upload_timeout
-                    )
                     _validate_resumable_upload_target(
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
@@ -391,8 +385,6 @@ class UploadServiceMixin:
                                         token=credentials["token"],
                                         upload_kwargs=lf_kwargs,
                                         request_timeout=request_timeout,
-                                        upload_deadline=upload_deadline,
-                                        upload_timeout=upload_timeout,
                                         batch_context=(batch_number, batch_count),
                                         auto_configure_lfs=auto_configure_lfs,
                                         configured_lfs_patterns=_validated_lfs_patterns(
@@ -462,24 +454,13 @@ class UploadServiceMixin:
                                         + "（规则作用于整个仓库）",
                                         flush=True,
                                     )
-                                    configuration_timeout = request_timeout
-                                    if upload_deadline is not None:
-                                        remaining = upload_deadline - time.monotonic()
-                                        if remaining <= 0:
-                                            raise TimeoutError(
-                                                "resumable upload timed out "
-                                                "during Git LFS configuration"
-                                            )
-                                        configuration_timeout = min(
-                                            request_timeout, remaining
-                                        )
                                     outcome = _configure_remote_lfs_attributes(
                                         token=credentials["token"],
                                         repo_id=normalized_repo_id,
                                         repo_type=eff_repo_type,
                                         revision=revision,
                                         patterns=new_patterns,
-                                        request_timeout=configuration_timeout,
+                                        request_timeout=request_timeout,
                                     )
                                     if outcome["changed"]:
                                         action = (

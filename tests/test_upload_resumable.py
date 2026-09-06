@@ -11,6 +11,7 @@ import queue
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
@@ -92,6 +93,8 @@ class InlineQueue:
 
 
 class InlineProcess:
+    elapsed = 0.0
+
     def __init__(self, target, args):
         self._target = target
         self._args = args
@@ -99,6 +102,7 @@ class InlineProcess:
         self._alive = False
 
     def start(self):
+        InlineProcess.elapsed += 301.0
         self._alive = True
         try:
             self._target(*self._args)
@@ -106,6 +110,9 @@ class InlineProcess:
             self._alive = False
 
     def join(self, timeout=None):
+        assert (
+            timeout is None
+        ), "request timeout must not become a process lifetime limit"
         return None
 
     def is_alive(self):
@@ -427,6 +434,65 @@ def main():
             check("T9 workers accepted for default resumable mode", result.exit_code == 0)
             if ulf_captured:
                 check("T9 worker count forwarded", ulf_captured[0]["num_workers"] == 2)
+            from atomgit.interfaces.sdk import AtomGitClient
+
+            for timeout in (None, 0.05):
+                ulf_captured.clear()
+                validation_captured.clear()
+                InlineProcess.elapsed = 0.0
+                args = [
+                    "upload",
+                    str(source),
+                    "--repo-id",
+                    "user/repo",
+                    "--batch-size",
+                    "1",
+                ]
+                if timeout is not None:
+                    args.extend(["--timeout", str(timeout)])
+                with patch("time.monotonic", lambda: InlineProcess.elapsed):
+                    result = runner.invoke(cli, args)
+                check(
+                    "CLI batches outlive request timeout",
+                    result.exit_code == 0
+                    and InlineProcess.elapsed >= 602.0
+                    and len(ulf_captured) >= 2,
+                )
+                check(
+                    "CLI reports unlimited total and request waiting",
+                    "上传总时限: 不限" in result.output
+                    and "默认网络请求等待超时:" in result.output,
+                )
+                expected_timeout = 300.0 if timeout is None else timeout
+                check(
+                    "CLI retains requested network waiting",
+                    validation_captured[0]["timeout"] == expected_timeout,
+                )
+                ulf_captured.clear()
+                validation_captured.clear()
+                InlineProcess.elapsed = 0.0
+                kwargs = {} if timeout is None else {"timeout": timeout}
+                with patch("time.monotonic", lambda: InlineProcess.elapsed):
+                    sdk_result = AtomGitClient(
+                        token="fake-token-never-print"
+                    ).upload_folder(
+                        source,
+                        "user/repo",
+                        resumable=True,
+                        batch_size=1,
+                        ignore_patterns=DEFAULT_IGNORES,
+                        **kwargs,
+                    )
+                check(
+                    "native SDK batches outlive request timeout",
+                    sdk_result.ok
+                    and InlineProcess.elapsed >= 602.0
+                    and len(ulf_captured) >= 2,
+                )
+                check(
+                    "SDK retains requested network waiting",
+                    validation_captured[0]["timeout"] == expected_timeout,
+                )
     finally:
         api_mod.upload_folder = original_upload_folder
         api_mod.hf_upload_file = original_upload_file

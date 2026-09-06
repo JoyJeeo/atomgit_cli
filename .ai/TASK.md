@@ -1,8 +1,221 @@
 # Current Issue Contract
 
-Status: active (R9 upload observability monitor; issue activation only)
+Status: active (D01 accepted and verified; commit/merge/push in progress)
 
-## Active Development Issue
+## Successor Development Issue
+
+- Updated: `2026-09-07`
+- ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
+- Title: `上传可靠性与可观测性修复`
+- Type: `bug`, `cli`, `sdk`, `compatibility`, `testing`, `documentation`
+- Priority: `P1`（正常长时间上传可能被错误总时限终止）
+- Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前仅收录已确认的 `D01 / UPLOAD-01`。
+- Current phase: D01 实现和审查已完成，交付复验 93 项通过；维护者的条件交付授权已满足。
+- User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
+  本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
+  维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
+  本地分支修改及离线验证；不创建远程 Issue，不实施 D02–D18。
+- Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
+  授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
+  原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
+- Next exact action: 完成交付复验，提交 D01、本地合入 yuto 并推送，核验远端一致。
+  后续议题不进入实施，讨论 Issue 不关闭。
+
+### Repository Reconciliation
+
+当前分支 `yuto`，HEAD `2c5d3515f24fe09c8d5aab61691419df69859a4b`，只有当前
+worktree。Git 已包含 R9 实现提交 `5c108f6`、合并 `4298043` 和交付记录 `2c5d351`；
+旧记录也注明实现完成、人工接受及无下一步。因此 R9 不作为新的活跃开发任务。
+下方历史正文保留，不据其旧的 active/未实现描述恢复执行。历史矛盾的完整整理仍属于
+D18；本次仅建立清晰的当前入口，没有将 D18 标记为已解决，也未核验新的远程状态。
+
+### D01 Objective And Evidence
+
+上传总时间不设限；请求超时只约束网络等待，不能终止仍在正常进行的长时间上传。
+
+当前 CLI 省略 `--timeout` 时显示总时限不限，却在
+`src/atomgit/interfaces/cli/commands/transfers.py` 将默认请求值 300 传给共享调用，
+经 `interfaces/cli/runner.py` 成为 `upload_timeout`。
+`adapters/upload/service.py` 用它创建 `time.monotonic() + upload_timeout`，
+`adapters/upload/resumable.py` 按剩余时间等待并终止子进程。原生 SDK 的 resumable
+路径也经 `adapters/huggingface.py` 到达同一上传服务。
+
+证据来自当前源码、相关测试和已安装依赖的只读核对；并非本轮真实上传复现。
+现有 `docs/faq.md`、`docs/upload_command_analysis.md` 和 CLI 帮助与默认执行不一致。
+
+### D01 Accepted Behavior And Compatibility Migration
+
+| 使用方式 | 上传总时限 | 默认网络请求等待超时 |
+|---|---|---|
+| 省略 `--timeout` | 不设限 | 300 秒 |
+| `--timeout N` | 不设限 | N 秒 |
+
+- CLI、原生 SDK 与历史上传接口的对应参数只控制请求等待；尽量保留参数名称、
+  签名、调用方式、返回值和错误包装，不能让 SDK 暗中保留同一错误总倒计时。
+- 明确的行为迁移：旧的显式 `--timeout N` / 对应 resumable API 参数会限制上传
+  总时间；新行为取消该限制。依赖旧行为的脚本受影响，必须在受影响文档中明确说明。
+- 当前 `huggingface-hub==1.1.7` 默认客户端使用
+  `httpx.Timeout(DEFAULT_REQUEST_TIMEOUT, write=60.0)`；已安装 HTTPX 为 `0.28.1`。
+  连接、读取、连接池等待采用配置值，写入等待仍为 60 秒；部分控制面请求使用
+  `min(request_timeout, 15)`。这些既有细分保护保留，不宣称全部请求统一等待五分钟。
+- 请求超时按网络等待阶段判断，不要求整个请求在 N 秒内完成，也不是全局上传进度
+  看门狗。参考：<https://www.python-httpx.org/advanced/timeouts/>。
+- D01 改变了 D02 的讨论前提，但不代表 D02 已接受或移除；细分参数与控制面展示
+  仍留待 D02/D03 逐项讨论。
+
+### D01 Implementation Scope
+
+1. 在共享上传服务保留请求超时计算，取消从请求值生成上传总截止时间。
+2. 子进程不再因累计运行达到请求超时值而被杀死；保留进程隔离、明确结果协议、
+   异常退出处理和取消清理。子进程退出但没有有效成功结果必须失败。
+3. 重试、LFS 预上传和慢速连接恢复不再受该错误总截止时间限制；保留既有错误分类、
+   重试次数、退避上限、慢速判定、替换收益、冷却和次数上限。
+4. 仅清理本次取消总计时后失去用途的参数、分支和说明；保留无关的等待、超时和
+   恢复逻辑，不新增计时器、后台看门狗、依赖或抽象。不采用最初提出的全链路 `None`
+   改造：取消总时限后，请求超时继续使用正常数值并保留合法性校验。
+5. 核对 CLI、原生 SDK、历史 API、普通目录与单文件的实际调用；保留全局请求超时和
+   进度状态在成功、失败后的恢复，以及临时资源、断点数据和源文件保护。
+6. CLI 显示“上传总时限：不限”和“默认网络请求等待超时：N 秒”；删除帮助中的
+   “resumable 同时作为总时限”，同步 FAQ、上传分析及受影响 SDK 文档和已有变更说明。
+   解释请求路径可能存在更具体限制，不提前实现 D03。
+
+### Affected Capability IDs
+
+本次文档记录涉及 `FLOOR-REGISTRY`；后续 D01 实施涉及既有
+`CLI-SURFACE`、`CLI-DISPATCH`、`UPLOAD-FILE`、`UPLOAD-FOLDER`、`UPLOAD-RESUMABLE`、
+`UPLOAD-LFS`、`UPLOAD-LFS-RECOVERY`、`SDK-UPLOAD`、`RUNTIME`、`DEPENDENCY-CONTRACT`、
+`ARCHITECTURE`、`ERROR-REDACTION`、`PORTABILITY` 和 `FLOOR-REGISTRY`。
+实施时将下述不变量及回归证据登记到现有能力与 CLI 台账，不增加未经要求的新能力。
+
+### Protected Existing Invariants
+
+- 请求超时保护、不可重试错误的失败、可重试错误的既有次数和退避限制继续有效。
+- LFS 重连的慢速、收益、冷却和替换上限继续有效；只移除上传总截止时间约束。
+- Ctrl+C 能停止本次上传并清理子进程；失败不误报成功，已有断点保持可恢复。
+- 凭证脱敏、进程隔离、源文件和缓存安全、临时资源存活周期、全局状态恢复不退化。
+- 除本节明确的总时限迁移及提示外，原有 CLI/SDK 参数、结果、导入、补丁接口和
+  model/dataset、revision 行为保持兼容。
+- `huggingface-hub==1.1.7`、`datasets==4.4.1`、Python >=3.9 兼容合同与七目录架构不变。
+
+### New Or Changed Invariants
+
+- 默认和显式请求超时均不产生上传总截止时间；单批与多批累计时间不触发总计时终止。
+- `--timeout N` 与对应 SDK/API 参数控制请求等待，按既有网络阶段覆盖规则生效。
+- CLI 显示、帮助、API 说明、执行层和跨入口回归对超时语义保持一致。
+- 旧的“显式总时限终止进程”测试按明确的兼容迁移替换，同时补足请求超时、故障退出、
+  有限重试和取消清理证据；不能仅删除测试来通过基线。
+
+### Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 从默认 CLI 入口模拟累计上传超过 300 秒 | 不创建总截止时间，不杀死健康上传进程 |
+| 显式较小请求超时、持续传输、多批累计耗时 | 不按上传总时间终止，后续批次继续 |
+| 注入读取/写入超时 | 进入实际错误处理，不以仅抛出模拟异常代替链路验证 |
+| 连续可重试错误和不可重试错误 | 按既有次数耗尽退出或直接失败，不无限重试 |
+| Ctrl+C、子进程异常退出、无有效结果 | 正确结束、清理子进程、不误报成功 |
+| CLI、原生 SDK、历史 API 的默认和显式参数 | 请求语义与实际调用一致，普通/单文件不退化 |
+| 成功、失败及前置失败 | 请求超时、进度状态和临时资源正确恢复 |
+| 当前锁定 HF 客户端与控制面覆盖 | 默认请求值、write=60 和 min(N,15) 未被误改 |
+
+优先扩展 `tests/test_upload_validation.py`、`tests/test_upload_resumable.py`、
+`tests/test_resumable_recovery.py`、`tests/test_sdk_upload_timeout.py`、
+`tests/test_lfs_preupload_policy.py` 及实际相关的慢速恢复、CLI/SDK、架构与依赖契约测试。
+用可控时钟与模拟进程覆盖长时间场景；取消清理还需真实本地子进程的离线证据。
+不真实等待五分钟，不访问 AtomGit。新增测试若确有必要，必须登记到完整测试清单和能力台账。
+
+### Implementation Phases And Acceptance
+
+1. 激活后先冻结现有调用、依赖与兼容契约，添加能暴露错误总计时的回归。
+   验证：旧实现失败且原因确为总计时，明确记录迁移的旧测试。
+2. 修复共享服务、进程执行及恢复链路，贯通 CLI/SDK。
+   验证：上述长时间、请求超时、有限重试、故障退出及取消清理专项通过。
+3. 同步帮助、文档和能力/测试/结构契约；执行完整离线门禁及独立审查。
+   验证：实现、文档与新旧行为迁移一致，无未解决阻塞发现，再进入人工验收。
+
+所有实施命令必须在 `atomgit_cli` conda 环境执行：
+
+```bash
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+另按 `.ai/DOD.md`、`.ai/TESTING.md`、`.ai/REVIEW.md` 执行适用依赖签名、结构、
+打包、脱敏、临时资源及平台检查。任何未通过或未执行的完整基线阻止实施 Issue 完成与交付。
+
+### Complete Baseline Evidence And Residual Risks
+
+所有验证均在 `atomgit_cli` conda 环境离线执行：
+
+- 实施前基线：`python tests/run_cli_baseline.py`，93 passed in 98.60s。
+- 红灯：新回归在旧实现上 2 failed，分别复现健康上传被请求时限终止、CLI 将请求值
+  传为进程等待上限。旧实现和新回归的差异已确认。
+- 首轮专项：上传/恢复/LFS 六项通过；跨入口及结构专项通过。
+- 首次完整修复后基线：92 passed、1 failed，定位为 `test_upload_batching.py` 仍锁定
+  旧的跨批次总时限。已按本 Issue 明确兼容迁移改为验证请求值保留、两批均无限时等待。
+- 审查修正：请求超时回归同时断言错误分类，避免其他异常冒充超时通过；补充子进程
+  报告成功后异常退出的失败回归。三项修正专项 3 passed in 15.18s。
+- 最终完整基线：`python tests/run_cli_baseline.py`，**93 passed in 104.82s**；包含
+  源码/打包、CLI、SDK、架构、依赖、开发底线及全部既有离线脚本。
+- `python -m compileall -q .`、`python -m pip check`、`git diff --check` 均通过；
+  变更 Python 文件通过 Python 3.9 语法解析，真实 HF `upload_large_folder` 签名已核对。
+- `fork`、`spawn`、`forkserver` 的真实本地子进程验证覆盖成功、失败、崩溃、无结果、
+  非法结果、成功后崩溃及 KeyboardInterrupt 清理；CLI/SDK 默认及显式超时覆盖模拟
+  累计 602 秒以上的多批上传，HF 客户端网络阶段超时与全局恢复已验证。
+- 已注册 `RESUMEUP-004`，不变量 117 -> 118；脚本数仍为 93，未删减测试清单。
+  旧总时限测试迁移保留失败与取消保护。格式台账按实际缩减更新：Black 413 -> 410，
+  isort 90 -> 89，Ruff 44 不变；没有放宽既有债务上限。
+- 既有五份规范文档变更通过哈希比对完整保留，新增差异凭证模式与生成物检查通过。
+- 未授权或未运行：真实 AtomGit 上传/下载与服务端写入、PR、标签、发布。
+  Git 提交、本地合并和仅推送 github/yuto 已获本次条件授权，当前执行中。
+  未在 Windows/Linux 主机或真实 Python 3.9 解释器执行；本机的启动方式测试和语法
+  检查不能代替这些平台实测。请求超时仍不能发现所有内部死锁。
+- 显式参数不再限制整个上传是已接受的兼容变化；帮助、README、FAQ、架构及上传分析
+  已说明。D02–D18 未实施、未接受，不因本次验证而自动解决。
+
+### Delivery Verification
+
+- 本次交付复验：`python tests/run_cli_baseline.py`，**93 passed in 105.41s**。
+- compileall、pip check、差异检查、Python 3.9 语法、凭证模式和生成物检查通过。
+- 复核无新的阻塞发现；暂存区文档合同检查通过。
+- 原有五份规范修改按哈希验证保留且未暂存；只交付 D01 实现及关联文档。
+
+### Independent Review
+
+- Procedure: 按 `.ai/REVIEW.md` 在同一会话切换独立审查角色，依据任务合同、实际差异、
+  调用链、测试结果和锁定依赖核对；没有使用外部审查代理。
+- Findings: 审查中发现请求失败回归未区分断言失败与请求超时；已补充错误分类断言，
+  并增加成功后进程崩溃回归。最终无未解决的 P0/P1/P2/P3 发现。
+- Evidence: 生产总截止时间链路已删除，公开参数签名未变；CLI/SDK 一致性、有限重试、
+  子进程结果协议和取消清理已覆盖；全部离线门禁通过。
+- Residual risks: 远程服务、其他主机平台和真实 Python 3.9 执行未验证，如上记录。
+- Verdict: `APPROVED`（实施审查通过，不代表人工验收或交付授权）。
+
+### D01 Acceptance Checklist
+
+- [x] 默认和显式请求超时均不限制上传总时长。
+- [x] 网络等待保护、有限重试、故障退出与取消清理已验证。
+- [x] CLI/SDK、帮助、文档和能力台账一致。
+- [x] 回归、完整离线基线、编译、依赖及差异检查通过。
+- [x] 独立审查无未解决发现，剩余验证边界已说明。
+- [x] 维护者授权自行复验后提交推送；交付复验通过，满足验收条件。
+- [ ] 按交付权限提交、合并和推送；本轮未执行。
+
+### Current Handoff Snapshot
+
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，基准分支 `yuto`，基准 HEAD `2c5d351`。
+- 当前任务分支：`codex/d01-upload-request-timeout`，沿用当前 dirty worktree，保留已有规范变更。
+- 续接必须使用当前 worktree；任务分支仅本地存在，未提交或推送。
+- 最近完成：交付复验 93 项通过，条件验收和交付授权已满足。
+- 下一步：提交 D01、本地合入 yuto、只推送 github/yuto 并验证远端。D02–D18 不实施。
+
+# Historical R9 Contract (retained evidence, not current execution authority)
+
+Historical status text (stale): `active (R9 upload observability monitor; issue activation only)`
+
+## Historical R9 Development Issue
 
 - Updated: `2026-08-26`
 - ID: `LOCAL-R9-UPLOAD-OBSERVABILITY-MONITOR`

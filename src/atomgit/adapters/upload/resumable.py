@@ -465,14 +465,13 @@ def _run_resumable_upload(
     result_queue,
     request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
     batch_context=None,
-    upload_deadline=None,
     auto_configure_lfs=False,
     configured_lfs_patterns=(),
 ):
     """Run HF's resumable uploader in an isolated child process.
 
-    The child is deliberately short-lived so a timed-out transfer can be
-    terminated without leaving worker threads running in the CLI process.
+    Isolation lets cancellation stop all upload worker threads together.
+    Request timeouts do not limit the lifetime of this process.
     """
     original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
     original_get_upload_mode = hf_large_folder._get_upload_mode
@@ -483,7 +482,6 @@ def _run_resumable_upload(
         else None
     )
     slow_flow_coordinator = _SlowFlowCoordinator(
-        deadline=upload_deadline,
         event_callback=lambda event: _print_resumable_slow_flow_event(
             event, batch_context
         ),
@@ -546,7 +544,6 @@ def _run_resumable_upload(
         hf_large_folder._get_upload_mode = get_upload_mode_with_policy
         preupload_controller = _ResumableLfsPreuploadController(
             original_preupload_lfs,
-            deadline=upload_deadline,
             fatal_callback=fatal_exit,
             event_callback=lambda event: _print_resumable_lfs_preupload_event(
                 event, batch_context
@@ -618,8 +615,6 @@ def _execute_resumable_upload_process(
     token: str,
     upload_kwargs: dict,
     request_timeout: float,
-    upload_deadline,
-    upload_timeout,
     batch_context,
     auto_configure_lfs: bool = False,
     configured_lfs_patterns=(),
@@ -636,31 +631,36 @@ def _execute_resumable_upload_process(
             result_queue,
             request_timeout,
             batch_context,
-            upload_deadline,
             auto_configure_lfs,
             configured_lfs_patterns,
         ),
     )
     process.daemon = True
-    remaining_timeout = None
-    if upload_deadline is not None:
-        remaining_timeout = upload_deadline - time.monotonic()
-    if remaining_timeout is not None and remaining_timeout <= 0:
-        raise TimeoutError(f"resumable upload timed out after {upload_timeout}s")
-    process.start()
-    process.join(remaining_timeout)
-    if process.is_alive():
-        process.terminate()
-        process.join(2)
-        raise TimeoutError(f"resumable upload timed out after {upload_timeout}s")
     try:
-        ok, error = result_queue.get(timeout=1)
-    except Exception as exc:
-        raise RuntimeError("resumable upload worker exited without a result") from exc
-    if not ok:
-        category = error.get("category") if isinstance(error, dict) else None
-        patterns = error.get("lfs_patterns", ()) if isinstance(error, dict) else ()
-        raise ResumableWorkerError(category or "unknown", patterns)
+        process.start()
+        process.join()
+        try:
+            ok, error = result_queue.get(timeout=1)
+        except Exception as exc:
+            raise RuntimeError(
+                "resumable upload worker exited without a result"
+            ) from exc
+        if ok is False:
+            category = error.get("category") if isinstance(error, dict) else None
+            patterns = error.get("lfs_patterns", ()) if isinstance(error, dict) else ()
+            raise ResumableWorkerError(category or "unknown", patterns)
+        if ok is not True or error is not None or getattr(process, "exitcode", 0) != 0:
+            raise RuntimeError("resumable upload worker returned an invalid result")
+    finally:
+        if process.is_alive():
+            process.terminate()
+            process.join(2)
+            if process.is_alive():
+                process.kill()
+                process.join()
+        if hasattr(result_queue, "close"):
+            result_queue.close()
+            result_queue.join_thread()
 
 
 def _validate_resumable_upload_target(

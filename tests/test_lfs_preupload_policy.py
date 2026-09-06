@@ -73,7 +73,7 @@ class FatalPreuploadApi:
         })
 
 
-def make_controller(outcomes, *, deadline=None, monotonic=None):
+def make_controller(outcomes):
     call = ScriptedPreupload(outcomes)
     sleeps = []
     events = []
@@ -82,8 +82,6 @@ def make_controller(outcomes, *, deadline=None, monotonic=None):
         call,
         sleep=sleeps.append,
         jitter=lambda delay: 0,
-        monotonic=monotonic or (lambda: 0.0),
-        deadline=deadline,
         fatal_callback=fatal.append,
         event_callback=events.append,
     )
@@ -232,21 +230,11 @@ def main():
             repr(sleeps),
         )
 
-    clock = iter([9.0, 9.0])
-    controller, call, sleeps, _, fatal = make_controller(
-        [http_error(503), "must-not-run"],
-        deadline=10.0,
-        monotonic=lambda: next(clock),
-    )
-    try:
-        controller.preupload_lfs([], None, "u/r", "model", "main")
-    except api_mod.ResumableLfsPreuploadError as error:
-        deadline_category = error.category
-    else:
-        deadline_category = "no-error"
-    check("deadline prevents overlong retry wait", call.calls == 1 and not sleeps)
-    check("deadline failure is timeout", deadline_category == "timeout")
-    check("deadline invokes fatal path", len(fatal) == 1)
+    controller, call, sleeps, _, fatal = make_controller([http_error(503), "ok"])
+    controller.preupload_lfs([], None, "u/r", "model", "main")
+    check("retry is not cut off by upload lifetime", call.calls == 2)
+    check("retry retains bounded wait", sleeps == [2.0])
+    check("recovered request does not invoke fatal path", not fatal)
 
     envelope = api_mod._resumable_failure_envelope(
         api_mod.ResumableLfsPreuploadError("lfs_quota")
@@ -363,7 +351,6 @@ def main():
             inline_queue,
             300.0,
             (1, 1),
-            None,
         )
         check(
             "inline terminal failure returns bounded category",
@@ -385,7 +372,6 @@ def main():
                     result_queue,
                     300.0,
                     (1, 1),
-                    None,
                 ),
             )
             process.start()

@@ -202,7 +202,6 @@ def main():
             result_queue,
             300.0,
             (1, 1),
-            None,
             True,
             (),
         )
@@ -228,7 +227,6 @@ def main():
             result_queue,
             300.0,
             (1, 1),
-            None,
             True,
             (),
         )
@@ -251,7 +249,6 @@ def main():
             result_queue,
             300.0,
             (1, 1),
-            None,
             True,
             ("*.bag",),
         )
@@ -273,7 +270,6 @@ def main():
             result_queue,
             300.0,
             (1, 1),
-            None,
             False,
             (),
         )
@@ -314,7 +310,6 @@ def main():
                 result_queue,
                 300.0,
                 (1, 1),
-                None,
                 True,
                 (),
             )

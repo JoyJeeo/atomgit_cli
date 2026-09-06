@@ -80,19 +80,19 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 77,
-        "changes": 413,
-        "digest": "4b85ba60b7dbc68496f9a1474d165875b95f697bd7a6a6d4432e65e1f4f629fa",
+        "files": 76,
+        "changes": 410,
+        "digest": "85b95b24ee7927548ffc65e16ae3ec34d5e58ce78bb3b98c7a4c44149cea4061",
     },
     "isort": {
-        "files": 82,
-        "changes": 90,
-        "digest": "664508c3dd55733c53ca33cfc6543b28b8437fea34f15ce3b3162ed1ef331716",
+        "files": 81,
+        "changes": 89,
+        "digest": "ebc157053c664c15aca8194d4e31d4e20e589c57b20ae00929bde88a296adff4",
     },
     "ruff": {
         "files": 15,
         "changes": 44,
-        "digest": "fdab117eedd83fe5d94dce25c9a72129fc26042c898a71b1b48f0fb422b1a8d1",
+        "digest": "e3883216e4d123029d66e52f19d59b6447db70b345461410664d09b2d76799da",
     },
 }
 

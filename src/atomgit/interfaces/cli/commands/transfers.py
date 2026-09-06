@@ -131,20 +131,13 @@ def upload(
         context.print_info(f"正在上传目录: {path}")
         context.print_info(f"待上传文件数量（应用忽略规则后）: {file_count}")
         context.print_info(f"待上传目录大小（应用忽略规则后）: {dir_size}")
-        if resumable:
-            context.print_info(
-                "上传总时限: 不限时"
-                if timeout_sec is None
-                else f"上传总时限: {timeout_sec:g}秒"
-            )
-        else:
-            context.print_info("上传总时限: 不限制（普通模式）")
+        context.print_info("上传总时限: 不限")
         request_timeout = (
             timeout_sec
             if timeout_sec is not None
             else context._RESUMABLE_DEFAULT_REQUEST_TIMEOUT
         )
-        context.print_info(f"单次网络请求超时: {request_timeout:g}秒")
+        context.print_info(f"默认网络请求等待超时: {request_timeout:g}秒")
         if pipr:
             context.print_info(f"仓库内路径: {pipr}/")
         if repo_type:
