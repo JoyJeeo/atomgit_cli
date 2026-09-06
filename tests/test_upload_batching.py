@@ -193,7 +193,9 @@ def main():
             )
             deadline_ok = (
                 deadline_result is True
-                and InlineProcess.joins == [5.0, 3.0]
+                and InlineProcess.joins == [None, None]
+                and len(resumable_calls) == 2
+                and target_validations[0]["timeout"] == 10
             )
             FakeHfApi.validation_consumes_timeout = False
             api_mod.time.monotonic = original["monotonic"]
@@ -499,7 +501,7 @@ def main():
                 and "上传批次汇总: 计划 700，新增提交 700，续传跳过 0，确认完成 700" in large_text
             )
             print(f"[{'PASS' if resumable_ok else 'FAIL'}] resumable 20-file batches/no-copy/unlimited")
-            print(f"[{'PASS' if deadline_ok else 'FAIL'}] validation and resumable batches share one total deadline")
+            print(f"[{'PASS' if deadline_ok else 'FAIL'}] validation retains request timeout while batches have no total deadline")
             print(f"[{'PASS' if ordinary_ok else 'FAIL'}] ordinary 20-file batches")
             print(f"[{'PASS' if all(configurable_results) else 'FAIL'}] exact 1/2/10/20 ordinary and resumable groups")
             print(f"[{'PASS' if projection_state_ok else 'FAIL'}] batch size isolates resumable projection state")

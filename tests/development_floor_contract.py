@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 117
+BASELINE_INVARIANT_COUNT = 118
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -533,6 +533,12 @@ CAPABILITY_REGISTRY = {
                 "Model and dataset routes, worker statistics, and resumable metadata remain distinct and deterministic.",
                 "test_dataset_resumable_route.py",
                 "test_resumable_stats.py",
+                "test_upload_resumable.py",
+            ),
+            _invariant(
+                "RESUMEUP-004",
+                "Default and explicit request timeouts never cap total upload lifetime across CLI, SDK, or multiple batches; cancellation reaps upload children and request failures remain failures.",
+                "test_resumable_recovery.py",
                 "test_upload_resumable.py",
             ),
         ),
@@ -1335,7 +1341,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "27 个稳定能力 ID",
-        "117 条可观察行为不变量",
+        "118 条可观察行为不变量",
         "92 个隔离 pytest case",
     ),
     "docs/testing.md": ("92 个 pytest case", "development_floor.md"),

@@ -139,12 +139,10 @@ class _SlowFlowCoordinator:
         *,
         monotonic=time.monotonic,
         reconnect_jitter=None,
-        deadline=None,
         event_callback=None,
     ):
         self._monotonic = monotonic
         self._reconnect_jitter = reconnect_jitter or (lambda: random.uniform(2.0, 8.0))
-        self._deadline = deadline
         self._event_callback = event_callback
         self._states = {}
         self._probe_key = None
@@ -276,8 +274,6 @@ class _SlowFlowCoordinator:
         continue_time = remaining_bytes / speed
         replace_time = delay + (retransmit_bytes / expected_speed)
         if continue_time < 2.0 * replace_time:
-            return None
-        if self._deadline is not None and now + replace_time >= self._deadline:
             return None
         if probe and self._probe_key is not None:
             return None
@@ -1214,8 +1210,6 @@ class _ResumableLfsPreuploadController:
         *,
         sleep=time.sleep,
         jitter=None,
-        monotonic=time.monotonic,
-        deadline=None,
         max_attempts: int = _RESUMABLE_LFS_PREUPLOAD_MAX_ATTEMPTS,
         fatal_callback=None,
         event_callback=None,
@@ -1226,8 +1220,6 @@ class _ResumableLfsPreuploadController:
         self._jitter = jitter or (
             lambda delay: random.uniform(0.0, min(0.5, delay * 0.1))
         )
-        self._monotonic = monotonic
-        self._deadline = deadline
         self._max_attempts = max_attempts
         self._fatal_callback = fatal_callback
         self._event_callback = event_callback
@@ -1284,11 +1276,6 @@ class _ResumableLfsPreuploadController:
                 if not retryable or attempt >= self._max_attempts:
                     self._fail(category, attempts=attempt)
                 delay = self._retry_delay(error, attempt)
-                if (
-                    self._deadline is not None
-                    and self._monotonic() + delay >= self._deadline
-                ):
-                    self._fail("timeout")
                 self._emit(
                     {
                         "kind": "lfs_preupload_retry",

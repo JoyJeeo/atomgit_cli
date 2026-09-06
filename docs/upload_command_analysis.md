@@ -14,7 +14,7 @@ atomgit upload [OPTIONS] PATH
 | `PATH` | 必填 | 本地文件或目录，Click 要求存在 |
 | `--repo-id` | 必填 | 目标仓库 ID |
 | `-m, --message` | 空 | 提交消息 |
-| `-t, --timeout` | 请求 300 秒、总时长不限 | 单次网络请求超时；resumable 目录同时作为上传总时限 |
+| `-t, --timeout` | 请求 300 秒、总时长不限 | 默认网络请求等待超时；不限制上传总时长 |
 | `--no-progress-bar` | 关闭 | 禁用 HF 上传进度条 |
 | `-p, --path-in-repo` | 根目录 | 仓库内目标前缀 |
 | `-r, --repo-type` | HF 默认 model | `model` 或 `dataset` |
@@ -251,7 +251,7 @@ worker 捕获异常后立即、无限地把同一对象放回队列。AtomGit �
 及协议 507 归为 LFS 存储不足，509 归为带宽额度不足；不匹配配额语义的 413、422、
 其他 4xx 和畸形 Batch 响应安全终止为 LFS 协商拒绝。只有 429、500/502/503/504、
 超时和连接失败允许重试，固定最多三次，基础退避为 2 秒、4 秒，等待上限 60 秒；
-有效 `Retry-After` 受同一上限和显式上传总 deadline 约束。终止或耗尽后仅传回受限
+有效 `Retry-After` 受同一等待上限约束，不受上传总时长限制。终止或耗尽后仅传回受限
 类别，不回传响应正文、URL、header、OID、trace ID 或本地路径；SHA-256、LFS 模式、
 未确认上传/提交状态及先前已提交批次保持可恢复。此失败不会触发
 `--auto-configure-lfs`，因为它不是 regular/LFS 策略误判。
@@ -271,11 +271,19 @@ SHA-256 均一致。
 session 后以目标请求超时创建新 client，退出上传分支时在 `finally` 中恢复调用前
 状态并再次关闭 session。由于这些仍是进程级全局值，并发调用需谨慎。
 
-省略 `--timeout` 时，上传总时长不限，但单次 HF 网络请求默认超时 300 秒，以便
-网络失效后进入可控重试而不是永久阻塞。显式 `--timeout N` 时，两种模式都把
-请求超时设置为 N 秒；resumable 模式还以 N 秒等待整个隔离上传进程，超过后终止
-该进程。因此显式 resumable timeout 是本次命令的硬总时限，不会因某个分块完成
-而重新计时。
+上传总时长始终不限；省略 `--timeout` 时，默认网络请求等待超时为 300 秒，显式
+`--timeout N` 时为 N 秒。该值不创建上传截止时间，也不会限制上传子进程或跨批次
+累计运行时间。Ctrl+C 会终止本次上传子进程；异常退出和缺失/无效结果均不算成功。
+
+HF 1.1.7 的默认 HTTPX 客户端将该值用于连接、读取和连接池等待，写入等待仍为
+60 秒；部分控制面请求使用 `min(N, 15)` 秒。它们约束对应网络等待阶段，不是一个
+请求从开始到结束的总时间，也不检测所有内部死锁。请求失败按既有分类和重试上限处理。
+
+原生 SDK `AtomGitClient.upload_folder(timeout=N, resumable=True)` 和历史
+`AtomGitAPI.upload_directory(upload_timeout=N, resumable=True)` 共用上传执行层，
+不再施加 N 秒总时限。历史 HF 风格 `atomgit_hub.upload_folder(upload_timeout=N)`
+仍只设置请求等待。参数名称和调用方式保留；依赖旧 resumable 总时限的调用方须迁移。
+这是明确的兼容性变化，不能继续用 `--timeout` 作为整个命令的运行时间限制。
 
 批次生命周期日志不依赖 HF 进度条；使用 `--no-progress-bar` 时计划、开始、
 成功/跳过/失败、累计进度、重试事件和最终汇总仍会输出，适合 CI 日志留存。

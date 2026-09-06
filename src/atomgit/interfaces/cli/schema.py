@@ -237,8 +237,8 @@ def build_cli(context):
         "timeout_sec",
         default=None,
         type=float,
-        help="单次网络请求超时（秒）；resumable 目录同时作为总时限。"
-        "省略时请求默认 300 秒且总时长不限",
+        help="默认网络请求等待超时（秒），省略时为 300 秒；上传总时长不限。"
+        "部分请求阶段有独立等待上限",
     )
     @click.option(
         "--no-progress-bar",
