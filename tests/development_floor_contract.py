@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 119
+BASELINE_INVARIANT_COUNT = 120
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -540,6 +540,11 @@ CAPABILITY_REGISTRY = {
                 "Default and explicit request timeouts never cap total upload lifetime across CLI, SDK, or multiple batches; cancellation reaps upload children and request failures remain failures.",
                 "test_resumable_recovery.py",
                 "test_upload_resumable.py",
+            ),
+            _invariant(
+                "RESUMEUP-005",
+                "A failed resumable batch reports persisted hashed, LFS-preuploaded, and locally unconfirmed file and byte progress while unreadable metadata stays unknown and redacted.",
+                "test_upload_batching.py",
             ),
         ),
         (
@@ -1288,6 +1293,7 @@ CAPABILITY_REGISTRY = {
                 "test_cli_error_redaction.py",
                 "test_login_error_semantics.py",
                 "test_refactor_behavior_guard.py",
+                "test_upload_batching.py",
             ),
             _invariant(
                 "REDACT-002",
@@ -1303,6 +1309,7 @@ CAPABILITY_REGISTRY = {
             "test_login_error_semantics.py",
             "test_refactor_behavior_guard.py",
             "test_sdk_exceptions.py",
+            "test_upload_batching.py",
             "test_upload_error_classify.py",
         ),
         ("docs/testing.md", "docs/architecture.md"),
@@ -1352,7 +1359,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "27 个稳定能力 ID",
-        "119 条可观察行为不变量",
+        "120 条可观察行为不变量",
         "92 个隔离 pytest case",
     ),
     "docs/testing.md": ("92 个 pytest case", "development_floor.md"),

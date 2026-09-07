@@ -11,6 +11,7 @@ from huggingface_hub import upload_file as hf_upload_file
 from huggingface_hub import upload_folder
 
 from ...infrastructure.config import config
+from ...infrastructure.filesystem import format_file_size
 from ...infrastructure.validation import (
     is_supported_upload_revision,
     normalize_path_in_repo,
@@ -29,6 +30,7 @@ from .projection import (
     _collect_resumable_upload_files,
     _prepare_resumable_upload_projection,
     _resumable_committed_file_count,
+    _resumable_upload_progress,
 )
 from .resumable import (
     _execute_resumable_upload_process,
@@ -44,6 +46,27 @@ _RESUMABLE_LFS_PATTERN_MAX_COUNT = None
 _configure_remote_lfs_attributes = None
 _validated_lfs_patterns = None
 _UPLOAD_TOKEN_OVERRIDE = ContextVar("atomgit_upload_token_override", default=None)
+
+
+def _print_resumable_upload_progress(batch_number, batch_count, progress) -> None:
+    message = (
+        f"[批次 {batch_number}/{batch_count}] 断点状态: "
+        f"已哈希 {progress['hashed_files']}/{progress['total_files']}"
+        f"（{format_file_size(progress['hashed_bytes'])}/"
+        f"{format_file_size(progress['total_bytes'])}），"
+        f"LFS 已预上传 {progress['preuploaded_files']}/"
+        f"{progress['lfs_files']}"
+        f"（{format_file_size(progress['preuploaded_bytes'])}/"
+        f"{format_file_size(progress['lfs_bytes'])}），"
+        f"本地待确认 {progress['pending_files']}"
+        f"（{format_file_size(progress['pending_bytes'])}）"
+    )
+    if progress["unknown_files"]:
+        message += (
+            f"，状态未知 {progress['unknown_files']}"
+            f"（{format_file_size(progress['unknown_bytes'])}）"
+        )
+    print(message, flush=True)
 
 
 @contextmanager
@@ -491,12 +514,14 @@ class UploadServiceMixin:
                                         )
                         except Exception:
                             confirmed_in_batch = batch_skipped
+                            batch_progress = None
                             if upload_root is not None:
+                                batch_progress = _resumable_upload_progress(
+                                    upload_root, batch, pipr
+                                )
                                 confirmed_in_batch = max(
                                     confirmed_in_batch,
-                                    _resumable_committed_file_count(
-                                        upload_root, selected_paths, pipr
-                                    ),
+                                    batch_progress["committed_files"],
                                 )
                             skipped_files += batch_skipped
                             submitted_files += max(
@@ -510,6 +535,10 @@ class UploadServiceMixin:
                                 f"剩余 {remaining_files}",
                                 flush=True,
                             )
+                            if batch_progress is not None:
+                                _print_resumable_upload_progress(
+                                    batch_number, batch_count, batch_progress
+                                )
                             print(
                                 "断点元数据已保留；修复问题后重新执行同一命令可继续上传",
                                 flush=True,

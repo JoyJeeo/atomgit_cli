@@ -4,10 +4,11 @@ import hashlib
 import os
 import shutil
 import stat
+import time
 from pathlib import Path
 from typing import Optional, Set
 
-from huggingface_hub._local_folder import read_upload_metadata
+from huggingface_hub._local_folder import get_local_upload_paths, read_upload_metadata
 from huggingface_hub.utils import filter_repo_objects
 
 from ..download.transport import _atomgit_hf_endpoint
@@ -261,3 +262,94 @@ def _resumable_committed_file_count(
         if metadata.is_committed:
             committed += 1
     return committed
+
+
+def _resumable_upload_progress(
+    projection: Path, selected_files, path_in_repo: str = None
+):
+    """Read the current batch's persisted HF upload progress."""
+    prefix = f"{path_in_repo}/" if path_in_repo else ""
+    progress = {
+        "total_files": len(selected_files),
+        "total_bytes": 0,
+        "hashed_files": 0,
+        "hashed_bytes": 0,
+        "lfs_files": 0,
+        "lfs_bytes": 0,
+        "preuploaded_files": 0,
+        "preuploaded_bytes": 0,
+        "committed_files": 0,
+        "pending_files": 0,
+        "pending_bytes": 0,
+        "unknown_files": 0,
+        "unknown_bytes": 0,
+    }
+    for relative_path, _, source_stat in selected_files:
+        size = source_stat.st_size
+        progress["total_bytes"] += size
+        try:
+            metadata = _read_resumable_upload_metadata(
+                Path(projection), prefix + relative_path.as_posix(), size
+            )
+        except Exception:
+            progress["unknown_files"] += 1
+            progress["unknown_bytes"] += size
+            continue
+        if metadata["sha256"] is not None:
+            progress["hashed_files"] += 1
+            progress["hashed_bytes"] += size
+        if metadata["upload_mode"] == "lfs":
+            progress["lfs_files"] += 1
+            progress["lfs_bytes"] += size
+            if metadata["is_uploaded"]:
+                progress["preuploaded_files"] += 1
+                progress["preuploaded_bytes"] += size
+        if metadata["is_committed"]:
+            progress["committed_files"] += 1
+        else:
+            progress["pending_files"] += 1
+            progress["pending_bytes"] += size
+    return progress
+
+
+def _read_resumable_upload_metadata(
+    projection: Path, path_in_repo: str, current_size: int
+):
+    """Parse one locked HF 1.1.7 metadata snapshot without changing it."""
+    paths = get_local_upload_paths(projection, path_in_repo)
+    if not paths.metadata_path.exists():
+        return _empty_resumable_upload_metadata()
+
+    lines = paths.metadata_path.read_text(encoding="utf-8").splitlines()
+    if len(lines) < 8:
+        raise ValueError("incomplete resumable upload metadata")
+    timestamp = float(lines[0])
+    size = int(lines[1])
+    if lines[2]:
+        int(lines[2])
+    sha256 = lines[3] or None
+    upload_mode = lines[4] or None
+    if upload_mode not in (None, "regular", "lfs"):
+        raise ValueError("invalid resumable upload mode")
+    is_uploaded = bool(int(lines[6]))
+    is_committed = bool(int(lines[7]))
+
+    if size != current_size or not paths.file_path.stat().st_mtime <= timestamp:
+        return _empty_resumable_upload_metadata()
+    if is_uploaded and not is_committed and time.time() - timestamp > 20 * 3600:
+        is_uploaded = False
+    return {
+        "sha256": sha256,
+        "upload_mode": upload_mode,
+        "is_uploaded": is_uploaded,
+        "is_committed": is_committed,
+    }
+
+
+def _empty_resumable_upload_metadata():
+    return {
+        "sha256": None,
+        "upload_mode": None,
+        "is_uploaded": False,
+        "is_committed": False,
+    }

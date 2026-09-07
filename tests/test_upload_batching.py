@@ -81,6 +81,9 @@ def main():
         fail_repo_on_call = None
         repo_upload_counts = {}
         missing_repo_id = None
+        checkpoint_repo_id = None
+        corrupt_checkpoint_repo_id = None
+        corrupt_metadata_path = None
         validation_consumes_timeout = False
 
         def __init__(self, endpoint=None, token=None):
@@ -92,17 +95,35 @@ def main():
             resumable_events.append(("upload", repo_id))
             call_number = self.repo_upload_counts.get(repo_id, 0) + 1
             self.repo_upload_counts[repo_id] = call_number
+            root = Path(kwargs["folder_path"])
+            files = sorted(
+                path
+                for path in root.rglob("*")
+                if path.is_file()
+                and not path.relative_to(root).as_posix().startswith(".cache/")
+            )
+            if repo_id == self.checkpoint_repo_id:
+                for index, file_path in enumerate(files):
+                    relative = file_path.relative_to(root).as_posix()
+                    paths = api_mod.get_local_upload_paths(root, relative)
+                    metadata = api_mod.read_upload_metadata(root, relative)
+                    metadata.sha256 = f"{index:064x}"
+                    metadata.upload_mode = "lfs" if index < 2 else "regular"
+                    metadata.is_uploaded = index == 0
+                    metadata.is_committed = index == 2
+                    metadata.save(paths)
+                raise RuntimeError("offline checkpoint failure")
+            if repo_id == self.corrupt_checkpoint_repo_id:
+                relative = files[0].relative_to(root).as_posix()
+                paths = api_mod.get_local_upload_paths(root, relative)
+                paths.metadata_path.write_text("corrupt\n", encoding="utf-8")
+                type(self).corrupt_metadata_path = paths.metadata_path
+                raise RuntimeError("offline corrupt checkpoint failure")
             if (
                 repo_id == self.fail_repo_id
                 or (repo_id, call_number) == self.fail_repo_on_call
             ):
                 raise RuntimeError("offline terminal failure")
-            root = Path(kwargs["folder_path"])
-            files = sorted(
-                path for path in root.rglob("*")
-                if path.is_file()
-                and not path.relative_to(root).as_posix().startswith(".cache/")
-            )
             resumable_calls.append((kwargs, files))
 
         def create_commit(self, **kwargs):
@@ -455,6 +476,54 @@ def main():
                 and "上传批次汇总: 计划 21，新增提交 0，续传跳过 0，确认完成 0" in failure_text
             )
 
+            checkpoint_repo = "user/repo-checkpoint-failure"
+            FakeHfApi.checkpoint_repo_id = checkpoint_repo
+            checkpoint_failure_output = StringIO()
+            with redirect_stdout(checkpoint_failure_output):
+                checkpoint_failure_result = api_mod.api.upload_directory(
+                    source,
+                    checkpoint_repo,
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                    path_in_repo="remote/prefix",
+                )
+            FakeHfApi.checkpoint_repo_id = None
+            checkpoint_failure_text = checkpoint_failure_output.getvalue()
+            checkpoint_failure_ok = (
+                checkpoint_failure_result is False
+                and "[批次 1/2] 失败: 累计确认完成 1/21，剩余 20"
+                in checkpoint_failure_text
+                and "[批次 1/2] 断点状态: 已哈希 20/20（20.0 B/20.0 B），"
+                "LFS 已预上传 1/2（1.0 B/2.0 B），"
+                "本地待确认 19（19.0 B）" in checkpoint_failure_text
+                and "上传批次汇总: 计划 21，新增提交 1，续传跳过 0，确认完成 1"
+                in checkpoint_failure_text
+            )
+
+            corrupt_repo = "user/repo-corrupt-checkpoint"
+            FakeHfApi.corrupt_checkpoint_repo_id = corrupt_repo
+            corrupt_output = StringIO()
+            with redirect_stdout(corrupt_output):
+                corrupt_result = api_mod.api.upload_directory(
+                    source,
+                    corrupt_repo,
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                )
+            FakeHfApi.corrupt_checkpoint_repo_id = None
+            corrupt_text = corrupt_output.getvalue()
+            corrupt_ok = (
+                corrupt_result is False
+                and "[批次 1/2] 断点状态: 已哈希 0/20（0 B/20.0 B），"
+                "LFS 已预上传 0/0（0 B/0 B），本地待确认 19（19.0 B），"
+                "状态未知 1（1.0 B）" in corrupt_text
+                and FakeHfApi.corrupt_metadata_path is not None
+                and FakeHfApi.corrupt_metadata_path.read_text(encoding="utf-8")
+                == "corrupt\n"
+                and str(FakeHfApi.corrupt_metadata_path) not in corrupt_text
+                and "offline corrupt checkpoint failure" not in corrupt_text
+            )
+
             configured_failure_repo = "user/repo-configured-failure"
             FakeHfApi.fail_repo_on_call = (configured_failure_repo, 2)
             FakeHfApi.repo_upload_counts.pop(configured_failure_repo, None)
@@ -510,6 +579,12 @@ def main():
             print(f"[{'PASS' if metadata_failure_ok else 'FAIL'}] metadata observation cannot fail upload")
             print(f"[{'PASS' if missing_ok else 'FAIL'}] missing target fails before hashing or upload")
             print(f"[{'PASS' if failure_ok else 'FAIL'}] terminal failure summary and ordering")
+            print(
+                f"[{'PASS' if checkpoint_failure_ok else 'FAIL'}] failure summary preserves checkpoint progress"
+            )
+            print(
+                f"[{'PASS' if corrupt_ok else 'FAIL'}] corrupt checkpoint remains unchanged and unknown"
+            )
             print(f"[{'PASS' if configured_failure_ok else 'FAIL'}] configured mid-plan failure counts")
             print(f"[{'PASS' if large_plan_ok else 'FAIL'}] 700-file lifecycle plan with progress bar")
             return 0 if all((
@@ -523,6 +598,8 @@ def main():
                 metadata_failure_ok,
                 missing_ok,
                 failure_ok,
+                checkpoint_failure_ok,
+                corrupt_ok,
                 configured_failure_ok,
                 large_plan_ok,
             )) else 1
