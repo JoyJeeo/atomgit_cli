@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 118
+BASELINE_INVARIANT_COUNT = 119
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -578,12 +578,23 @@ CAPABILITY_REGISTRY = {
                 "Automatic attributes are opt-in, action-scoped, concurrency-safe, and preserve existing repository content.",
                 "test_auto_configure_lfs.py",
             ),
+            _invariant(
+                "LFS-004",
+                "Every public upload entrypoint forwards its effective request timeout unchanged to canonical LFS pointer verification.",
+                "test_canonical_lfs_pointer.py",
+                "test_upload_file_no_copy.py",
+                "test_upload_resumable.py",
+                "test_sdk_upload_timeout.py",
+            ),
         ),
         (
             "test_auto_configure_lfs.py",
             "test_canonical_lfs_pointer.py",
             "test_lfs_preupload_policy.py",
             "test_resumable_commit_policy.py",
+            "test_sdk_upload_timeout.py",
+            "test_upload_file_no_copy.py",
+            "test_upload_resumable.py",
         ),
         ("docs/architecture.md", "docs/upload_command_analysis.md"),
         ("offline-contract", "security-contract", "controlled-remote"),
@@ -1341,7 +1352,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "27 个稳定能力 ID",
-        "118 条可观察行为不变量",
+        "119 条可观察行为不变量",
         "92 个隔离 pytest case",
     ),
     "docs/testing.md": ("92 个 pytest case", "development_floor.md"),

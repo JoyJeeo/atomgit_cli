@@ -11,9 +11,12 @@ import queue
 import sys
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import huggingface_hub.hf_api as hf_api
 from click.testing import CliRunner
+from huggingface_hub._commit_api import CommitOperationAdd
 
 import atomgit  # noqa: F401
 
@@ -47,6 +50,8 @@ def fake_upload_folder(**kwargs):
 class FakeHfApi:
     """Match the locked HF 1.1.7 large-folder signatures used by AtomGit."""
 
+    exercise_pointer_verification = False
+
     def __init__(self, endpoint=None, token=None, library_name=None,
                  library_version=None, user_agent=None, headers=None):
         hfa_init_captured.append({"endpoint": endpoint, "token": token})
@@ -79,6 +84,30 @@ class FakeHfApi:
             "visible_files": visible_files,
             "metadata_present": metadata.exists(),
         })
+        if self.exercise_pointer_verification:
+            operation = CommitOperationAdd(
+                path_in_repo="a.txt",
+                path_or_fileobj=b"a",
+            )
+            operation._upload_mode = "lfs"
+            return self.create_commit(
+                repo_id=repo_id,
+                repo_type=repo_type,
+                revision=revision or "main",
+                operations=[operation],
+                commit_message="offline pointer timeout",
+            )
+
+    def create_commit(self, **kwargs):
+        operations = kwargs.get("operations", ())
+        list(
+            hf_api._prepare_commit_payload(
+                operations=operations,
+                files_to_copy={},
+                commit_message=kwargs.get("commit_message", "offline commit"),
+            )
+        )
+        return SimpleNamespace(oid="d" * 40)
 
 
 class InlineQueue:
@@ -138,6 +167,18 @@ def main():
     original_context = api_mod.multiprocessing.get_context
     original_hf_home = os.environ.get("HF_HOME")
     original_v5_get = api_mod._atomgit_v5_get_json
+    original_verify_pointers = api_mod.verify_canonical_lfs_pointers
+    original_canonical_upload = api_mod.run_canonical_lfs_upload
+    original_mark_committed = api_mod._mark_resumable_operations_committed
+    pointer_timeouts = []
+    ordinary_pointer_timeouts = []
+
+    def fake_verify_pointers(*, timeout, **kwargs):
+        pointer_timeouts.append(timeout)
+
+    def fake_canonical_upload(upload, *, token, repo_id, timeout):
+        ordinary_pointer_timeouts.append(timeout)
+        return upload()
 
     def fake_v5_get(path, token, timeout=15):
         validation_captured.append({
@@ -154,6 +195,8 @@ def main():
     api_mod.hf_upload_file = fake_upload_folder
     api_mod.HfApi = FakeHfApi
     api_mod._atomgit_v5_get_json = fake_v5_get
+    api_mod.verify_canonical_lfs_pointers = fake_verify_pointers
+    api_mod.run_canonical_lfs_upload = fake_canonical_upload
     api_mod.multiprocessing.get_all_start_methods = lambda: ["fork"]
     api_mod.multiprocessing.get_context = lambda method: InlineContext()
     cfg_mod.config.is_logged_in = lambda: True
@@ -237,6 +280,7 @@ def main():
 
             # An explicit opt-out preserves the ordinary upload-folder path.
             uf_captured.clear(); ulf_captured.clear()
+            ordinary_pointer_timeouts.clear()
             result = runner.invoke(
                 cli,
                 ["upload", str(source), "--repo-id", "user/repo", "--no-resumable"],
@@ -244,6 +288,9 @@ def main():
             check("T2 --no-resumable succeeds", result.exit_code == 0)
             check("T2 --no-resumable uses upload_folder",
                   len(uf_captured) == 1 and not ulf_captured)
+            check("T2 ordinary pointer verification uses request timeout",
+                  ordinary_pointer_timeouts == [300.0],
+                  repr(ordinary_pointer_timeouts))
 
             # Dataset keeps the verified AtomGit model compatibility route.
             uf_captured.clear(); ulf_captured.clear()
@@ -493,13 +540,46 @@ def main():
                     "SDK retains requested network waiting",
                     validation_captured[0]["timeout"] == expected_timeout,
                 )
+
+            ulf_captured.clear()
+            pointer_timeouts.clear()
+            FakeHfApi.exercise_pointer_verification = True
+            api_mod._mark_resumable_operations_committed = (
+                lambda folder_path, operations: None
+            )
+            try:
+                pointer_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(source),
+                        "--repo-id",
+                        "user/repo",
+                        "--timeout",
+                        "28800",
+                    ],
+                )
+            finally:
+                FakeHfApi.exercise_pointer_verification = False
+                api_mod._mark_resumable_operations_committed = original_mark_committed
+            check(
+                "resumable pointer verification keeps a large request timeout",
+                pointer_result.exit_code == 0
+                and pointer_timeouts
+                and all(timeout == 28800.0 for timeout in pointer_timeouts),
+                repr(pointer_timeouts),
+            )
     finally:
+        FakeHfApi.exercise_pointer_verification = False
         api_mod.upload_folder = original_upload_folder
         api_mod.hf_upload_file = original_upload_file
         api_mod.HfApi = original_hf_api
         api_mod.multiprocessing.get_all_start_methods = original_methods
         api_mod.multiprocessing.get_context = original_context
         api_mod._atomgit_v5_get_json = original_v5_get
+        api_mod.verify_canonical_lfs_pointers = original_verify_pointers
+        api_mod.run_canonical_lfs_upload = original_canonical_upload
+        api_mod._mark_resumable_operations_committed = original_mark_committed
         if original_hf_home is None:
             os.environ.pop("HF_HOME", None)
         else:

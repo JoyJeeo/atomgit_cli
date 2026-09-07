@@ -275,14 +275,16 @@ session 后以目标请求超时创建新 client，退出上传分支时在 `fin
 `--timeout N` 时为 N 秒。该值不创建上传截止时间，也不会限制上传子进程或跨批次
 累计运行时间。Ctrl+C 会终止本次上传子进程；异常退出和缺失/无效结果均不算成功。
 
-HF 1.1.7 的默认 HTTPX 客户端将该值用于连接、读取和连接池等待，写入等待仍为
-60 秒；部分控制面请求使用 `min(N, 15)` 秒。它们约束对应网络等待阶段，不是一个
-请求从开始到结束的总时间，也不检测所有内部死锁。请求失败按既有分类和重试上限处理。
+LFS pointer 确认使用同一个 N，不再施加固定 15 秒上限。HF 1.1.7 的默认 HTTPX
+客户端将请求默认值用于连接、读取和连接池等待，写入等待仍为 60 秒。它们约束对应
+网络等待阶段，不是一个请求从开始到结束的总时间，也不检测所有内部死锁。请求失败
+按既有分类和重试上限处理。
 
 原生 SDK `AtomGitClient.upload_folder(timeout=N, resumable=True)` 和历史
 `AtomGitAPI.upload_directory(upload_timeout=N, resumable=True)` 共用上传执行层，
 不再施加 N 秒总时限。历史 HF 风格 `atomgit_hub.upload_folder(upload_timeout=N)`
-仍只设置请求等待。参数名称和调用方式保留；依赖旧 resumable 总时限的调用方须迁移。
+同样让上传请求和 LFS pointer 确认使用 N。参数名称和调用方式保留；依赖旧 resumable
+总时限的调用方须迁移。
 这是明确的兼容性变化，不能继续用 `--timeout` 作为整个命令的运行时间限制。
 
 批次生命周期日志不依赖 HF 进度条；使用 `--no-progress-bar` 时计划、开始、

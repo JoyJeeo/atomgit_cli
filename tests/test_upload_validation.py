@@ -47,6 +47,14 @@ def main():
                 ok = result.exit_code == 2 and marker in result.output.lower()
                 print(f"[{'PASS' if ok else 'FAIL'}] {' '.join(args)}")
                 passed += ok
+            help_result = runner.invoke(cli, ["upload", "--help"])
+            ok = (
+                help_result.exit_code == 0
+                and "默认网络请求等待超时" in help_result.output
+                and "部分请求阶段有独立等待上限" not in help_result.output
+            )
+            print(f"[{'PASS' if ok else 'FAIL'}] timeout help has one request contract")
+            passed += ok
             cfg_mod.config.is_logged_in = lambda: True
             valid = runner.invoke(
                 cli,
@@ -114,8 +122,8 @@ def main():
             ok = all(result is False for result in direct_results) and len(calls) == direct_before
             print(f"[{'PASS' if ok else 'FAIL'}] direct API rejects invalid batch sizes")
             passed += ok
-            print(f"summary: {passed}/15 passed")
-            return 0 if passed == 15 else 1
+            print(f"summary: {passed}/16 passed")
+            return 0 if passed == 16 else 1
         finally:
             api_mod.api.upload_directory = original
             api_mod.api.upload_folder = original_file

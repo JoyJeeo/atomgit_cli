@@ -7,6 +7,8 @@ from pathlib import Path
 import atomgit_hub
 from huggingface_hub import constants as hf_constants
 
+from atomgit.interfaces.sdk import AtomGitClient
+
 
 results = []
 
@@ -19,18 +21,24 @@ def check(name, condition, detail=""):
 
 def main():
     original_upload = atomgit_hub.hf_upload_folder
+    original_canonical_upload = atomgit_hub.run_canonical_lfs_upload
     suite_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    pointer_timeouts = []
+
+    def capture_canonical_upload(upload, *, token, repo_id, timeout):
+        pointer_timeouts.append(timeout)
+        return upload()
+
+    atomgit_hub.run_canonical_lfs_upload = capture_canonical_upload
     try:
         with tempfile.TemporaryDirectory() as source_dir:
             source = Path(source_dir)
             (source / "file.bin").write_bytes(b"content")
             hf_constants.DEFAULT_REQUEST_TIMEOUT = 19
+            request_timeouts = []
 
             def successful_upload(**kwargs):
-                check(
-                    "requested timeout visible during success",
-                    hf_constants.DEFAULT_REQUEST_TIMEOUT == 7,
-                )
+                request_timeouts.append(hf_constants.DEFAULT_REQUEST_TIMEOUT)
                 return "commit-url"
 
             atomgit_hub.hf_upload_folder = successful_upload
@@ -38,12 +46,41 @@ def main():
                 source,
                 "user/repo",
                 token="fake-token",
-                upload_timeout=7,
+                upload_timeout=10,
             )
             check("success result preserved", result == "commit-url")
             check(
+                "legacy SDK forwards the requested timeout to upload and verification",
+                request_timeouts[-1] == 10 and pointer_timeouts[-1] == 10,
+            )
+            check(
                 "timeout restored after success",
                 hf_constants.DEFAULT_REQUEST_TIMEOUT == 19,
+            )
+
+            default_result = atomgit_hub.upload_folder(
+                source,
+                "user/repo",
+                token="fake-token",
+            )
+            check(
+                "legacy SDK defaults upload and verification to 300 seconds",
+                default_result == "commit-url"
+                and request_timeouts[-1] == 300.0
+                and pointer_timeouts[-1] == 300.0,
+            )
+            native_result = AtomGitClient(token="fake-token").upload_folder(
+                source,
+                "user/repo",
+                token="fake-token",
+                resumable=False,
+                timeout=28800,
+            )
+            check(
+                "native SDK ordinary upload keeps a large verification timeout",
+                native_result.ok
+                and request_timeouts[-1] == 28800
+                and pointer_timeouts[-1] == 28800,
             )
 
             def failing_upload(**kwargs):
@@ -92,6 +129,7 @@ def main():
             )
     finally:
         atomgit_hub.hf_upload_folder = original_upload
+        atomgit_hub.run_canonical_lfs_upload = original_canonical_upload
         hf_constants.DEFAULT_REQUEST_TIMEOUT = suite_timeout
 
     passed = sum(1 for _, condition, _ in results if condition)

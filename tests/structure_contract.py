@@ -227,6 +227,7 @@ CURRENT_INTERNAL_EDGES = {
     ("adapters.huggingface", "adapters.upload.service"),
     ("adapters.huggingface", "adapters.sdk_repositories"),
     ("adapters.huggingface", "adapters.sdk_uploads"),
+    ("adapters.lfs.pointer", "core.contracts"),
     ("adapters.sdk_common", "infrastructure.config"),
     ("adapters.sdk_common", "infrastructure.validation"),
     ("adapters.sdk_datasets", "adapters.sdk_common"),

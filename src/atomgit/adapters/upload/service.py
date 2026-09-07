@@ -159,7 +159,7 @@ class UploadServiceMixin:
                         lambda: hf_upload_file(**file_kwargs),
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
-                        timeout=min(request_timeout, 15),
+                        timeout=request_timeout,
                     )
                     return True
 
@@ -197,7 +197,7 @@ class UploadServiceMixin:
                         lambda: upload_folder(**upload_kwargs),
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
-                        timeout=min(request_timeout, 15),
+                        timeout=request_timeout,
                     )
                     return True
             finally:
@@ -568,7 +568,7 @@ class UploadServiceMixin:
                                 ),
                                 token=credentials["token"],
                                 repo_id=upload_kwargs["repo_id"],
-                                timeout=min(request_timeout, 15),
+                                timeout=request_timeout,
                             )
                         except Exception:
                             remaining_files = total_files - completed_files

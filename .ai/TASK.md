@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D01 delivered on github/yuto; no active implementation)
+Status: active (D03 LFS pointer request-timeout alignment)
 
 ## Successor Development Issue
 
@@ -9,22 +9,35 @@ Status: inactive (D01 delivered on github/yuto; no active implementation)
 - Title: `上传可靠性与可观测性修复`
 - Type: `bug`, `cli`, `sdk`, `compatibility`, `testing`, `documentation`
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
-- Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前仅收录已确认的 `D01 / UPLOAD-01`。
-- Current phase: D01 已完成验收、提交、本地合并及推送，远端合并提交已核验一致。
+- Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`
+  和 `D03 / UPLOAD-03`；D02 已由 D01 解决并移除。
+- Current phase: D01 已完成验收、提交、本地合并及推送；D03 实现、全量验证、最终
+  独立审查和维护者人工验收已完成，当前按授权执行提交、合并及推送。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
   本地分支修改及离线验证；不创建远程 Issue，不实施 D02–D18。
+  维护者又于 `2026-09-07` 确认 D03 采用“LFS pointer 确认统一使用请求超时、HF
+  60 秒写入等待保持不变”，并明确要求将方案写入开发 Issue。本次只授权记录 D03
+  及同步讨论交接。维护者随后在新对话明确要求“现在开始开发task最新任务”，授权
+  D03 的本地任务分支、源码、测试、文档修改及离线验证；不授权提交、合并、推送或
+  远程操作。维护者随后明确要求“自己再完整测试一下，确认基线测试没有问题后，
+  提交推送”，据此在复验通过后接受 D03，并授权提交、本地合入 `yuto` 及仅推送
+  `github/yuto`；不推送任务分支。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
-- Next exact action: 继续 D02 讨论；后续开发需确认方案并明确激活。
-  后续议题不进入实施，讨论 Issue 不关闭。
+- D03 delivery mode: 复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
+  `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
+- Next exact action: 提交 D03、本地合入 `yuto`、仅推送 `github/yuto` 并核验。
 
 ### Repository Reconciliation
 
-当前分支 `yuto`，HEAD `2c5d3515f24fe09c8d5aab61691419df69859a4b`，只有当前
-worktree。Git 已包含 R9 实现提交 `5c108f6`、合并 `4298043` 和交付记录 `2c5d351`；
+当前分支 `codex/d03-lfs-pointer-timeout`，基于与 `github/yuto` 一致的
+`yuto@11ffbe524a0afabb364fc007ff9a0601b9901f3f`，只有当前 worktree。Git 已包含
+R9 实现提交 `5c108f6`、合并
+`4298043` 和交付记录 `2c5d351`，以及 D01 任务提交 `a4d7216`、合并 `720d641`
+和交付记录 `11ffbe5`；
 旧记录也注明实现完成、人工接受及无下一步。因此 R9 不作为新的活跃开发任务。
 下方历史正文保留，不据其旧的 active/未实现描述恢复执行。历史矛盾的完整整理仍属于
 D18；本次仅建立清晰的当前入口，没有将 D18 标记为已解决，也未核验新的远程状态。
@@ -60,8 +73,8 @@ D18；本次仅建立清晰的当前入口，没有将 D18 标记为已解决，
   `min(request_timeout, 15)`。这些既有细分保护保留，不宣称全部请求统一等待五分钟。
 - 请求超时按网络等待阶段判断，不要求整个请求在 N 秒内完成，也不是全局上传进度
   看门狗。参考：<https://www.python-httpx.org/advanced/timeouts/>。
-- D01 改变了 D02 的讨论前提，但不代表 D02 已接受或移除；细分参数与控制面展示
-  仍留待 D02/D03 逐项讨论。
+- D01 改变了 D02 的讨论前提；在 D01 接受时，细分参数与控制面展示仍留待 D02/D03
+  逐项讨论。后续 D02、D03 决定见各自章节。
 
 ### D01 Implementation Scope
 
@@ -173,7 +186,8 @@ git diff --check
   未在 Windows/Linux 主机或真实 Python 3.9 解释器执行；本机的启动方式测试和语法
   检查不能代替这些平台实测。请求超时仍不能发现所有内部死锁。
 - 显式参数不再限制整个上传是已接受的兼容变化；帮助、README、FAQ、架构及上传分析
-  已说明。D02–D18 未实施、未接受，不因本次验证而自动解决。
+  已说明。D01 交付时 D02–D18 未实施、未接受，不因该次验证自动解决；后续 D02、
+  D03 决定见各自章节。
 
 ### Delivery Verification
 
@@ -203,18 +217,212 @@ git diff --check
 - [x] 维护者授权自行复验后提交推送；交付复验通过，满足验收条件。
 - [x] 按交付权限提交、本地合入 yuto、仅推送 github/yuto，并核验远端一致。
 
+### D03 Objective And Evidence
+
+取消 AtomGit 自己添加的 LFS pointer 确认 15 秒上限，使确认请求直接采用调用方的
+有效请求超时；不修改 HF 1.1.7 内部的 60 秒写入等待，也不恢复上传总时限。
+
+当前单文件、普通目录、resumable、原生 SDK 和历史上传入口在调用
+`run_canonical_lfs_upload` 或 `verify_canonical_lfs_pointers` 时使用
+`min(request_timeout, 15)`、`min(timeout, 15)` 或 `min(upload_timeout, 15)`。
+因此即使用户设置 `--timeout 300` 或 `--timeout 28800`，上传提交后的原始 LFS
+pointer 读取仍只使用 15 秒等待；CLI 只展示默认请求超时，用户无法从运行提示判断
+这个差异。
+
+本机只读核对确认锁定依赖为 `huggingface-hub==1.1.7`、`httpx==0.28.1`。HF 默认
+同步和异步客户端均使用
+`httpx.Timeout(constants.DEFAULT_REQUEST_TIMEOUT, write=60.0)`；`upload_file`、
+`upload_folder` 和 `upload_large_folder` 均不提供单次调用的 timeout 参数。60 秒
+只约束向服务器写入数据时的等待，不是整个上传总时长，D03 不接管该全局客户端。
+
+### D03 Accepted Behavior And Compatibility Migration
+
+| 使用方式 | LFS pointer 确认等待 | 上传总时长 | HF 写入等待 |
+|---|---:|---|---:|
+| 省略 `--timeout` | 300 秒 | 不限 | 60 秒 |
+| `--timeout N` | N 秒 | 不限 | 60 秒 |
+
+- CLI、原生 `AtomGitClient`、历史 `AtomGitAPI` 和 `atomgit_hub` 的有效请求超时必须
+  原样到达 LFS pointer 确认，不再暗中取 15 秒上限。
+- 这些 timeout 约束对应网络等待操作，不要求单个请求或整个上传在 N 秒内完成。
+- 对 N 大于 15 的调用，这是明确行为变化：确认故障可能等待更久，但不会再因隐藏
+  上限提前失败；N 小于或等于 15 时行为不变。
+- 不新增公开参数，不改变现有参数名称、签名、调用方式、返回值和错误包装。
+- 本决定后续替代 D01 中“保留 `min(N,15)`”的细分保护；D01 取消总时限的核心行为
+  和历史交付记录不变。
+
+### D03 Implementation Scope
+
+1. 删除所有公开上传链路中的 `min(..., 15)`，在
+   `adapters/upload/service.py`、`adapters/upload/resumable.py`、
+   `adapters/huggingface.py` 和 `adapters/sdk_uploads.py` 将有效请求超时原样传给 LFS
+   pointer 确认。
+2. `run_canonical_lfs_upload` 和 `verify_canonical_lfs_pointers` 继续使用现有
+   `timeout` 参数；不新增参数。其默认值改用项目现有的 300 秒请求超时合同，避免
+   漏传时回落到隐藏的 15 秒值，不为此增加新的配置层或抽象。
+3. 单文件和目录 CLI 均显示“上传总时限：不限”和“默认网络请求等待超时：N 秒”；
+   删除帮助中“部分请求阶段有独立等待上限”的旧提示，因为 LFS 确认已统一使用 N。
+4. 同步 README、FAQ、架构、上传分析及 SDK 参数说明：删除 `min(N,15)`，明确 LFS
+   pointer 确认使用 N，同时准确保留 HF 写入等待 60 秒及非全局总时限的说明。
+5. 只改变确认等待值；保留 pointer 逐字节验证、失败关闭、凭证脱敏、错误分类、
+   断点元数据、批次、取消清理、全局状态恢复和当前有限重试行为。
+
+### D03 Affected Capability IDs
+
+`CLI-SURFACE`、`CLI-DISPATCH`、`UPLOAD-FILE`、`UPLOAD-FOLDER`、
+`UPLOAD-RESUMABLE`、`UPLOAD-LFS`、`SDK-UPLOAD`、`RUNTIME`、
+`DEPENDENCY-CONTRACT`、`ARCHITECTURE`、`ERROR-REDACTION` 和 `FLOOR-REGISTRY`。
+实施时更新现有能力与不变量台账，不新增未要求的能力或测试脚本。
+
+### D03 Protected Existing Invariants
+
+- 默认和显式请求超时均不限制上传总时长，健康长上传不会按累计时间被终止。
+- HF 1.1.7 的 `write=60.0`、连接/读取/连接池超时结构及进程全局状态恢复不变。
+- LFS pointer 必须按返回提交逐字节验证；超时、读取失败、畸形响应或内容不匹配均
+  不能误报上传成功。
+- CLI/SDK 错误包装和凭证脱敏不退化，不泄露 token、签名 URL、响应正文或本地路径。
+- Ctrl+C、resumable 子进程清理、临时目录、源文件、断点缓存、批次和 model/dataset、
+  revision 行为保持兼容。
+- 当前重试次数、退避、慢速恢复和远端状态核对保持不变；D03 不提前实施 D05–D08。
+
+### D03 New Or Changed Invariants
+
+- 所有公开上传入口的 LFS pointer 确认使用有效请求超时 N，不得再施加固定 15 秒上限。
+- 省略参数时确认使用 300 秒；显式 10、300、28800 等合法值必须原样传递。
+- 单文件与目录的 CLI 显示、帮助、SDK 说明、执行层和回归证据对该语义一致。
+- N 大于 15 时允许确认故障等待更久，这是已接受的兼容变化，不得通过重新添加隐藏
+  上限规避。
+
+### D03 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| CLI/SDK 省略超时 | LFS pointer 确认收到 300，不是 15 |
+| 显式 `--timeout 10` | 确认收到 10，既有小值行为不退化 |
+| 显式 `--timeout 300` | 确认收到 300，不再截断为 15 |
+| 显式 `--timeout 28800` | 大值原样传递，不引入独立控制面上限 |
+| 单文件、普通目录、resumable | 三种上传模式均到达统一确认合同 |
+| 原生 SDK、`AtomGitAPI`、`atomgit_hub` | 跨入口参数和结果语义一致 |
+| 确认超时、读取失败、畸形响应、内容不匹配 | 仍安全失败且分类、脱敏不退化 |
+| 成功、失败、前置失败、中断 | 请求超时、进度和临时/全局状态正确恢复 |
+| D01 长时间与多批次回归 | N 不重新成为上传总截止时间 |
+| 锁定 HF 客户端合同 | `write=60.0` 未被修改或错误宣称受 N 控制 |
+
+优先扩展现有 `tests/test_canonical_lfs_pointer.py`、
+`tests/test_upload_resumable.py`、`tests/test_upload_batching.py`、
+`tests/test_upload_file_no_copy.py`、`tests/test_sdk_upload_timeout.py` 及必要的 CLI、SDK、
+依赖和开发底线合同，不创建新测试脚本。所有测试离线执行，不真实等待 300 或 28800 秒，
+不访问 AtomGit。
+
+### D03 Implementation Phases And Acceptance
+
+1. 激活后冻结六类公开入口、底层默认值和 HF 1.1.7 依赖合同，先添加大于 15 秒值
+   被截断的回归。验证：旧实现因实际收到 15 而失败，失败原因确为隐藏上限。
+2. 最小修改共享确认调用及底层默认值，不引入新参数、客户端工厂、重试或抽象。
+   验证：默认、10、300、28800 及所有上传入口专项通过，错误与恢复专项不退化。
+3. 同步 CLI/SDK 输出和文档、能力与不变量台账；执行完整离线基线、compileall、
+   pip check、diff check 及独立审查。验证：无未解决阻塞发现后再进入人工验收。
+
+实施必须在 `atomgit_cli` conda 环境运行；完整基线失败或未运行时不得完成、提交、
+合并或推送 D03。
+
+### D03 Verification Evidence
+
+- 实施前完整离线基线：`python tests/run_cli_baseline.py`，93 passed in 111.82s。
+- 锁定依赖只读核对：`huggingface-hub==1.1.7`、`httpx==0.28.1`；`upload_file`、
+  `upload_folder`、`HfApi.upload_large_folder` 的真实签名不接收 timeout 参数；HF 客户端
+  当前结构为 connect/read/pool 采用默认请求值、write=60.0。
+- 红灯回归：`test_canonical_lfs_pointer.py` 为 23/25，通过项外的两项均实际收到 15
+  而非默认 300；`test_upload_file_no_copy.py` 为 17/19，默认 300 与显式 28800 均被
+  截断为 15。组合命令退出 1，失败原因与 D03 隐藏上限一致。
+- 实现后专项：canonical pointer 25/25、单文件 CLI/原生 SDK 21/21、resumable 与普通
+  目录 61/61、历史/原生 SDK 超时 9/9、CLI 验证/help 16/16、commit/retry 51/51、SDK
+  参数 14/14、全局状态 7/7、parity 21/21、开发底线 15/15、结构 18/18、HF 依赖签名
+  16/16、打包元数据 13/13；相关 batching 与 source-layout 脚本同时通过。
+- 已删除四个适配器的六处 `min(..., 15)`，底层两个默认值统一复用 300 秒合同；新增
+  `LFS-004`，不变量 118 -> 119，测试脚本数不变。格式债务未增长：Black 410、Ruff
+  44 不变；新增导入使 isort 89 -> 88，精确摘要已收紧。
+- 首次实现后完整基线：92 passed、1 failed in 104.41s；唯一失败是新增原生 SDK 测试
+  只向 client 构造器提供假 token，隔离 HOME 下方法请求没有凭证而正确失败。测试已改为
+  在两次原生 SDK 方法调用显式传入假 token；相关脚本重新通过，未修改产品鉴权行为。
+- 最终完整离线基线：`python tests/run_cli_baseline.py`，93 passed in 105.02s。
+- `python -m compileall -q .`、`python -m pip check`、`git diff --check` 通过；14 个变更
+  Python 文件通过 Python 3.9 AST 语法解析，差异无凭证字面量、二进制、未跟踪生成物。
+- 首轮审查 P2 已修复：断点元数据空操作只在新增 pointer 场景内生效并在 `finally`
+  恢复。修复后专项 61/61、格式门禁 13/13，完整离线基线 93 passed in 109.24s；编译、
+  依赖、Python 3.9 语法、差异、凭证字面量、二进制和未跟踪生成物检查再次通过。
+- 第二轮审查 P2 已修复：开发与讨论交接的分支、D03 激活、权限和验证状态已同步。
+  修复后完整离线基线 93 passed in 110.07s；compileall、pip check、diff check 再次通过，
+  没有未跟踪文件。
+- 当前未运行：真实 AtomGit、Windows/Linux 与真实 Python 3.9 解释器。
+
+### D03 Delivery Verification
+
+- 维护者交付授权后的完整离线复验：`python tests/run_cli_baseline.py`，
+  **93 passed in 104.29s**。
+- `python -m compileall -q .`、`python -m pip check`、`git diff --check` 通过；14 个
+  变更 Python 文件通过 Python 3.9 AST 语法解析，锁定 HF/httpx 版本、方法签名和
+  `write=60.0` 合同复核通过。
+- 差异中的 6 个凭证形式字面量均为测试文件内带 `fake` 标记的占位值；无二进制差异、
+  未跟踪生成物或真实凭证。原有五份规范文档修改保持在本次交付范围外。
+
+### D03 Non-Goals And Residual Risks
+
+- 不修改或替换 HF 全局 HTTP 客户端，不让 `--timeout` 控制 `write=60.0`。
+- 不新增 LFS 确认重试；服务端最终一致性策略留给 D05。
+- 不区分“远端已提交”和“本地已确认”，不改变重跑去重或错误子类型；留给 D06–D08。
+- 较大 N 会延长提交后确认失败的等待，但这是统一参数的已接受结果。
+- 本轮没有真实 AtomGit、Windows/Linux 或真实 Python 3.9 执行证据；未来实施时必须
+  将未运行项作为剩余风险报告，远程写入仍需单独授权。
+
+### D03 Independent Review
+
+- 首轮审查：`REQUEST CHANGES`。发现 1 个 P2：新增 resumable pointer 超时回归在整个
+  `test_upload_resumable.py` 运行期将断点元数据提交函数替换为空操作，补丁范围超出新增
+  场景，可能削弱既有测试证据。生产实现、调用链、文档和依赖合同未发现其他问题。
+- 修复要求：只在新增 pointer 场景内临时替换并在 `finally` 恢复；修复后重新运行相关
+  专项、完整基线和全新独立审查。
+- 修复状态：已按要求收窄并恢复补丁；修复后全部门禁通过，等待全新审查结论。
+- 第二轮审查：`REQUEST CHANGES`。发现 1 个 P2：开发 Issue 的旧仓库核对段和讨论
+  Issue 的头部、权限及持久快照仍声明 `yuto / D03 未激活`，与真实任务分支和当前
+  授权冲突。实现、测试、文档行为与依赖合同未发现其他问题。
+- 第二轮修复状态：两份交接已与真实分支和权限同步；修复后全部门禁通过，等待最终
+  独立审查结论。
+- 最终审查：无 P0/P1/P2/P3 发现；两项历史发现均已修复，生产超时传递、错误失败关闭、
+  全局状态恢复、测试隔离、文档、锁定依赖、结构和开发底线证据一致。剩余风险仅为
+  未执行真实 AtomGit、Windows/Linux 和真实 Python 3.9 验证。Verdict: `APPROVED`。
+
+### D03 Activation And Delivery Status
+
+- [x] 维护者确认行为方向和 HF 60 秒写入边界。
+- [x] 完整方案已获准写入本地开发 Issue。
+- [x] D03 实施已明确激活。
+- [x] 红灯回归、实现、文档和能力台账完成。
+- [x] 专项与完整离线门禁通过。
+- [x] 独立审查和人工验收完成。
+- [x] 提交、合并和仅推送 `github/yuto` 已获得明确授权。
+- [ ] 提交、本地合并、推送及远端一致性核验完成。
+
+当前 D03 已通过维护者要求的完整复验并获得交付授权；只允许本地合入 `yuto` 并推送
+`github/yuto`，不能推送任务分支或执行其他远程操作。
+
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
+  `codex/d03-lfs-pointer-timeout`，基于 `yuto` 的
+  `11ffbe524a0afabb364fc007ff9a0601b9901f3f`；尚无 D03 提交。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
 - 本地 no-ff 合并并已推送的提交：`720d641a776fae7ff94c786f45fe813530387f25`。
-- `git push github yuto` 成功；`git ls-remote` 已确认远端 yuto 为上述合并提交，
-  远端没有 `codex/d01-upload-request-timeout` 分支。此交付记录另作后续文档提交。
+- D01 交付记录提交 `11ffbe5` 已推送；当前远端 yuto 为该提交，远端没有
+  `codex/d01-upload-request-timeout` 分支。
 - 源码与测试等交付树同已验证的任务分支一致；没有修改 main 或 atomgit 远端。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
-  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留。续接使用当前 worktree。
-- 最近完成：交付复验 93 passed in 105.41s；编译、依赖、差异和审查通过，D01 已交付。
-- 下一步：D02 讨论；讨论 Issue 保持 active，D02–D18 未实施，不自动激活新开发。
+  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；本轮另有
+  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 的 D02/D03 讨论与登记修改。续接使用
+  当前 worktree。
+- 最近完成：维护者交付授权后的完整复验 93 passed in 104.29s；compileall、pip check、
+  Python 3.9 语法、依赖签名、差异、凭证与生成物检查通过。
+- 下一步：提交 D03、本地 no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验；D04 不实施。
 
 # Historical R9 Contract (retained evidence, not current execution authority)
 

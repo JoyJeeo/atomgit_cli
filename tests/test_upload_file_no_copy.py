@@ -22,9 +22,14 @@
 import sys
 import tempfile
 from pathlib import Path
+
+import huggingface_hub
 from click.testing import CliRunner
 
 import atomgit  # noqa: F401  触发包初始化
+import atomgit.lfs_pointer as pointer_mod
+from atomgit.interfaces.sdk import AtomGitClient
+
 # atomgit/__init__.py 的 `from .api import api` 会把包级 api 名字
 # 覆盖为 HuggingFaceAPI 实例，故用 sys.modules 取真正的 api 模块。
 api_mod = sys.modules["atomgit.api"]
@@ -61,6 +66,15 @@ def fake_upload_folder(**kwargs):
 # 替换 api 模块引用的两个底层入口
 api_mod.hf_upload_file = fake_upload_file
 api_mod.upload_folder = fake_upload_folder
+canonical_timeouts = []
+
+
+def fake_canonical_upload(upload, *, token, repo_id, timeout):
+    canonical_timeouts.append(timeout)
+    return upload()
+
+
+api_mod.run_canonical_lfs_upload = fake_canonical_upload
 
 # stub 鉴权
 cfg_mod.config.is_logged_in = lambda: True
@@ -92,6 +106,9 @@ def main():
                       f"path_in_repo={call.get('path_in_repo')!r}")
                 check("T1 传了 token", bool(call.get("token")),
                       f"token={'有' if call.get('token') else '无'}")
+                check("T1 LFS 确认使用默认请求超时",
+                      canonical_timeouts[-1] == 300.0,
+                      f"timeout={canonical_timeouts[-1]}")
 
             # --- T2: 单文件 + --path-in-repo sub/ → path_in_repo='sub/weights.bin' ---
             uf_captured.clear(); ufold_captured.clear()
@@ -146,6 +163,42 @@ def main():
                 check("T6 commit_message='add weights'",
                       uf_captured[0].get("commit_message") == "add weights",
                       f"msg={uf_captured[0].get('commit_message')!r}")
+
+            # --- T7: 显式大请求超时不截断 LFS pointer 确认 ---
+            uf_captured.clear()
+            ufold_captured.clear()
+            r = runner.invoke(cli, ["upload", str(fpath), "--repo-id", "user/repo",
+                                   "--timeout", "28800"])
+            check("T7 大请求超时上传 exit=0", r.exit_code == 0,
+                  f"exit={r.exit_code}")
+            check("T7 LFS 确认保留大请求超时",
+                  canonical_timeouts[-1] == 28800.0,
+                  f"timeout={canonical_timeouts[-1]}")
+
+            # --- T8: 原生 SDK 单文件入口使用同一请求超时合同 ---
+            original_hf_upload_file = huggingface_hub.upload_file
+            original_pointer_upload = pointer_mod.run_canonical_lfs_upload
+            native_timeouts = []
+
+            def capture_native_upload(upload, *, token, repo_id, timeout):
+                native_timeouts.append(timeout)
+                return upload()
+
+            huggingface_hub.upload_file = fake_upload_file
+            pointer_mod.run_canonical_lfs_upload = capture_native_upload
+            try:
+                native_result = AtomGitClient(token="fake-token").upload_file(
+                    fpath,
+                    "user/repo",
+                    token="fake-token",
+                    timeout=300,
+                )
+            finally:
+                huggingface_hub.upload_file = original_hf_upload_file
+                pointer_mod.run_canonical_lfs_upload = original_pointer_upload
+            check("T8 原生 SDK 单文件上传成功", native_result.ok)
+            check("T8 原生 SDK LFS 确认保留请求超时",
+                  native_timeouts == [300], repr(native_timeouts))
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

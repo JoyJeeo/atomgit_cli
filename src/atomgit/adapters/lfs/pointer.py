@@ -14,6 +14,8 @@ from urllib.parse import quote, urlencode
 
 import huggingface_hub.hf_api as hf_api
 
+from ...core.contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
+
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
 _MAX_POINTER_RESPONSE_BYTES = 64 * 1024
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
@@ -264,7 +266,7 @@ def verify_canonical_lfs_pointers(
     repo_id: str,
     revision: str,
     expectations: Iterable[CanonicalLfsPointer],
-    timeout: float = 15,
+    timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
 ) -> None:
     """Verify committed raw Git blobs without resolving large LFS objects."""
     for expectation in expectations:
@@ -287,7 +289,7 @@ def run_canonical_lfs_upload(
     *,
     token: str,
     repo_id: str,
-    timeout: float = 15,
+    timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
 ):
     """Run one HF upload and verify every LFS blob at its returned commit."""
     with canonical_lfs_payloads() as expectations:
