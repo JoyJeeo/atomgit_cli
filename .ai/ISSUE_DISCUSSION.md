@@ -327,31 +327,29 @@ Issue 继续处理 D04，不因 D03 开发而关闭或扩大后续议题权限�
 | 2026-09-07 | 接受 D03：LFS pointer 确认统一使用请求超时，HF 60 秒写入等待不变；写入开发 Issue 但不激活，并进入 D04 | 维护者明确确认并授权写入 |
 | 2026-09-07 | 单独激活后继开发 Issue 中的 D03，仅授权本地任务分支、源码、测试、文档与离线验证；D04 仍只讨论 | 维护者明确要求“现在开始开发task最新任务” |
 | 2026-09-07 | D03 完整复验通过后接受实现，并授权提交、本地合入 yuto、仅推送 github/yuto；任务分支不推送 | 维护者明确要求复验无误后提交推送 |
+| 2026-09-07 | D03 以 `c87c62e` 提交，通过 `6b5a968` no-ff 合入并仅推送 github/yuto；远端一致且无任务分支 | 授权范围内交付核验 |
 
 ## 后继开发 Issue 交接
 
-- 状态: `partially-recorded; D01 delivered; D03 accepted; delivery authorized`
+- 状态: `partially-recorded; D01 and D03 delivered; no active development item`
 - 目标文件: `.ai/TASK.md`
 - 开发 Issue ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
 - 已映射问题: `D01 / UPLOAD-01`、`D03 / UPLOAD-03`
-- 当前权限: D01 已交付；D03 复验通过后已获提交、本地合入 yuto 和仅推送
-  github/yuto 的授权，任务分支不推送；后续项仍需确认及写入/实施授权，讨论 Issue
-  不关闭。
+- 当前权限: D01 和 D03 已按各自授权完成交付；后续项仍需确认及写入/实施授权，
+  讨论 Issue 不关闭。
 
 ## 持久交接快照
 
-- 分支: `codex/d03-lfs-pointer-timeout`，基于 `yuto@11ffbe5`；尚无 D03 提交
-- 交付合并提交: `720d641a776fae7ff94c786f45fe813530387f25`（已推送并核验）；
-  本交接记录位于后续文档提交，实际 HEAD 以 Git 为准
-- 工作区: `dirty`；D03 实现、测试、文档和交接均未提交；原有五份规范文档修改未纳入
-  D03，完整保留，续接必须使用当前 worktree。
-- 最近完成: D03 两轮审查发现均已修复，最终独立审查 `APPROVED`；维护者要求的交付
-  复验为 93 passed in 104.29s，compileall、pip check、Python 3.9 语法、依赖签名、
-  差异、凭证与生成物检查通过。D01 既有交付保持不变。
+- 分支: `yuto`；本地 D03 任务分支 `codex/d03-lfs-pointer-timeout` 保留且未推送
+- D03 实现提交: `c87c62e54f36a85f497780dc454bf5539cff6643`
+- D03 no-ff 合并提交: `6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
+  github/yuto 并核验当时远端一致；远端不存在 D03 任务分支
+- 工作区: `dirty`；仅原有五份规范文档修改保持未提交，未纳入 D03。
+- 最近完成: D03 复验 93 passed in 104.29s；compileall、pip check、Python 3.9 语法、
+  依赖签名、差异、凭证与生成物检查通过；随后完成验收、提交、合并、推送和核验。
 - 验证状态: D03 专项、完整基线、编译、依赖、Python 3.9 语法、差异、凭证字面量和
   生成物检查通过。未运行真实远程上传和其他主机平台，详细证据见 `.ai/TASK.md`。
-- 下一步: 提交 D03、本地合入 yuto、仅推送 github/yuto 并核验；D04 保持 discussing，
-  不实施。
+- 下一步: 无活跃开发动作；D04 保持 discussing，不实施。
 - 阻塞: `无`
 - 续接要求: 未提交变更必须在当前 worktree 继续；未授权创建检查点提交
 

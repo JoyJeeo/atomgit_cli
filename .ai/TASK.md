@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D03 LFS pointer request-timeout alignment)
+Status: completed (D01 and D03 delivered; no active development item)
 
 ## Successor Development Issue
 
@@ -11,8 +11,8 @@ Status: active (D03 LFS pointer request-timeout alignment)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`
   和 `D03 / UPLOAD-03`；D02 已由 D01 解决并移除。
-- Current phase: D01 已完成验收、提交、本地合并及推送；D03 实现、全量验证、最终
-  独立审查和维护者人工验收已完成，当前按授权执行提交、合并及推送。
+- Current phase: D01 和 D03 均已完成验收、提交、本地合并、推送及远端核验；D04
+  保持讨论状态，尚未激活为开发任务。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -29,12 +29,13 @@ Status: active (D03 LFS pointer request-timeout alignment)
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
 - D03 delivery mode: 复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
-- Next exact action: 提交 D03、本地合入 `yuto`、仅推送 `github/yuto` 并核验。
+- Next exact action: 无活跃开发动作；继续 D04 讨论需要维护者后续指令。
 
 ### Repository Reconciliation
 
-当前分支 `codex/d03-lfs-pointer-timeout`，基于与 `github/yuto` 一致的
-`yuto@11ffbe524a0afabb364fc007ff9a0601b9901f3f`，只有当前 worktree。Git 已包含
+当前分支 `yuto`，D03 实现提交 `c87c62e54f36a85f497780dc454bf5539cff6643`
+已通过 no-ff 合并提交 `6b5a9687cf461bf99a4e6d30445b5e17a4894c25` 合入并推送
+`github/yuto`；本地任务分支未推送，只有当前 worktree。Git 已包含
 R9 实现提交 `5c108f6`、合并
 `4298043` 和交付记录 `2c5d351`，以及 D01 任务提交 `a4d7216`、合并 `720d641`
 和交付记录 `11ffbe5`；
@@ -365,6 +366,9 @@ pointer 读取仍只使用 15 秒等待；CLI 只展示默认请求超时，用�
   `write=60.0` 合同复核通过。
 - 差异中的 6 个凭证形式字面量均为测试文件内带 `fake` 标记的占位值；无二进制差异、
   未跟踪生成物或真实凭证。原有五份规范文档修改保持在本次交付范围外。
+- D03 实现提交 `c87c62e54f36a85f497780dc454bf5539cff6643` 已通过 no-ff 合并提交
+  `6b5a9687cf461bf99a4e6d30445b5e17a4894c25` 合入 `yuto`；仅推送 `github/yuto`，
+  远端与本地合并提交一致，远端不存在 D03 任务分支。
 
 ### D03 Non-Goals And Residual Risks
 
@@ -401,28 +405,26 @@ pointer 读取仍只使用 15 秒等待；CLI 只展示默认请求超时，用�
 - [x] 专项与完整离线门禁通过。
 - [x] 独立审查和人工验收完成。
 - [x] 提交、合并和仅推送 `github/yuto` 已获得明确授权。
-- [ ] 提交、本地合并、推送及远端一致性核验完成。
+- [x] 提交、本地合并、推送及远端一致性核验完成。
 
-当前 D03 已通过维护者要求的完整复验并获得交付授权；只允许本地合入 `yuto` 并推送
-`github/yuto`，不能推送任务分支或执行其他远程操作。
+当前 D03 已完成限定交付；D04 仍只讨论，未因本次交付获得实施权限。
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d03-lfs-pointer-timeout`，基于 `yuto` 的
-  `11ffbe524a0afabb364fc007ff9a0601b9901f3f`；尚无 D03 提交。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D03 实现提交
+  `c87c62e54f36a85f497780dc454bf5539cff6643`，本地任务分支保留且未推送。
+- D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
+  `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
 - 本地 no-ff 合并并已推送的提交：`720d641a776fae7ff94c786f45fe813530387f25`。
 - D01 交付记录提交 `11ffbe5` 已推送；当前远端 yuto 为该提交，远端没有
   `codex/d01-upload-request-timeout` 分支。
 - 源码与测试等交付树同已验证的任务分支一致；没有修改 main 或 atomgit 远端。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
-  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；本轮另有
-  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 的 D02/D03 讨论与登记修改。续接使用
-  当前 worktree。
-- 最近完成：维护者交付授权后的完整复验 93 passed in 104.29s；compileall、pip check、
-  Python 3.9 语法、依赖签名、差异、凭证与生成物检查通过。
-- 下一步：提交 D03、本地 no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验；D04 不实施。
+  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接使用当前
+  worktree，不能把这些修改误纳入后续提交。
+- 最近完成：D03 完整复验、验收、提交、本地合并、仅推送 `github/yuto` 和远端核验。
+- 下一步：无活跃开发动作；D04 保持 discussing，不实施。
 
 # Historical R9 Contract (retained evidence, not current execution authority)
 
