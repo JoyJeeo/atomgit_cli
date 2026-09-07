@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D04 final acceptance and delivery authorized)
+Status: completed (D01, D03, and D04 delivered; no active development item)
 
 ## Successor Development Issue
 
@@ -11,8 +11,8 @@ Status: active (D04 final acceptance and delivery authorized)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03` 和 `D04 / UPLOAD-04`；D02 已由 D01 解决并移除。
-- Current phase: D01 和 D03 已交付；D04 实现、审查修复、文档、开发底线与最终
-  离线验收均已完成，验收通过，正在执行获授权的限定交付。
+- Current phase: D01、D03 和 D04 均已完成验收、提交、本地合并、限定推送与远端核验；
+  当前没有活跃开发项，D05 仍停留在问题讨论阶段。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -37,8 +37,7 @@ Status: active (D04 final acceptance and delivery authorized)
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
 - D04 delivery mode: 本地验收通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
-- Next exact action: 仅暂存 D04 变更并提交任务分支，本地 no-ff 合入 `yuto`、仅推送
-  `github/yuto`，核验远端一致后记录交付证据。
+- Next exact action: 无活跃开发动作；继续 D05 讨论需要维护者后续指令，不得直接实施。
 
 ### Repository Reconciliation
 
@@ -527,8 +526,8 @@ resumable 上传失败时，在保留现有累计确认汇总的同时，准确�
   Ruff 44 不变。新增结构依赖边已登记，结构专项 18/18 通过。
 - 差异均为文本且没有未跟踪生成物；原有五份规范文档修改保持原样，本任务仅在已有
   修改的 `.ai/DEVELOPMENT_FLOOR.md` 精确更新一处不变量计数。
-- 未运行真实 AtomGit、Windows/Linux 或真实 Python 3.9 解释器；未执行提交、合并、
-  推送或其他远程操作。
+- 未运行真实 AtomGit、Windows/Linux 或真实 Python 3.9 解释器；这些仍是 D04 的
+  已知剩余风险，不影响已授权的 Git 交付。
 
 ### D04 Activation Status
 
@@ -540,7 +539,7 @@ resumable 上传失败时，在保留现有累计确认汇总的同时，准确�
 - [x] 专项与完整离线门禁通过。
 - [x] 首轮审查发现已修复，全新独立审查通过。
 - [x] 维护者授权 AI 最终验收；最终门禁无误，D04 实现已接受。
-- [ ] 提交、合并和限定推送已授权，等待执行完成。
+- [x] 提交、本地合并、限定推送与远端一致性核验完成。
 
 ### D04 Independent Review
 
@@ -562,28 +561,40 @@ resumable 上传失败时，在保留现有累计确认汇总的同时，准确�
   Python 3.9 解释器，且未验证未来 HF 版本，均已明确保留为授权外风险。
 - 结论：`APPROVED`。该结论不授权提交、合并、推送、关闭 Issue 或发布。
 
+### D04 Delivery Verification
+
+- D04 实现提交：`e0459f26b841e816cf1c2a021435029dd7780a10`
+  （`fix(upload): report resumable failure progress`）。
+- 本地 no-ff 合并提交：`bca794b99ca39a7afc40b20bdd9aa23e4d9ddc23`
+  （`merge: report resumable failure progress`）；其提交树与已验收实现提交一致。
+- 仅推送 `github/yuto`；推送后远端 `yuto` 与本地合并提交一致，远端不存在
+  `codex/d04-upload-failure-progress` 分支。未修改 `main` 或 `atomgit` 远端。
+- 最终交付前完整离线基线 93 passed in 100.75s；compileall、pip check、Python 3.9
+  语法、锁定依赖签名、差异与敏感信息检查通过。
+- 原有五份规范文档修改未进入 D04 实现或合并提交，继续保留在本地工作区。
+
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d04-upload-failure-progress`，基于 `yuto` 的
-  `e64dcd97ae03259dcf139091bed5afe166d2e9c7`；D03 本地任务分支保留且未推送。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D04 实现提交
+  `e0459f26b841e816cf1c2a021435029dd7780a10` 已由 no-ff 合并提交
+  `bca794b99ca39a7afc40b20bdd9aa23e4d9ddc23` 合入并推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
 - 本地 no-ff 合并并已推送的提交：`720d641a776fae7ff94c786f45fe813530387f25`。
 - D01 交付记录提交 `11ffbe5` 已推送；当前远端 yuto 为该提交，远端没有
   `codex/d01-upload-request-timeout` 分支。
-- 源码与测试等交付树同已验证的任务分支一致；没有修改 main 或 atomgit 远端。
+- D04 合并提交树同已验证的任务分支一致；只推送 `github/yuto`，没有修改 main 或
+  atomgit 远端，远端没有 D04 任务分支。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接使用当前
   worktree，不能把这些修改误纳入后续提交。
-- 最近完成：D04 实现、文档、开发底线、专项与完整离线门禁通过。
+- 最近完成：D04 验收、实现提交、本地 no-ff 合并、仅推送 `github/yuto` 和远端核验。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
   以及已有用户修改中的 `.ai/DEVELOPMENT_FLOOR.md` 一处计数；无未跟踪文件。
-- 下一步：仅暂存 D04 变更并提交任务分支，本地 no-ff 合入 `yuto`，仅推送
-  `github/yuto` 并核验远端一致；不推送任务分支。
+- 下一步：无活跃开发动作；继续 D05 讨论需要维护者后续指令。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 
