@@ -302,7 +302,8 @@ atomgit upload PATH
 缺少末尾 LF 的 pointer 物化逻辑。单文件、普通目录和 SDK 使用返回的 commit SHA
 回读 V5 contents 原始 blob；resumable 在每个子提交成功后验证，响应不明确时先做
 既有 OID/size 对账，再验证目标 revision，最后才标记断点元数据为已提交。验证不
-解析到大型 LFS 对象，且该 HF 序列化包装在非 AtomGit 上下文中保持关闭。
+解析到大型 LFS 对象，使用调用方的有效请求超时且不再施加固定 15 秒上限；该 HF
+序列化包装在非 AtomGit 上下文中保持关闭。
 
 resumable 通过显式 AtomGit endpoint 的 `HfApi(endpoint=..., token=...)` 认证，
 避免隔离子进程回落到 `huggingface.co`。私有 model 和 dataset 均已使用真实

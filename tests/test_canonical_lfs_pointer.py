@@ -212,6 +212,19 @@ def main():
         and "fake-pointer-token" not in request.full_url,
     )
 
+    opened.clear()
+    verify_canonical_lfs_pointers(
+        token="fake-pointer-token",
+        repo_id="owner/repo",
+        revision="main",
+        expectations=expectations,
+    )
+    check(
+        "verification defaults to the project request timeout",
+        opened[0][1] == 300.0,
+        f"timeout={opened[0][1]}",
+    )
+
     pointer_mod._open_atomgit_url = lambda request, timeout: FakeResponse(
         expected[:-1]
     )
@@ -333,7 +346,8 @@ def main():
         "upload wrapper verifies the exact returned commit",
         wrapped_result.oid == "b" * 40
         and len(opened) == 1
-        and "ref=" + ("b" * 40) in opened[0][0].full_url,
+        and "ref=" + ("b" * 40) in opened[0][0].full_url
+        and opened[0][1] == 300.0,
     )
 
     original_preupload = hf_api.HfApi.preupload_lfs_files

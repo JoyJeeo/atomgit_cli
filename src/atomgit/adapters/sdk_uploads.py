@@ -121,7 +121,7 @@ def upload_folder(
                 lambda: hf_upload_folder(**upload_kwargs),
                 token=token,
                 repo_id=normalized_repo_id,
-                timeout=min(upload_timeout, 15),
+                timeout=upload_timeout,
             )
         except Exception as error:
             raise _sdk_error(error, "上传目录", repo_id) from error

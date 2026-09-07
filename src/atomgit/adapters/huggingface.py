@@ -89,7 +89,7 @@ class HuggingFaceAdapter:
             lambda: upload_file(**kwargs),
             token=token,
             repo_id=repo_id,
-            timeout=min(timeout, 15),
+            timeout=timeout,
         )
 
     def upload_folder(

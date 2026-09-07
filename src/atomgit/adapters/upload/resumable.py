@@ -567,7 +567,7 @@ def _run_resumable_upload(
                         repo_id=repo_id,
                         revision=revision,
                         expectations=expectations,
-                        timeout=min(request_timeout, 15),
+                        timeout=request_timeout,
                     )
                 ),
                 fatal_callback=fatal_exit,

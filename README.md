@@ -224,7 +224,7 @@ atomgit upload <path> --repo-id <id> [options]
 |------|------|
 | `--repo-id <id>` | 目标仓库ID（必填，如 `username/repo-name`） |
 | `-m, --message <text>` | 上传提交说明 |
-| `-t, --timeout <sec>` | 默认网络请求等待超时秒数，省略时为 300 秒；上传总时长不限，部分请求阶段有独立等待上限 |
+| `-t, --timeout <sec>` | 默认网络请求等待超时秒数，省略时为 300 秒；上传总时长不限 |
 | `--no-progress-bar` | 禁用进度条（日志/CI 场景） |
 | `-p, --path-in-repo <prefix>` | 仓库内目标目录前缀（如 `sub/`），默认根目录 |
 | `-r, --repo-type <model\|dataset>` | 仓库类型，默认按 model 处理 |
@@ -273,9 +273,10 @@ CLI 的文件数量和大小统计会先应用与上传相同的默认及用户�
 续传元数据，因此展示值与实际上传集合一致。底层的 `Upload N LFS files` 仍只
 统计过滤后需要传输的 LFS 文件，不包含随提交发送的普通小文件。
 
-上传总时间不设限。`--timeout N` 只设置默认网络请求等待超时，不要求整个请求在 N 秒内
-完成；HF 1.1.7 的写入等待仍为 60 秒，部分控制面请求上限为 `min(N, 15)` 秒。
-原生 SDK 的 `timeout` 和历史上传 API 的 `upload_timeout` 采用相同语义。
+上传总时间不设限。`--timeout N` 设置默认网络请求等待超时，LFS pointer 确认也使用
+N 秒，不要求整个请求在 N 秒内完成；HF 1.1.7 的写入等待仍为 60 秒。
+原生 SDK 的 `timeout` 和历史上传 API 的 `upload_timeout` 采用相同语义。N 大于 15
+时，提交后的 pointer 确认故障可能比旧版本等待更久，但不会再被隐藏上限提前终止。
 兼容变化：显式超时不再终止整次 resumable 上传，依赖旧总时限行为的脚本需相应调整。
 
 resumable 的 Git LFS 预上传不会无限重试。认证、权限、仓库不存在、LFS 存储或
