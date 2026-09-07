@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: completed (D01 and D03 delivered; no active development item)
+Status: active (D04 final acceptance and delivery authorized)
 
 ## Successor Development Issue
 
@@ -9,10 +9,10 @@ Status: completed (D01 and D03 delivered; no active development item)
 - Title: `上传可靠性与可观测性修复`
 - Type: `bug`, `cli`, `sdk`, `compatibility`, `testing`, `documentation`
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
-- Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`
-  和 `D03 / UPLOAD-03`；D02 已由 D01 解决并移除。
-- Current phase: D01 和 D03 均已完成验收、提交、本地合并、推送及远端核验；D04
-  保持讨论状态，尚未激活为开发任务。
+- Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
+  `D03 / UPLOAD-03` 和 `D04 / UPLOAD-04`；D02 已由 D01 解决并移除。
+- Current phase: D01 和 D03 已交付；D04 实现、审查修复、文档、开发底线与最终
+  离线验收均已完成，验收通过，正在执行获授权的限定交付。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -24,16 +24,26 @@ Status: completed (D01 and D03 delivered; no active development item)
   远程操作。维护者随后明确要求“自己再完整测试一下，确认基线测试没有问题后，
   提交推送”，据此在复验通过后接受 D03，并授权提交、本地合入 `yuto` 及仅推送
   `github/yuto`；不推送任务分支。
+  维护者随后于 `2026-09-07` 明确表示“接受 按你的建议开始执行”，接受 D04 方案，
+  授权写入并激活 D04、创建本地任务分支、修改相关源码、既有测试、用户文档和开发
+  底线台账，并执行离线验证；未授权提交、合并、推送或真实 AtomGit 操作。
+  维护者随后明确要求“自己去验收一下 没问题就提交推送”，授权 AI 完成 D04 最终
+  验收；全部门禁无误后提交 D04、本地 no-ff 合入 `yuto`，并仅推送 `github/yuto`。
+  任务分支不推送；真实 AtomGit 操作、PR、标签、发布和 D05–D18 实施仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
 - D03 delivery mode: 复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
-- Next exact action: 无活跃开发动作；继续 D04 讨论需要维护者后续指令。
+- D04 delivery mode: 本地验收通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
+  `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
+- Next exact action: 仅暂存 D04 变更并提交任务分支，本地 no-ff 合入 `yuto`、仅推送
+  `github/yuto`，核验远端一致后记录交付证据。
 
 ### Repository Reconciliation
 
-当前分支 `yuto`，D03 实现提交 `c87c62e54f36a85f497780dc454bf5539cff6643`
+当前分支 `codex/d04-upload-failure-progress`，基于 `yuto` 的
+`e64dcd97ae03259dcf139091bed5afe166d2e9c7`。D03 实现提交 `c87c62e54f36a85f497780dc454bf5539cff6643`
 已通过 no-ff 合并提交 `6b5a9687cf461bf99a4e6d30445b5e17a4894c25` 合入并推送
 `github/yuto`；本地任务分支未推送，只有当前 worktree。Git 已包含
 R9 实现提交 `5c108f6`、合并
@@ -407,12 +417,156 @@ pointer 读取仍只使用 15 秒等待；CLI 只展示默认请求超时，用�
 - [x] 提交、合并和仅推送 `github/yuto` 已获得明确授权。
 - [x] 提交、本地合并、推送及远端一致性核验完成。
 
-当前 D03 已完成限定交付；D04 仍只讨论，未因本次交付获得实施权限。
+当前 D03 已完成限定交付；D04 已获维护者确认并激活本地实施。
+
+### D04 Objective And Evidence
+
+resumable 上传失败时，在保留现有累计确认汇总的同时，准确显示当前失败批次已经
+持久化的哈希、LFS 预上传和本地待确认文件/字节状态，使用户能判断断点元数据的实际
+价值而不误判远端提交结果。
+
+当前 `adapters/upload/service.py` 的失败路径只调用
+`_resumable_committed_file_count`，随后输出新增提交、续传跳过和确认完成文件数。
+锁定的 `huggingface-hub==1.1.7` 已在投影元数据中持久化 `size`、`sha256`、
+`upload_mode`、`is_uploaded` 和 `is_committed`；HF 自带运行报告也使用这些字段，
+但子进程失败后的 AtomGit 汇总没有读取并展示它们。因此大量 LFS 数据完成预上传后，
+最终仍可能只显示“确认完成 0”。
+
+### D04 Accepted Behavior
+
+- 只在 resumable 当前批次失败时，读取该批次已有断点元数据并输出一条凭证安全的
+  “断点状态”。此前成功批次继续由现有累计确认汇总表示。
+- 已哈希以 `sha256` 非空为准；LFS 已预上传以 `upload_mode == "lfs"` 且
+  `is_uploaded` 为准；本地待确认以 `is_committed` 为假为准。三类均显示文件数和
+  以项目现有格式化函数表示的字节数。
+- “LFS 已预上传”不能表述为已提交或永久可复用；“本地待确认”不能推断远端一定
+  没有提交。现有失败类型、返回值、建议和重新执行指引保持不变。
+- 元数据读取属于观察行为。单个状态无法读取时记录为未知，不按零处理；统计失败
+  不能覆盖原始上传异常、导致成功或改变断点内容。
+- 输出不包含源路径、远端路径、OID、token、URL、header、响应正文或异常明细。
+
+### D04 Implementation Scope
+
+1. 在 resumable 投影所有者中增加一个只读批次统计函数，按锁定 HF 1.1.7 元数据
+   格式读取快照并复用既有文件大小格式化能力；保留现有已提交计数接口和兼容补丁面。
+2. 在共享上传服务的 resumable 失败分支中读取并打印当前批次断点状态，顺序位于
+   失败累计行与现有重新执行指引之间。
+3. 扩展现有批次测试覆盖预上传后失败、部分提交、普通/LFS 混合、元数据读取异常，
+   并证明成功路径、普通上传和原有累计汇总不变。
+4. 更新最小权威用户文档与既有 `UPLOAD-RESUMABLE` 能力台账，不新增测试脚本。
+
+### D04 Affected Capability IDs
+
+`CLI-SURFACE`、`UPLOAD-FOLDER`、`UPLOAD-RESUMABLE`、`UPLOAD-LFS`、
+`ERROR-REDACTION`、`DEPENDENCY-CONTRACT`、`ARCHITECTURE` 和 `FLOOR-REGISTRY`。
+
+### D04 Protected Existing Invariants
+
+- CLI、原生 SDK、历史 API 的参数、返回值、异常包装和上传路径保持兼容。
+- 成功批次、失败累计、续传跳过、确认完成和重新执行指引语义不变。
+- 断点元数据由 HF 上传流程拥有；观察代码不写入、修复或删除它，也不访问远端。
+- 元数据观察失败不改变原始失败分类、退出状态、资源清理或全局状态恢复。
+- 路径、OID、token、签名 URL、header、响应正文和异常明细不会进入新增输出。
+- D01 的无限上传总时长、D03 的 pointer 请求超时、HF 60 秒写入等待、有限重试、
+  取消清理、锁定依赖和 Python >=3.9 合同不变。
+- 上传服务复用 infrastructure 的既有大小格式化所有者；新增内部依赖边必须进入
+  精确结构合同，七目录所有权和依赖方向保持有效。
+
+### D04 New Or Changed Invariants
+
+- resumable 批次失败后，CLI 显示当前批次已哈希、LFS 已预上传和本地待确认的文件数
+  与字节数，且不把预上传误报为已提交。
+- 部分或全部元数据无法观察时明确显示未知数量；不可观察项不伪装成零进度。
+- 新增状态只描述当前失败批次；命令级累计确认继续由既有汇总表示。
+
+### D04 Focused Tests And Evidence
+
+- 在 `tests/test_upload_batching.py` 中构造真实本地 HF 元数据，先证明旧实现遗漏断点
+  状态，再覆盖已哈希、LFS 已预上传、本地待确认和字节统计。
+- 覆盖部分已提交、混合 regular/LFS、元数据读取失败、首次失败无进度、成功输出和
+  ordinary 路径不变；观察错误不能覆盖原始失败。
+- 更新 `tests/development_floor_contract.py` 的既有能力与新增不变量，测试脚本总数不变。
+- 更新 `tests/structure_contract.py` 登记上传服务复用文件大小格式化函数的真实依赖边。
+- 完成后运行相关批次、错误脱敏、领域所有权、开发底线和依赖合同专项，以及
+  `python tests/run_cli_baseline.py`、`python -m compileall -q .`、
+  `python -m pip check`、Python 3.9 语法检查和 `git diff --check`。
+- 全部验证仅离线执行；真实 AtomGit、Windows/Linux 和真实 Python 3.9 解释器不在
+  本次授权范围，作为剩余风险报告。
+
+### D04 Implementation Phases And Acceptance
+
+1. 补充能证明旧失败汇总遗漏已持久化进度的红灯回归。
+   验证：旧实现因缺少断点状态而失败，原有断点和累计断言继续通过。
+2. 实现只读统计与失败输出，不改上传状态机或跨进程协议。
+   验证：进度、未知状态、原始错误保持和敏感信息边界专项通过。
+3. 同步最小文档和开发底线，运行完整离线门禁并执行独立审查。
+   验证：无未解决发现后提交维护者人工验收；未获授权前不提交或交付。
+
+### D04 Verification Evidence
+
+- 红灯回归：`python tests/test_upload_batching.py` 退出 1；既有 12 个场景通过，新增
+  “failure summary preserves checkpoint progress” 失败。模拟元数据已保存 20/20 哈希、
+  1/2 LFS 预上传和 1 个已提交文件，旧实现仍只显示累计确认与总汇总，未输出断点状态。
+- 红灯阶段确认原因与 D04 一致，当时尚未修改产品实现或运行完整基线。
+- 实现后专项：批次、开发底线、打包元数据、上传所有权、错误脱敏、上传进度、
+  resumable、结构、导入顺序、HF 依赖、错误处理、统计、恢复、SDK 超时和架构 parity
+  共 14 个隔离脚本通过。
+- 首轮完整离线基线：`python tests/run_cli_baseline.py`，**93 passed in 112.92s**；
+  首轮审查修复后重新运行，**93 passed in 109.91s**。
+- 维护者授权后的最终验收：`python tests/run_cli_baseline.py`，
+  **93 passed in 100.75s**；`python -m compileall -q .`、`python -m pip check`、
+  `git diff --check`、6 个变更 Python 文件的 Python 3.9 AST、锁定依赖版本与真实
+  `get_local_upload_paths` 签名复核全部通过。
+- `python -m compileall -q .`、`python -m pip check`、`git diff --check` 通过；6 个变更
+  Python 文件通过 Python 3.9 AST 语法解析。
+- 锁定依赖为 `huggingface-hub==1.1.7`、`httpx==0.28.1`；真实上传元数据为 8 行格式，
+  `LocalUploadFileMetadata` 含对应状态字段，路径解析使用锁定的
+  `get_local_upload_paths(local_dir, filename)`。
+- 新增 `RESUMEUP-005`，开发底线保持 28 项能力、92 个隔离脚本，不变量 119 -> 120；
+  精确格式债务因测试内既有生成器表达式被同一修改替换而收紧为 Black 409，isort 88、
+  Ruff 44 不变。新增结构依赖边已登记，结构专项 18/18 通过。
+- 差异均为文本且没有未跟踪生成物；原有五份规范文档修改保持原样，本任务仅在已有
+  修改的 `.ai/DEVELOPMENT_FLOOR.md` 精确更新一处不变量计数。
+- 未运行真实 AtomGit、Windows/Linux 或真实 Python 3.9 解释器；未执行提交、合并、
+  推送或其他远程操作。
+
+### D04 Activation Status
+
+- [x] 维护者接受 D04 行为和边界。
+- [x] D04 已写入后继开发 Issue 并明确激活。
+- [x] 本地任务分支已从当前 `yuto` 创建。
+- [x] 红灯回归已证明旧行为。
+- [x] 实现、文档和开发底线已完成。
+- [x] 专项与完整离线门禁通过。
+- [x] 首轮审查发现已修复，全新独立审查通过。
+- [x] 维护者授权 AI 最终验收；最终门禁无误，D04 实现已接受。
+- [ ] 提交、合并和限定推送已授权，等待执行完成。
+
+### D04 Independent Review
+
+- 首轮审查：`REQUEST CHANGES`。发现 2 个 P2：讨论 Issue 的持久快照仍停留在 D04
+  刚激活、尚未运行回归的旧阶段；“状态未知”仅用替换函数抛错验证，没有覆盖 HF 1.1.7
+  对损坏元数据会记录本地路径并删除文件的真实读取行为，因此新统计的纯观察合同缺少
+  直接证据。
+- 修复要求：使用不修改元数据、不记录路径的只读快照解析覆盖失败汇总；增加真实损坏
+  元数据回归并证明文件保持、输出脱敏和未知计数；同步两份交接后重跑专项与完整门禁，
+  再进行全新审查。
+- 修复结果：两项发现均已处理。失败统计改用不修改元数据、不记录路径的 8 行快照解析；
+  新增真实损坏元数据回归，证明损坏文件保持不变、原始失败继续报告、未知数量明确且
+  本地路径和解析明细不进入输出。同步交接后，专项 14/14、完整离线基线 93/93、
+  compileall、pip check、Python 3.9 语法、锁定依赖签名和差异检查全部通过。
+- 全新审查：无 P0–P3 发现。已核对 D04 验收行为、完整差异、相关源码与测试、用户文档、
+  HF 1.1.7 真实实现和签名、Python 3.9 语法、开发底线映射、脱敏与权限边界；首轮两项
+  P2 均已关闭。
+- 缺失证据与剩余风险：无必需证据缺失；未运行真实 AtomGit、Windows/Linux 或真实
+  Python 3.9 解释器，且未验证未来 HF 版本，均已明确保留为授权外风险。
+- 结论：`APPROVED`。该结论不授权提交、合并、推送、关闭 Issue 或发布。
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D03 实现提交
-  `c87c62e54f36a85f497780dc454bf5539cff6643`，本地任务分支保留且未推送。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
+  `codex/d04-upload-failure-progress`，基于 `yuto` 的
+  `e64dcd97ae03259dcf139091bed5afe166d2e9c7`；D03 本地任务分支保留且未推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -423,8 +577,15 @@ pointer 读取仍只使用 15 秒等待；CLI 只展示默认请求超时，用�
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接使用当前
   worktree，不能把这些修改误纳入后续提交。
-- 最近完成：D03 完整复验、验收、提交、本地合并、仅推送 `github/yuto` 和远端核验。
-- 下一步：无活跃开发动作；D04 保持 discussing，不实施。
+- 最近完成：D04 实现、文档、开发底线、专项与完整离线门禁通过。
+- D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
+  `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
+  `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
+  以及已有用户修改中的 `.ai/DEVELOPMENT_FLOOR.md` 一处计数；无未跟踪文件。
+- 下一步：仅暂存 D04 变更并提交任务分支，本地 no-ff 合入 `yuto`，仅推送
+  `github/yuto` 并核验远端一致；不推送任务分支。
+- D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
+  93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 
 # Historical R9 Contract (retained evidence, not current execution authority)
 

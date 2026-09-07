@@ -81,8 +81,8 @@ TOOL_POLICY = {
 LEGACY_TOOL_DEBT = {
     "black": {
         "files": 76,
-        "changes": 410,
-        "digest": "ac38c5ffd9d23e40f67ba4233f39a43ff9259ceb94751bb0229fc977d83fa887",
+        "changes": 409,
+        "digest": "af6c94876795400a46b4cc9a93113c75c18d67075c2869b5b8f9e62206341f4b",
     },
     "isort": {
         "files": 80,

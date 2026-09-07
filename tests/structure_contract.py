@@ -263,6 +263,7 @@ CURRENT_INTERNAL_EDGES = {
     ("adapters.upload.service", "adapters.upload.projection"),
     ("adapters.upload.service", "adapters.upload.resumable"),
     ("adapters.upload.service", "infrastructure.config"),
+    ("adapters.upload.service", "infrastructure.filesystem"),
     ("adapters.upload.service", "infrastructure.validation"),
     ("__init__", "api"),
     ("__init__", "atomgit_hub"),
