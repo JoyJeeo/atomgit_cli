@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 120
+BASELINE_INVARIANT_COUNT = 121
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -590,6 +590,12 @@ CAPABILITY_REGISTRY = {
                 "test_upload_file_no_copy.py",
                 "test_upload_resumable.py",
                 "test_sdk_upload_timeout.py",
+            ),
+            _invariant(
+                "LFS-005",
+                "Each unconfirmed pointer gets at most three read-only checks at one commit with fixed two- and four-second waits; confirmed pointers and upload writes are not repeated.",
+                "test_canonical_lfs_pointer.py",
+                "test_resumable_commit_policy.py",
             ),
         ),
         (
@@ -1358,11 +1364,11 @@ WORKFLOW_DOCUMENT_MARKERS = {
     ),
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
-        "27 个稳定能力 ID",
-        "120 条可观察行为不变量",
-        "92 个隔离 pytest case",
+        "28 个稳定能力 ID",
+        "121 条可观察行为不变量",
+        "93 个隔离 pytest case",
     ),
-    "docs/testing.md": ("92 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("93 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

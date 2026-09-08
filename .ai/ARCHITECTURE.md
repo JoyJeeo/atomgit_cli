@@ -137,7 +137,9 @@ adapter boundaries.
 - Resumable uploads use revision- and destination-scoped metadata and restore
   global timeout/progress state.
 - AtomGit LFS pointers are canonical ASCII bytes ending in one LF and are
-  verified against the returned raw V5 blob before success is reported.
+  verified against the returned raw V5 blob before success is reported. Each
+  unconfirmed pointer receives at most three read-only checks at the same commit;
+  verification retries never repeat upload writes or mark resumable metadata early.
 - Downloads reject unsafe paths, isolate redirect credentials, preserve
   revision in resume identity, verify optional checksums, and prune only files
   recorded by a successful manifest-scoped download.

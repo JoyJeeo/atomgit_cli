@@ -4,6 +4,7 @@ import base64
 import json
 import re
 import threading
+import time
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
@@ -18,6 +19,7 @@ from ...core.contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 
 _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
 _MAX_POINTER_RESPONSE_BYTES = 64 * 1024
+_POINTER_VERIFICATION_BACKOFF_SECONDS = (2.0, 4.0)
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _PATCH_LOCK = threading.Lock()
 _EXPECTATIONS: ContextVar[Optional[List["CanonicalLfsPointer"]]] = ContextVar(
@@ -269,19 +271,39 @@ def verify_canonical_lfs_pointers(
     timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
 ) -> None:
     """Verify committed raw Git blobs without resolving large LFS objects."""
+    if not token:
+        raise CanonicalLfsPointerError("AtomGit credential is unavailable")
+    _repository_path(repo_id)
+    if not isinstance(revision, str) or not revision:
+        raise CanonicalLfsPointerError("commit revision is unavailable")
+    if (
+        not isinstance(timeout, (int, float))
+        or isinstance(timeout, bool)
+        or timeout <= 0
+    ):
+        raise CanonicalLfsPointerError("pointer verification timeout is invalid")
+
     for expectation in expectations:
-        raw = _read_raw_pointer(
-            token=token,
-            repo_id=repo_id,
-            revision=revision,
-            expectation=expectation,
-            timeout=timeout,
-        )
-        if raw != expectation.content:
-            raise CanonicalLfsPointerError(
-                "AtomGit generated a noncanonical Git LFS pointer for "
-                + repr(expectation.path_in_repo)
-            )
+        for attempt in range(len(_POINTER_VERIFICATION_BACKOFF_SECONDS) + 1):
+            try:
+                raw = _read_raw_pointer(
+                    token=token,
+                    repo_id=repo_id,
+                    revision=revision,
+                    expectation=expectation,
+                    timeout=timeout,
+                )
+                if raw != expectation.content:
+                    raise CanonicalLfsPointerError(
+                        "AtomGit generated a noncanonical Git LFS pointer for "
+                        + repr(expectation.path_in_repo)
+                    )
+            except CanonicalLfsPointerError:
+                if attempt == len(_POINTER_VERIFICATION_BACKOFF_SECONDS):
+                    raise
+                time.sleep(_POINTER_VERIFICATION_BACKOFF_SECONDS[attempt])
+            else:
+                break
 
 
 def run_canonical_lfs_upload(

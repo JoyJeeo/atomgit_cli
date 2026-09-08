@@ -176,6 +176,7 @@ def main():
             return self.payload
 
     original_open = pointer_mod._open_atomgit_url
+    original_sleep = pointer_mod.time.sleep
     opened = []
 
     def exact_open(request, timeout):
@@ -225,9 +226,127 @@ def main():
         f"timeout={opened[0][1]}",
     )
 
-    pointer_mod._open_atomgit_url = lambda request, timeout: FakeResponse(
-        expected[:-1]
+    retry_outcomes = [
+        urllib.error.URLError("temporary pointer read failure"),
+        FakeResponse(expected),
+    ]
+    retry_sleeps = []
+
+    def recover_on_second_read(request, timeout):
+        opened.append((request, timeout))
+        outcome = retry_outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    opened.clear()
+    pointer_mod._open_atomgit_url = recover_on_second_read
+    pointer_mod.time.sleep = retry_sleeps.append
+    try:
+        verify_canonical_lfs_pointers(
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+            revision="main",
+            expectations=expectations,
+            timeout=9,
+        )
+    except CanonicalLfsPointerError:
+        transient_read_recovered = False
+    else:
+        transient_read_recovered = True
+    check(
+        "pointer verification retries a transient read failure",
+        transient_read_recovered
+        and len(opened) == 2
+        and all(timeout == 9 for _, timeout in opened),
+        f"recovered={transient_read_recovered} calls={len(opened)}",
     )
+    check("first retry waits two seconds", retry_sleeps == [2.0], repr(retry_sleeps))
+
+    malformed_response = FakeResponse(expected)
+    malformed_response.payload = b"not-json"
+    retry_outcomes[:] = [
+        malformed_response,
+        urllib.error.URLError("second temporary failure"),
+        FakeResponse(expected),
+    ]
+    opened.clear()
+    retry_sleeps.clear()
+    verify_canonical_lfs_pointers(
+        token="fake-pointer-token",
+        repo_id="owner/repo",
+        revision="main",
+        expectations=expectations,
+        timeout=11,
+    )
+    check(
+        "pointer verification recovers on the third read",
+        len(opened) == 3
+        and all(timeout == 11 for _, timeout in opened)
+        and retry_sleeps == [2.0, 4.0],
+        f"calls={len(opened)} sleeps={retry_sleeps!r}",
+    )
+
+    retry_outcomes[:] = [FakeResponse(expected[:-1]), FakeResponse(expected)]
+    opened.clear()
+    retry_sleeps.clear()
+    verify_canonical_lfs_pointers(
+        token="fake-pointer-token",
+        repo_id="owner/repo",
+        revision="main",
+        expectations=expectations,
+    )
+    check(
+        "temporary pointer mismatch is retried",
+        len(opened) == 2 and retry_sleeps == [2.0],
+        f"calls={len(opened)} sleeps={retry_sleeps!r}",
+    )
+
+    second_content = b"second canonical pointer fixture"
+    second_oid = hashlib.sha256(second_content).hexdigest()
+    second_pointer = canonical_lfs_pointer(second_oid, len(second_content))
+    second_expectation = pointer_mod.CanonicalLfsPointer(
+        path_in_repo="nested/second.bin",
+        oid=second_oid,
+        size=len(second_content),
+        content=second_pointer,
+    )
+    path_reads = {"nested/fixture.bin": 0, "nested/second.bin": 0}
+
+    def multi_pointer_open(request, timeout):
+        path = (
+            "nested/second.bin"
+            if "nested/second.bin" in request.full_url
+            else "nested/fixture.bin"
+        )
+        path_reads[path] += 1
+        if path == "nested/second.bin" and path_reads[path] == 1:
+            return FakeResponse(expected)
+        return FakeResponse(second_pointer if path == "nested/second.bin" else expected)
+
+    pointer_mod._open_atomgit_url = multi_pointer_open
+    retry_sleeps.clear()
+    verify_canonical_lfs_pointers(
+        token="fake-pointer-token",
+        repo_id="owner/repo",
+        revision="main",
+        expectations=[expectations[0], second_expectation],
+    )
+    check(
+        "retrying one pointer does not reread an already confirmed pointer",
+        path_reads == {"nested/fixture.bin": 1, "nested/second.bin": 2}
+        and retry_sleeps == [2.0],
+        f"reads={path_reads!r} sleeps={retry_sleeps!r}",
+    )
+
+    mismatch_reads = []
+
+    def mismatched_open(request, timeout):
+        mismatch_reads.append((request, timeout))
+        return FakeResponse(expected[:-1])
+
+    pointer_mod._open_atomgit_url = mismatched_open
+    retry_sleeps.clear()
     try:
         verify_canonical_lfs_pointers(
             token="fake-pointer-token",
@@ -242,9 +361,17 @@ def main():
         )
     else:
         missing_lf_rejected = False
-    check("verification rejects a pointer missing its final LF", missing_lf_rejected)
+    check(
+        "verification rejects a pointer missing its final LF after three reads",
+        missing_lf_rejected
+        and len(mismatch_reads) == 3
+        and retry_sleeps == [2.0, 4.0],
+        f"calls={len(mismatch_reads)} sleeps={retry_sleeps!r}",
+    )
 
+    failed_reads = []
     def failing_open(request, timeout):
+        failed_reads.append((request, timeout))
         raise urllib.error.HTTPError(
             "https://api.atomgit.com/private/repository/path?ref=fake-secret-ref",
             404,
@@ -254,6 +381,7 @@ def main():
         )
 
     pointer_mod._open_atomgit_url = failing_open
+    retry_sleeps.clear()
     try:
         verify_canonical_lfs_pointers(
             token="fake-pointer-token",
@@ -285,12 +413,98 @@ def main():
         and "Git LFS pointer 验证失败" in str(fetch_sdk_error),
     )
     check(
+        "verification transport retries are bounded",
+        len(failed_reads) == 3 and retry_sleeps == [2.0, 4.0],
+        f"calls={len(failed_reads)} sleeps={retry_sleeps!r}",
+    )
+    check(
         "verification transport failure is credential-safe",
         "fake-secret-ref" not in safe_rendered_error
         and "fake-secret-body" not in safe_rendered_error
         and "fake-pointer-token" not in safe_rendered_error
         and "fake-secret-ref" not in fetch_hint,
     )
+
+    validation_reads = []
+    pointer_mod._open_atomgit_url = lambda request, timeout: validation_reads.append(
+        (request, timeout)
+    )
+    invalid_inputs = (
+        {"token": ""},
+        {"repo_id": "invalid"},
+        {"revision": ""},
+        {"timeout": 0},
+        {"timeout": True},
+    )
+    invalid_rejected = 0
+    retry_sleeps.clear()
+    for changes in invalid_inputs:
+        arguments = {
+            "token": "fake-pointer-token",
+            "repo_id": "owner/repo",
+            "revision": "main",
+            "expectations": expectations,
+            "timeout": 9,
+        }
+        arguments.update(changes)
+        try:
+            verify_canonical_lfs_pointers(**arguments)
+        except CanonicalLfsPointerError:
+            invalid_rejected += 1
+    check(
+        "invalid verification inputs fail before reads or waits",
+        invalid_rejected == len(invalid_inputs)
+        and not validation_reads
+        and not retry_sleeps,
+        f"rejected={invalid_rejected} reads={len(validation_reads)}",
+    )
+
+    interrupted_reads = []
+
+    def interrupting_open(request, timeout):
+        interrupted_reads.append((request, timeout))
+        raise KeyboardInterrupt
+
+    pointer_mod._open_atomgit_url = interrupting_open
+    retry_sleeps.clear()
+    try:
+        verify_canonical_lfs_pointers(
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+            revision="main",
+            expectations=expectations,
+        )
+    except KeyboardInterrupt:
+        read_interrupt_propagated = True
+    else:
+        read_interrupt_propagated = False
+    check(
+        "read interruption propagates without retry",
+        read_interrupt_propagated
+        and len(interrupted_reads) == 1
+        and not retry_sleeps,
+    )
+
+    pointer_mod._open_atomgit_url = failing_open
+    pointer_mod.time.sleep = lambda delay: (_ for _ in ()).throw(KeyboardInterrupt())
+    failed_reads.clear()
+    try:
+        verify_canonical_lfs_pointers(
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+            revision="main",
+            expectations=expectations,
+        )
+    except KeyboardInterrupt:
+        sleep_interrupt_propagated = True
+    else:
+        sleep_interrupt_propagated = False
+    check(
+        "backoff interruption propagates before another read",
+        sleep_interrupt_propagated and len(failed_reads) == 1,
+        f"calls={len(failed_reads)}",
+    )
+    pointer_mod.time.sleep = retry_sleeps.append
 
     contract_error = CanonicalLfsPointerError(
         "noncanonical pointer for fake-token-secret"
@@ -319,9 +533,10 @@ def main():
         and "fake-token-secret" not in str(sdk_error),
     )
 
-    pointer_mod._open_atomgit_url = exact_open
+    upload_calls = []
 
     def fake_upload():
+        upload_calls.append(True)
         upload_operation = CommitOperationAdd(
             path_in_repo="nested/fixture.bin",
             path_or_fileobj=content,
@@ -336,7 +551,13 @@ def main():
         )
         return SimpleNamespace(oid="b" * 40)
 
+    retry_outcomes[:] = [
+        urllib.error.URLError("temporary post-commit read failure"),
+        FakeResponse(expected),
+    ]
+    pointer_mod._open_atomgit_url = recover_on_second_read
     opened.clear()
+    retry_sleeps.clear()
     wrapped_result = run_canonical_lfs_upload(
         fake_upload,
         token="fake-pointer-token",
@@ -345,9 +566,11 @@ def main():
     check(
         "upload wrapper verifies the exact returned commit",
         wrapped_result.oid == "b" * 40
-        and len(opened) == 1
+        and upload_calls == [True]
+        and len(opened) == 2
         and "ref=" + ("b" * 40) in opened[0][0].full_url
-        and opened[0][1] == 300.0,
+        and all(timeout == 300.0 for _, timeout in opened)
+        and retry_sleeps == [2.0],
     )
 
     original_preupload = hf_api.HfApi.preupload_lfs_files
@@ -376,6 +599,7 @@ def main():
         )
         return SimpleNamespace(oid="c" * 40)
 
+    pointer_mod._open_atomgit_url = exact_open
     opened.clear()
     run_canonical_lfs_upload(
         fake_no_op_upload,
@@ -433,6 +657,7 @@ def main():
     )
 
     pointer_mod._open_atomgit_url = original_open
+    pointer_mod.time.sleep = original_sleep
 
     passed = sum(results)
     print(f"summary: {passed}/{len(results)} passed")
