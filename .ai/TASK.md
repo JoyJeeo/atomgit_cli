@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D05 canonical LFS pointer verification retry)
+Status: inactive (D05 delivered; D01, D03, D04, and D05 delivered)
 
 ## Successor Development Issue
 
@@ -11,9 +11,8 @@ Status: active (D05 canonical LFS pointer verification retry)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04` 和 `D05 / LFS-01`；D02 已由 D01 解决并移除。
-- Current phase: D01、D03 和 D04 均已完成验收、提交、本地合并、限定推送与远端核验；
-  D05 最终复验通过，维护者已接受并授权限定交付，准备提交任务分支、本地合入 `yuto`
-  并仅推送 `github/yuto`。
+- Current phase: D01、D03、D04 和 D05 均已完成验收、提交、本地 no-ff 合并、仅推送
+  `github/yuto` 与远端核验；当前没有活跃开发项。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -50,19 +49,15 @@ Status: active (D05 canonical LFS pointer verification retry)
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
 - D05 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
-- Next exact action: 精确暂存并提交 D05，确认不含既有 `.ai` 规范修改；本地 no-ff
-  合入 `yuto` 后记录交付结果并仅推送 `github/yuto`。
+- Next exact action: 等待维护者继续 D06 讨论；不得直接实施 D06–D18。
 
 ### Repository Reconciliation
 
-当前分支 `yuto`，HEAD `163d6a4a7a789108de01516730385ee6de8aa1b6`，与
-`github/yuto` 一致；D04 已通过 no-ff 合并提交
-`bca794b99ca39a7afc40b20bdd9aa23e4d9ddc23` 合入并完成限定推送，本地任务分支保留且
-未推送。当前 worktree 只有本地 `.ai` 文档修改，没有 D05 分支、实现或测试变更。
-Git 已包含 R9 实现提交 `5c108f6`、合并 `4298043` 和交付记录 `2c5d351`，以及 D01、
-D03、D04 的已交付提交；旧记录也注明实现完成、人工接受及无下一步。因此 R9 不作为
-新的活跃开发任务。下方历史正文保留，不据其旧的 active/未实现描述恢复执行。历史
-矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
+当前分支 `yuto`。D05 实现提交
+`b6d65eb` 已通过 no-ff 合并提交 `ef17f41` 合入；该合并已仅推送 `github/yuto` 并核验
+远端提交一致，任务分支保留在本地且未推送。当前 worktree 只剩五份既有 `.ai` 规范
+修改。Git 还包含 R9、D01、D03 和 D04 的已交付提交；旧记录注明实现完成，因此不恢复
+为活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -723,10 +718,8 @@ V5 contents API。读取、解析或逐字节比较失败会立即进入安全�
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d05-pointer-verification-retry`，基于 `yuto@163d6a4`；D04 实现提交
-  `e0459f26b841e816cf1c2a021435029dd7780a10` 已由 no-ff 合并提交
-  `bca794b99ca39a7afc40b20bdd9aa23e4d9ddc23` 合入并推送。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D05 实现提交
+  `b6d65eb` 已由 no-ff 合并提交 `ef17f41` 合入并仅推送 `github/yuto`。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -735,12 +728,11 @@ V5 contents API。读取、解析或逐字节比较失败会立即进入安全�
   `codex/d01-upload-request-timeout` 分支。
 - D04 合并提交树同已验证的任务分支一致；只推送 `github/yuto`，没有修改 main 或
   atomgit 远端，远端没有 D04 任务分支。
-- D05 本地任务分支为 `codex/d05-pointer-verification-retry`，基线提交
-  `163d6a4a7a789108de01516730385ee6de8aa1b6`；没有实现提交，未推送任务分支。
-- 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/ISSUE_DISCUSSION.md`、
-  `.ai/MASTER_PROMPT.md`、`.ai/README.md`、`.ai/WORKFLOW.md` 六份未提交修改仍保留；
-  本次另更新 `.ai/TASK.md` 并在讨论文件增加 D05 决定。续接必须使用当前 worktree，
-  不能把原有修改误纳入后续提交。
+- D05 本地任务分支 `codex/d05-pointer-verification-retry` 保留且未推送；远端不存在该
+  任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
+- 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
+  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
+  worktree，不能将其误归入 D05 交付。
 - 最近完成：维护者授权激活 D05；实施前完整离线基线为
   `python tests/run_cli_baseline.py`，93 passed in 106.35s。锁定依赖已核对为
   `huggingface-hub==1.1.7`、`datasets==4.4.1`、`httpx==0.28.1`，可执行登记册实际为
@@ -770,10 +762,12 @@ V5 contents API。读取、解析或逐字节比较失败会立即进入安全�
   `.ai/README.md`、`.ai/WORKFLOW.md` 的未提交修改继续原样保留；
   `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 还叠加了 D05 记录，后续交付必须精确隔离，
   不能误纳入无关修改。
-- 下一步：提交 D05、本地合入 `yuto`、记录交付结果并仅推送 `github/yuto`；不推进 D06。
+- D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
+  `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
+- 下一步：等待维护者继续 D06 讨论；不直接实施 D06–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
-- D05 验证：未运行；当前仅记录开发合同，不以 D04 的历史证据替代 D05 验证。
+- D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
 
 # Historical R9 Contract (retained evidence, not current execution authority)
 
