@@ -12,9 +12,9 @@
 
 当前完整离线基线包含：
 
-- 27 个稳定能力 ID；
-- 120 条可观察行为不变量；
-- 92 个隔离 pytest case，每个 case 对应一个可直接执行的
+- 28 个稳定能力 ID；
+- 121 条可观察行为不变量；
+- 93 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
 
@@ -55,7 +55,7 @@ CLI command owner 与 `cli/__init__.py` package facade 还锁定历史 Click sch
 | `UPLOAD-FILE` | 单文件上传 | 不复制源文件、路径准确、临时资源安全 |
 | `UPLOAD-FOLDER` | 普通目录上传 | ignore、前缀、批次、worker 和错误语义稳定 |
 | `UPLOAD-RESUMABLE` | resumable 上传 | 投影隔离、恢复、超时、对账和进度正确 |
-| `UPLOAD-LFS` | LFS 策略 | preupload、规范 pointer 和 attributes 安全 |
+| `UPLOAD-LFS` | LFS 策略 | preupload、规范 pointer、有界只读确认和 attributes 安全 |
 | `UPLOAD-LFS-RECOVERY` | LFS 慢流恢复 | 只替换异常对象并有界停止 |
 | `DOWNLOAD-SNAPSHOT` | 整仓下载 | 清单、既有文件、重试、manifest 和 prune 安全 |
 | `DOWNLOAD-FILE` | 单文件下载 | 精确目标、resume、checksum 和 Unicode 行为 |

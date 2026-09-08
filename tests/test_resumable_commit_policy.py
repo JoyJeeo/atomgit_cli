@@ -6,11 +6,12 @@ import queue
 import sys
 import tempfile
 from types import SimpleNamespace
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from io import StringIO
 from pathlib import Path
 
 import atomgit  # noqa: F401
+import atomgit.lfs_pointer as pointer_mod
 from huggingface_hub import CommitOperationAdd
 from huggingface_hub.errors import HfHubHTTPError
 
@@ -147,6 +148,132 @@ def main():
         operations=[small_regular], commit_message="batch",
     )
     check("safe regular operation remains supported", regular_result == "regular-ok")
+
+    pointer_content = pointer_mod.canonical_lfs_pointer("12" * 32, 7)
+    pointer_expectation = pointer_mod.CanonicalLfsPointer(
+        path_in_repo="payload.bin",
+        oid="12" * 32,
+        size=7,
+        content=pointer_content,
+    )
+
+    @contextmanager
+    def pointer_expectations():
+        yield [pointer_expectation]
+
+    original_pointer_read = pointer_mod._read_raw_pointer
+    original_pointer_sleep = pointer_mod.time.sleep
+    pointer_sleeps = []
+    pointer_reads = []
+    pointer_outcomes = [
+        pointer_mod.CanonicalLfsPointerError("temporary read failure"),
+        pointer_content,
+    ]
+
+    def scripted_pointer_read(**kwargs):
+        pointer_reads.append(kwargs)
+        outcome = pointer_outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    pointer_mod._read_raw_pointer = scripted_pointer_read
+    pointer_mod.time.sleep = pointer_sleeps.append
+    try:
+        pointer_operation = FakeOperation("payload.bin")
+        recovered_client = ScriptedClient([SimpleNamespace(oid="d" * 40)])
+        recovered_marked = []
+        recovered_controller = api_mod._ResumableCommitController(
+            recovered_client.create_commit,
+            token="fake-token-never-print",
+            canonical_payloads=pointer_expectations,
+            verify_committed=lambda items, repo_id, revision: (
+                pointer_mod.verify_canonical_lfs_pointers(
+                    token="fake-token-never-print",
+                    repo_id=repo_id,
+                    revision=revision,
+                    expectations=items,
+                    timeout=17,
+                )
+            ),
+            mark_committed=lambda items: recovered_marked.extend(items),
+        )
+        recovered_result = recovered_controller.create_commit(
+            repo_id="user/repo",
+            repo_type="model",
+            revision="main",
+            operations=[pointer_operation],
+            commit_message="batch",
+        )
+        check(
+            "pointer retry does not duplicate resumable create-commit",
+            recovered_result.oid == "d" * 40
+            and len(recovered_client.calls) == 1
+            and len(pointer_reads) == 2
+            and pointer_sleeps == [2.0],
+        )
+        check(
+            "resumable metadata is marked only after pointer recovery",
+            recovered_marked == [pointer_operation]
+            and all(
+                item["repo_id"] == "user/repo"
+                and item["revision"] == "d" * 40
+                and item["timeout"] == 17
+                for item in pointer_reads
+            ),
+        )
+
+        exhausted_client = ScriptedClient([SimpleNamespace(oid="e" * 40)])
+        exhausted_marked = []
+        pointer_reads.clear()
+        pointer_sleeps.clear()
+
+        def failing_pointer_read(**kwargs):
+            pointer_reads.append(kwargs)
+            raise pointer_mod.CanonicalLfsPointerError("persistent read failure")
+
+        pointer_mod._read_raw_pointer = failing_pointer_read
+        exhausted_controller = api_mod._ResumableCommitController(
+            exhausted_client.create_commit,
+            token="fake-token-never-print",
+            canonical_payloads=pointer_expectations,
+            verify_committed=lambda items, repo_id, revision: (
+                pointer_mod.verify_canonical_lfs_pointers(
+                    token="fake-token-never-print",
+                    repo_id=repo_id,
+                    revision=revision,
+                    expectations=items,
+                    timeout=17,
+                )
+            ),
+            mark_committed=lambda items: exhausted_marked.extend(items),
+        )
+        try:
+            exhausted_controller.create_commit(
+                repo_id="user/repo",
+                repo_type="model",
+                revision="main",
+                operations=[pointer_operation],
+                commit_message="batch",
+            )
+        except api_mod.ResumableCommitError:
+            pointer_exhaustion_failed = True
+        else:
+            pointer_exhaustion_failed = False
+        check(
+            "exhausted pointer reads do not duplicate create-commit",
+            pointer_exhaustion_failed
+            and len(exhausted_client.calls) == 1
+            and len(pointer_reads) == 3
+            and pointer_sleeps == [2.0, 4.0],
+        )
+        check(
+            "exhausted pointer reads leave resumable metadata uncommitted",
+            not exhausted_marked,
+        )
+    finally:
+        pointer_mod._read_raw_pointer = original_pointer_read
+        pointer_mod.time.sleep = original_pointer_sleep
 
     sleeps = []
     timeout_client = ScriptedClient([httpx.ReadTimeout("response timed out")])

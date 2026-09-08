@@ -287,6 +287,12 @@ LFS pointer 确认使用同一个 N，不再施加固定 15 秒上限。HF 1.1.7
 网络等待阶段，不是一个请求从开始到结束的总时间，也不检测所有内部死锁。请求失败
 按既有分类和重试上限处理。
 
+每个尚未确认的 pointer 在同一 commit SHA 上最多执行三次 V5 contents 只读确认，
+失败后固定等待 2 秒、4 秒；已确认项不重读。读取失败、畸形响应和逐字节不匹配均可
+进入该边界，但不会重复 LFS 上传、preupload 或 create-commit。第三次仍失败时保留
+原有安全错误和失败关闭语义；该结果只说明客户端无法确认成功，不断言远端内容必然
+错误。输入无效和 Ctrl+C 不进入剩余重试。
+
 原生 SDK `AtomGitClient.upload_folder(timeout=N, resumable=True)` 和历史
 `AtomGitAPI.upload_directory(upload_timeout=N, resumable=True)` 共用上传执行层，
 不再施加 N 秒总时限。历史 HF 风格 `atomgit_hub.upload_folder(upload_timeout=N)`
