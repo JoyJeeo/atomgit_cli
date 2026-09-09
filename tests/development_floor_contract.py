@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 121
+BASELINE_INVARIANT_COUNT = 122
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -597,13 +597,26 @@ CAPABILITY_REGISTRY = {
                 "test_canonical_lfs_pointer.py",
                 "test_resumable_commit_policy.py",
             ),
+            _invariant(
+                "LFS-006",
+                "A valid returned commit followed by failed pointer verification is reported as remote-created and locally unconfirmed without exposing the revision, repeating a write, or marking resumable state committed; native SDK results preserve the validated revision as structured metadata and legacy base catches remain compatible.",
+                "test_architecture_parity.py",
+                "test_canonical_lfs_pointer.py",
+                "test_resumable_commit_policy.py",
+                "test_sdk_upload_timeout.py",
+                "test_upload_error_classify.py",
+                "test_upload_error_handling.py",
+            ),
         ),
         (
+            "test_architecture_parity.py",
             "test_auto_configure_lfs.py",
             "test_canonical_lfs_pointer.py",
             "test_lfs_preupload_policy.py",
             "test_resumable_commit_policy.py",
             "test_sdk_upload_timeout.py",
+            "test_upload_error_classify.py",
+            "test_upload_error_handling.py",
             "test_upload_file_no_copy.py",
             "test_upload_resumable.py",
         ),
@@ -1365,7 +1378,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "121 条可观察行为不变量",
+        "122 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),

@@ -82,12 +82,12 @@ LEGACY_TOOL_DEBT = {
     "black": {
         "files": 76,
         "changes": 409,
-        "digest": "ab674ed28202d6175f4dea36200710194f6b7ec09251b1ba00e705cb7180a812",
+        "digest": "9cc2a6f9508810ec6042355fe0a8225f3034530778a00c00b4b28ed7c1921997",
     },
     "isort": {
         "files": 80,
-        "changes": 88,
-        "digest": "fabca785c8d7782ef34d34f97212e501c0944d1c1224a1feab0296cd6773f90a",
+        "changes": 87,
+        "digest": "a3c2a08c7a8232efaef986c6f7530c217b3c24dbea0963bec7ef3694769ca596",
     },
     "ruff": {
         "files": 15,

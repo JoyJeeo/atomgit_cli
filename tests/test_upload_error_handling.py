@@ -17,6 +17,8 @@ import tempfile
 from pathlib import Path
 
 import atomgit  # noqa: F401
+import atomgit.lfs_pointer as pointer_mod
+
 api_mod = sys.modules["atomgit.api"]
 cfg_mod = sys.modules["atomgit.config"]
 
@@ -114,6 +116,96 @@ def main():
     # --- 8. 401+Repository Not Found（HF 文案含 gated 通用词）---
     exc_401_rnf = Exception("401 Client Error.\nRepository Not Found for url: 'https://hub.atomgit.com/api/models/weixin_52273949/test_model/preupload/main'.\nIf you are trying to access a private or gated repo, make sure you are authenticated.\nNote: Creating a commit assumes that the repo already exists. Please use `create_repo`.")
     run_case("E8 文件-401 仓库不存在（gated 词不误判）", exc_401_rnf, "仓库不存在", "repo create")
+
+    original_canonical_upload = api_mod.run_canonical_lfs_upload
+    commit_revision = "a" * 40
+
+    def unconfirmed_upload(*args, **kwargs):
+        raise pointer_mod.CanonicalLfsCommitUnconfirmedError(commit_revision)
+
+    api_mod.run_canonical_lfs_upload = unconfirmed_upload
+    try:
+        output = __import__("io").StringIO()
+        with (
+            tempfile.TemporaryDirectory() as td,
+            __import__("contextlib").redirect_stdout(output),
+        ):
+            source = Path(td) / "payload.bin"
+            source.write_bytes(b"payload")
+            unconfirmed_result = api_mod.api.upload_folder(source, "user/repo")
+        unconfirmed_text = output.getvalue()
+        check("E9 已创建未确认仍返回False", unconfirmed_result is False)
+        check(
+            "E9 CLI 显示独立远端和本地状态",
+            "远端提交已创建但未确认" in unconfirmed_text
+            and "远端提交状态：已创建" in unconfirmed_text
+            and "本地确认状态：失败" in unconfirmed_text,
+        )
+        check(
+            "E9 CLI 不误报成功或泄露 revision",
+            "上传文件成功" not in unconfirmed_text
+            and commit_revision not in unconfirmed_text
+            and "fake-token-0123456789" not in unconfirmed_text,
+        )
+
+        output = __import__("io").StringIO()
+        with (
+            tempfile.TemporaryDirectory() as td,
+            __import__("contextlib").redirect_stdout(output),
+        ):
+            source = Path(td) / "folder"
+            source.mkdir()
+            (source / "payload.bin").write_bytes(b"payload")
+            directory_result = api_mod.api.upload_directory(
+                source, "user/repo", resumable=False
+            )
+        directory_text = output.getvalue()
+        check(
+            "E10 普通目录保留已创建未确认状态",
+            directory_result is False
+            and "远端提交已创建但未确认" in directory_text
+            and commit_revision not in directory_text,
+        )
+    finally:
+        api_mod.run_canonical_lfs_upload = original_canonical_upload
+
+    original_execute_resumable = api_mod._execute_resumable_upload_process
+    original_v5_get = api_mod._atomgit_v5_get_json
+    api_mod._atomgit_v5_get_json = lambda *args, **kwargs: {
+        "full_name": "user/repo",
+        "default_branch": "main",
+    }
+
+    def unconfirmed_resumable(*args, **kwargs):
+        raise api_mod.ResumableWorkerError(
+            "remote_commit_unconfirmed", commit_revision=commit_revision
+        )
+
+    api_mod._execute_resumable_upload_process = unconfirmed_resumable
+    try:
+        output = __import__("io").StringIO()
+        with (
+            tempfile.TemporaryDirectory() as td,
+            __import__("contextlib").redirect_stdout(output),
+        ):
+            source = Path(td) / "folder"
+            source.mkdir()
+            (source / "payload.bin").write_bytes(b"payload")
+            resumable_result = api_mod.api.upload_directory(
+                source, "user/repo", resumable=True
+            )
+        resumable_text = output.getvalue()
+        check(
+            "E11 resumable 目录保留已创建未确认状态",
+            resumable_result is False
+            and "远端提交已创建但未确认" in resumable_text
+            and "断点元数据已保留" in resumable_text
+            and commit_revision not in resumable_text
+            and "上传目录成功" not in resumable_text,
+        )
+    finally:
+        api_mod._execute_resumable_upload_process = original_execute_resumable
+        api_mod._atomgit_v5_get_json = original_v5_get
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

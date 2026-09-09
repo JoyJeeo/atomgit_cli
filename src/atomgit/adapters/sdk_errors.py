@@ -1,6 +1,10 @@
 """Stable, credential-safe error conversion for historical SDK adapters."""
 
-from ..adapters.lfs.pointer import CanonicalLfsPointerError
+from ..adapters.lfs.pointer import (
+    CanonicalLfsCommitUnconfirmedError,
+    CanonicalLfsPointerError,
+)
+from ..adapters.upload.errors import ResumableWorkerError
 from ..core.errors import (
     AtomGitAuthenticationError,
     AtomGitError,
@@ -67,3 +71,27 @@ def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGit
     if "unsupported" in message or "not supported" in message:
         return AtomGitUnsupportedError(f"AtomGit 不支持请求的{operation}行为{target}")
     return AtomGitError(f"{operation}失败{target}（{name}）")
+
+
+def _sdk_error_metadata(error: Exception) -> dict:
+    """Return bounded commit state for native SDK upload failures."""
+    current = error
+    seen = set()
+    for _ in range(8):
+        if not isinstance(current, BaseException) or id(current) in seen:
+            break
+        seen.add(id(current))
+        if isinstance(
+            current,
+            (CanonicalLfsCommitUnconfirmedError, ResumableWorkerError),
+        ) and (
+            getattr(current, "remote_commit_status", None) == "created"
+            and getattr(current, "local_confirmation_status", None) == "unconfirmed"
+        ):
+            return {
+                "remote_commit": "created",
+                "local_confirmation": "unconfirmed",
+                "commit_revision": current.commit_revision,
+            }
+        current = current.__cause__ or current.__context__
+    return {}

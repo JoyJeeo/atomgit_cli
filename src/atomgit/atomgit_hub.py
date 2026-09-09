@@ -52,6 +52,7 @@ normalize_repo_id = _sdk_common.normalize_repo_id
 auth_error_kind = _sdk_errors.auth_error_kind
 is_retryable_download_error = _sdk_errors.is_retryable_download_error
 CanonicalLfsPointerError = _sdk_errors.CanonicalLfsPointerError
+CanonicalLfsCommitUnconfirmedError = _sdk_errors.CanonicalLfsCommitUnconfirmedError
 run_download_with_retry = _sdk_downloads.run_download_with_retry
 validate_upload_path_no_symlinks = _sdk_uploads.validate_upload_path_no_symlinks
 run_canonical_lfs_upload = _sdk_uploads.run_canonical_lfs_upload
@@ -96,6 +97,7 @@ _SDK_PATCH_TARGETS = {
     "normalize_repo_id": (_sdk_common, _sdk_uploads),
     "auth_error_kind": (_sdk_errors,),
     "is_retryable_download_error": (_sdk_errors,),
+    "CanonicalLfsCommitUnconfirmedError": (_sdk_errors, _sdk_uploads),
     "CanonicalLfsPointerError": (_sdk_errors,),
     "run_download_with_retry": (_sdk_datasets, _sdk_downloads),
     "validate_upload_path_no_symlinks": (_sdk_uploads,),

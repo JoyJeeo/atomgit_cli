@@ -148,6 +148,12 @@ V5 contents API，读取未解析的原始 Git blob 并与预期字节完全比�
 同一进程中不属于 AtomGit 上传的 HF commit 仍保持锁定依赖的原始 `lfsFile`
 行为。历史提交中的旧 pointer 不在上传流程中自动修复。
 
+只有服务端返回通过格式校验的 commit SHA 且随后验证失败时，状态才细分为
+`remote_commit=created`、`local_confirmation=unconfirmed`。CLI 不输出 revision，
+并提示先检查远端再决定是否重试；原生 SDK 在失败结果 metadata 中返回经校验的
+revision；历史 SDK 细分异常仍可被原 pointer 基类捕获。无效或缺失 revision 保持
+原验证失败语义，不会伪造“已创建”状态。
+
 ## 5. Resumable 目录上传
 
 目录在没有显式选择且没有 `--message` 时默认进入该分支。`--resumable` 可继续
@@ -292,6 +298,9 @@ LFS pointer 确认使用同一个 N，不再施加固定 15 秒上限。HF 1.1.7
 进入该边界，但不会重复 LFS 上传、preupload 或 create-commit。第三次仍失败时保留
 原有安全错误和失败关闭语义；该结果只说明客户端无法确认成功，不断言远端内容必然
 错误。输入无效和 Ctrl+C 不进入剩余重试。
+若失败发生在合法 commit SHA 返回之后，resumable worker 以专用类别和经校验
+revision 把状态传回父进程；父进程不会降批、重试 create-commit 或标记本地
+committed。伪造或格式无效的 revision 会降级为普通未知错误，不进入该状态。
 
 原生 SDK `AtomGitClient.upload_folder(timeout=N, resumable=True)` 和历史
 `AtomGitAPI.upload_directory(upload_timeout=N, resumable=True)` 共用上传执行层，

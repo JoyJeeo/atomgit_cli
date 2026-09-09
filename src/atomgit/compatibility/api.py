@@ -77,6 +77,7 @@ try:
     from ..adapters.download import transport as _download_transport
     from ..adapters.lfs import service as _lfs_service
     from ..adapters.lfs.pointer import (  # noqa: F401
+        CanonicalLfsCommitUnconfirmedError,
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
@@ -128,6 +129,7 @@ except ImportError:
     from adapters.download import transport as _download_transport
     from adapters.lfs import service as _lfs_service
     from adapters.lfs.pointer import (  # noqa: F401
+        CanonicalLfsCommitUnconfirmedError,
         CanonicalLfsPointerError,
         canonical_lfs_payloads,
         run_canonical_lfs_upload,
@@ -476,6 +478,7 @@ _UPLOAD_PATCH_TARGETS = {
     "httpx": (_upload_errors, _upload_resumable),
     "socket": (_upload_errors, _upload_resumable),
     "auth_error_kind": (_upload_errors,),
+    "CanonicalLfsCommitUnconfirmedError": (_upload_errors,),
     "CanonicalLfsPointerError": (_upload_errors,),
     "ResumableUploadModeError": (_upload_errors, _upload_resumable),
     "ResumableLfsAttributesError": (_upload_errors, _upload_resumable),

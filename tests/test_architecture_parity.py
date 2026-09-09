@@ -9,6 +9,8 @@ from pathlib import Path
 
 from atomgit.adapters import HuggingFaceAdapter
 from atomgit.adapters.download.service import RemoteDownloadFileNotFoundError
+from atomgit.adapters.upload import service as upload_service
+from atomgit.adapters.upload.errors import ResumableWorkerError
 from atomgit.core import (
     CAPABILITY_REGISTRY,
     RUNTIME_ROUTE_REGISTRY,
@@ -253,6 +255,47 @@ def main():
         check(
             "LFS policy reaches the shared transfer port",
             transfer.calls[-1][1]["auto_configure_lfs"] is True,
+        )
+
+        commit_revision = "a" * 40
+
+        class UnconfirmedUploadApi:
+            def upload_directory(self, *args, **kwargs):
+                if upload_service._UPLOAD_ERROR_PROPAGATION.get():
+                    raise ResumableWorkerError(
+                        "remote_commit_unconfirmed",
+                        commit_revision=commit_revision,
+                    )
+                return False
+
+        unconfirmed_client = AtomGitClient(
+            config=ConfigFake("saved-token"),
+            transfer=HuggingFaceAdapter(api_module=UnconfirmedUploadApi()),
+        )
+        unconfirmed_output = StringIO()
+        with redirect_stdout(unconfirmed_output):
+            unconfirmed_result = unconfirmed_client.upload_folder(
+                source.parent,
+                "user/repo",
+                token="fake-token",
+                resumable=True,
+            )
+        check(
+            "native SDK returns structured created and unconfirmed state",
+            not unconfirmed_result.ok
+            and unconfirmed_result.metadata
+            == {
+                "remote_commit": "created",
+                "local_confirmation": "unconfirmed",
+                "commit_revision": commit_revision,
+            },
+            repr(unconfirmed_result),
+        )
+        check(
+            "native SDK state propagation is silent and keeps revision structured",
+            not unconfirmed_output.getvalue()
+            and commit_revision not in str(unconfirmed_result.error),
+            repr((unconfirmed_output.getvalue(), unconfirmed_result.error)),
         )
 
     result = client.create_branch("user/repo", "feature", token="explicit-token")

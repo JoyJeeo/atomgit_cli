@@ -14,7 +14,7 @@ from ..infrastructure.validation import (
     normalize_repo_id,
     validate_upload_path_no_symlinks,
 )
-from .lfs.pointer import run_canonical_lfs_upload
+from .lfs.pointer import CanonicalLfsCommitUnconfirmedError, run_canonical_lfs_upload
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -123,6 +123,8 @@ def upload_folder(
                 repo_id=normalized_repo_id,
                 timeout=upload_timeout,
             )
+        except CanonicalLfsCommitUnconfirmedError:
+            raise
         except Exception as error:
             raise _sdk_error(error, "上传目录", repo_id) from error
     finally:
