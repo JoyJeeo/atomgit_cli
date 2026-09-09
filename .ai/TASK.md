@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D06 implementation authorized; D01, D03, D04, and D05 delivered)
+Status: inactive (D06 delivered; D01, D03, D04, D05, and D06 delivered)
 
 ## Successor Development Issue
 
@@ -12,9 +12,8 @@ Status: active (D06 implementation authorized; D01, D03, D04, and D05 delivered)
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01` 和 `D06 / LFS-02`；
   D02 已由 D01 解决并移除。
-- Current phase: D01、D03、D04 和 D05 均已完成验收、提交、本地 no-ff 合并、仅推送
-  `github/yuto` 与远端核验；D06 已完成实现、文档、开发底线、完整离线门禁和独立
-  审查，维护者已在最终复验通过后接受并授权限定交付。
+- Current phase: D01、D03、D04、D05 和 D06 均已完成验收、提交、本地 no-ff 合并、
+  仅推送 `github/yuto` 与远端核验；当前没有活跃开发项。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -65,18 +64,15 @@ Status: active (D06 implementation authorized; D01, D03, D04, and D05 delivered)
   `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
 - D06 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
-- Next exact action: 提交 D06 任务分支，本地 no-ff 合入 `yuto`，仅推送并核验
-  `github/yuto`，然后记录交付结果；不得实施 D07–D18。
+- Next exact action: 等待维护者继续 D07 讨论；不得直接实施 D07–D18。
 
 ### Repository Reconciliation
 
-当前分支 `codex/d06-commit-confirmation-state`，从 `yuto` 的 `74da469` 创建。D05 实现提交
-`b6d65eb` 已通过 no-ff 合并提交 `ef17f41` 合入；该合并已仅推送 `github/yuto` 并核验
-远端提交一致，任务分支保留在本地且未推送。当前 worktree 保留五份既有 `.ai` 规范
-修改，并叠加 D06 的源码、既有测试、用户文档、开发底线、`.ai/TASK.md` 和
-`.ai/ISSUE_DISCUSSION.md` 修改；尚未提交。Git 还包含 R9、D01、D03 和 D04 的已交付
-提交；旧记录注明实现完成，因此不恢复为活跃任务。历史矛盾的完整整理仍属于 D18，
-本次没有将 D18 标记为已解决。
+当前分支 `yuto`。D06 实现提交 `928b8b9` 已通过 no-ff 合并提交 `0e7bb12` 合入；该合并
+已仅推送 `github/yuto` 并核验远端提交一致，任务分支保留在本地且未推送。当前
+worktree 只剩五份既有 `.ai` 规范修改。Git 还包含 R9、D01、D03、D04 和 D05 的已
+交付提交；旧记录注明实现完成，因此不恢复为活跃任务。历史矛盾的完整整理仍属于
+D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -890,8 +886,8 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
 ### Current Handoff Snapshot
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d06-commit-confirmation-state`，基于 `yuto` 的 `74da469`；D05 实现提交
-  `b6d65eb` 已由 no-ff 合并提交 `ef17f41` 合入并仅推送 `github/yuto`。
+  `yuto`；D06 实现提交 `928b8b9` 已由 no-ff 合并提交 `0e7bb12` 合入并仅推送
+  `github/yuto`。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -904,8 +900,8 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入 D05 或 D06 交付。本次另只修改
-  `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md` 以记录 D06，未修改实现文件。
+  worktree，不能将其误归入 D05 或 D06 交付。D06 任务分支保留在本地且未推送，
+  没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -921,8 +917,10 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 再次通过。
 - D06 独立审查：无 P0/P1/P2/P3 发现，结论 `APPROVED`；真实 AtomGit、Windows/Linux
   和真实 Python 3.9 仍未验证。该结论不授权提交、合并或推送。
-- 最近完成：D06 最终复验通过，维护者已接受并授权限定交付；远端 `github/yuto`
-  仍为基线 `74da469`，当前准备提交任务分支。
+- D06 交付：实现提交 `928b8b9`，no-ff 合并提交 `0e7bb12`；仅推送
+  `github/yuto` 后以 `git ls-remote` 核验远端为 `0e7bb12`，任务分支未推送。
+- 最近完成：D06 已完成限定交付；实现与合并结果已进入 `yuto` 和 `github/yuto`，
+  worktree 只剩五份既有 `.ai` 规范修改。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -951,8 +949,7 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：添加 D06 红灯回归，确认旧实现仅因丢失远端 commit 状态而失败；D07
-  讨论在 D06 开发期间不推进，也不实施 D07–D18。
+- 下一步：等待维护者继续 D07 讨论；不得直接实施 D07–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
