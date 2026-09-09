@@ -10,6 +10,7 @@ from ...infrastructure.validation import auth_error_kind
 from .projection import ResumableProjectionError
 
 # Program-step 9 LFS exception and validation slots are wired by atomgit.api.
+CanonicalLfsCommitUnconfirmedError = None
 CanonicalLfsPointerError = None
 ResumableUploadModeError = None
 ResumableLfsAttributesError = None
@@ -38,6 +39,7 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "upload_mode": "resumable worker upload mode is unsafe",
     "lfs_attributes": "resumable worker LFS attributes need verification",
     "lfs_pointer": "resumable worker LFS pointer verification failed",
+    "remote_commit_unconfirmed": "remote commit was created but remains unconfirmed",
     "client_resource": "resumable worker client resources are insufficient",
     "unknown": "resumable worker failed",
 }
@@ -46,15 +48,28 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
 class ResumableWorkerError(RuntimeError):
     """A credential-safe failure reconstructed from the upload child."""
 
-    def __init__(self, category: str, lfs_patterns=()):
+    def __init__(self, category: str, lfs_patterns=(), *, commit_revision=None):
         if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
             category = "unknown"
+        state = None
+        if category == "remote_commit_unconfirmed":
+            if not isinstance(CanonicalLfsCommitUnconfirmedError, type):
+                category = "unknown"
+            else:
+                try:
+                    state = CanonicalLfsCommitUnconfirmedError(commit_revision)
+                except Exception:
+                    category = "unknown"
         self.category = category
         self.lfs_patterns = (
             _validated_lfs_patterns(lfs_patterns)
             if category in ("upload_mode", "lfs_attributes")
             else ()
         )
+        if state is not None:
+            self.remote_commit_status = state.remote_commit_status
+            self.local_confirmation_status = state.local_confirmation_status
+            self.commit_revision = state.commit_revision
         super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
@@ -94,6 +109,8 @@ def _resumable_worker_error_category(error: BaseException) -> str:
             return "lfs_attributes"
         if isinstance(cause, ResumableLfsPreuploadError):
             return cause.category
+        if isinstance(cause, CanonicalLfsCommitUnconfirmedError):
+            return "remote_commit_unconfirmed"
         if isinstance(cause, CanonicalLfsPointerError):
             return "lfs_pointer"
 
@@ -155,6 +172,11 @@ def _resumable_failure_envelope(error: BaseException) -> dict:
     """Build the only error payload allowed across the process boundary."""
     category = _resumable_worker_error_category(error)
     envelope = {"category": category}
+    if category == "remote_commit_unconfirmed":
+        for cause in _resumable_error_chain(error):
+            if isinstance(cause, CanonicalLfsCommitUnconfirmedError):
+                envelope["commit_revision"] = cause.commit_revision
+                break
     if category in ("upload_mode", "lfs_attributes"):
         for cause in _resumable_error_chain(error):
             patterns = _validated_lfs_patterns(getattr(cause, "lfs_patterns", ()))
@@ -247,6 +269,11 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
                 "Git blob 确认；本次上传未确认成功，请保留断点并联系平台支持。",
             ),
+            "remote_commit_unconfirmed": (
+                "远端提交已创建但未确认",
+                "远端提交状态：已创建；本地确认状态：失败。"
+                "请先确认远端状态再决定是否重试，断点状态已保留。",
+            ),
             "client_resource": (
                 "客户端资源不足",
                 "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
@@ -264,6 +291,13 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "服务端将超大文件判定为 regular；请在仓库 .gitattributes "
             "中为该文件类型配置 Git LFS 后重试；如允许 CLI 提交该配置，"
             "可加 --auto-configure-lfs 重新执行同一命令。断点状态已保留。",
+        )
+
+    if isinstance(e, CanonicalLfsCommitUnconfirmedError):
+        return (
+            "远端提交已创建但未确认",
+            "远端提交状态：已创建；本地确认状态：失败。"
+            "请先确认远端状态再决定是否重试。",
         )
 
     if isinstance(e, CanonicalLfsPointerError):

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 from ...adapters import AtomGitV5Adapter, HuggingFaceAdapter
+from ...adapters.sdk_errors import _sdk_error, _sdk_error_metadata
 from ...core.contracts import (
     DownloadRequest,
     OperationResult,
@@ -64,11 +65,17 @@ class AtomGitClient:
         except AtomGitError:
             raise
         except Exception as error:
+            metadata = _sdk_error_metadata(error)
             return OperationResult(
                 operation,
                 False,
                 repo_id=repo_id,
-                error=classify_remote_error(error, operation, repo_id),
+                metadata=metadata,
+                error=(
+                    _sdk_error(error, operation, repo_id)
+                    if metadata
+                    else classify_remote_error(error, operation, repo_id)
+                ),
             )
 
     def login(self, token: str) -> OperationResult[Dict[str, Any]]:

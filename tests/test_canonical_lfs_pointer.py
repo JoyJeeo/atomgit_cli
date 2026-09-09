@@ -573,6 +573,108 @@ def main():
         and retry_sleeps == [2.0],
     )
 
+    pointer_mod._open_atomgit_url = failing_open
+    failed_reads.clear()
+    retry_sleeps.clear()
+    try:
+        run_canonical_lfs_upload(
+            fake_upload,
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+        )
+    except CanonicalLfsPointerError as error:
+        unconfirmed_error = error
+    else:
+        unconfirmed_error = None
+    unconfirmed_type = getattr(pointer_mod, "CanonicalLfsCommitUnconfirmedError", None)
+    check(
+        "post-commit pointer failure preserves created and unconfirmed state",
+        unconfirmed_type is not None
+        and isinstance(unconfirmed_error, unconfirmed_type)
+        and unconfirmed_error.remote_commit_status == "created"
+        and unconfirmed_error.local_confirmation_status == "unconfirmed"
+        and unconfirmed_error.commit_revision == "b" * 40
+        and isinstance(unconfirmed_error.__cause__, CanonicalLfsPointerError)
+        and len(failed_reads) == 3
+        and retry_sleeps == [2.0, 4.0]
+        and "b" * 40 not in str(unconfirmed_error)
+        and "fake-pointer-token" not in str(unconfirmed_error),
+        type(unconfirmed_error).__name__ if unconfirmed_error else "no error",
+    )
+
+    multi_reads = []
+
+    def multi_pointer_open(request, timeout):
+        multi_reads.append((request, timeout))
+        if len(multi_reads) == 1:
+            return FakeResponse(expected)
+        raise urllib.error.URLError("later pointer is unavailable")
+
+    def multi_pointer_upload():
+        operations = []
+        for path in ("nested/confirmed.bin", "nested/unconfirmed.bin"):
+            operation = CommitOperationAdd(
+                path_in_repo=path,
+                path_or_fileobj=content,
+            )
+            operation._upload_mode = "lfs"
+            operations.append(operation)
+        list(
+            hf_api._prepare_commit_payload(
+                operations=operations,
+                files_to_copy={},
+                commit_message="multi pointer upload",
+            )
+        )
+        return SimpleNamespace(oid="c" * 40)
+
+    pointer_mod._open_atomgit_url = multi_pointer_open
+    retry_sleeps.clear()
+    try:
+        run_canonical_lfs_upload(
+            multi_pointer_upload,
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+        )
+    except CanonicalLfsPointerError as error:
+        multi_pointer_error = error
+    else:
+        multi_pointer_error = None
+    check(
+        "a later pointer failure leaves the whole returned commit unconfirmed",
+        isinstance(multi_pointer_error, unconfirmed_type)
+        and multi_pointer_error.commit_revision == "c" * 40
+        and len(multi_reads) == 4
+        and retry_sleeps == [2.0, 4.0],
+        type(multi_pointer_error).__name__ if multi_pointer_error else "no error",
+    )
+
+    opened.clear()
+    failed_reads.clear()
+
+    def invalid_revision_upload():
+        fake_upload()
+        return SimpleNamespace(oid="not-a-commit-sha")
+
+    try:
+        run_canonical_lfs_upload(
+            invalid_revision_upload,
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+        )
+    except CanonicalLfsPointerError as error:
+        invalid_revision_error = error
+    else:
+        invalid_revision_error = None
+    check(
+        "invalid commit metadata never claims a created remote commit",
+        isinstance(invalid_revision_error, CanonicalLfsPointerError)
+        and not isinstance(invalid_revision_error, unconfirmed_type)
+        and not opened
+        and not failed_reads,
+        type(invalid_revision_error).__name__ if invalid_revision_error else "no error",
+    )
+
     original_preupload = hf_api.HfApi.preupload_lfs_files
 
     def fake_preupload(self, *, additions, **kwargs):

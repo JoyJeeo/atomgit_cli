@@ -237,6 +237,7 @@ CURRENT_INTERNAL_EDGES = {
     ("adapters.sdk_downloads", "adapters.sdk_errors"),
     ("adapters.sdk_downloads", "infrastructure.utils"),
     ("adapters.sdk_errors", "adapters.lfs.pointer"),
+    ("adapters.sdk_errors", "adapters.upload.errors"),
     ("adapters.sdk_errors", "core.errors"),
     ("adapters.sdk_errors", "infrastructure.utils"),
     ("adapters.sdk_repositories", "adapters.sdk_common"),
@@ -374,6 +375,7 @@ CURRENT_INTERNAL_EDGES = {
     ("infrastructure.utils", "infrastructure.validation"),
     ("interfaces.sdk.__init__", "interfaces.sdk.client"),
     ("interfaces.sdk.client", "adapters.__init__"),
+    ("interfaces.sdk.client", "adapters.sdk_errors"),
     ("interfaces.sdk.client", "core.contracts"),
     ("interfaces.sdk.client", "core.errors"),
     ("interfaces.sdk.client", "core.policies"),
@@ -399,9 +401,9 @@ CURRENT_INTERNAL_EDGES = {
 
 LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
-    "atomgit_hub": {"max_lines": 168, "max_functions": 2, "max_classes": 0},
+    "atomgit_hub": {"max_lines": 170, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 27, "max_functions": 0, "max_classes": 0},
-    "compatibility.api": {"max_lines": 781, "max_functions": 0, "max_classes": 1},
+    "compatibility.api": {"max_lines": 784, "max_functions": 0, "max_classes": 1},
     "compatibility.cli": {"max_lines": 143, "max_functions": 3, "max_classes": 1},
     "compatibility.completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "compatibility.config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},
@@ -474,6 +476,7 @@ PUBLIC_SYMBOLS = {
     ),
     "atomgit.lfs_pointer": (
         "CanonicalLfsPointer",
+        "CanonicalLfsCommitUnconfirmedError",
         "CanonicalLfsPointerError",
         "canonical_lfs_pointer",
         "run_canonical_lfs_upload",

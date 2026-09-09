@@ -21,6 +21,7 @@ _ATOMGIT_V5_API_BASE = "https://api.atomgit.com/api/v5"
 _MAX_POINTER_RESPONSE_BYTES = 64 * 1024
 _POINTER_VERIFICATION_BACKOFF_SECONDS = (2.0, 4.0)
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+_COMMIT_REVISION_PATTERN = re.compile(r"[0-9a-f]{40,64}")
 _PATCH_LOCK = threading.Lock()
 _EXPECTATIONS: ContextVar[Optional[List["CanonicalLfsPointer"]]] = ContextVar(
     "atomgit_canonical_lfs_expectations", default=None
@@ -29,6 +30,28 @@ _EXPECTATIONS: ContextVar[Optional[List["CanonicalLfsPointer"]]] = ContextVar(
 
 class CanonicalLfsPointerError(RuntimeError):
     """AtomGit could not produce or verify a canonical Git LFS pointer."""
+
+
+def _validated_commit_revision(commit_revision: str) -> str:
+    if (
+        not isinstance(commit_revision, str)
+        or _COMMIT_REVISION_PATTERN.fullmatch(commit_revision) is None
+    ):
+        raise CanonicalLfsPointerError("commit revision is unavailable")
+    return commit_revision
+
+
+class CanonicalLfsCommitUnconfirmedError(CanonicalLfsPointerError):
+    """A returned remote commit could not be confirmed by pointer checks."""
+
+    remote_commit_status = "created"
+    local_confirmation_status = "unconfirmed"
+
+    def __init__(self, commit_revision: str):
+        self.commit_revision = _validated_commit_revision(commit_revision)
+        super().__init__(
+            "remote commit was created but its LFS pointers are unconfirmed"
+        )
 
 
 @dataclass(frozen=True)
@@ -317,16 +340,20 @@ def run_canonical_lfs_upload(
     with canonical_lfs_payloads() as expectations:
         result = upload()
     if expectations:
-        revision = getattr(result, "oid", None)
-        if not isinstance(revision, str) or not revision:
+        try:
+            revision = _validated_commit_revision(getattr(result, "oid", None))
+        except CanonicalLfsPointerError as error:
             raise CanonicalLfsPointerError(
                 "AtomGit upload did not return a commit for pointer verification"
+            ) from error
+        try:
+            verify_canonical_lfs_pointers(
+                token=token,
+                repo_id=repo_id,
+                revision=revision,
+                expectations=expectations,
+                timeout=timeout,
             )
-        verify_canonical_lfs_pointers(
-            token=token,
-            repo_id=repo_id,
-            revision=revision,
-            expectations=expectations,
-            timeout=timeout,
-        )
+        except CanonicalLfsPointerError as error:
+            raise CanonicalLfsCommitUnconfirmedError(revision) from error
     return result

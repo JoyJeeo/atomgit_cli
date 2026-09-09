@@ -46,6 +46,9 @@ _RESUMABLE_LFS_PATTERN_MAX_COUNT = None
 _configure_remote_lfs_attributes = None
 _validated_lfs_patterns = None
 _UPLOAD_TOKEN_OVERRIDE = ContextVar("atomgit_upload_token_override", default=None)
+_UPLOAD_ERROR_PROPAGATION = ContextVar(
+    "atomgit_upload_error_propagation", default=False
+)
 
 
 def _print_resumable_upload_progress(batch_number, batch_count, progress) -> None:
@@ -77,6 +80,16 @@ def scoped_upload_token(token):
         yield
     finally:
         _UPLOAD_TOKEN_OVERRIDE.reset(marker)
+
+
+@contextmanager
+def propagate_upload_errors():
+    """Let the native SDK convert upload failures into structured results."""
+    marker = _UPLOAD_ERROR_PROPAGATION.set(True)
+    try:
+        yield
+    finally:
+        _UPLOAD_ERROR_PROPAGATION.reset(marker)
 
 
 class UploadServiceMixin:
@@ -228,6 +241,8 @@ class UploadServiceMixin:
                 close_hf_session()
                 _restore_progress_bar_state(original_progress_state)
         except Exception as e:
+            if _UPLOAD_ERROR_PROPAGATION.get():
+                raise
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
             print(f"上传文件失败[{err_type}]")
             print(f"💡 建议: {hint}")
@@ -637,6 +652,8 @@ class UploadServiceMixin:
                 _restore_progress_bar_state(original_progress_state)
 
         except Exception as e:
+            if _UPLOAD_ERROR_PROPAGATION.get():
+                raise
             err_type, hint = _classify_upload_error(e, repo_id=repo_id)
             print(f"上传目录失败[{err_type}]")
             print(f"💡 建议: {hint}")

@@ -74,6 +74,7 @@ HISTORICAL_PATCH_NAMES = {
     "normalize_repo_id",
     "auth_error_kind",
     "is_retryable_download_error",
+    "CanonicalLfsCommitUnconfirmedError",
     "CanonicalLfsPointerError",
     "run_download_with_retry",
     "validate_upload_path_no_symlinks",

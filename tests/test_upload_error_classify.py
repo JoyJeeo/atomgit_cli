@@ -217,6 +217,51 @@ def main():
     check("受限错误载荷不包含完整路径",
           "/private/source/model.bag" not in repr(resource_envelope))
 
+    commit_revision = "a" * 40
+    pointer_cause = api_mod.CanonicalLfsPointerError(
+        "pointer failure with fake-secret-response"
+    )
+    unconfirmed_error = None
+    try:
+        raise api_mod.CanonicalLfsCommitUnconfirmedError(
+            commit_revision
+        ) from pointer_cause
+    except api_mod.CanonicalLfsCommitUnconfirmedError as error:
+        unconfirmed_error = error
+    unconfirmed_envelope = api_mod._resumable_failure_envelope(unconfirmed_error)
+    unconfirmed_worker = api_mod.ResumableWorkerError(
+        unconfirmed_envelope["category"],
+        commit_revision=unconfirmed_envelope["commit_revision"],
+    )
+    unconfirmed_type, unconfirmed_hint = classify(unconfirmed_worker)
+    check(
+        "已创建未确认状态安全穿过 worker envelope",
+        unconfirmed_envelope
+        == {
+            "category": "remote_commit_unconfirmed",
+            "commit_revision": commit_revision,
+        }
+        and unconfirmed_worker.remote_commit_status == "created"
+        and unconfirmed_worker.local_confirmation_status == "unconfirmed"
+        and unconfirmed_worker.commit_revision == commit_revision,
+    )
+    check(
+        "已创建未确认状态有独立 CLI 分类且不打印 revision",
+        unconfirmed_type == "远端提交已创建但未确认"
+        and "远端提交状态：已创建" in unconfirmed_hint
+        and "本地确认状态：失败" in unconfirmed_hint
+        and commit_revision not in unconfirmed_hint
+        and "fake-secret-response" not in unconfirmed_hint,
+    )
+    tampered_worker = api_mod.ResumableWorkerError(
+        "remote_commit_unconfirmed", commit_revision="unsafe/revision"
+    )
+    check(
+        "非法 worker revision 降级为未知状态",
+        tampered_worker.category == "unknown"
+        and not hasattr(tampered_worker, "commit_revision"),
+    )
+
     # --- 优先级：仓库已禁用即便含 403 也不应被误判为认证失败 ---
     # DisabledRepoError 含 403 文本时，应归到"仓库已禁用"
     if _HF_ERR_OK:

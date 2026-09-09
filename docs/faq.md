@@ -101,6 +101,11 @@ LFS 对象上传；提交完成后再按精确 commit SHA 读取 V5 原始 blob 
 CLI 上传继续引入问题，但不会自动改写既有提交；已有非规范 pointer 需要单独授权
 的规范化提交或服务端修复。
 
+如果服务端已经返回合法 commit SHA，但上述只读验证仍失败，CLI 会区分为“远端提交
+已创建、本地确认失败”，隐藏 SHA，并提示先检查远端再决定是否重试；这避免在状态
+不明确时重复创建提交。原生 SDK 的失败结果会把两个状态和经校验的 revision 放在
+metadata 中，历史 SDK 则抛出仍可被 `CanonicalLfsPointerError` 捕获的细分异常。
+
 ## 为什么普通大目录上传会警告并长时间没有进度？
 
 `--no-resumable` 使用锁定 `huggingface-hub==1.1.7` 的 `upload_folder`。该版本在

@@ -111,9 +111,9 @@ class HuggingFaceAdapter:
         auto_configure_lfs=False,
     ):
         if resumable:
-            from .upload.service import scoped_upload_token
+            from .upload.service import propagate_upload_errors, scoped_upload_token
 
-            with scoped_upload_token(token):
+            with scoped_upload_token(token), propagate_upload_errors():
                 return self.api.upload_directory(
                     Path(source),
                     repo_id,

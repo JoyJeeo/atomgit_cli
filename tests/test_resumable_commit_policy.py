@@ -256,10 +256,12 @@ def main():
                 operations=[pointer_operation],
                 commit_message="batch",
             )
-        except api_mod.ResumableCommitError:
+        except api_mod.ResumableCommitError as error:
             pointer_exhaustion_failed = True
+            pointer_exhaustion_error = error
         else:
             pointer_exhaustion_failed = False
+            pointer_exhaustion_error = None
         check(
             "exhausted pointer reads do not duplicate create-commit",
             pointer_exhaustion_failed
@@ -270,6 +272,21 @@ def main():
         check(
             "exhausted pointer reads leave resumable metadata uncommitted",
             not exhausted_marked,
+        )
+        error_chain = list(api_mod._resumable_error_chain(pointer_exhaustion_error))
+        unconfirmed_errors = [
+            error
+            for error in error_chain
+            if type(error).__name__ == "CanonicalLfsCommitUnconfirmedError"
+        ]
+        check(
+            "resumable pointer exhaustion preserves the returned commit state",
+            len(unconfirmed_errors) == 1
+            and unconfirmed_errors[0].remote_commit_status == "created"
+            and unconfirmed_errors[0].local_confirmation_status == "unconfirmed"
+            and unconfirmed_errors[0].commit_revision == "e" * 40
+            and len(exhausted_client.calls) == 1,
+            repr([type(error).__name__ for error in error_chain]),
         )
     finally:
         pointer_mod._read_raw_pointer = original_pointer_read

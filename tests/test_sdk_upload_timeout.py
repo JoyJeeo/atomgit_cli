@@ -83,6 +83,32 @@ def main():
                 and pointer_timeouts[-1] == 28800,
             )
 
+            commit_revision = "a" * 40
+
+            def unconfirmed_upload(*args, **kwargs):
+                raise atomgit_hub.CanonicalLfsCommitUnconfirmedError(commit_revision)
+
+            atomgit_hub.run_canonical_lfs_upload = unconfirmed_upload
+            try:
+                atomgit_hub.upload_folder(
+                    source,
+                    "user/repo",
+                    token="fake-token",
+                )
+            except atomgit_hub.CanonicalLfsPointerError as error:
+                check(
+                    "legacy SDK preserves the post-commit error subclass",
+                    isinstance(error, atomgit_hub.CanonicalLfsCommitUnconfirmedError)
+                    and error.commit_revision == commit_revision,
+                )
+            else:
+                check(
+                    "legacy SDK preserves the post-commit error subclass",
+                    False,
+                    "no exception",
+                )
+            atomgit_hub.run_canonical_lfs_upload = capture_canonical_upload
+
             def failing_upload(**kwargs):
                 check(
                     "requested timeout visible during failure",

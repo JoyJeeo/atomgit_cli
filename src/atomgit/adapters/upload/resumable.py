@@ -22,7 +22,13 @@ from huggingface_hub._local_folder import get_local_upload_paths, read_upload_me
 
 from ..download.integrity import _atomgit_file_checksum
 from ..download.transport import _atomgit_hf_endpoint
-from ..lfs.pointer import canonical_lfs_payloads, verify_canonical_lfs_pointers
+from ..lfs.pointer import (
+    CanonicalLfsCommitUnconfirmedError,
+    CanonicalLfsPointerError,
+    _validated_commit_revision,
+    canonical_lfs_payloads,
+    verify_canonical_lfs_pointers,
+)
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 from .errors import (
     ResumableCommitError,
@@ -299,14 +305,24 @@ class _ResumableCommitController:
                 with self._canonical_payloads() as expectations:
                     result = self._create_commit(*args, **call_kwargs)
                 if expectations:
-                    commit_revision = getattr(result, "oid", None)
-                    if not isinstance(commit_revision, str) or not commit_revision:
-                        raise RuntimeError("resumable commit revision is unavailable")
-                    self._verify_committed(
-                        expectations,
-                        call_kwargs.get("repo_id"),
-                        commit_revision,
-                    )
+                    try:
+                        commit_revision = _validated_commit_revision(
+                            getattr(result, "oid", None)
+                        )
+                    except CanonicalLfsPointerError as error:
+                        raise RuntimeError(
+                            "resumable commit revision is unavailable"
+                        ) from error
+                    try:
+                        self._verify_committed(
+                            expectations,
+                            call_kwargs.get("repo_id"),
+                            commit_revision,
+                        )
+                    except CanonicalLfsPointerError as error:
+                        raise CanonicalLfsCommitUnconfirmedError(
+                            commit_revision
+                        ) from error
                 self._mark_committed(operations)
                 return result
             except Exception as error:
@@ -648,7 +664,12 @@ def _execute_resumable_upload_process(
         if ok is False:
             category = error.get("category") if isinstance(error, dict) else None
             patterns = error.get("lfs_patterns", ()) if isinstance(error, dict) else ()
-            raise ResumableWorkerError(category or "unknown", patterns)
+            commit_revision = (
+                error.get("commit_revision") if isinstance(error, dict) else None
+            )
+            raise ResumableWorkerError(
+                category or "unknown", patterns, commit_revision=commit_revision
+            )
         if ok is not True or error is not None or getattr(process, "exitcode", 0) != 0:
             raise RuntimeError("resumable upload worker returned an invalid result")
     finally:
