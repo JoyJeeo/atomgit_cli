@@ -205,7 +205,6 @@ def main():
         "/repos/owner/nested%2Frepo/contents/nested/fixture.bin" in request.full_url
         and "ref=" + ("a" * 40) in request.full_url
         and timeout == 9,
-        request.full_url,
     )
     check(
         "verification authenticates without putting token in the URL",
@@ -425,6 +424,158 @@ def main():
         and "fake-secret-ref" not in fetch_hint,
     )
 
+    def response_with_payload(payload):
+        response = FakeResponse(expected)
+        response.payload = payload
+        return response
+
+    reason_cases = (
+        (
+            "authentication_failed",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 401, "secret", {}, None
+            ),
+        ),
+        (
+            "permission_denied",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 403, "secret", {}, None
+            ),
+        ),
+        (
+            "pointer_unavailable",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 404, "secret", {}, None
+            ),
+        ),
+        (
+            "rate_limited",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 429, "secret", {}, None
+            ),
+        ),
+        (
+            "service_unavailable",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 503, "secret", {}, None
+            ),
+        ),
+        ("request_timeout", lambda: TimeoutError("fake-secret-timeout")),
+        (
+            "connection_failed",
+            lambda: urllib.error.URLError(ConnectionResetError("fake-secret-reset")),
+        ),
+        (
+            "request_rejected",
+            lambda: urllib.error.HTTPError(
+                "https://secret.invalid", 302, "secret", {}, None
+            ),
+        ),
+        (
+            "response_too_large",
+            lambda: response_with_payload(b"x" * (64 * 1024 + 1)),
+        ),
+        (
+            "response_malformed",
+            lambda: response_with_payload(b"fake-secret-invalid-json"),
+        ),
+        ("content_mismatch", lambda: FakeResponse(expected[:-1])),
+        ("unknown_read_failure", lambda: RuntimeError("fake-secret-unknown")),
+    )
+    classified_reasons = []
+    for expected_reason, outcome_factory in reason_cases:
+        reason_reads = []
+
+        def classified_open(request, timeout):
+            reason_reads.append((request, timeout))
+            outcome = outcome_factory()
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return outcome
+
+        pointer_mod._open_atomgit_url = classified_open
+        retry_sleeps.clear()
+        try:
+            verify_canonical_lfs_pointers(
+                token="fake-pointer-token",
+                repo_id="owner/repo",
+                revision="main",
+                expectations=expectations,
+                timeout=13,
+            )
+        except CanonicalLfsPointerError as error:
+            classified_reasons.append(getattr(error, "confirmation_failure", None))
+            rendered = str(error)
+        else:
+            classified_reasons.append(None)
+            rendered = ""
+        check(
+            f"pointer failure is classified as {expected_reason}",
+            classified_reasons[-1] == expected_reason
+            and len(reason_reads) == 3
+            and retry_sleeps == [2.0, 4.0]
+            and "fake-secret" not in rendered
+            and "secret.invalid" not in rendered,
+            repr((classified_reasons[-1], len(reason_reads), retry_sleeps)),
+        )
+    check(
+        "pointer failure reasons use the exact accepted whitelist",
+        set(classified_reasons) == {reason for reason, _ in reason_cases},
+        repr(classified_reasons),
+    )
+
+    def malformed_status_open(request, timeout):
+        raise urllib.error.HTTPError("https://secret.invalid", None, "secret", {}, None)
+
+    pointer_mod._open_atomgit_url = malformed_status_open
+    retry_sleeps.clear()
+    try:
+        verify_canonical_lfs_pointers(
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+            revision="main",
+            expectations=expectations,
+        )
+    except CanonicalLfsPointerError as error:
+        malformed_status_reason = error.confirmation_failure
+    else:
+        malformed_status_reason = None
+    check(
+        "malformed HTTP status safely uses request_rejected",
+        malformed_status_reason == "request_rejected" and retry_sleeps == [2.0, 4.0],
+    )
+
+    mixed_outcomes = [
+        urllib.error.HTTPError("https://secret.invalid", 401, "secret", {}, None),
+        TimeoutError("fake-secret-timeout"),
+        FakeResponse(expected[:-1]),
+    ]
+
+    def mixed_failure_open(request, timeout):
+        outcome = mixed_outcomes.pop(0)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    pointer_mod._open_atomgit_url = mixed_failure_open
+    retry_sleeps.clear()
+    try:
+        verify_canonical_lfs_pointers(
+            token="fake-pointer-token",
+            repo_id="owner/repo",
+            revision="main",
+            expectations=expectations,
+        )
+    except CanonicalLfsPointerError as error:
+        mixed_failure_reason = getattr(error, "confirmation_failure", None)
+    else:
+        mixed_failure_reason = None
+    check(
+        "mixed retries report only the final failure reason",
+        mixed_failure_reason == "content_mismatch" and retry_sleeps == [2.0, 4.0],
+        repr((mixed_failure_reason, retry_sleeps)),
+    )
+
     validation_reads = []
     pointer_mod._open_atomgit_url = lambda request, timeout: validation_reads.append(
         (request, timeout)
@@ -594,6 +745,7 @@ def main():
         and unconfirmed_error.remote_commit_status == "created"
         and unconfirmed_error.local_confirmation_status == "unconfirmed"
         and unconfirmed_error.commit_revision == "b" * 40
+        and unconfirmed_error.confirmation_failure == "pointer_unavailable"
         and isinstance(unconfirmed_error.__cause__, CanonicalLfsPointerError)
         and len(failed_reads) == 3
         and retry_sleeps == [2.0, 4.0]

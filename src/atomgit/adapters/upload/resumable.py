@@ -320,8 +320,9 @@ class _ResumableCommitController:
                             commit_revision,
                         )
                     except CanonicalLfsPointerError as error:
-                        raise CanonicalLfsCommitUnconfirmedError(
-                            commit_revision
+                        raise CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+                            commit_revision,
+                            error.confirmation_failure,
                         ) from error
                 self._mark_committed(operations)
                 return result
@@ -667,8 +668,14 @@ def _execute_resumable_upload_process(
             commit_revision = (
                 error.get("commit_revision") if isinstance(error, dict) else None
             )
+            confirmation_failure = (
+                error.get("confirmation_failure") if isinstance(error, dict) else None
+            )
             raise ResumableWorkerError(
-                category or "unknown", patterns, commit_revision=commit_revision
+                category or "unknown",
+                patterns,
+                commit_revision=commit_revision,
+                confirmation_failure=confirmation_failure,
             )
         if ok is not True or error is not None or getattr(process, "exitcode", 0) != 0:
             raise RuntimeError("resumable upload worker returned an invalid result")

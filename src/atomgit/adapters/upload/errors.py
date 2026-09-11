@@ -44,11 +44,49 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "unknown": "resumable worker failed",
 }
 
+_LFS_CONFIRMATION_FAILURE_HINTS = {
+    "authentication_failed": "确认请求的登录凭证无效，请重新登录并先核对远端状态。",
+    "permission_denied": "当前账号无权读取 pointer，请检查仓库权限并先核对远端状态。",
+    "pointer_unavailable": (
+        "未找到对应 pointer，这不能证明远端提交不存在，请先核对远端状态。"
+    ),
+    "rate_limited": "pointer 确认请求受到限流，请稍后核对远端状态。",
+    "service_unavailable": "pointer 确认服务暂时不可用，请稍后核对远端状态。",
+    "request_timeout": "读取 pointer 超时，请检查网络并先核对远端状态。",
+    "connection_failed": "无法连接确认接口，请检查网络并先核对远端状态。",
+    "request_rejected": "确认请求被服务拒绝，请核对仓库状态或联系平台支持。",
+    "response_too_large": (
+        "确认接口返回数据异常过大，未能读取 pointer，请联系平台支持。"
+    ),
+    "response_malformed": ("确认接口返回格式异常，未能解析 pointer，请联系平台支持。"),
+    "content_mismatch": (
+        "pointer 内容与本次上传预期不一致，请联系平台支持检查该提交。"
+    ),
+    "unknown_read_failure": "读取 pointer 时发生未知错误，请先核对远端状态。",
+}
+
+
+def _lfs_confirmation_failure_hint(error: BaseException) -> str:
+    reason = getattr(error, "confirmation_failure", None)
+    if not isinstance(reason, str):
+        reason = "unknown_read_failure"
+    return _LFS_CONFIRMATION_FAILURE_HINTS.get(
+        reason,
+        _LFS_CONFIRMATION_FAILURE_HINTS["unknown_read_failure"],
+    )
+
 
 class ResumableWorkerError(RuntimeError):
     """A credential-safe failure reconstructed from the upload child."""
 
-    def __init__(self, category: str, lfs_patterns=(), *, commit_revision=None):
+    def __init__(
+        self,
+        category: str,
+        lfs_patterns=(),
+        *,
+        commit_revision=None,
+        confirmation_failure=None,
+    ):
         if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
             category = "unknown"
         state = None
@@ -57,7 +95,12 @@ class ResumableWorkerError(RuntimeError):
                 category = "unknown"
             else:
                 try:
-                    state = CanonicalLfsCommitUnconfirmedError(commit_revision)
+                    state = (
+                        CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+                            commit_revision,
+                            confirmation_failure,
+                        )
+                    )
                 except Exception:
                     category = "unknown"
         self.category = category
@@ -70,6 +113,7 @@ class ResumableWorkerError(RuntimeError):
             self.remote_commit_status = state.remote_commit_status
             self.local_confirmation_status = state.local_confirmation_status
             self.commit_revision = state.commit_revision
+            self.confirmation_failure = state.confirmation_failure
         super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
@@ -176,6 +220,13 @@ def _resumable_failure_envelope(error: BaseException) -> dict:
         for cause in _resumable_error_chain(error):
             if isinstance(cause, CanonicalLfsCommitUnconfirmedError):
                 envelope["commit_revision"] = cause.commit_revision
+                reason = cause.confirmation_failure
+                envelope["confirmation_failure"] = (
+                    reason
+                    if isinstance(reason, str)
+                    and reason in _LFS_CONFIRMATION_FAILURE_HINTS
+                    else "unknown_read_failure"
+                )
                 break
     if category in ("upload_mode", "lfs_attributes"):
         for cause in _resumable_error_chain(error):
@@ -283,7 +334,10 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "上传子进程失败且未能安全识别原因；断点状态已保留，请稍后重试。",
             ),
         }
-        return structured_errors[e.category]
+        error_type, hint = structured_errors[e.category]
+        if e.category == "remote_commit_unconfirmed":
+            hint += _lfs_confirmation_failure_hint(e)
+        return error_type, hint
 
     if isinstance(e, ResumableUploadModeError):
         return (
@@ -297,7 +351,7 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
         return (
             "远端提交已创建但未确认",
             "远端提交状态：已创建；本地确认状态：失败。"
-            "请先确认远端状态再决定是否重试。",
+            + _lfs_confirmation_failure_hint(e),
         )
 
     if isinstance(e, CanonicalLfsPointerError):

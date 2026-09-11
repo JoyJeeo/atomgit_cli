@@ -308,8 +308,10 @@ atomgit upload PATH
 resumable 也只在确认成功后标记本地 committed。
 服务端返回合法 commit SHA 后若验证仍失败，异常会携带“远端已创建、本地未确认”
 状态：CLI 隐藏 SHA 并提示先核对远端；原生 SDK 仅在结构化 metadata 中返回经校验
-revision；历史 SDK 的细分异常仍继承原 pointer 异常。resumable worker 只传递相同
-受校验状态，不会触发降批、重复写入或提前写入 committed。
+revision 和固定白名单 `confirmation_failure`；历史 SDK 的细分异常仍继承原 pointer
+异常。原因只取三次确认耗尽时的最后一次安全类别，resumable worker 只传递相同受
+校验状态、经校验 revision 和原因码，不会传递底层异常文本、触发降批、重复写入或
+提前写入 committed。
 
 resumable 通过显式 AtomGit endpoint 的 `HfApi(endpoint=..., token=...)` 认证，
 避免隔离子进程回落到 `huggingface.co`。私有 model 和 dataset 均已使用真实

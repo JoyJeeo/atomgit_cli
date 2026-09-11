@@ -223,8 +223,9 @@ def main():
     )
     unconfirmed_error = None
     try:
-        raise api_mod.CanonicalLfsCommitUnconfirmedError(
-            commit_revision
+        raise api_mod.CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+            commit_revision,
+            "connection_failed",
         ) from pointer_cause
     except api_mod.CanonicalLfsCommitUnconfirmedError as error:
         unconfirmed_error = error
@@ -232,6 +233,7 @@ def main():
     unconfirmed_worker = api_mod.ResumableWorkerError(
         unconfirmed_envelope["category"],
         commit_revision=unconfirmed_envelope["commit_revision"],
+        confirmation_failure=unconfirmed_envelope["confirmation_failure"],
     )
     unconfirmed_type, unconfirmed_hint = classify(unconfirmed_worker)
     check(
@@ -240,6 +242,7 @@ def main():
         == {
             "category": "remote_commit_unconfirmed",
             "commit_revision": commit_revision,
+            "confirmation_failure": "connection_failed",
         }
         and unconfirmed_worker.remote_commit_status == "created"
         and unconfirmed_worker.local_confirmation_status == "unconfirmed"
@@ -250,17 +253,81 @@ def main():
         unconfirmed_type == "远端提交已创建但未确认"
         and "远端提交状态：已创建" in unconfirmed_hint
         and "本地确认状态：失败" in unconfirmed_hint
+        and "无法连接确认接口" in unconfirmed_hint
         and commit_revision not in unconfirmed_hint
         and "fake-secret-response" not in unconfirmed_hint,
     )
     tampered_worker = api_mod.ResumableWorkerError(
-        "remote_commit_unconfirmed", commit_revision="unsafe/revision"
+        "remote_commit_unconfirmed",
+        commit_revision=commit_revision,
+        confirmation_failure="unsafe-reason",
     )
     check(
-        "非法 worker revision 降级为未知状态",
-        tampered_worker.category == "unknown"
-        and not hasattr(tampered_worker, "commit_revision"),
+        "非法确认原因降级且保留已创建未确认状态",
+        tampered_worker.category == "remote_commit_unconfirmed"
+        and tampered_worker.confirmation_failure == "unknown_read_failure"
+        and tampered_worker.commit_revision == commit_revision,
     )
+    unhashable_worker = api_mod.ResumableWorkerError(
+        "remote_commit_unconfirmed",
+        commit_revision=commit_revision,
+        confirmation_failure=["unsafe-reason"],
+    )
+    unhashable_error = (
+        api_mod.CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+            commit_revision,
+            "connection_failed",
+        )
+    )
+    unhashable_error.confirmation_failure = ["unsafe-reason"]
+    unhashable_envelope = api_mod._resumable_failure_envelope(unhashable_error)
+    unhashable_type, unhashable_hint = classify(unhashable_error)
+    check(
+        "不可哈希确认原因安全降级且不破坏状态或 CLI 分类",
+        unhashable_worker.category == "remote_commit_unconfirmed"
+        and unhashable_worker.confirmation_failure == "unknown_read_failure"
+        and unhashable_envelope["confirmation_failure"] == "unknown_read_failure"
+        and unhashable_type == "远端提交已创建但未确认"
+        and "未知错误" in unhashable_hint,
+    )
+    confirmation_hints = (
+        ("authentication_failed", "重新登录"),
+        ("permission_denied", "仓库权限"),
+        ("pointer_unavailable", "不能证明远端提交不存在"),
+        ("rate_limited", "限流"),
+        ("service_unavailable", "暂时不可用"),
+        ("request_timeout", "读取 pointer 超时"),
+        ("connection_failed", "检查网络"),
+        ("request_rejected", "服务拒绝"),
+        ("response_too_large", "异常过大"),
+        ("response_malformed", "格式异常"),
+        ("content_mismatch", "内容与本次上传预期不一致"),
+        ("unknown_read_failure", "未知错误"),
+    )
+    for reason, expected_hint in confirmation_hints:
+        reason_error = (
+            api_mod.CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+                commit_revision,
+                reason,
+            )
+        )
+        reason_envelope = api_mod._resumable_failure_envelope(reason_error)
+        reason_worker = api_mod.ResumableWorkerError(
+            reason_envelope["category"],
+            commit_revision=reason_envelope["commit_revision"],
+            confirmation_failure=reason_envelope["confirmation_failure"],
+        )
+        reason_type, reason_hint = classify(reason_worker)
+        check(
+            f"确认失败原因 {reason} 安全穿过 worker 并生成建议",
+            reason_envelope["confirmation_failure"] == reason
+            and reason_worker.confirmation_failure == reason
+            and reason_type == "远端提交已创建但未确认"
+            and expected_hint in reason_hint
+            and commit_revision not in reason_hint
+            and "http" not in reason_hint.lower()
+            and "fake-secret" not in reason_hint,
+        )
 
     # --- 优先级：仓库已禁用即便含 403 也不应被误判为认证失败 ---
     # DisabledRepoError 含 403 文本时，应归到"仓库已禁用"

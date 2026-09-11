@@ -142,8 +142,10 @@ adapter boundaries.
   verification retries never repeat upload writes or mark resumable metadata early.
   A valid returned commit followed by failed verification is represented as
   remote-created and locally unconfirmed: CLI output hides the revision, native
-  SDK metadata carries the validated revision, and legacy base catches remain
-  compatible. Resumable workers propagate that state without another write.
+  SDK metadata carries the validated revision and a fixed safe final-attempt
+  failure code, and legacy base catches remain compatible. Resumable workers
+  propagate that state, validated revision, and code without exception text or
+  another write.
 - Downloads reject unsafe paths, isolate redirect credentials, preserve
   revision in resume identity, verify optional checksums, and prune only files
   recorded by a successful manifest-scoped download.

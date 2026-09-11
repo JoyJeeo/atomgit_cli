@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 122
+BASELINE_INVARIANT_COUNT = 125
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -600,6 +600,21 @@ CAPABILITY_REGISTRY = {
             _invariant(
                 "LFS-006",
                 "A valid returned commit followed by failed pointer verification is reported as remote-created and locally unconfirmed without exposing the revision, repeating a write, or marking resumable state committed; native SDK results preserve the validated revision as structured metadata and legacy base catches remain compatible.",
+                "test_architecture_parity.py",
+                "test_canonical_lfs_pointer.py",
+                "test_resumable_commit_policy.py",
+                "test_sdk_upload_timeout.py",
+                "test_upload_error_classify.py",
+                "test_upload_error_handling.py",
+            ),
+            _invariant(
+                "LFS-007",
+                "After three pointer checks are exhausted, transport, HTTP, response, and byte mismatch failures map to the fixed safe confirmation-failure whitelist, with only the final attempt reported.",
+                "test_canonical_lfs_pointer.py",
+            ),
+            _invariant(
+                "LFS-008",
+                "Ordinary upload, resumable workers, CLI errors, native SDK metadata, and legacy SDK exceptions preserve one validated confirmation-failure reason alongside the remote-created and locally-unconfirmed state.",
                 "test_architecture_parity.py",
                 "test_canonical_lfs_pointer.py",
                 "test_resumable_commit_policy.py",
@@ -1321,15 +1336,28 @@ CAPABILITY_REGISTRY = {
                 "test_download_redirect_security.py",
                 "test_sdk_exceptions.py",
             ),
+            _invariant(
+                "REDACT-003",
+                "Pointer confirmation failures expose only fixed guidance publicly; the internal worker envelope retains the D06 validated revision, state category, and fixed reason code but never exception text, URL, response body, repository path, object ID, or token.",
+                "test_architecture_parity.py",
+                "test_canonical_lfs_pointer.py",
+                "test_sdk_upload_timeout.py",
+                "test_upload_error_classify.py",
+                "test_upload_error_handling.py",
+            ),
         ),
         (
             "test_cli_error_redaction.py",
+            "test_architecture_parity.py",
+            "test_canonical_lfs_pointer.py",
             "test_download_redirect_security.py",
             "test_login_error_semantics.py",
             "test_refactor_behavior_guard.py",
             "test_sdk_exceptions.py",
+            "test_sdk_upload_timeout.py",
             "test_upload_batching.py",
             "test_upload_error_classify.py",
+            "test_upload_error_handling.py",
         ),
         ("docs/testing.md", "docs/architecture.md"),
         ("offline-contract", "security-contract"),
@@ -1378,7 +1406,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "122 条可观察行为不变量",
+        "125 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),

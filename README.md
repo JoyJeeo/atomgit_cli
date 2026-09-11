@@ -302,9 +302,11 @@ AtomGit V5 contents API 按精确 commit SHA 读取原始 Git blob 并逐字节�
 同一 commit 的只读确认，不会重复上传对象或创建 commit。三次均无法确认时仍安全
 失败，这表示客户端未能确认成功，不等于已经证明远端 pointer 内容错误。
 若服务端已返回合法 commit SHA，CLI 会明确提示“远端提交已创建、本地确认失败”，
-但不会输出 SHA；请先检查远端再决定是否重试。原生 SDK 返回失败结果，并在 metadata
-中提供 `remote_commit=created`、`local_confirmation=unconfirmed` 和经校验的
-`commit_revision`；历史 SDK 抛出兼容 `CanonicalLfsPointerError` 的细分异常。
+但不会输出 SHA；三次确认耗尽后还会说明最后一次失败属于认证、权限、未找到、限流、
+服务、超时、连接、请求、响应或内容不匹配中的哪一类，并给出对应建议。原生 SDK
+返回失败结果，并在 metadata 中提供 `remote_commit=created`、
+`local_confirmation=unconfirmed`、经校验的 `commit_revision` 和机器可读的
+`confirmation_failure`；历史 SDK 抛出兼容 `CanonicalLfsPointerError` 的细分异常。
 该逻辑对所有仓库统一生效，不按仓库名称适配。它防止新 CLI 上传继续产生脏克隆，
 但不会自动改写已有提交或修复历史中已经不规范的 pointer。
 

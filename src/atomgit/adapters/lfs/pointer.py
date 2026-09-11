@@ -1,8 +1,11 @@
 """Canonical Git LFS pointer protocol for AtomGit's HF-compatible API."""
 
 import base64
+import http.client
 import json
 import re
+import socket
+import ssl
 import threading
 import time
 import urllib.error
@@ -22,6 +25,22 @@ _MAX_POINTER_RESPONSE_BYTES = 64 * 1024
 _POINTER_VERIFICATION_BACKOFF_SECONDS = (2.0, 4.0)
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _COMMIT_REVISION_PATTERN = re.compile(r"[0-9a-f]{40,64}")
+_CONFIRMATION_FAILURE_CODES = frozenset(
+    {
+        "authentication_failed",
+        "permission_denied",
+        "pointer_unavailable",
+        "rate_limited",
+        "service_unavailable",
+        "request_timeout",
+        "connection_failed",
+        "request_rejected",
+        "response_too_large",
+        "response_malformed",
+        "content_mismatch",
+        "unknown_read_failure",
+    }
+)
 _PATCH_LOCK = threading.Lock()
 _EXPECTATIONS: ContextVar[Optional[List["CanonicalLfsPointer"]]] = ContextVar(
     "atomgit_canonical_lfs_expectations", default=None
@@ -30,6 +49,19 @@ _EXPECTATIONS: ContextVar[Optional[List["CanonicalLfsPointer"]]] = ContextVar(
 
 class CanonicalLfsPointerError(RuntimeError):
     """AtomGit could not produce or verify a canonical Git LFS pointer."""
+
+    confirmation_failure = None
+
+    @classmethod
+    def _for_confirmation_failure(cls, message: str, confirmation_failure):
+        error = cls(message)
+        error.confirmation_failure = (
+            confirmation_failure
+            if isinstance(confirmation_failure, str)
+            and confirmation_failure in _CONFIRMATION_FAILURE_CODES
+            else "unknown_read_failure"
+        )
+        return error
 
 
 def _validated_commit_revision(commit_revision: str) -> str:
@@ -46,6 +78,7 @@ class CanonicalLfsCommitUnconfirmedError(CanonicalLfsPointerError):
 
     remote_commit_status = "created"
     local_confirmation_status = "unconfirmed"
+    confirmation_failure = "unknown_read_failure"
 
     def __init__(self, commit_revision: str):
         self.commit_revision = _validated_commit_revision(commit_revision)
@@ -223,6 +256,31 @@ def _repository_path(repo_id: str) -> str:
     return "/repos/{}/{}".format(quote(owner, safe=""), quote(repository, safe=""))
 
 
+def _pointer_read_failure(error: Exception) -> str:
+    if isinstance(error, urllib.error.HTTPError):
+        status_code = error.code
+        if status_code == 401:
+            return "authentication_failed"
+        if status_code == 403:
+            return "permission_denied"
+        if status_code == 404:
+            return "pointer_unavailable"
+        if status_code == 429:
+            return "rate_limited"
+        if isinstance(status_code, int) and 500 <= status_code <= 599:
+            return "service_unavailable"
+        return "request_rejected"
+    reason = error.reason if isinstance(error, urllib.error.URLError) else error
+    if isinstance(reason, TimeoutError):
+        return "request_timeout"
+    if isinstance(error, urllib.error.URLError) or isinstance(
+        reason,
+        (ConnectionError, socket.gaierror, ssl.SSLError, http.client.HTTPException),
+    ):
+        return "connection_failed"
+    return "unknown_read_failure"
+
+
 def _read_raw_pointer(
     *,
     token: str,
@@ -263,25 +321,30 @@ def _read_raw_pointer(
     try:
         with _open_atomgit_url(request, timeout=timeout) as response:
             payload = response.read(_MAX_POINTER_RESPONSE_BYTES + 1)
-    except Exception:
+    except Exception as error:
         # The transport exception may contain the authenticated repository URL,
         # revision, response text, or other remote details.  Collapse it at this
         # boundary so CLI, SDK, and resumable callers all fail closed under the
         # same credential-safe pointer-verification contract.
-        raise CanonicalLfsPointerError(
-            "raw Git LFS pointer could not be retrieved for verification"
+        raise CanonicalLfsPointerError._for_confirmation_failure(
+            "raw Git LFS pointer could not be retrieved for verification",
+            _pointer_read_failure(error),
         ) from None
     if len(payload) > _MAX_POINTER_RESPONSE_BYTES:
-        raise CanonicalLfsPointerError("pointer verification response is too large")
+        raise CanonicalLfsPointerError._for_confirmation_failure(
+            "pointer verification response is too large",
+            "response_too_large",
+        )
     try:
         document = json.loads(payload.decode("utf-8"))
         if not isinstance(document, dict) or document.get("encoding") != "base64":
             raise ValueError
         raw = base64.b64decode(document["content"], validate=True)
-    except (KeyError, TypeError, ValueError, UnicodeError) as error:
-        raise CanonicalLfsPointerError(
-            "pointer verification response is malformed"
-        ) from error
+    except (KeyError, TypeError, ValueError, UnicodeError):
+        raise CanonicalLfsPointerError._for_confirmation_failure(
+            "pointer verification response is malformed",
+            "response_malformed",
+        ) from None
     return raw
 
 
@@ -317,9 +380,9 @@ def verify_canonical_lfs_pointers(
                     timeout=timeout,
                 )
                 if raw != expectation.content:
-                    raise CanonicalLfsPointerError(
-                        "AtomGit generated a noncanonical Git LFS pointer for "
-                        + repr(expectation.path_in_repo)
+                    raise CanonicalLfsPointerError._for_confirmation_failure(
+                        "AtomGit generated a noncanonical Git LFS pointer",
+                        "content_mismatch",
                     )
             except CanonicalLfsPointerError:
                 if attempt == len(_POINTER_VERIFICATION_BACKOFF_SECONDS):
@@ -355,5 +418,8 @@ def run_canonical_lfs_upload(
                 timeout=timeout,
             )
         except CanonicalLfsPointerError as error:
-            raise CanonicalLfsCommitUnconfirmedError(revision) from error
+            raise CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+                revision,
+                error.confirmation_failure,
+            ) from error
     return result

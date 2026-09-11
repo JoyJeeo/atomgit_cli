@@ -121,7 +121,10 @@ def main():
     commit_revision = "a" * 40
 
     def unconfirmed_upload(*args, **kwargs):
-        raise pointer_mod.CanonicalLfsCommitUnconfirmedError(commit_revision)
+        raise pointer_mod.CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+            commit_revision,
+            "authentication_failed",
+        )
 
     api_mod.run_canonical_lfs_upload = unconfirmed_upload
     try:
@@ -139,7 +142,8 @@ def main():
             "E9 CLI 显示独立远端和本地状态",
             "远端提交已创建但未确认" in unconfirmed_text
             and "远端提交状态：已创建" in unconfirmed_text
-            and "本地确认状态：失败" in unconfirmed_text,
+            and "本地确认状态：失败" in unconfirmed_text
+            and "重新登录" in unconfirmed_text,
         )
         check(
             "E9 CLI 不误报成功或泄露 revision",
@@ -178,7 +182,9 @@ def main():
 
     def unconfirmed_resumable(*args, **kwargs):
         raise api_mod.ResumableWorkerError(
-            "remote_commit_unconfirmed", commit_revision=commit_revision
+            "remote_commit_unconfirmed",
+            commit_revision=commit_revision,
+            confirmation_failure="content_mismatch",
         )
 
     api_mod._execute_resumable_upload_process = unconfirmed_resumable
@@ -200,6 +206,7 @@ def main():
             resumable_result is False
             and "远端提交已创建但未确认" in resumable_text
             and "断点元数据已保留" in resumable_text
+            and "内容与本次上传预期不一致" in resumable_text
             and commit_revision not in resumable_text
             and "上传目录成功" not in resumable_text,
         )

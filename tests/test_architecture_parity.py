@@ -265,6 +265,7 @@ def main():
                     raise ResumableWorkerError(
                         "remote_commit_unconfirmed",
                         commit_revision=commit_revision,
+                        confirmation_failure="rate_limited",
                     )
                 return False
 
@@ -288,8 +289,8 @@ def main():
                 "remote_commit": "created",
                 "local_confirmation": "unconfirmed",
                 "commit_revision": commit_revision,
+                "confirmation_failure": "rate_limited",
             },
-            repr(unconfirmed_result),
         )
         check(
             "native SDK state propagation is silent and keeps revision structured",
