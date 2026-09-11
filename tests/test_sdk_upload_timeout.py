@@ -84,9 +84,19 @@ def main():
             )
 
             commit_revision = "a" * 40
+            legacy_unconfirmed = atomgit_hub.CanonicalLfsCommitUnconfirmedError(
+                commit_revision
+            )
+            check(
+                "legacy post-commit errors default to an unknown safe reason",
+                legacy_unconfirmed.confirmation_failure == "unknown_read_failure",
+            )
 
             def unconfirmed_upload(*args, **kwargs):
-                raise atomgit_hub.CanonicalLfsCommitUnconfirmedError(commit_revision)
+                raise atomgit_hub.CanonicalLfsCommitUnconfirmedError._for_confirmation_failure(
+                    commit_revision,
+                    "response_malformed",
+                )
 
             atomgit_hub.run_canonical_lfs_upload = unconfirmed_upload
             try:
@@ -99,7 +109,8 @@ def main():
                 check(
                     "legacy SDK preserves the post-commit error subclass",
                     isinstance(error, atomgit_hub.CanonicalLfsCommitUnconfirmedError)
-                    and error.commit_revision == commit_revision,
+                    and error.commit_revision == commit_revision
+                    and error.confirmation_failure == "response_malformed",
                 )
             else:
                 check(

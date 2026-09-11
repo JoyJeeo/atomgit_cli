@@ -103,8 +103,11 @@ CLI 上传继续引入问题，但不会自动改写既有提交；已有非规�
 
 如果服务端已经返回合法 commit SHA，但上述只读验证仍失败，CLI 会区分为“远端提交
 已创建、本地确认失败”，隐藏 SHA，并提示先检查远端再决定是否重试；这避免在状态
-不明确时重复创建提交。原生 SDK 的失败结果会把两个状态和经校验的 revision 放在
-metadata 中，历史 SDK 则抛出仍可被 `CanonicalLfsPointerError` 捕获的细分异常。
+不明确时重复创建提交。三次确认耗尽后，提示还会区分最后一次失败属于认证、权限、
+未找到、限流、服务、超时、连接、请求、响应或内容不匹配；不会显示 URL、响应正文、
+仓库路径、OID、token 或 SHA。原生 SDK 的失败结果会把两个状态、经校验的 revision
+和 `confirmation_failure` 原因码放在 metadata 中，历史 SDK 则抛出仍可被
+`CanonicalLfsPointerError` 捕获的细分异常。
 
 ## 为什么普通大目录上传会警告并长时间没有进度？
 

@@ -92,6 +92,7 @@ def _sdk_error_metadata(error: Exception) -> dict:
                 "remote_commit": "created",
                 "local_confirmation": "unconfirmed",
                 "commit_revision": current.commit_revision,
+                "confirmation_failure": current.confirmation_failure,
             }
         current = current.__cause__ or current.__context__
     return {}

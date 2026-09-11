@@ -150,9 +150,11 @@ V5 contents API，读取未解析的原始 Git blob 并与预期字节完全比�
 
 只有服务端返回通过格式校验的 commit SHA 且随后验证失败时，状态才细分为
 `remote_commit=created`、`local_confirmation=unconfirmed`。CLI 不输出 revision，
-并提示先检查远端再决定是否重试；原生 SDK 在失败结果 metadata 中返回经校验的
-revision；历史 SDK 细分异常仍可被原 pointer 基类捕获。无效或缺失 revision 保持
-原验证失败语义，不会伪造“已创建”状态。
+并根据三次确认中最后一次失败输出安全建议；原生 SDK 在失败结果 metadata 中返回
+经校验的 revision 和 `confirmation_failure`。原因码限定为认证失败、权限不足、
+pointer 不可用、限流、服务不可用、请求超时、连接失败、请求拒绝、响应过大、响应
+畸形、内容不匹配和未知读取失败；历史 SDK 细分异常仍可被原 pointer 基类捕获。
+无效或缺失 revision 保持原验证失败语义，不会伪造“已创建”状态。
 
 ## 5. Resumable 目录上传
 

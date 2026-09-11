@@ -230,7 +230,10 @@ def main():
 
         def failing_pointer_read(**kwargs):
             pointer_reads.append(kwargs)
-            raise pointer_mod.CanonicalLfsPointerError("persistent read failure")
+            raise pointer_mod.CanonicalLfsPointerError._for_confirmation_failure(
+                "persistent read failure",
+                "request_timeout",
+            )
 
         pointer_mod._read_raw_pointer = failing_pointer_read
         exhausted_controller = api_mod._ResumableCommitController(
@@ -285,6 +288,7 @@ def main():
             and unconfirmed_errors[0].remote_commit_status == "created"
             and unconfirmed_errors[0].local_confirmation_status == "unconfirmed"
             and unconfirmed_errors[0].commit_revision == "e" * 40
+            and unconfirmed_errors[0].confirmation_failure == "request_timeout"
             and len(exhausted_client.calls) == 1,
             repr([type(error).__name__ for error in error_chain]),
         )
