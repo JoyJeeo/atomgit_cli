@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D07 implementation; D01, D03, D04, D05, and D06 delivered)
+Status: inactive (D07 delivered; D01, D03, D04, D05, D06, and D07 delivered)
 
 ## Successor Development Issue
 
@@ -12,8 +12,8 @@ Status: active (D07 implementation; D01, D03, D04, D05, and D06 delivered)
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02` 和
   `D07 / LFS-03`；D02 已由 D01 解决并移除。
-- Current phase: D01、D03、D04、D05 和 D06 均已完成限定交付；D07 红灯、实现、
-  文档、专项、完整离线门禁、独立审查和维护者授权后的交付复验已完成，正在限定交付。
+- Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
+  合并和限定交付；当前没有活跃开发项。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -77,17 +77,14 @@ Status: active (D07 implementation; D01, D03, D04, D05, and D06 delivered)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
 - D07 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
-- Next exact action: 提交 D07、本地 no-ff 合入 `yuto`、记录交付结果并仅推送
-  `github/yuto`；不得实施 D08–D18。
+- Next exact action: 等待维护者继续 D08 讨论；不得直接实施 D08–D18。
 
 ### Repository Reconciliation
 
-当前分支 `codex/d07-pointer-failure-reasons`。D06 实现提交 `928b8b9` 已通过 no-ff 合并提交 `0e7bb12` 合入，随后
-交付记录提交 `505f384` 已推送；本地与 `github/yuto` 当前均为 `505f384`。D06 任务
-分支保留在本地且未推送。当前 worktree 除本次 D07 两份交接登记外，仍有五份既有
-`.ai` 规范修改。Git 还包含 R9、D01、D03、D04 和 D05 的已交付提交；旧记录注明实现
-完成，因此不恢复为活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为
-已解决。
+当前分支 `yuto`。D07 实现提交 `23e51d7` 已通过 no-ff 合并提交 `d109e6b` 合入；任务
+分支保留在本地且未推送。当前 worktree 只剩五份既有 `.ai` 规范修改。Git 还包含
+R9、D01、D03、D04、D05 和 D06 的已交付提交；旧记录注明实现完成，因此不恢复为
+活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -1071,12 +1068,19 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
 - [x] 专项、完整离线门禁和独立审查通过。
 - [x] 维护者完成人工验收并授权适用的 Git/远程交付。
 
+### D07 Delivery Verification
+
+- 实现提交：`23e51d7f6a9cf979e78090418df78cdb14660b84`。
+- no-ff 合并提交：`d109e6b1b7e6a92628dbe2477788069243603b87`；合并树与已验收
+  任务树一致。
+- 交付仅允许推送 `github/yuto`；任务分支保持本地，不执行真实 AtomGit、PR、标签、
+  发布或 D08–D18 实施。
+- 五份既有 `.ai` 规范修改在提交和合并前后哈希一致，未纳入 D07 交付。
+
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d07-pointer-failure-reasons`，基于 `yuto` 的 `505f384` 创建；D06 实现提交
-  `928b8b9` 已由 no-ff 合并提交 `0e7bb12` 合入，随后
-  交付记录提交 `505f384` 已仅推送 `github/yuto`，本地与远端当前一致。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D07 实现
+  提交 `23e51d7` 已由 no-ff 合并提交 `d109e6b` 合入，任务分支保留在本地且不推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -1108,11 +1112,10 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   和真实 Python 3.9 仍未验证。该结论不授权提交、合并或推送。
 - D06 交付：实现提交 `928b8b9`，no-ff 合并提交 `0e7bb12`；交付记录提交
   `505f384` 已仅推送 `github/yuto`，任务分支未推送。
-- D07 当前变更：pointer 白名单原因分类及脱敏、普通/resumable/worker/CLI/SDK
-  贯通、既有测试扩展、用户与架构文档、开发底线和本交接；全部保持未提交。
-- 最近完成：D07 交付复验 93/93 通过，维护者已接受并授权限定提交、合并和推送；
-  `yuto` 和 `github/yuto` 仍为 `505f384`，worktree 保留五份既有 `.ai` 规范修改及
-  D07 变更。
+- D07 交付：实现提交 `23e51d7`，no-ff 合并提交 `d109e6b`；任务分支保持本地且不
+  推送。
+- 最近完成：D07 交付复验 93/93 通过，并已完成任务提交和本地 no-ff 合并；worktree
+  只剩五份既有 `.ai` 规范修改。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -1141,7 +1144,7 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：完成 D07 限定交付并进入 D08 讨论；不得直接实施 D08–D18。
+- 下一步：等待维护者继续 D08 讨论；不得直接实施 D08–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
