@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D09 and D10 joint implementation)
+Status: inactive (D09 and D10 delivered; awaiting next explicit activation)
 
 ## Successor Development Issue
 
@@ -16,8 +16,8 @@ Status: active (D09 and D10 joint implementation)
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
-  开发底线、最终完整离线门禁和独立审查；维护者已接受结果并授权限定交付，当前进入
-  本地任务提交与 `yuto` 合并。
+  开发底线、最终完整离线门禁和独立审查；维护者已接受结果，任务提交 `f1b4c78`
+  已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -115,18 +115,16 @@ Status: active (D09 and D10 joint implementation)
 - D09/D10 delivery mode: 最终交付复验通过后提交本地任务分支、no-ff 合入 `yuto`，
   并且只推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D11–D18。
-- Next exact action: 提交 D09/D10 本地任务分支、no-ff 合入 `yuto`，记录交付结果后
-  仅推送 `github/yuto` 并核验远端一致。
+- Next exact action: 等待维护者继续 D11 讨论或明确激活新的开发 Issue；不得自行实施
+  D11–D18、执行真实 AtomGit 操作或其他远程写入。
 
 ### Repository Reconciliation
 
-当前分支 `codex/d09-d10-upload-observability`，HEAD 仍为 `75094a7`，基于与
-`github/yuto` 一致的 `yuto@75094a7`。D08 实现提交 `16025c8` 已通过 no-ff 合并提交
-`9ee013c` 合入，交付记录提交 `75094a7` 已限定推送；D09/D10 修改尚未提交。当前
-worktree 保留五份既有 `.ai` 规范修改，并叠加获授权的 D09/D10 源码、既有测试、最小
-文档、开发底线及任务记录。Git 还包含 R9、D01、D03、D04、D05、D06 和 D07 的历史或
-已交付提交；旧记录不恢复为活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将
-D18 标记为已解决。
+当前分支 `yuto`；D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 合入，
+并仅推送 `github/yuto` 后核验远端一致。任务分支保留在本地且未推送。当前 worktree
+仅保留五份既有 `.ai` 规范修改，未纳入 D09/D10 提交。Git 还包含 R9、D01、D03、D04、
+D05、D06 和 D07 的历史或已交付提交；旧记录不恢复为活跃任务。历史矛盾的完整整理
+仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -1711,9 +1709,8 @@ git diff --check
 ### Current Handoff Snapshot
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d09-d10-upload-observability`，基于 `yuto@75094a7`；D09/D10 已联合激活，
-  已通过最终离线门禁和独立审查，当前等待人工验收。D08 已通过任务提交 `16025c8` 和 no-ff 合并提交
-  `9ee013c` 完成限定交付，D08 任务分支保留在本地且不推送。
+  `yuto`；D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
+  并已仅推送和核验 `github/yuto`。D09/D10 任务分支保留在本地且未推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -1786,6 +1783,9 @@ git diff --check
 - D09/D10 独立审查：首轮 P2 和续接复核的 P3 文档一致性问题均已修复；最终无开放
   P0/P1/P2/P3 发现，结论 `APPROVED`。真实 AtomGit、Windows/Linux、独立 Python 3.9
   和 D17 真实端到端链路未运行；该结论不授权提交、合并或推送。
+- D09/D10 交付：任务提交 `f1b4c78`，no-ff 合并提交 `85167bd`；仅推送并核验
+  `github/yuto`，任务分支保留在本地且未推送。没有修改 `main`、其他远端分支或真实
+  AtomGit 仓库。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -1813,8 +1813,8 @@ git diff --check
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：按维护者授权提交 D09/D10、本地 no-ff 合入 `yuto`、记录交付结果，并且
-  只推送和核验 `github/yuto`；不推送任务分支，不执行真实 AtomGit 或 D11–D18。
+- 下一步：等待维护者继续 D11 讨论或明确激活新的开发 Issue；不执行真实 AtomGit
+  操作，也不自行实施 D11–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
