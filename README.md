@@ -359,6 +359,12 @@ atomgit cache clear
 > 重试。large-folder 仍不支持单一提交说明，需指定
 > `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
 > CLI 未指定时自动使用 `model`。
+> 每次 resumable 提交前还会在对应稳定投影中私密、原子地记录待对账状态，并把
+> 当前远端提交作为 `parent_commit`。若写响应或 pointer 确认不明确，下一次同身份
+> 运行会先在同一不可变 revision 上核对大小、强摘要和规范 pointer；完全匹配时只
+> 恢复本地 committed 状态并显示“新增提交 0”，远端已前进、内容冲突、状态损坏或
+> 无法确认时则停止且不创建新提交。`atomgit cache clear` 会删除这份保护状态，未
+> 人工核对远端前不应在失败后立即清理缓存。
 > `--auto-configure-lfs` 启用后，CLI 会在服务端把文件判定为 LFS 后、对象预上传或
 > 引用提交前，从安全扩展名生成 `*.ext filter=lfs diff=lfs merge=lfs -text`，检查
 > 目标 revision 根目录 `.gitattributes` 并仅追加缺失或被后续规则覆盖的规则。CLI

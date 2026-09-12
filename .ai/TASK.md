@@ -1,19 +1,22 @@
 # Current Issue Contract
 
-Status: inactive (D07 delivered; D01, D03, D04, D05, D06, and D07 delivered)
+Status: active (D08 implementation; D01, D03, D04, D05, D06, and D07 delivered)
 
 ## Successor Development Issue
 
-- Updated: `2026-09-11`
+- Updated: `2026-09-12`
 - ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
 - Title: `上传可靠性与可观测性修复`
 - Type: `bug`, `cli`, `sdk`, `compatibility`, `testing`, `documentation`
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
-  `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02` 和
-  `D07 / LFS-03`；D02 已由 D01 解决并移除。
+  `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
+  `D07 / LFS-03` 和 `D08 / LFS-04`；D02 已由 D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
-  合并和限定交付；当前没有活跃开发项。
+  合并和限定交付；维护者于 `2026-09-12` 明确要求“开始开发”，D08 已激活。
+  D08 实现、文档、专项、93 脚本完整离线基线和独立审查均已通过；维护者已要求最终
+  复验，交付基线和全部静态门禁无误，正在提交、本地合入 `yuto` 并仅推送
+  `github/yuto`。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -64,6 +67,18 @@ Status: inactive (D07 delivered; D01, D03, D04, D05, D06, and D07 delivered)
   维护者随后明确要求“你自己验收一下，没有问题就提交并推送”；最终复验全部通过后，
   据此接受 D07 并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`
   及记录交付结果。任务分支不推送，其他远程操作及 D08–D18 实施仍未授权。
+  维护者于 `2026-09-12` 接受 D08 的“私有待对账提交凭据、重跑前只读核对、
+  `parent_commit` 并发保护、冲突失败关闭”方案，并明确要求将开发方案写入本地开发
+  Issue。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`；不授权激活
+  D08、创建分支、修改源码/测试/用户文档、运行实施验证、提交、合并、推送、真实
+  AtomGit 操作或实施 D09–D18。
+  维护者随后在新对话明确要求“开始开发”，据此单独授权激活 D08、创建本地
+  任务分支、修改 D08 范围内的源码、既有测试、用户文档和开发底线台账，并执行离线
+  验证；不授权提交、合并、推送、PR、发布、真实 AtomGit 操作或实施 D09–D18。
+  维护者随后明确要求“自己再验证一下功能是否正常 没有问题就提交并推送”；据此接受
+  D08 并授权最终复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
+  `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
+  D09–D18 实施仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -77,7 +92,10 @@ Status: inactive (D07 delivered; D01, D03, D04, D05, D06, and D07 delivered)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
 - D07 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
-- Next exact action: 等待维护者继续 D08 讨论；不得直接实施 D08–D18。
+- D08 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
+  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D09–D18。
+- Next exact action: 按限定权限提交 D08 任务分支、本地 no-ff 合入 `yuto`、仅推送
+  `github/yuto` 并核验远端一致。
 
 ### Repository Reconciliation
 
@@ -1077,10 +1095,198 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   发布或 D08–D18 实施。
 - 五份既有 `.ai` 规范修改在提交和合并前后哈希一致，未纳入 D07 交付。
 
+### D08 Objective And Evidence
+
+防止 resumable 上传在远端提交结果不明确或 LFS pointer 确认失败后，重新执行同一
+上传身份时再次提交相同路径、产生重复历史或覆盖并发修改。重跑必须先只读核对远端
+不可变快照；只有状态能够被完整证明时才恢复或继续，未知和冲突状态一律失败关闭。
+
+当前 `src/atomgit/adapters/upload/resumable.py` 只在 pointer 验证成功后写入 HF
+`is_committed=True`。D06/D07 的合法 commit revision、`created/unconfirmed` 状态和
+失败原因只通过异常与 worker envelope 传递，没有跨进程持久化。锁定的 HF 1.1.7
+`LocalUploadFileMetadata` 只有 `is_committed` 布尔值，无法区分“尚未提交”和“提交
+结果不明”；重跑会把所有未 committed 文件再次放入 commit 队列。现有对账只处理
+同一进程内的模糊网络错误，并对非 `main` revision 直接放弃匹配。
+
+已核对锁定依赖：`HfApi.create_commit` 支持 `parent_commit`，可在不新增依赖或公开
+参数的前提下建立服务端并发保护。本方案只基于源码、测试和已安装依赖签名设计，未
+执行真实 AtomGit 读写。
+
+### D08 Accepted Behavior And State Contract
+
+- 仅处理 CLI 默认目录 resumable、`AtomGitAPI.upload_directory(resumable=True)` 和
+  `AtomGitClient.upload_folder(resumable=True)`；单文件、普通目录及
+  `--no-resumable` 不在 D08 范围。
+- 同一上传身份继续沿用稳定投影隔离：endpoint、源目录、仓库、传输类型、revision、
+  远端前缀、外层 batch size 和 batch index 均一致时才能复用状态。
+- 在现有投影的 `.cache/huggingface/atomgit/pending-commit-v1.json` 保存一个私有、
+  原子更新的待对账提交凭据，不修改 HF 八行 metadata 格式。凭据只有 schema version、
+  `attempting` 或 `created_unconfirmed` 状态、提交前 base revision、可选的已返回 commit
+  revision，以及当前提交操作的远端相对路径、大小、SHA-256、上传模式和 regular
+  Git blob SHA-1；不得保存 token、URL、响应正文、异常原文或本地绝对路径。
+- 凭据目录必须为 `0700`，凭据和锁文件必须为 `0600`；JSON 使用同目录临时文件和
+  `os.replace` 原子替换，大小上限 64 KiB，操作数上限 20。未知版本、字段缺失、非法
+  路径/摘要/大小或超限内容必须失败关闭，不能自动删除后继续提交。
+- 每次远端提交前解析目标 revision 的当前不可变 SHA，先原子写入 `attempting`
+  凭据，再把该 SHA 作为 `parent_commit` 调用锁定 HF API；凭据写入失败时不得调用
+  `create_commit`。已验证为空的初始分支允许 base revision 为 null，但普通 404 不得
+  被猜测为空分支。
+- 远端返回合法 commit SHA 后，将凭据更新为 `created_unconfirmed`，再执行 D05 的
+  同一 commit 三次只读 pointer 确认。只有 pointer 和 metadata 均确认成功后才设置
+  `is_committed=True` 并删除凭据；任一步骤异常都保留可恢复状态。
+- 重跑发现凭据时，必须在任何 upload、preupload 或 create-commit 前读取目标 revision
+  的不可变快照 H1，比较每个文件的远端强摘要和大小；regular 比较 Git blob SHA-1，
+  LFS 比较对象 SHA-256/大小并复用严格三行 pointer 验证。应用结果前再次解析 H2，
+  只有 H1 == H2 才允许更新本地 metadata。
+- 完全匹配项标记 committed，并计为“确认复用”；部分匹配只确认匹配项，冲突项保留
+  在凭据中。任何读取失败、pointer 不可确认、本地内容变化、凭据损坏或 H1/H2 变化
+  都不得触发新写入。
+- 若当前 revision 仍等于凭据的 base revision，可证明上次尝试没有推进该分支，允许
+  只对仍缺失的操作安全重试；若 revision 已前进且仍有不匹配项，则报告内容冲突并
+  停止，不自动覆盖、合并或重放。
+- 同一投影的“凭据读取、对账、上传子进程完成”由跨进程锁串行化；不同上传身份仍可
+  并行。`parent_commit` 发生 409/412 时进入只读冲突处理，不在新 HEAD 上自动重放。
+- CLI 只显示确认复用、冲突和仍需提交的数量，不显示路径、SHA、OID 或远端细节。
+  全部恢复时成功汇总必须显示新增提交 0、续传跳过 N；冲突或未知状态必须返回非零并
+  明确说明本次没有创建新提交。
+- 原生 SDK resumable 在全部恢复时返回成功，在冲突或未知时返回失败；历史
+  `AtomGitAPI.upload_directory` 保持布尔合同。公开签名、参数、默认值和普通上传
+  行为不变，不提前扩展 D09/D10 monitor/Flow 数据合同。
+
+### D08 Implementation Scope
+
+1. 在 `src/atomgit/adapters/upload/resumable.py` 增加最小凭据读写、严格校验、投影级
+   锁、不可变 revision 解析、跨重跑远端对账和 `parent_commit` 状态转换；复用现有
+   `_atomgit_file_checksum`、canonical pointer 验证和 metadata 标记，不新建生产模块。
+2. 在 `src/atomgit/adapters/upload/service.py` 于启动 HF worker 前执行凭据恢复，并
+   准确区分确认复用、新增提交、冲突和完成数量；全已确认批次仍进入既有仓库/权限
+   检查，但不能调用远端提交。
+3. 在 `src/atomgit/adapters/upload/errors.py` 增加内部
+   `remote_commit_conflict`、`remote_recovery_state` 安全类别，worker 只传固定类别、
+   原因码和有界数量；不新增公开异常基类。同步 `compatibility/api.py` 的 owner、consumer
+   和 patch 接缝，保持历史 monkeypatch/导入身份。
+4. 保留现有 429、413 降批、模糊网络错误对账和 auto-configure-lfs 流程：413 在确认
+   未写入后清理原组凭据再建立子组凭据；409/412 保留凭据并失败关闭；网络、5xx、
+   Ctrl+C 或进程崩溃保留凭据。已 committed 条目和遗留凭据必须可幂等收敛。
+5. 扩展既有 resumable commit、batching、CLI/SDK、HF 签名、cache 和 portability 测试；
+   同步 README、FAQ、上传分析、架构和开发底线说明。不新增依赖、公共参数或测试脚本。
+
+### D08 Affected Capability IDs
+
+`UPLOAD-RESUMABLE`、`UPLOAD-LFS`、`REVISION`、`SDK-UPLOAD`、`CACHE`、
+`DEPENDENCY-CONTRACT`、`ERROR-REDACTION`、`PORTABILITY`、`ARCHITECTURE` 和
+`FLOOR-REGISTRY`。
+
+### D08 Protected Existing Invariants
+
+- D05 的同一 commit/path/timeout 三次只读确认、`2.0/4.0` 退避和已确认 pointer
+  不重读保持不变；D06 的 `created/unconfirmed` 和 D07 的最终白名单原因码保持。
+- 未确认状态不能标记 committed，失败不能误报成功；已确认文件、预上传对象和完成
+  批次不得重复写入，源文件与稳定投影 metadata 不得损坏。
+- 上传总时长继续不限，请求 timeout、429 重试、413 降批、模糊错误对账、LFS 慢流
+  恢复、auto-configure-lfs、Ctrl+C 子进程清理及全局 HF 状态恢复不得退化。
+- CLI、原生 SDK 和历史 API 的公开签名、默认值、model/dataset、revision、repo ID、
+  path-in-repo、ignore 和成功返回合同不变；非 resumable 入口不受影响。
+- 所有人类可见输出、SDK 错误、worker envelope 和测试日志不得泄露 token、URL、响应
+  正文、本地绝对路径、远端路径、OID、commit SHA 或底层异常原文。
+- `huggingface-hub==1.1.7`、`datasets==4.4.1`、Python >=3.9、source/editable/wheel/
+  sdist、Windows/POSIX 和 93 脚本完整离线基线合同不变。
+
+### D08 New Or Changed Invariants
+
+- `RESUMEUP-006`：resumable 提交意图必须在远端写入前私密、原子持久化；跨进程重跑
+  必须先对账，不能盲目重复提交或覆盖已前进 revision。
+- `LFS-009`：只有同一不可变 revision 上的强摘要、大小和规范 LFS pointer 全部匹配，
+  待确认文件才能转为 committed；不匹配、读取未知或并发变化不得触发新写入。
+- 可执行登记从当前 Git 权威状态的 28 个能力、125 条不变量、93 个测试脚本更新为
+  28 个能力、127 条不变量、93 个测试脚本；不得使用 TASK 历史段落中的旧计数。
+
+### D08 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 首次 commit 返回 SHA、pointer 确认耗尽，独立第二次运行 | 累计 create-commit 恰好一次；第二次只读确认、标记 committed 并清理凭据 |
+| commit 响应超时或进程在返回前退出，远端实际已完成 | `attempting` 凭据保留；重跑确认远端后不重复提交 |
+| 当前 revision 等于 base、目标操作仍缺失 | 以同一 `parent_commit` 只提交缺失操作 |
+| 当前 revision 已前进且部分内容不同 | 匹配项可确认，冲突项保留；本次 create-commit 为零且返回非零 |
+| pointer 读取超时、404、畸形或内容不匹配 | 保持 D05/D07 次数与原因；凭据保留且无新写入 |
+| H1/H2 不同或 409/412 | 识别并发变化，禁止在新 HEAD 自动重放 |
+| 本地内容变化、凭据损坏/超限/未知版本 | 失败关闭，不删除保护状态、不输出敏感字段、不远端写入 |
+| regular、LFS、混合批次与部分 metadata 保存后崩溃 | 状态幂等收敛，统计准确，完成项不重做 |
+| `main`、非 `main`、model、dataset、CLI、原生 SDK、历史 resumable API | 路由和结果合同一致，普通上传完全不变 |
+| 两个相同投影并发运行 | 投影锁与 `parent_commit` 保证最多一个提交者，另一方重新读取状态 |
+| cache clear、Ctrl+C 和子进程异常退出 | 只清理 AtomGit 缓存或保留恢复凭据，凭证、源文件和其他缓存不受影响 |
+
+优先扩展 `tests/test_resumable_commit_policy.py`、`tests/test_upload_batching.py`、
+`tests/test_upload_resumable.py`、`tests/test_hf_api_contract.py`、`tests/test_cache_clear.py`
+和 `tests/test_windows_compatibility.py`。红灯必须在旧实现上证明第二次提交或冲突覆盖
+风险；不能仅断言内部函数或使用宽松 `**kwargs` fake。真实 HF 1.1.7
+`create_commit(parent_commit=...)` 签名必须参与合同验证。
+
+### D08 Implementation Phases And Acceptance
+
+1. 激活后先冻结 HF metadata、create-commit、投影身份和现有恢复调用链，添加跨两次
+   独立运行的红灯回归。验证：旧实现产生第二次提交，失败原因与 D08 一致。
+2. 实现私有凭据、严格 schema、原子权限和投影锁。验证：损坏、并发、异常退出、
+   半完成 metadata 和 cache 清理专项通过，尚不改变远端提交策略。
+3. 实现不可变快照对账、二次 HEAD 检查和匹配/未知/冲突状态。验证：所有未知和冲突
+   场景远端写调用为零，完全匹配能够幂等恢复。
+4. 接入 `parent_commit`、控制器状态转换、413/409/412/网络错误和 CLI/SDK 统计提示。
+   验证：安全缺失只提交一次，确认复用不计新增提交，各入口一致。
+5. 同步用户文档、架构、开发底线和完整测试映射；执行完整离线门禁并独立审查。
+   验证：93/93 基线、compileall、pip check、Python 3.9 语法、锁定依赖、打包、结构、
+   脱敏、生成物和 diff check 全部通过，无未解决阻塞发现后再进入人工验收。
+
+### D08 Independent Review
+
+- 首轮只读审查发现锁路径未拒绝符号链接/非普通文件（P2），以及 409/412 文档误称
+  create-commit 调用为零（P3）；已返回实现模式分别补充失败关闭回归和修正文案。
+- 修复后提交策略 70/70、恢复与进程 52/52、打包 13/13 和 93 脚本完整基线重新通过；
+  compileall、pip check、Python 3.9 AST、锁定依赖签名、格式债务、凭证、二进制、
+  未跟踪生成物和 diff check 通过。
+- 第二轮只读审查无新的 P0/P1/P2/P3 发现，所有发现均已关闭，结论 `APPROVED`。
+  该结论不代表人工验收，也不授权提交、合并、推送或任何真实 AtomGit 操作。
+
+### D08 Non-Goals And Residual Risks
+
+- 不为单文件、普通目录、`--no-resumable` 或旧版本已经产生但没有 D08 凭据的状态提供
+  追溯防重；更改 `HF_HOME`、源目录、repo/revision/prefix/batch identity 或清理缓存后
+  自动防重保证失效。
+- 不新增强制覆盖/合并参数。冲突默认停止；维护者人工确认需要以本地覆盖时，可显式
+  选择既有非 resumable 路径，但该操作不属于自动恢复。
+- 服务端没有幂等键时，客户端不能消除“远端写入成功且本地持久介质同时永久损坏”的
+  全部极端窗口；空分支没有 parent SHA 时并发保护较弱。
+- 每个提交增加一次只读 revision 查询，这是防止重复与覆盖的接受成本；仍使用现有
+  请求 timeout，不增加总时限或无限重试。
+- 真实 AtomGit 的 `parent_commit`、409/412、空分支和不可变 revision 行为，Windows/
+  Linux 进程锁及真实 Python 3.9 仍是实施交付时必须报告的未验证边界；任何真实写入
+  验证需要单独授权。
+
+### D08 Compatibility And Rollback
+
+- 兼容变化仅发生在冲突 resumable 重跑：旧行为可能继续提交，新行为返回非零并禁止
+  覆盖；公共参数、返回类型和非 resumable 行为不变。
+- 新凭据只保护新版本创建的状态，不迁移旧 HF metadata。未知 schema 失败关闭，避免
+  降级误判。
+- 若实现回归，可整体回退 D08 单一实现提交；新凭据位于既有 AtomGit/HF cache 下，不
+  修改源文件或凭证。旧版本会忽略凭据并失去防重保护，有未解决凭据时不得直接降级
+  重跑；`atomgit cache clear` 只能在人工核对远端后作为最后手段。
+
+### D08 Activation Status
+
+- [x] 维护者接受 D08 最终方案并授权登记到本地开发 Issue。
+- [x] 维护者单独授权激活 D08。
+- [x] 本地任务分支已创建。
+- [x] 红灯回归、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D07 实现
-  提交 `23e51d7` 已由 no-ff 合并提交 `d109e6b` 合入，任务分支保留在本地且不推送。
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
+  `codex/d08-resumable-commit-recovery`，基线 `yuto@8e8ae07` 与 `github/yuto`
+  一致；D07 实现提交 `23e51d7` 已由 no-ff 合并提交
+  `d109e6b` 合入，任务分支保留在本地且不推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -1093,7 +1299,8 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入 D05 或 D06 交付。D06 任务分支保留在本地且未推送，
+  worktree，不能将其误归入后续 Issue；本次只在 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md` 叠加 D08 方案登记。D06 任务分支保留在本地且未推送，
   没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
@@ -1113,9 +1320,22 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
 - D06 交付：实现提交 `928b8b9`，no-ff 合并提交 `0e7bb12`；交付记录提交
   `505f384` 已仅推送 `github/yuto`，任务分支未推送。
 - D07 交付：实现提交 `23e51d7`，no-ff 合并提交 `d109e6b`；任务分支保持本地且不
-  推送。
-- 最近完成：D07 交付复验 93/93 通过，并已完成任务提交和本地 no-ff 合并；worktree
-  只剩五份既有 `.ai` 规范修改。
+  推送，仅推送并核验 `github/yuto`。
+- D08 实现与专项：新增私有原子 `pending-commit-v1.json`、投影锁、H1/H2 强摘要对账、
+  `parent_commit` 并发保护、冲突/未知失败关闭和恢复统计；提交策略 70/70、恢复与进程
+  52/52、上传错误 29/29、结构 18/18、打包 13/13 及批次专项通过。审查前修正了恢复
+  异常绕过 fatal 回调的问题并增加回归；格式债务保持 Black 409、isort 87、Ruff 44。
+- D08 最终完整基线：`python tests/run_cli_baseline.py` 为 **93 passed in 97.66s**；
+  compileall、pip check、15 个变更 Python 文件的 Python 3.9 AST、锁定依赖真实签名、
+  格式债务、凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 均通过。
+- D08 交付复验：维护者授权后重跑 `python tests/run_cli_baseline.py`，结果为
+  **93 passed in 101.76s**；compileall、pip check、Python 3.9 AST、锁定依赖签名、
+  格式债务、凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 再次通过，
+  五份既有 `.ai` 规范修改哈希保持不变。
+- D08 独立审查：首轮 P2/P3 已修复并重新通过全部门禁；第二轮无新发现，结论
+  `APPROVED`。未执行真实 AtomGit、提交、合并、推送、PR 或发布。
+- 最近完成：D08 交付复验和全部静态门禁通过；正在按限定权限提交、本地 no-ff 合入
+  `yuto` 并仅推送 `github/yuto`。D07 已完成任务提交、本地 no-ff 合并和限定推送交付。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -1139,12 +1359,12 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   `.ai/{ARCHITECTURE,DEVELOPMENT_FLOOR,ISSUE_DISCUSSION,TASK,TESTING}.md`。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 的未提交修改继续原样保留；
-  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 还叠加了 D05 交付及 D06 未激活方案记录，
-  后续交付必须精确隔离，
-  不能误纳入无关修改。
+  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 还叠加了获授权的 D08 未激活方案记录；
+  后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：等待维护者继续 D08 讨论；不得直接实施 D08–D18。
+- 下一步：提交 D08 任务分支、本地 no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验
+  远端一致，不实施 D09–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。

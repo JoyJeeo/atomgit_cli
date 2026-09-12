@@ -272,6 +272,15 @@ resumable 当前批次失败后，CLI 会从现有 HF 断点元数据补充显�
 失败统计不会删除或改写损坏元数据；该状态不包含本地或远端路径、OID、凭证、URL、
 header 或响应正文。
 
+每个 resumable 提交在远端写入前，会在稳定投影的
+`.cache/huggingface/atomgit/pending-commit-v1.json` 记录 0600 私有待对账凭据，并
+使用提交前不可变 SHA 作为 `parent_commit`。进程退出、网络响应不明确或 pointer
+确认失败后，同一上传身份重跑会在 upload/preupload 前读取 H1、核对 regular Git
+blob SHA-1 或 LFS SHA-256/大小/规范 pointer，再读取 H2。只有 H1 == H2 的匹配项
+会恢复 committed；H1 仍等于原 base 时才允许提交缺失项。分支已前进且内容不匹配、
+读取未知、本地内容变化或凭据损坏均在写入前失败关闭；409/412 不创建新提交，也不在
+新 HEAD 上自动重放。
+
 真实 404 MB 文件测试已完成“中断 -> 再次执行 -> 下载回读”，文件大小和
 SHA-256 均一致。
 

@@ -403,7 +403,7 @@ LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
     "atomgit_hub": {"max_lines": 170, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 27, "max_functions": 0, "max_classes": 0},
-    "compatibility.api": {"max_lines": 784, "max_functions": 0, "max_classes": 1},
+    "compatibility.api": {"max_lines": 811, "max_functions": 0, "max_classes": 1},
     "compatibility.cli": {"max_lines": 143, "max_functions": 3, "max_classes": 1},
     "compatibility.completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "compatibility.config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},

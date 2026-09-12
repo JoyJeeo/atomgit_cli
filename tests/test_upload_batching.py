@@ -69,6 +69,7 @@ def main():
         "monotonic": api_mod.time.monotonic,
         "read_metadata": api_mod.read_upload_metadata,
         "v5_get": api_mod._atomgit_v5_get_json,
+        "execute_resumable": api_mod._execute_resumable_upload_process,
     }
     resumable_calls = []
     ordinary_calls = []
@@ -171,6 +172,77 @@ def main():
             (nested / "._nested.bin").write_bytes(b"appledouble")
             (nested / ".DS_Store").write_bytes(b"finder")
             os.environ["HF_HOME"] = str(root / "hf-home")
+
+            def recover_every_file(**kwargs):
+                projection = Path(kwargs["upload_kwargs"]["folder_path"])
+                recovered = sum(
+                    1
+                    for path in projection.rglob("*")
+                    if path.is_file()
+                    and not path.relative_to(projection)
+                    .as_posix()
+                    .startswith(".cache/")
+                )
+                return {"recovered": recovered}
+
+            recovery_output = StringIO()
+            api_mod._execute_resumable_upload_process = recover_every_file
+            with redirect_stdout(recovery_output):
+                recovery_result = api_mod.api.upload_directory(
+                    source,
+                    "user/repo-recovered",
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                )
+            api_mod._execute_resumable_upload_process = original["execute_resumable"]
+            recovery_text = recovery_output.getvalue()
+            recovery_summary_ok = (
+                recovery_result is True
+                and "上传批次汇总: 计划 21，新增提交 0，续传跳过 21，确认完成 21"
+                in recovery_text
+            )
+            target_validations.clear()
+            resumable_events.clear()
+
+            def recover_one_then_conflict(**kwargs):
+                projection = Path(kwargs["upload_kwargs"]["folder_path"])
+                path = sorted(
+                    item.relative_to(projection).as_posix()
+                    for item in projection.rglob("*")
+                    if item.is_file()
+                    and not item.relative_to(projection)
+                    .as_posix()
+                    .startswith(".cache/")
+                )[0]
+                paths = api_mod.get_local_upload_paths(projection, path)
+                metadata = api_mod.read_upload_metadata(projection, path)
+                metadata.sha256 = "00" * 32
+                metadata.upload_mode = "regular"
+                metadata.is_committed = True
+                metadata.save(paths)
+                raise api_mod.ResumableWorkerError(
+                    "remote_commit_conflict", confirmed=1, remaining=19
+                )
+
+            conflict_output = StringIO()
+            api_mod._execute_resumable_upload_process = recover_one_then_conflict
+            with redirect_stdout(conflict_output):
+                conflict_result = api_mod.api.upload_directory(
+                    source,
+                    "user/repo-conflict",
+                    ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                    resumable=True,
+                )
+            api_mod._execute_resumable_upload_process = original["execute_resumable"]
+            conflict_text = conflict_output.getvalue()
+            conflict_summary_ok = (
+                conflict_result is False
+                and "上传批次汇总: 计划 21，新增提交 0，续传跳过 1，确认完成 1"
+                in conflict_text
+                and "确认复用 1，冲突 19，仍需提交 19" in conflict_text
+            )
+            target_validations.clear()
+            resumable_events.clear()
 
             result = api_mod.api.upload_directory(
                 source,
@@ -587,22 +659,38 @@ def main():
             )
             print(f"[{'PASS' if configured_failure_ok else 'FAIL'}] configured mid-plan failure counts")
             print(f"[{'PASS' if large_plan_ok else 'FAIL'}] 700-file lifecycle plan with progress bar")
-            return 0 if all((
-                resumable_ok,
-                deadline_ok,
-                ordinary_ok,
-                all(configurable_results),
-                projection_state_ok,
-                lifecycle_ok,
-                skip_ok,
-                metadata_failure_ok,
-                missing_ok,
-                failure_ok,
-                checkpoint_failure_ok,
-                corrupt_ok,
-                configured_failure_ok,
-                large_plan_ok,
-            )) else 1
+            print(
+                f"[{'PASS' if recovery_summary_ok else 'FAIL'}] "
+                "recovered batches report zero new commits"
+            )
+            print(
+                f"[{'PASS' if conflict_summary_ok else 'FAIL'}] "
+                "conflict summaries do not count recovered files as new commits"
+            )
+            return (
+                0
+                if all(
+                    (
+                        resumable_ok,
+                        deadline_ok,
+                        ordinary_ok,
+                        all(configurable_results),
+                        projection_state_ok,
+                        lifecycle_ok,
+                        skip_ok,
+                        metadata_failure_ok,
+                        missing_ok,
+                        failure_ok,
+                        checkpoint_failure_ok,
+                        corrupt_ok,
+                        configured_failure_ok,
+                        large_plan_ok,
+                        recovery_summary_ok,
+                        conflict_summary_ok,
+                    )
+                )
+                else 1
+            )
     finally:
         api_mod.HfApi = original["hf_api"]
         api_mod.multiprocessing.get_all_start_methods = original["methods"]
@@ -612,6 +700,7 @@ def main():
         api_mod.time.monotonic = original["monotonic"]
         api_mod.read_upload_metadata = original["read_metadata"]
         api_mod._atomgit_v5_get_json = original["v5_get"]
+        api_mod._execute_resumable_upload_process = original["execute_resumable"]
 
 
 if __name__ == "__main__":

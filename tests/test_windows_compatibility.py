@@ -147,6 +147,36 @@ def main():
                 == ["nested/file.bin"],
                 type(manifest_error).__name__ if manifest_error else "",
             )
+            pending_projection = root / "pending-projection"
+            try:
+                api_mod._write_pending_commit(
+                    pending_projection,
+                    {
+                        "version": 1,
+                        "state": "attempting",
+                        "base_revision": "a" * 40,
+                        "commit_revision": None,
+                        "operations": [
+                            {
+                                "path": "payload.bin",
+                                "size": 1,
+                                "sha256": "b" * 64,
+                                "upload_mode": "regular",
+                                "git_sha1": "c" * 40,
+                            }
+                        ],
+                    },
+                )
+                pending_error = None
+            except Exception as error:
+                pending_error = error
+            check(
+                "pending commit save works without os.fchmod",
+                pending_error is None
+                and api_mod._read_pending_commit(pending_projection)["state"]
+                == "attempting",
+                type(pending_error).__name__ if pending_error else "",
+            )
             os.fchmod = original_fchmod
 
             original_lock_module = api_mod._windows_file_lock_module

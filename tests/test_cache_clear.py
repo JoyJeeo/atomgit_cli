@@ -14,6 +14,16 @@ def main():
         root.mkdir()
         (root / "upload-projections").mkdir()
         (root / "upload-projections" / "payload.bin").write_bytes(b"cache")
+        pending = (
+            root
+            / "upload-projections"
+            / ".cache"
+            / "huggingface"
+            / "atomgit"
+            / "pending-commit-v1.json"
+        )
+        pending.parent.mkdir(parents=True)
+        pending.write_text("pending", encoding="utf-8")
         (root / "hub-cache.json").write_text("cache", encoding="utf-8")
         environment = os.environ.get("HF_HOME")
         os.environ["HF_HOME"] = str(root)
