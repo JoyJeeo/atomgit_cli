@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D08 implementation; D01, D03, D04, D05, D06, and D07 delivered)
+Status: inactive (D01, D03, D04, D05, D06, D07, and D08 delivered)
 
 ## Successor Development Issue
 
@@ -13,10 +13,8 @@ Status: active (D08 implementation; D01, D03, D04, D05, D06, and D07 delivered)
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
   `D07 / LFS-03` 和 `D08 / LFS-04`；D02 已由 D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
-  合并和限定交付；维护者于 `2026-09-12` 明确要求“开始开发”，D08 已激活。
-  D08 实现、文档、专项、93 脚本完整离线基线和独立审查均已通过；维护者已要求最终
-  复验，交付基线和全部静态门禁无误，正在提交、本地合入 `yuto` 并仅推送
-  `github/yuto`。
+  合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
+  `github/yuto` 限定推送。后续开发需要新的明确授权。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -94,8 +92,8 @@ Status: active (D08 implementation; D01, D03, D04, D05, D06, and D07 delivered)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
 - D08 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D09–D18。
-- Next exact action: 按限定权限提交 D08 任务分支、本地 no-ff 合入 `yuto`、仅推送
-  `github/yuto` 并核验远端一致。
+- Next exact action: 等待维护者继续 D09 讨论或发出新的明确任务；不得直接实施
+  D09–D18。
 
 ### Repository Reconciliation
 
@@ -1334,8 +1332,11 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   五份既有 `.ai` 规范修改哈希保持不变。
 - D08 独立审查：首轮 P2/P3 已修复并重新通过全部门禁；第二轮无新发现，结论
   `APPROVED`。未执行真实 AtomGit、提交、合并、推送、PR 或发布。
-- 最近完成：D08 交付复验和全部静态门禁通过；正在按限定权限提交、本地 no-ff 合入
-  `yuto` 并仅推送 `github/yuto`。D07 已完成任务提交、本地 no-ff 合并和限定推送交付。
+- D08 交付：任务提交 `16025c8`，no-ff 合并提交 `9ee013c`；仅推送并核验
+  `github/yuto`，任务分支保留在本地且未推送。没有修改 `main`、其他远端分支或真实
+  AtomGit 仓库。
+- 最近完成：D08 已完成最终复验、审查、提交、本地 no-ff 合并和限定推送交付；开发
+  Issue 当前 inactive。D07 及更早已交付项保持不变。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -1363,8 +1364,7 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：提交 D08 任务分支、本地 no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验
-  远端一致，不实施 D09–D18。
+- 下一步：等待维护者继续 D09 讨论或发出新的明确任务，不实施 D09–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
