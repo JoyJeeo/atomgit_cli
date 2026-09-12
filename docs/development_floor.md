@@ -13,7 +13,7 @@
 当前完整离线基线包含：
 
 - 28 个稳定能力 ID；
-- 127 条可观察行为不变量；
+- 132 条可观察行为不变量；
 - 93 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
@@ -54,9 +54,9 @@ CLI command owner 与 `cli/__init__.py` package facade 还锁定历史 Click sch
 | `REVISION` | 分支与 revision | 分支显式创建并验证，未验证 revision 不上传 |
 | `UPLOAD-FILE` | 单文件上传 | 不复制源文件、路径准确、临时资源安全 |
 | `UPLOAD-FOLDER` | 普通目录上传 | ignore、前缀、批次、worker 和错误语义稳定 |
-| `UPLOAD-RESUMABLE` | resumable 上传 | 投影隔离、恢复、超时、对账和进度正确 |
+| `UPLOAD-RESUMABLE` | resumable 上传 | 投影隔离、恢复、超时、对账、进度和观测隔离正确 |
 | `UPLOAD-LFS` | LFS 策略 | preupload、规范 pointer、提交状态确认和 attributes 安全 |
-| `UPLOAD-LFS-RECOVERY` | LFS 慢流恢复 | 只替换异常对象并有界停止 |
+| `UPLOAD-LFS-RECOVERY` | LFS 慢流恢复 | 只替换异常对象并产生无干扰结构化 Flow 状态 |
 | `DOWNLOAD-SNAPSHOT` | 整仓下载 | 清单、既有文件、重试、manifest 和 prune 安全 |
 | `DOWNLOAD-FILE` | 单文件下载 | 精确目标、resume、checksum 和 Unicode 行为 |
 | `DOWNLOAD-INTEGRITY` | 下载完整性 | framing、大小、摘要和原子替换一致 |
@@ -69,9 +69,9 @@ CLI command owner 与 `cli/__init__.py` package facade 还锁定历史 Click sch
 | `CACHE` | 缓存清理 | 只清理 AtomGit 管理内容 |
 | `DEPENDENCY-CONTRACT` | 锁定依赖 | 真实 HF/datasets 签名拒绝宽松 fake |
 | `PACKAGING` | 分发安装 | wheel、入口、导入、installer 和 deploy |
-| `PORTABILITY` | 平台兼容 | Python 3.9+、Windows 和 POSIX 安全结果一致 |
+| `PORTABILITY` | 平台兼容 | Python 3.9+、Windows、POSIX 和多进程启动方式结果一致 |
 | `ERROR-REDACTION` | 错误脱敏 | 保留错误类别但不暴露凭证或签名 URL |
-| `UPLOAD-OBSERVABILITY` | 上传监控 | 只读会话快照与 Flow 状态展示 |
+| `UPLOAD-OBSERVABILITY` | 上传监控 | 只读会话快照、实时 Flow 状态与有界跨进程观测 |
 | `ARCHITECTURE` | 七目录架构与 CLI/SDK parity | 通用远程能力必须有共享用例、双入口或明确 CLI-only 分类 |
 
 每个登记项还包含风险级别、入口、完整不变量、离线测试、文档、证据类别和受控

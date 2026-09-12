@@ -65,6 +65,77 @@ def main():
         ((70.0, 100.0, 130.0),) * 3
     ) == 100.0)
 
+    observed_clock = Clock()
+    observed_states = []
+    observed = api_mod._SlowFlowCoordinator(
+        monotonic=observed_clock,
+        observation_callback=observed_states.append,
+    )
+    observed.register(
+        "private-object-key",
+        total_bytes=100,
+        file_abbrev="source.bin",
+        transfer_type="basic",
+    )
+    initial_state = observed_states[-1]
+    check(
+        "Flow registration publishes an anonymous baseline state",
+        initial_state["type"] == "flow_state"
+        and initial_state["flow_key"] == 1
+        and initial_state["payload"]["phase"] == "establishing_baseline"
+        and initial_state["payload"]["sample_speed"] is None
+        and "private-object-key" not in repr(initial_state),
+    )
+    observed.observe_sample("private-object-key", 20.0, 80)
+    sample_state = observed_states[-1]
+    check(
+        "five-second display samples do not enter recovery policy",
+        sample_state["payload"]["sample_speed"] == 20.0
+        and sample_state["payload"]["remaining_bytes"] == 80
+        and observed._states["private-object-key"].speeds == []
+        and observed.replacement_count("private-object-key") == 0,
+    )
+    for _ in range(13):
+        observed.observe_window("private-object-key", 100.0, 50)
+    window_state = observed_states[-1]
+    check(
+        "formal display trend contains only twelve real windows",
+        window_state["payload"]["window_speed"] == 100.0
+        and window_state["payload"]["stable_baseline"] == 100.0
+        and window_state["payload"]["trend"] == [100.0] * 12,
+    )
+    flow_key = window_state["flow_key"]
+    observed.complete("private-object-key")
+    observed.register(
+        "private-object-key",
+        total_bytes=100,
+        file_abbrev="source.bin",
+        transfer_type="basic",
+    )
+    check(
+        "the same object keeps one anonymous Flow across lifecycle changes",
+        observed_states[-1]["flow_key"] == flow_key,
+    )
+
+    def broken_observer(message):
+        raise RuntimeError("observation unavailable")
+
+    isolated = api_mod._SlowFlowCoordinator(
+        monotonic=observed_clock,
+        reconnect_jitter=lambda: 2.0,
+        observation_callback=broken_observer,
+    )
+    isolated.register("isolated", total_bytes=10_000)
+    isolated_decision = None
+    for speed in (100.0, 100.0, 100.0, 30.0, 30.0, 30.0):
+        isolated_decision = isolated.observe_window("isolated", speed, 9_000)
+    check(
+        "observation callback failure cannot change recovery decisions",
+        isolated_decision is not None
+        and isolated_decision.delay == 2.0
+        and isolated.replacement_count("isolated") == 1,
+    )
+
     clock = Clock()
     coordinator = api_mod._SlowFlowCoordinator(
         monotonic=clock,

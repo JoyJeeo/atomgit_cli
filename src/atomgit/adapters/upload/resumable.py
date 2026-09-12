@@ -4,6 +4,7 @@ import hashlib
 import json
 import multiprocessing
 import os
+import queue
 import random
 import re
 import socket
@@ -36,6 +37,7 @@ from ..lfs.pointer import (
     canonical_lfs_pointer,
     verify_canonical_lfs_pointers,
 )
+from ..lfs.service import _dispatch_upload_observation, set_upload_observer
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 from .errors import (
     ResumableCommitConflictError,
@@ -77,6 +79,12 @@ _PENDING_COMMIT_MAX_BYTES = 64 * 1024
 
 _PENDING_COMMIT_MAX_OPERATIONS = 20
 
+_UPLOAD_OBSERVATION_QUEUE_SIZE = 256
+
+_UPLOAD_OBSERVATION_MAX_BYTES = 16 * 1024
+
+_UPLOAD_OBSERVATION_FIELDS = {"version", "type", "sequence", "flow_key", "payload"}
+
 _PENDING_COMMIT_DIRECTORY = Path(".cache/huggingface/atomgit")
 
 _PENDING_COMMIT_FILENAME = "pending-commit-v1.json"
@@ -86,6 +94,93 @@ _PENDING_COMMIT_LOCK_FILENAME = "pending-commit-v1.lock"
 _SHA1_PATTERN = re.compile(r"[0-9a-f]{40}")
 
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+
+
+class _UploadObservationSender:
+    """Best-effort child sender for versioned observation messages."""
+
+    def __init__(self, observation_queue):
+        self._queue = observation_queue
+        self._sequence = 0
+
+    def send(self, message) -> None:
+        if (
+            self._queue is None
+            or not isinstance(message, dict)
+            or set(message) != {"type", "flow_key", "payload"}
+            or message.get("type") not in ("flow_state", "flow_event")
+            or not isinstance(message.get("flow_key"), int)
+            or isinstance(message.get("flow_key"), bool)
+            or message["flow_key"] <= 0
+            or not isinstance(message.get("payload"), dict)
+        ):
+            return
+        self._sequence += 1
+        envelope = {
+            "version": 1,
+            "type": message["type"],
+            "sequence": self._sequence,
+            "flow_key": message["flow_key"],
+            "payload": message["payload"],
+        }
+        try:
+            encoded = json.dumps(
+                envelope,
+                ensure_ascii=False,
+                allow_nan=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            if len(encoded) > _UPLOAD_OBSERVATION_MAX_BYTES:
+                return
+            self._queue.put_nowait(encoded)
+        except Exception:
+            pass
+
+
+def _decode_upload_observation(value) -> Optional[dict]:
+    """Decode one bounded v1 envelope; malformed observations are discarded."""
+    if not isinstance(value, bytes) or len(value) > _UPLOAD_OBSERVATION_MAX_BYTES:
+        return None
+    try:
+        envelope = json.loads(value.decode("utf-8"))
+    except (UnicodeError, ValueError, TypeError):
+        return None
+    if (
+        not isinstance(envelope, dict)
+        or set(envelope) != _UPLOAD_OBSERVATION_FIELDS
+        or envelope.get("version") != 1
+        or envelope.get("type") not in ("flow_state", "flow_event")
+        or not isinstance(envelope.get("sequence"), int)
+        or isinstance(envelope.get("sequence"), bool)
+        or envelope["sequence"] <= 0
+        or not isinstance(envelope.get("flow_key"), int)
+        or isinstance(envelope.get("flow_key"), bool)
+        or envelope["flow_key"] <= 0
+        or not isinstance(envelope.get("payload"), dict)
+    ):
+        return None
+    return envelope
+
+
+def _drain_upload_observations(observation_queue, source_id) -> None:
+    while True:
+        try:
+            value = observation_queue.get_nowait()
+        except (queue.Empty, AttributeError, EOFError, OSError, ValueError):
+            return
+        envelope = _decode_upload_observation(value)
+        if envelope is not None:
+            _dispatch_upload_observation(source_id, envelope=envelope)
+
+
+def _close_upload_observation_queue(observation_queue) -> None:
+    for method_name in ("close", "join_thread"):
+        try:
+            method = getattr(observation_queue, method_name, None)
+            if callable(method):
+                method()
+        except Exception:
+            pass
 
 
 def _pending_commit_paths(folder_path: Path):
@@ -1031,12 +1126,15 @@ def _run_resumable_upload(
     batch_context=None,
     auto_configure_lfs=False,
     configured_lfs_patterns=(),
+    observation_queue=None,
 ):
     """Run HF's resumable uploader in an isolated child process.
 
     Isolation lets cancellation stop all upload worker threads together.
     Request timeouts do not limit the lifetime of this process.
     """
+    if multiprocessing.current_process().name != "MainProcess":
+        set_upload_observer(None)
     original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
     original_get_upload_mode = hf_large_folder._get_upload_mode
     original_preupload_lfs = hf_large_folder._preupload_lfs
@@ -1045,10 +1143,12 @@ def _run_resumable_upload(
         if auto_configure_lfs
         else None
     )
+    observation_sender = _UploadObservationSender(observation_queue)
     slow_flow_coordinator = _SlowFlowCoordinator(
         event_callback=lambda event: _print_resumable_slow_flow_event(
             event, batch_context
         ),
+        observation_callback=observation_sender.send,
     )
     result_sent = False
 
@@ -1171,6 +1271,7 @@ def _run_resumable_upload(
         hf_large_folder._preupload_lfs = original_preupload_lfs
         hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         close_hf_session()
+        _close_upload_observation_queue(observation_queue)
 
 
 def _print_upload_batch_plan(
@@ -1206,6 +1307,11 @@ def _execute_resumable_upload_process(
     methods = multiprocessing.get_all_start_methods()
     context = multiprocessing.get_context("fork" if "fork" in methods else "spawn")
     result_queue = context.Queue()
+    try:
+        observation_queue = context.Queue(maxsize=_UPLOAD_OBSERVATION_QUEUE_SIZE)
+    except Exception:
+        observation_queue = None
+    source_id = object()
     process = context.Process(
         target=_run_resumable_upload,
         args=(
@@ -1216,12 +1322,18 @@ def _execute_resumable_upload_process(
             batch_context,
             auto_configure_lfs,
             configured_lfs_patterns,
+            observation_queue,
         ),
     )
     process.daemon = True
+    terminal = "failed"
     try:
         process.start()
+        while process.is_alive():
+            process.join(0.1)
+            _drain_upload_observations(observation_queue, source_id)
         process.join()
+        _drain_upload_observations(observation_queue, source_id)
         try:
             ok, error = result_queue.get(timeout=1)
         except Exception as exc:
@@ -1257,7 +1369,11 @@ def _execute_resumable_upload_process(
             or getattr(process, "exitcode", 0) != 0
         ):
             raise RuntimeError("resumable upload worker returned an invalid result")
+        terminal = "completed"
         return error
+    except KeyboardInterrupt:
+        terminal = "interrupted"
+        raise
     finally:
         if process.is_alive():
             process.terminate()
@@ -1265,9 +1381,12 @@ def _execute_resumable_upload_process(
             if process.is_alive():
                 process.kill()
                 process.join()
+        _drain_upload_observations(observation_queue, source_id)
+        _dispatch_upload_observation(source_id, terminal=terminal)
         if hasattr(result_queue, "close"):
             result_queue.close()
             result_queue.join_thread()
+        _close_upload_observation_queue(observation_queue)
 
 
 def _validate_resumable_upload_target(

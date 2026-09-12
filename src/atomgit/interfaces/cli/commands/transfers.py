@@ -176,16 +176,15 @@ def upload(
                 bytes_total=upload_size,
                 batch=f"0/{max(1, (file_count + batch_size - 1) // batch_size)}",
             )
+        lfs_service = None
+        previous_observer = None
         try:
             if observe_session is not None:
                 import importlib
 
                 lfs_service = importlib.import_module("atomgit.adapters.lfs.service")
-                lfs_service.set_upload_observer(
-                    lambda event: observe_session.event(
-                        event.get("kind", "LFS event"), event.get("kind", "lfs")
-                    )
-                )
+                previous_observer = lfs_service._upload_observer
+                lfs_service.set_upload_observer(observe_session.observe)
             result = context.run_usecase(
                 "upload_folder",
                 path,
@@ -215,8 +214,8 @@ def upload(
                 observe_session.finish("failed")
             raise
         finally:
-            if observe_session is not None:
-                lfs_service.set_upload_observer(None)
+            if lfs_service is not None:
+                lfs_service.set_upload_observer(previous_observer)
             if observe_session is not None:
                 observe_session.close()
 

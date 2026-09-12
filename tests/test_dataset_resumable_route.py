@@ -31,6 +31,12 @@ class InlineQueue:
     def get(self, timeout=None):
         return self._queue.get(timeout=timeout)
 
+    def get_nowait(self):
+        return self._queue.get_nowait()
+
+    def put_nowait(self, value):
+        self._queue.put_nowait(value)
+
 
 class InlineProcess:
     def __init__(self, target, args):
@@ -57,7 +63,7 @@ class InlineProcess:
 
 
 class InlineContext:
-    def Queue(self):
+    def Queue(self, maxsize=0):
         return InlineQueue()
 
     def Process(self, target, args):

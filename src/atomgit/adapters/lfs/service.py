@@ -58,6 +58,25 @@ def set_upload_observer(callback):
     _upload_observer = callback
 
 
+def _dispatch_upload_observation(
+    source_id, *, envelope: Optional[dict] = None, terminal: Optional[str] = None
+) -> None:
+    """Deliver one parent-owned observation without affecting an upload."""
+    if _upload_observer is None:
+        return
+    packet = {"source_id": source_id}
+    if envelope is not None:
+        packet["envelope"] = envelope
+    elif terminal is not None:
+        packet["terminal"] = terminal
+    else:
+        return
+    try:
+        _upload_observer(packet)
+    except Exception:
+        pass
+
+
 _SLOW_FLOW_REPLACEMENT_COOLDOWNS = (0.0, 60.0, 180.0)
 _SLOW_FLOW_STREAM_CHUNK_BYTES = 512 * 1024
 # HF Hub 1.1.7 documents a 1 GB regular-file commit payload limit. Files above
@@ -116,9 +135,17 @@ class _SlowFlowDecision:
 @dataclass
 class _SlowFlowState:
     total_bytes: int
+    flow_key: int = 0
+    file_abbrev: str = ""
+    transfer_type: str = "basic"
     speeds: list = field(default_factory=list)
+    trend: list = field(default_factory=list)
     stable_baseline: Optional[float] = None
+    peer_baseline: Optional[float] = None
     current_speed: Optional[float] = None
+    sample_speed: Optional[float] = None
+    window_speed: Optional[float] = None
+    remaining_bytes: int = 0
     slow_windows: int = 0
     degraded_windows: int = 0
     replacements: int = 0
@@ -129,6 +156,8 @@ class _SlowFlowState:
     disabled: bool = False
     active: bool = True
     probe: bool = False
+    phase: str = "establishing_baseline"
+    last_decision: str = "none"
 
 
 class _SlowFlowCoordinator:
@@ -140,11 +169,14 @@ class _SlowFlowCoordinator:
         monotonic=time.monotonic,
         reconnect_jitter=None,
         event_callback=None,
+        observation_callback=None,
     ):
         self._monotonic = monotonic
         self._reconnect_jitter = reconnect_jitter or (lambda: random.uniform(2.0, 8.0))
         self._event_callback = event_callback
+        self._observation_callback = observation_callback
         self._states = {}
+        self._next_flow_key = 1
         self._probe_key = None
         self._lock = threading.Lock()
 
@@ -161,27 +193,95 @@ class _SlowFlowCoordinator:
         except Exception:
             pass
 
-    def register(self, object_key, *, total_bytes: int) -> None:
+    def _publish(self, message: dict) -> None:
+        if self._observation_callback is None:
+            return
+        try:
+            self._observation_callback(message)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _state_message(state: _SlowFlowState) -> dict:
+        return {
+            "type": "flow_state",
+            "flow_key": state.flow_key,
+            "payload": {
+                "file_abbrev": state.file_abbrev,
+                "type": state.transfer_type,
+                "size": state.total_bytes,
+                "remaining_bytes": state.remaining_bytes,
+                "sample_speed": state.sample_speed,
+                "window_speed": state.window_speed,
+                "stable_baseline": state.stable_baseline,
+                "peer_baseline": state.peer_baseline,
+                "slow_windows": state.slow_windows,
+                "replacement_count": state.replacements,
+                "phase": state.phase,
+                "last_decision": state.last_decision,
+                "trend": list(state.trend),
+            },
+        }
+
+    @staticmethod
+    def _event_message(state: _SlowFlowState, event: str, **details) -> dict:
+        return {
+            "type": "flow_event",
+            "flow_key": state.flow_key,
+            "payload": {"event": event, **details},
+        }
+
+    def register(
+        self,
+        object_key,
+        *,
+        total_bytes: int,
+        file_abbrev: str = "",
+        transfer_type: str = "basic",
+    ) -> None:
         if (
             not isinstance(total_bytes, int)
             or isinstance(total_bytes, bool)
             or total_bytes < 0
         ):
             raise ValueError("LFS object size is invalid")
+        if transfer_type not in ("basic", "multipart"):
+            raise ValueError("LFS transfer type is invalid")
+        abbreviation = PurePosixPath(str(file_abbrev)).name[-10:]
         with self._lock:
             state = self._states.get(object_key)
             if state is None:
-                self._states[object_key] = _SlowFlowState(total_bytes=total_bytes)
+                state = _SlowFlowState(
+                    total_bytes=total_bytes,
+                    flow_key=self._next_flow_key,
+                    file_abbrev=abbreviation,
+                    transfer_type=transfer_type,
+                    remaining_bytes=total_bytes,
+                )
+                self._states[object_key] = state
+                self._next_flow_key += 1
             else:
                 state.active = True
                 if state.total_bytes != total_bytes:
                     raise RuntimeError("LFS object size changed during upload")
+                state.phase = (
+                    "stable"
+                    if state.stable_baseline is not None
+                    else "establishing_baseline"
+                )
+                state.last_decision = "none"
+            message = self._state_message(state)
+        self._publish(message)
 
     def complete(self, object_key, *, reset_windows: bool = False) -> None:
+        message = None
+        event = None
         with self._lock:
             state = self._states.get(object_key)
             if state is not None:
                 state.active = False
+                state.phase = "failed" if reset_windows else "completed"
+                state.last_decision = state.phase
                 if reset_windows:
                     state.speeds.clear()
                     state.stable_baseline = None
@@ -194,6 +294,29 @@ class _SlowFlowCoordinator:
                     state.probe = False
                 if self._probe_key == object_key:
                     self._probe_key = None
+                message = self._state_message(state)
+                event = self._event_message(state, state.phase)
+        if message is not None:
+            self._publish(message)
+            self._publish(event)
+
+    def observe_sample(self, object_key, speed: float, remaining_bytes: int) -> None:
+        if (
+            not math.isfinite(speed)
+            or speed < 0
+            or not isinstance(remaining_bytes, int)
+            or isinstance(remaining_bytes, bool)
+            or remaining_bytes < 0
+        ):
+            return
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is None or not state.active:
+                return
+            state.sample_speed = float(speed)
+            state.remaining_bytes = min(state.total_bytes, remaining_bytes)
+            message = self._state_message(state)
+        self._publish(message)
 
     def replacement_count(self, object_key) -> int:
         with self._lock:
@@ -206,6 +329,8 @@ class _SlowFlowCoordinator:
             return state.disabled if state is not None else False
 
     def replacement_finished(self, object_key) -> None:
+        message = None
+        event = None
         with self._lock:
             state = self._states.get(object_key)
             if state is None:
@@ -214,6 +339,16 @@ class _SlowFlowCoordinator:
             state.fresh_speeds.clear()
             state.slow_windows = 0
             state.degraded_windows = 0
+            state.phase = "verifying_reconnect"
+            state.last_decision = "reconnect_started"
+            message = self._state_message(state)
+            event = self._event_message(
+                state,
+                "reconnect_started",
+                replacement=state.replacements,
+            )
+        self._publish(message)
+        self._publish(event)
 
     def _peer_baseline(self, object_key) -> Optional[float]:
         peers = [
@@ -268,14 +403,18 @@ class _SlowFlowCoordinator:
     ) -> Optional[_SlowFlowDecision]:
         if state.disabled or state.replacements >= _SLOW_FLOW_MAX_REPLACEMENTS:
             state.disabled = True
+            state.phase = "replacement_disabled"
+            state.last_decision = "replacement_disabled"
             return None
         now = self._monotonic()
         delay = self._replacement_delay(state, now)
         continue_time = remaining_bytes / speed
         replace_time = delay + (retransmit_bytes / expected_speed)
         if continue_time < 2.0 * replace_time:
+            state.last_decision = "not_beneficial"
             return None
         if probe and self._probe_key is not None:
+            state.last_decision = "probe_in_progress"
             return None
         state.replacements += 1
         state.last_replacement_at = now + delay
@@ -285,15 +424,11 @@ class _SlowFlowCoordinator:
         state.probe = probe
         if probe:
             self._probe_key = object_key
+        state.phase = "waiting_replacement"
+        state.last_decision = "replacement_approved"
         decision = _SlowFlowDecision(
             object_key=object_key,
             replacement_number=state.replacements,
-            delay=delay,
-            probe=probe,
-        )
-        self._emit(
-            "lfs_slow_flow_replace",
-            replacement=state.replacements,
             delay=delay,
             probe=probe,
         )
@@ -314,6 +449,9 @@ class _SlowFlowCoordinator:
             or remaining_bytes < 0
         ):
             return None
+        decision = None
+        event = None
+        legacy_event = None
         with self._lock:
             state = self._states.get(object_key)
             if state is None:
@@ -323,86 +461,155 @@ class _SlowFlowCoordinator:
 
             prior_baseline = state.stable_baseline
             state.current_speed = speed
+            state.window_speed = float(speed)
+            state.remaining_bytes = min(state.total_bytes, remaining_bytes)
             state.speeds.append(speed)
             if len(state.speeds) > 12:
                 del state.speeds[:-12]
+            state.trend.append(float(speed))
+            if len(state.trend) > 12:
+                del state.trend[:-12]
 
             if state.awaiting_improvement:
+                state.phase = "verifying_reconnect"
                 state.fresh_speeds.append(speed)
-                if len(state.fresh_speeds) < _SLOW_FLOW_REQUIRED_WINDOWS:
-                    return None
-                improved = float(median(state.fresh_speeds[-3:]))
-                replaced_speed = state.replaced_speed or 0.0
-                peer_baseline = self._peer_baseline(object_key)
-                state.awaiting_improvement = False
-                state.fresh_speeds.clear()
-                if improved < replaced_speed * 2.0 or (
-                    peer_baseline is not None and improved < peer_baseline * 0.7
-                ):
-                    state.disabled = True
+                if len(state.fresh_speeds) >= _SLOW_FLOW_REQUIRED_WINDOWS:
+                    improved = float(median(state.fresh_speeds[-3:]))
+                    replaced_speed = state.replaced_speed or 0.0
+                    peer_baseline = self._peer_baseline(object_key)
+                    state.peer_baseline = peer_baseline
+                    state.awaiting_improvement = False
+                    state.fresh_speeds.clear()
+                    if improved < replaced_speed * 2.0 or (
+                        peer_baseline is not None and improved < peer_baseline * 0.7
+                    ):
+                        state.disabled = True
+                        state.phase = "replacement_disabled"
+                        state.last_decision = "improvement_failed"
+                        event = self._event_message(
+                            state,
+                            "improvement_failed",
+                            replacement=state.replacements,
+                        )
+                        legacy_event = (
+                            "lfs_slow_flow_disabled",
+                            {"reason": "no_improvement"},
+                        )
+                    else:
+                        state.stable_baseline = improved
+                        state.speeds = [improved] * 3
+                        state.phase = "recovered"
+                        state.last_decision = "improvement_passed"
+                        state.probe = False
+                        event = self._event_message(
+                            state,
+                            "improvement_passed",
+                            replacement=state.replacements,
+                        )
                     if self._probe_key == object_key:
                         self._probe_key = None
-                    self._emit("lfs_slow_flow_disabled", reason="no_improvement")
-                    return None
-                state.stable_baseline = improved
-                state.speeds = [improved] * 3
-                if self._probe_key == object_key:
-                    self._probe_key = None
-                state.probe = False
-                return None
-
-            if prior_baseline is None and len(state.speeds) >= 3:
-                state.stable_baseline = _slow_flow_stable_baseline(state.speeds[-3:])
-                prior_baseline = state.stable_baseline
-
-            if prior_baseline is None:
-                return None
-            if speed <= prior_baseline * 0.3:
-                state.degraded_windows += 1
             else:
-                state.degraded_windows = 0
+                if prior_baseline is None and len(state.speeds) >= 3:
+                    state.stable_baseline = _slow_flow_stable_baseline(
+                        state.speeds[-3:]
+                    )
+                    prior_baseline = state.stable_baseline
 
-            peer_baseline = self._peer_baseline(object_key)
-            if peer_baseline is not None:
-                slow = speed <= peer_baseline * 0.3 and speed <= prior_baseline * 0.5
-                expected_speed = peer_baseline
-            else:
-                slow = speed <= prior_baseline * 0.3
-                expected_speed = prior_baseline
-            state.slow_windows = state.slow_windows + 1 if slow else 0
+                if prior_baseline is None:
+                    state.phase = "establishing_baseline"
+                    state.last_decision = "none"
+                else:
+                    if speed <= prior_baseline * 0.3:
+                        state.degraded_windows += 1
+                    else:
+                        state.degraded_windows = 0
 
-            retransmit = (
-                state.total_bytes if retransmit_bytes is None else retransmit_bytes
-            )
-            if self._collective_slowdown():
-                return self._decide(
-                    object_key,
-                    state,
-                    speed=speed,
-                    remaining_bytes=remaining_bytes,
-                    retransmit_bytes=retransmit,
-                    expected_speed=prior_baseline,
-                    probe=True,
-                )
-            if self._collective_candidate():
-                return None
-            if self._probe_key is not None:
-                return None
-            if state.slow_windows < _SLOW_FLOW_REQUIRED_WINDOWS:
-                if not slow:
-                    recent_baseline = _slow_flow_stable_baseline(state.speeds[-3:])
-                    if recent_baseline is not None:
-                        state.stable_baseline = recent_baseline
-                return None
-            return self._decide(
-                object_key,
-                state,
-                speed=speed,
-                remaining_bytes=remaining_bytes,
-                retransmit_bytes=retransmit,
-                expected_speed=expected_speed,
-                probe=False,
-            )
+                    peer_baseline = self._peer_baseline(object_key)
+                    state.peer_baseline = peer_baseline
+                    if peer_baseline is not None:
+                        slow = (
+                            speed <= peer_baseline * 0.3
+                            and speed <= prior_baseline * 0.5
+                        )
+                        expected_speed = peer_baseline
+                    else:
+                        slow = speed <= prior_baseline * 0.3
+                        expected_speed = prior_baseline
+                    state.slow_windows = state.slow_windows + 1 if slow else 0
+                    state.phase = "suspected_slow" if slow else "stable"
+                    state.last_decision = "none"
+
+                    retransmit = (
+                        state.total_bytes
+                        if retransmit_bytes is None
+                        else retransmit_bytes
+                    )
+                    if self._collective_slowdown():
+                        decision = self._decide(
+                            object_key,
+                            state,
+                            speed=speed,
+                            remaining_bytes=remaining_bytes,
+                            retransmit_bytes=retransmit,
+                            expected_speed=prior_baseline,
+                            probe=True,
+                        )
+                    elif self._collective_candidate():
+                        state.last_decision = "collective_wait"
+                    elif self._probe_key is not None:
+                        state.last_decision = "probe_in_progress"
+                    elif state.slow_windows < _SLOW_FLOW_REQUIRED_WINDOWS:
+                        if not slow:
+                            recent_baseline = _slow_flow_stable_baseline(
+                                state.speeds[-3:]
+                            )
+                            if recent_baseline is not None:
+                                state.stable_baseline = recent_baseline
+                    else:
+                        decision = self._decide(
+                            object_key,
+                            state,
+                            speed=speed,
+                            remaining_bytes=remaining_bytes,
+                            retransmit_bytes=retransmit,
+                            expected_speed=expected_speed,
+                            probe=False,
+                        )
+                    if decision is not None:
+                        event = self._event_message(
+                            state,
+                            "replacement_approved",
+                            replacement=decision.replacement_number,
+                            delay=decision.delay,
+                            probe=decision.probe,
+                        )
+                        legacy_event = (
+                            "lfs_slow_flow_replace",
+                            {
+                                "replacement": decision.replacement_number,
+                                "delay": decision.delay,
+                                "probe": decision.probe,
+                            },
+                        )
+                    elif state.disabled:
+                        event = self._event_message(
+                            state,
+                            "replacement_disabled",
+                            replacement=state.replacements,
+                        )
+                    elif slow:
+                        event = self._event_message(
+                            state,
+                            "slow_observed",
+                            slow_windows=state.slow_windows,
+                        )
+            message = self._state_message(state)
+        self._publish(message)
+        if event is not None:
+            self._publish(event)
+        if legacy_event is not None:
+            self._emit(legacy_event[0], **legacy_event[1])
+        return decision
 
 
 class _SlowFlowReconnect(RuntimeError):
@@ -456,16 +663,23 @@ class _SlowFlowPayload:
         paced_elapsed = max(0.0, read_start - self._last_read_end)
         self._sample_elapsed += paced_elapsed
         if self._sample_elapsed >= _SLOW_FLOW_SAMPLE_SECONDS:
-            self._window_elapsed += self._sample_elapsed
+            sample_elapsed = self._sample_elapsed
+            sample_bytes = self._sample_bytes
+            self._window_elapsed += sample_elapsed
             self._window_bytes += self._sample_bytes
             self._sample_elapsed = 0.0
             self._sample_bytes = 0
+            remaining = max(
+                0,
+                self._total_bytes - self._confirmed_bytes - self._delivered_bytes,
+            )
+            self._coordinator.observe_sample(
+                self._object_key,
+                sample_bytes / sample_elapsed,
+                remaining,
+            )
             if self._window_elapsed >= _SLOW_FLOW_WINDOW_SECONDS:
                 speed = self._window_bytes / self._window_elapsed
-                remaining = max(
-                    0,
-                    self._total_bytes - self._confirmed_bytes - self._delivered_bytes,
-                )
                 decision = self._coordinator.observe_window(
                     self._object_key,
                     speed,
@@ -533,7 +747,12 @@ class _ResumableLfsTransferController:
         object_key = _lfs_object_key(operation)
         total_bytes = operation.upload_info.size
         identity = _lfs_source_identity(operation)
-        self._coordinator.register(object_key, total_bytes=total_bytes)
+        self._coordinator.register(
+            object_key,
+            total_bytes=total_bytes,
+            file_abbrev=str(operation.path_in_repo),
+            transfer_type="basic",
+        )
         succeeded = False
         try:
             while True:
@@ -571,7 +790,12 @@ class _ResumableLfsTransferController:
         total_bytes = operation.upload_info.size
         identity = _lfs_source_identity(operation)
         response_headers = []
-        self._coordinator.register(object_key, total_bytes=total_bytes)
+        self._coordinator.register(
+            object_key,
+            total_bytes=total_bytes,
+            file_abbrev=str(operation.path_in_repo),
+            transfer_type="multipart",
+        )
         succeeded = False
         try:
             for part_index, part_url in enumerate(sorted_urls):

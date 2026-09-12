@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 127
+BASELINE_INVARIANT_COUNT = 132
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -559,6 +559,7 @@ CAPABILITY_REGISTRY = {
             "test_resumable_recovery.py",
             "test_resumable_stats.py",
             "test_upload_batching.py",
+            "test_upload_observability.py",
             "test_upload_path_in_repo.py",
             "test_upload_progress.py",
             "test_upload_resumable.py",
@@ -667,7 +668,7 @@ CAPABILITY_REGISTRY = {
                 "test_lfs_slow_flow_recovery.py",
             ),
         ),
-        ("test_lfs_slow_flow_recovery.py",),
+        ("test_lfs_slow_flow_recovery.py", "test_upload_observability.py"),
         ("docs/architecture.md", "docs/upload_command_analysis.md"),
         ("offline-contract", "controlled-remote"),
         "partial",
@@ -1257,6 +1258,11 @@ CAPABILITY_REGISTRY = {
                 "test_environment_lifecycle_ownership.py",
                 "test_uninstaller.py",
             ),
+            _invariant(
+                "PORT-009",
+                "Fork, spawn, and available forkserver upload workers carry equivalent observations through one explicit process-safe contract without inherited callbacks or child snapshot writes.",
+                "test_resumable_recovery.py",
+            ),
         ),
         (
             "test_auth_repository_services_ownership.py",
@@ -1266,6 +1272,7 @@ CAPABILITY_REGISTRY = {
             "test_installer.py",
             "test_import_order_contract.py",
             "test_packaging_metadata.py",
+            "test_resumable_recovery.py",
             "test_src_layout_migration.py",
             "test_uninstaller.py",
             "test_update.py",
@@ -1364,11 +1371,13 @@ CAPABILITY_REGISTRY = {
             "test_download_redirect_security.py",
             "test_login_error_semantics.py",
             "test_refactor_behavior_guard.py",
+            "test_resumable_recovery.py",
             "test_sdk_exceptions.py",
             "test_sdk_upload_timeout.py",
             "test_upload_batching.py",
             "test_upload_error_classify.py",
             "test_upload_error_handling.py",
+            "test_upload_observability.py",
         ),
         ("docs/testing.md", "docs/architecture.md"),
         ("offline-contract", "security-contract"),
@@ -1384,8 +1393,35 @@ CAPABILITY_REGISTRY = {
                 "Upload monitor sessions are read-only, bounded, atomically persisted, and expose no credentials or source paths.",
                 "test_upload_observability.py",
             ),
+            _invariant(
+                "UPO-002",
+                "Every resumable LFS object has one stable anonymous Flow from registration through terminal state, including reconnects.",
+                "test_lfs_slow_flow_recovery.py",
+                "test_upload_observability.py",
+            ),
+            _invariant(
+                "UPO-003",
+                "Five-second display samples stay separate from thirty-second recovery windows and the bounded formal trend without changing recovery decisions.",
+                "test_lfs_slow_flow_recovery.py",
+            ),
+            _invariant(
+                "UPO-004",
+                "Structured Flow state, session totals, and critical events are bounded and idempotent, and observer or persistence failures cannot change upload outcomes or expose sensitive values.",
+                "test_lfs_slow_flow_recovery.py",
+                "test_upload_observability.py",
+            ),
+            _invariant(
+                "UPO-005",
+                "Resumable observations use a versioned, redacted, bounded, non-blocking child-to-parent channel whose failure cannot alter the independent upload result.",
+                "test_resumable_recovery.py",
+                "test_upload_observability.py",
+            ),
         ),
-        ("test_upload_observability.py",),
+        (
+            "test_lfs_slow_flow_recovery.py",
+            "test_resumable_recovery.py",
+            "test_upload_observability.py",
+        ),
         ("docs/features/upload-monitor.md", ".ai/TASK.md"),
         (
             "offline-contract",
@@ -1417,7 +1453,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "127 条可观察行为不变量",
+        "132 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),

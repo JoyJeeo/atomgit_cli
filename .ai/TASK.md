@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D01, D03, D04, D05, D06, D07, and D08 delivered)
+Status: active (D09 and D10 joint implementation)
 
 ## Successor Development Issue
 
@@ -11,10 +11,13 @@ Status: inactive (D01, D03, D04, D05, D06, D07, and D08 delivered)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
-  `D07 / LFS-03` 和 `D08 / LFS-04`；D02 已由 D01 解决并移除。
+  `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01` 和 `D10 / MON-02`；D02 已由
+  D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
-  `github/yuto` 限定推送。后续开发需要新的明确授权。
+  `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
+  开发底线、最终完整离线门禁和独立审查；维护者已接受结果并授权限定交付，当前进入
+  本地任务提交与 `yuto` 合并。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -77,6 +80,23 @@ Status: inactive (D01, D03, D04, D05, D06, D07, and D08 delivered)
   D08 并授权最终复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
   `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
   D09–D18 实施仍未授权。
+  维护者随后于 `2026-09-12` 接受 D09 的“协调器结构化状态、UploadSession 最新状态
+  覆盖、有界关键事件、5 秒显示采样与 30 秒正式窗口分离”方案，并明确要求将完整方案
+  写入本地开发 Issue。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`；
+  不授权激活 D09、创建分支、修改源码/测试/用户文档、运行实施验证、提交、合并、
+  推送、真实 AtomGit 操作或实施 D10–D18。
+  维护者随后明确接受 D10 的“父进程单一状态所有者、独立 256 条有界观测队列、
+  v1 脱敏 JSON envelope、与可靠结果队列彻底分离、中间显示样本允许降级丢失”方案，
+  并要求将完整开发方案写入本地开发 Issue。本次只授权更新 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md`；不授权激活 D09/D10、创建分支、修改源码/测试/用户文档、
+  运行实施验证、提交、合并、推送、真实 AtomGit 操作或实施 D11–D18。
+  维护者随后通过批注明确要求“开始联合开发 D09/D10”，授权激活本地 Issue、创建
+  基于 `yuto@75094a7` 的本地任务分支、修改 D09/D10 范围内源码、既有测试、最小
+  文档和开发底线，并运行离线验证；不授权提交、合并、推送、真实 AtomGit 操作或
+  实施 D11–D18。
+  维护者随后明确要求“自己验收一下 没问题就提交推送”；据此授权最终交付复验通过后
+  接受 D09/D10，提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录
+  交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D11–D18 仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -92,15 +112,21 @@ Status: inactive (D01, D03, D04, D05, D06, D07, and D08 delivered)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit 操作、PR、标签或发布。
 - D08 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D09–D18。
-- Next exact action: 等待维护者继续 D09 讨论或发出新的明确任务；不得直接实施
-  D09–D18。
+- D09/D10 delivery mode: 最终交付复验通过后提交本地任务分支、no-ff 合入 `yuto`，
+  并且只推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
+  D11–D18。
+- Next exact action: 提交 D09/D10 本地任务分支、no-ff 合入 `yuto`，记录交付结果后
+  仅推送 `github/yuto` 并核验远端一致。
 
 ### Repository Reconciliation
 
-当前分支 `yuto`。D07 实现提交 `23e51d7` 已通过 no-ff 合并提交 `d109e6b` 合入；任务
-分支保留在本地且未推送。当前 worktree 只剩五份既有 `.ai` 规范修改。Git 还包含
-R9、D01、D03、D04、D05 和 D06 的已交付提交；旧记录注明实现完成，因此不恢复为
-活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
+当前分支 `codex/d09-d10-upload-observability`，HEAD 仍为 `75094a7`，基于与
+`github/yuto` 一致的 `yuto@75094a7`。D08 实现提交 `16025c8` 已通过 no-ff 合并提交
+`9ee013c` 合入，交付记录提交 `75094a7` 已限定推送；D09/D10 修改尚未提交。当前
+worktree 保留五份既有 `.ai` 规范修改，并叠加获授权的 D09/D10 源码、既有测试、最小
+文档、开发底线及任务记录。Git 还包含 R9、D01、D03、D04、D05、D06 和 D07 的历史或
+已交付提交；旧记录不恢复为活跃任务。历史矛盾的完整整理仍属于 D18，本次没有将
+D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -1279,12 +1305,415 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
 - [x] 专项、完整离线门禁和独立审查通过。
 - [x] 维护者完成人工验收并授权适用的 Git/远程交付。
 
+### D09 Objective And Evidence
+
+让 resumable LFS 上传的每个 Flow 把真实速度、基线、低速窗口、替换次数、剩余字节、
+阶段和有限趋势写入上传会话快照，使 `atomgit monitor upload status` 不再只有 Flow
+表头。观测信息必须直接来自既有慢流协调器，不能从终端文字反推，也不能复制或改变
+恢复策略。
+
+当前 `UploadSession` 以 `flows=[]` 创建，只有通用字段更新和文字事件追加，没有 Flow
+upsert。CLI 的 LFS observer 只把事件 `kind` 作为消息保存，其他结构化详情被丢弃；
+`_SlowFlowCoordinator` 的速度、基线、低速和替换状态只保留在 `_states` 中，注册、
+5 秒采样、30 秒窗口、重连验证、完成和失败均未形成完整观测状态。monitor renderer
+虽会遍历 `flows`，但生产端从未填充该数组。
+
+本方案依据当前源码、既有测试、`docs/features/upload-monitor.md` 和可执行开发底线形成，
+未运行真实 AtomGit 上传。历史 R9 文本不是当前实现权威；实际源码与测试显示观测集成
+只完成了快照/界面外壳和少量事件接线。
+
+### D09 Accepted Behavior And State Contract
+
+- 每个 coordinator 内首次注册一个 LFS 对象时建立匿名 Flow 关联；同一对象的连接替换、
+  multipart 后续 part 和改善验证沿用该关联。最终会话显示使用 `Flow-01`、`Flow-02`
+  等匿名编号；完整 OID、SHA、源路径和远端路径不得离开上传内部。
+- Flow 注册后立即产生状态，尚无速度时显示 `--` 和“建立基线”；不能等到低速替换后
+  才出现。文件列只允许使用现有规则生成的 basename 最后十个 Unicode 字符缩写，不
+  保存完整源路径或远端路径。
+- `_SlowFlowPayload` 每约 5 秒计算 `sample_speed` 和估计剩余字节，仅用于显示；每约
+  30 秒继续调用既有 `observe_window`，更新 `window_speed`、自身/同伴基线、低速窗口、
+  替换次数和决策解释。5 秒数据不得进入或改变慢流策略。
+- Flow 阶段使用稳定内部状态并由 renderer 转换为中文：建立基线、稳定、疑似低速、
+  等待替换、重连后验证、已恢复、自动替换已停用、完成、失败。注册、正式窗口、替换
+  批准、replacement finished、改善成功/失败及 PUT 终态均必须更新最新状态。
+- 展示趋势与策略 `state.speeds` 分离，只保存实际产生的最近 12 个正式窗口；策略在
+  重连后重置或校准自身窗口时不得伪造、清空或改写用户看到的历史趋势。
+- 采用“完整最新 `flow_state` 覆盖 + 低频 `flow_event` 追加”。普通 5 秒采样、重复
+  稳定状态和普通剩余字节变化不进入事件队列；低速阶段变化、替换、改善、停用、完成
+  和失败可进入最多 200 条的关键事件队列。
+- `UploadSession` 按匿名关联覆盖 Flow，而不是追加重复行；从最新状态幂等计算
+  `active_flows`、`peak_flows`、`replacement_total`、`improvement_total` 和
+  `disabled_total`。重复或迟到的相同状态不能膨胀累计值。
+- 协调器锁内只复制待发布的普通数据，实际 observer 调用在锁外执行。callback 异常、
+  字段错误、序列化失败、快照不可写或 monitor 崩溃均不得改变上传决策、重试、结果或
+  CLI 退出码。
+- Flow 状态和事件只接受白名单字段、固定状态/原因码及有界安全数值；不得包含 token、
+  URL、请求头、响应正文、异常原文、源/远端路径、完整 OID 或可用于重放请求的内容。
+- D09 只定义状态生产、归并、持久化字段和 Flow 行展示。子进程到父进程的可靠传递由
+  已接受的 D10 合同实现，批次/文件进度由 D11 决定；D09/D10 必须联合交付，不得只
+  交付 D09 或提前声称独立 monitor 在 `fork`、`spawn`、`forkserver` 下均已修复。
+
+### D09 Implementation Scope
+
+1. 在 `src/atomgit/adapters/lfs/service.py` 扩展既有 `_SlowFlowState` 和协调器 observer：
+   增加匿名关联、5 秒显示采样、独立 12 窗口趋势、阶段/决策状态及成功/失败终态；复用
+   既有速度和恢复事实，不新增恢复算法或生产模块。
+2. 在 `src/atomgit/infrastructure/upload_observe.py` 为 `UploadSession` 增加单一结构化
+   观测入口，严格验证白名单并用新列表/字典覆盖 Flow 状态，幂等维护会话计数；保留
+   现有原子快照、权限、1 秒限频、2 秒 heartbeat 和旧快照兼容。
+3. 仅补齐 Flow 必需展示：文件缩写、5 秒/30 秒速度、相对基线、低速/替换计数、趋势
+   和阶段。D14 的时间格式、D15 的刷新方式以及其他 monitor UX 不在本次修改范围。
+4. `src/atomgit/interfaces/cli/commands/transfers.py` 的最终结构化接线必须服从后续已接受
+   的 D10 数据合同，不能继续用只传 `kind` 的 lambda，也不能先提交一个仅适用于
+   `fork` 的临时实现。
+5. 扩展既有 `tests/test_lfs_slow_flow_recovery.py` 和
+   `tests/test_upload_observability.py`；更新开发底线及最小权威文档。不新增依赖、公开
+   命令/参数、SDK 签名、生产模块或测试脚本。
+
+### D09 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`UPLOAD-LFS-RECOVERY`、`UPLOAD-RESUMABLE`、
+`ERROR-REDACTION`、`PORTABILITY` 和 `FLOOR-REGISTRY`。
+
+### D09 Protected Existing Invariants
+
+- 现有 30 秒正式窗口、自身/同伴稳定基线、连续三次低速、收益检查、整体降速探针、
+  `2/8` 秒首次抖动、`60/180` 秒冷却、改善要求和每对象最多三次替换完全不变。
+- basic PUT 从对象起点重传、multipart 保留已确认 part、源文件身份检查、LFS Batch
+  回退、异常传播和上传成功/失败判断不得退化。
+- CLI、原生 SDK 和历史 API 的命令、参数、签名、返回值、错误层次、model/dataset、
+  revision、batch 和 timeout 行为保持兼容；普通及非 resumable 上传不产生虚假 Flow。
+- observer、publisher、monitor 或快照故障不阻塞上传，不触发或禁止连接替换，不改变
+  错误与退出码；全局 callback 在成功、失败和取消后仍须恢复。
+- 现有快照目录 `0700`、文件 `0600`、同目录临时文件和 `os.replace` 原子更新保持；
+  旧 v1 空 Flow 快照仍可读取，cache clear 边界不变。
+- `huggingface-hub==1.1.7`、`datasets==4.4.1`、Python >=3.9、七目录架构、source/
+  editable/wheel/sdist、93 个测试脚本及所有既有能力/不变量不得退化。
+
+### D09 New Or Changed Invariants
+
+- `UPO-002`：每个 resumable LFS 对象从注册到终态拥有稳定匿名、可覆盖且安全脱敏的
+  Flow 状态；同一对象重连不产生重复行。
+- `UPO-003`：约 5 秒速度只用于显示，约 30 秒正式窗口和独立 12 窗口趋势来自真实
+  payload 消费；新增观测对既有慢流策略决策为零影响。
+- `UPO-004`：结构化状态、会话计数和关键事件有界且幂等；任何 observer、归并或
+  持久化失败都不影响上传结果或泄露敏感内容。
+- 实施时预计将当前 28 个能力、127 条不变量、93 个测试脚本更新为 28 个能力、130 条
+  不变量、93 个测试脚本；实际数字必须以实施时 Git 和可执行登记册为准，不得预先
+  声称登记已经完成。
+
+### D09 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| Flow 注册但尚无采样 | 立即出现一个匿名 Flow；速度为 `--`，阶段为建立基线 |
+| 受控时钟推进约 5 秒 | `sample_speed` 和剩余字节更新；慢流策略状态和决定不变 |
+| 连续 30 秒正式窗口 | window speed、基线、peer baseline、低速窗口和真实趋势一致 |
+| 同一对象触发替换、重连和改善 | Flow ID 不变；替换计数、阶段、事件和改善汇总只增加一次 |
+| 改善不足或次数耗尽 | 阶段为停用，原因准确，不再触发额外替换或重复计数 |
+| basic/multipart 成功与失败 | 写入完成/失败终态，active count 收敛且现有传输语义不变 |
+| 超过 12 个窗口、200 个事件或重复状态 | 趋势/事件限长；最新状态保留且累计值不膨胀 |
+| callback 抛错、畸形/越界/敏感 payload、快照不可写 | 状态被安全丢弃，上传决定、结果、退出码及脱敏不变 |
+| 旧空 Flow 快照、普通和非 resumable 上传 | 继续兼容读取；不制造精确速度或虚假 Flow |
+
+优先扩展 `tests/test_lfs_slow_flow_recovery.py` 与
+`tests/test_upload_observability.py`，不创建新测试脚本。红灯必须通过真实
+`_SlowFlowCoordinator -> structured observer -> UploadSession -> snapshot/render`
+边界证明旧实现保持 `flows=[]` 或缺少生命周期/速度状态；不能只断言一个新 helper。
+
+实施完成后在 `atomgit_cli` conda 环境执行：
+
+```bash
+python tests/test_lfs_slow_flow_recovery.py
+python tests/test_upload_observability.py
+python tests/test_upload_resumable.py
+python tests/test_development_floor.py
+python tests/test_structure_guard.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+完整基线和静态门禁必须在最后一次修正后重跑并记录；真实 AtomGit 上传不是 D09 本地
+状态合同的必需证据，不得以离线 mock 宣称远端已验证。
+
+### D09 Implementation Phases And Acceptance
+
+1. 在 D10 方案也获接受且维护者单独激活后，冻结现有 observer、慢流状态、上传入口和
+   开发底线，添加 D09 红灯。验证：旧实现因 Flow 空缺或状态不完整失败，既有断言通过。
+2. 实现协调器结构化状态、5 秒显示采样、独立趋势和完整生命周期。验证：慢流恢复专项
+   全部通过，新增观测前后的 decision、delay、replacement count 完全相同。
+3. 实现 UploadSession 白名单归并、幂等计数、限长快照和 Flow 展示。验证：旧/新快照、
+   重复更新、终态、异常和脱敏专项通过。
+4. 按已接受的 D10 合同接入上传子进程与父进程；在此之前 D09 阶段只能记为本地组件
+   完成，不能进入交付验收。验证：实际父进程持有唯一会话状态并写出完整 Flow 快照。
+5. 同步 `tests/development_floor_contract.py`、`docs/features/upload-monitor.md`、
+   `docs/development_floor.md` 和必要架构说明；运行完整离线门禁并按 `.ai/REVIEW.md`
+   独立审查。无未解决发现后才进入人工验收。
+
+### D09 Non-Goals And Residual Risks
+
+- 不处理 D10 跨进程协议、D11 批次/文件进度、D12 heartbeat、D13 自动退出、D14 时间
+  显示、D15 刷屏、D16 仓库类型警告或 D17 完整真实跨进程测试范围。
+- 不提供下载监控、暂停/取消上传、Web UI、常驻 daemon、原始 debug log 或新的 TUI
+  依赖；不改变上传恢复策略或远端仓库。
+- D10 接线前，在 `fork` 下继承 callback 仍可能写父进程副本，在 `spawn` 下可能完全
+  收不到状态；这是已知阻塞依赖，不能用 D09 单元测试掩盖。
+- 真实网络节奏、Windows/Linux 多进程调度和真实 Python 3.9 解释器仍是后续验收需明确
+  报告的边界；任何真实 AtomGit 写入必须获得单独授权。
+
+### D09 Compatibility And Rollback
+
+- 不改变公开 CLI/SDK/API；快照继续使用 v1，新增行为主要是填充已有 Flow 字段。旧
+  快照缺失 Flow 或新增字段时继续按 `--`/空表降级，未知字段被忽略。
+- 不迁移 HF metadata、上传投影、源文件或远端数据。若实现回归，可整体回退 D09/D10
+  对应实现提交；新快照仍是普通 JSON，旧版本会忽略额外字段。
+- 必要时可使用既有 `atomgit cache clear` 清理观测快照，但不能触及源文件、续传元数据
+  或远端内容。
+
+### D09 Activation Status
+
+- [x] 维护者接受 D09 完整方案并授权登记到本地开发 Issue。
+- [x] D10 跨进程数据合同已讨论并接受。
+- [x] 维护者单独授权激活 D09 实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D10 Objective And Evidence
+
+在 resumable 上传子进程与 CLI 父进程之间建立跨 `fork`、`spawn` 和
+`forkserver` 同义的结构化观测数据合同，使 D09 的 Flow 状态只由父进程
+归并并写入 JSON 快照，同时保证观测拥塞、字段错误或 monitor 故障不影响
+上传结果、退出码、取消和断点元数据。
+
+当前 CLI 在父进程创建 `UploadSession` 和后台 `SnapshotPublisher`，然后
+`adapters/upload/resumable.py` 另建子进程执行 HF worker。
+`set_upload_observer(lambda ...)` 只是进程内全局回调：`fork` 会让子进程继承
+`UploadSession` 副本并直接写快照，父进程发布器又可用旧副本覆盖；
+`spawn` / `forkserver` 不继承该回调，状态可完全丢失。父进程当前在
+`process.join()` 中阻塞，只有一条上传结果队列，没有运行期间的状态通道。
+monitor 只读 JSON 快照，无法直接访问上传子进程或修复该缺口。
+
+证据来自当前源码、`tests/test_upload_observability.py`、
+`tests/test_resumable_recovery.py`、`tests/test_upload_resumable.py`、
+`tests/test_lfs_slow_flow_recovery.py` 和 `docs/features/upload-monitor.md` 的只读核对；
+未运行真实 AtomGit 上传。
+
+### D10 Accepted Transport And Ownership Contract
+
+- 父进程是 `UploadSession`、会话 Flow 映射和 JSON 快照的唯一写入者。
+  子进程不得持有会话对象、publisher 线程、快照路径或父进程 callback。
+- 保留现有独立 `result_queue` 传递必须可靠到达的上传成功/失败结果；
+  另建 `multiprocessing.Queue(maxsize=256)` 作为 `observation_queue`。
+  两条队列不混用，状态洪水不得阻塞或改写结果 envelope。
+- 观测队列只传 UTF-8 JSON bytes。子进程使用 `ensure_ascii=False`、
+  `allow_nan=False` 和紧凑分隔符序列化；单条消息最大 16 KiB。序列化失败、
+  消息超限、队列满或队列关闭时丢弃当前观测消息，不等待、不重试。
+- 内部 envelope 固定为 v1，且只允许 `version`、`type`、`sequence`、
+  `flow_key` 和 `payload`。`version` 必须为 `1`；`type` 只能为
+  `flow_state` 或 `flow_event`；`sequence` 是子进程流中严格递增的正整数；
+  `flow_key` 是 coordinator 内部匿名正整数，不得使用 OID、SHA 或路径。
+- `flow_state.payload` 只允许 D09 的安全字段：最多十个 Unicode 字符的
+  `file_abbrev`，`basic` / `multipart` 传输类型，有界大小与剩余字节，
+  有限非负速度/基线，`0..3` 低速窗口和替换次数，固定阶段/决策码，
+  以及最多 12 个有限正式窗口速度。
+- `flow_event.payload` 只允许固定事件码及必要安全数值：进入低速观察、
+  批准替换、开始新连接、改善通过/失败、自动替换停用与 Flow 完成/失败。
+  普通 5 秒样本和重复稳定状态不进入事件历史。
+- envelope 不携带 session ID、仓库名、源/远程路径、完整文件名、OID、
+  SHA、token、URL、请求头、响应正文、异常原文或可重放请求的信息。
+  墙上时间由父进程接收合法消息时生成，子进程不传时间戳。
+- 每次 `_execute_resumable_upload_process` 调用由父进程建立私有
+  `source_id`，不持久化到快照。父进程将 `(source_id, flow_key)` 映射为会话内
+  唯一的 `Flow-01`、`Flow-02` 等编号；同一 coordinator 中的 basic 重连、
+  multipart 后续 part 和改善验证沿用同一 `flow_key`。
+- 父进程按 `(source_id, sequence)` 拒绝重复或迟到消息。非法 JSON、未知
+  版本/类型、多余字段、越界数值或敏感 payload 整条丢弃，不创建 Flow、
+  不增加计数，也不更新会话时间。
+- 子进程启动后首先清除可能由 `fork` 继承的父进程 observer，再把
+  D09 coordinator 的结构化输出写入显式传入的观测队列。coordinator 锁内只
+  复制待发布数据，实际 callback 和序列化/入队在锁外执行。
+- 父进程用约 100 ms 的 `process.join(timeout)` 与队列排空循环取代一次
+  无期限 `join()`。子进程退出后，先排空已成功入队的消息，再读取和
+  验证原有 result envelope。
+- 父进程根据已确认的成功、失败、无结果崩溃或 Ctrl+C，用固定安全
+  原因将当前 source 中仍活跃的已知 Flow 收敛为完成、失败或中断。不为
+  从未注册的 Flow 伪造记录，不改变原有上传结果分类、异常或 CLI 退出码。
+- 队列满或子进程被 `SIGKILL` / `os._exit` 截断时，允许丢失未成功入队的
+  中间显示样本。`flow_state` 是完整覆盖值，后续样本可自愈；父进程对已知
+  Flow 的终态收敛和独立可靠的上传结果不受影响。
+
+### D10 Implementation Scope
+
+1. 在 `src/atomgit/adapters/upload/resumable.py` 增加最小的 v1 JSON envelope
+   编解码、有界非阻塞子进程发送器、独立观测队列和父进程排空循环。
+   `_run_resumable_upload` 只在末尾增加可选观测队列参数，保持既有调用和补丁接缝。
+2. 在 `src/atomgit/adapters/lfs/service.py` 与 D09 一起产生匿名、白名单、完整
+   覆盖的 Flow 状态和低频关键事件；不在该模块写 JSON 快照或实现跨进程存储。
+3. 在 `src/atomgit/infrastructure/upload_observe.py` 为 `UploadSession` 增加单一
+   结构化入口，完成 envelope/payload 严格验证、source/序号去重、会话 Flow ID
+   映射、完整状态覆盖和幂等累计。继续使用新列表/字典提交快照，不让
+   publisher 线程观察到原地修改的共享结构。
+4. 在 `src/atomgit/interfaces/cli/commands/transfers.py` 将只保存 `kind` 的 lambda
+   改为完整结构化入口，并保持成功、失败、取消后的 observer 恢复和会话关闭。
+5. 与 D09 共同更新 `tests/development_floor_contract.py`、
+   `docs/features/upload-monitor.md`、`docs/development_floor.md` 和必要的架构说明。
+   不新增生产模块、外部依赖、公开命令/参数或测试脚本。
+
+### D10 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`UPLOAD-LFS-RECOVERY`、`UPLOAD-RESUMABLE`、
+`ERROR-REDACTION`、`PORTABILITY`、`ARCHITECTURE` 和 `FLOOR-REGISTRY`。
+
+### D10 Protected Existing Invariants
+
+- D09 的 5 秒显示采样、30 秒正式窗口、独立趋势、阶段、白名单和幂等归并
+  合同保持；新传输通道不改变慢流判断、替换次数、等待、改善要求或结果。
+- 子进程必须继续传回一个经严格验证的成功或失败 result envelope；空结果、
+  非法结果、崩溃和成功后异常退出仍必须失败，不得因观测消息误报成功。
+- Ctrl+C 仍停止本次上传并通过现有 terminate/kill/join 路径回收子进程；
+  观测队列和 callback 不得吞掉 `KeyboardInterrupt`。
+- D05–D08 的 pointer 确认、错误分类、已创建/未确认状态、私有待对账凭据、
+  `parent_commit` 并发保护和无重复远程写入保持。
+- CLI、原生 SDK 和历史 API 的公开命令、参数、签名、返回值、错误层次、
+  model/dataset、revision、batch 和 timeout 行为保持；普通及非 resumable 上传
+  不生成虚假 Flow。
+- 快照目录 `0700`、文件 `0600`、同目录临时文件与 `os.replace` 原子替换、
+  1 秒写入限频、2 秒 heartbeat、旧 v1 快照读取和 cache clear 边界不退化。
+- `huggingface-hub==1.1.7`、`datasets==4.4.1`、Python >=3.9、七目录架构、
+  source/editable/wheel/sdist、93 个测试脚本及全部既有能力/不变量不得退化。
+
+### D10 New Or Changed Invariants
+
+- `UPO-005`：resumable 观测使用显式、版本化、脱敏、有界且非阻塞的子进程
+  到父进程通道；父进程是会话和快照的唯一写入者，观测故障不影响上传结果。
+- `PORT-009`：`fork`、`spawn` 和可用时的 `forkserver` 均通过同一显式数据
+  合同向父进程传递同义状态；不依赖继承 callback 或子进程直接写快照。
+- D09/D10 联合实施时预计将 28 个能力、127 条不变量、93 个测试脚本更新为
+  28 个能力、132 条不变量、93 个测试脚本。实际数字必须以实施时 Git 和
+  可执行登记册为准，不得预先声称登记已完成。
+
+### D10 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| `fork` 子进程发送状态 | 不调用继承的会话 callback，只由父进程归并和写快照 |
+| `spawn` / `forkserver` 受控发送 | 不依赖内存继承，父进程收到同义、同序消息 |
+| 同一 Flow 重连、multipart 后续 part | `flow_key` 和会话 Flow ID 不变，不增加重复行 |
+| 不同批次或子进程 source 复用相同 `flow_key` | 分配不同会话 Flow ID，状态不相互覆盖 |
+| 重复/迟到序号 | 旧状态被丢弃，趋势、累计值和终态不回退 |
+| 非法 JSON、未知版本/类型、多余/越界/敏感字段 | 整条安全丢弃，不建 Flow、不写快照、不泄露信息 |
+| 单条超过 16 KiB 或队列满 | 发送立即返回；中间样本可丢弃，上传继续 |
+| 观测队列洪水 | 独立 result 仍能送达并准确分类成功/失败 |
+| callback 抛错、publisher 或快照不可写 | 观测降级，上传决策、结果和退出码不变 |
+| 成功、报告失败、无结果、崩溃、成功后崩溃、Ctrl+C | 已知活跃 Flow 安全收敛，既有结果分类和子进程回收不变 |
+| 旧 v1 空 Flow 快照、普通/非 resumable 上传 | 继续兼容，不制造虚假 Flow |
+
+优先扩展 `tests/test_upload_observability.py`、`tests/test_resumable_recovery.py`、
+`tests/test_upload_resumable.py` 和 `tests/test_lfs_slow_flow_recovery.py`，必要时同步
+`tests/test_upload_batching.py`、`tests/test_development_floor.py` 和
+`tests/test_structure_guard.py`，但不新增测试脚本。D10 红灯必须直接证明旧
+实现的 callback 继承/丢失或父进程覆盖问题，不能只断言一个新 helper。
+
+实施完成后在 `atomgit_cli` conda 环境执行：
+
+```bash
+python tests/test_lfs_slow_flow_recovery.py
+python tests/test_upload_observability.py
+python tests/test_resumable_recovery.py
+python tests/test_upload_resumable.py
+python tests/test_upload_batching.py
+python tests/test_development_floor.py
+python tests/test_structure_guard.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+最后一次修正后必须重跑完整离线基线和静态门禁，并按 `.ai/REVIEW.md`
+执行独立审查。真实 AtomGit 写入不是 D09/D10 本地状态合同的必需证据，
+未获授权时不得执行或用离线 mock 代替声称。
+
+### D10 Implementation Phases And Acceptance
+
+1. 维护者单独激活后，从 `yuto@75094a7` 创建本地 D09/D10 任务分支，
+   冻结当前源码、进程结果合同、D09 状态字段和发展底线，先添加红灯。
+   验证：旧实现在至少一个真实父子进程边界上失败，既有断言继续通过。
+2. 完成 D09 coordinator 结构化状态、5 秒显示样本、30 秒正式窗口、独立
+   趋势和完整生命周期。验证：慢流恢复专项通过，新增观测前后的决策、
+   delay 和 replacement count 完全一致。
+3. 实现 D10 v1 JSON 消息、非阻塞子进程发送、独立有界队列与父进程
+   排空循环。验证：可用启动方式同义，洪水不阻塞 result，失败/崩溃/
+   取消的结果和清理不变。
+4. 实现 `UploadSession` 严格验证、序号去重、会话 Flow 映射、幂等计数和终态
+   收敛，再完成 CLI 结构化接线。验证：父进程持有唯一会话并写出完整
+   Flow 快照，迟到/非法/敏感消息不改变状态。
+5. 同步用户文档、架构、开发底线及 D09/D10 证据；执行专项、完整离线门禁和
+   独立审查。无未解决发现后才进入人工验收；人工验收不自动授权提交或远程操作。
+
+验收必须同时满足：父进程是唯一快照写入者；三种可用启动方式使用同一数据
+合同；同一 Flow 重连不重复；不同 source 不冲突；迟到/非法/超限消息失败关闭；
+观测洪水、callback、publisher、快照或 monitor 故障不影响上传；崩溃/取消后已知 Flow
+收敛且子进程回收；脱敏合同、公开兼容、完整基线和独立审查全部通过。
+
+### D10 Non-Goals And Residual Risks
+
+- 不更新 D11 的批次/文件进度，不处理 D12–D17 的 heartbeat、monitor 退出、
+  时间格式、刷屏、仓库类型警告和完整真实命令链路。D09/D10 实施后仍不得
+  声称整个 monitor 问题已修复。
+- 不提供下载监控、暂停/取消上传、Web UI、常驻 daemon、socket、共享内存、
+  外部消息系统或新 TUI 依赖。
+- 观测是有界 best-effort；队列满或进程被 `SIGKILL` / `os._exit` 截断时，
+  最后一个未成功入队的显示样本可丢失。后续完整状态可自愈，父进程只能对已知
+  Flow 收敛终态，不能补造从未成功注册的 Flow 历史。
+- 当前生产启动方式选择保持不变；D10 保证数据合同不依赖内存继承，
+  但 Windows/Linux 真实调度、真实 Python 3.9 和长时间网络节奏仍是交付时必须报告的
+  未验证边界。D17 仍负责真实 CLI 上传子进程、JSON 快照和独立 monitor
+  命令的端到端覆盖。
+- 真实 AtomGit 写入、PR、标签、发布、提交、合并和推送未授权。
+
+### D10 Compatibility And Rollback
+
+- 不改公开 CLI/SDK/API；快照继续使用 v1，旧快照缺少 Flow 或新字段时按
+  `--` / 空表降级，未知字段被忽略。
+- `_run_resumable_upload` 的内部补丁接缝保留；观测队列参数仅能作为末尾可选值增加，
+  原有位置参数调用不失效。result envelope 的字段、分类和验证保持。
+- 无持久数据迁移；新版本运行后自然写出包含 Flow 的 v1 快照，不修改 HF metadata、
+  上传投影、源文件或远程数据。
+- 若实现回归，必须整体回退 D09/D10 实现提交，不得只保留子进程状态生产或
+  只回退跨进程通道。新快照仍是普通 JSON，旧版本可忽略新字段。
+- 必要时可用既有 `atomgit cache clear` 清理观测快照，但不得删除源文件、
+  resumable 元数据、D08 待对账凭据或远程内容。
+
+### D10 Activation Status
+
+- [x] 维护者接受 D10 完整方案并授权登记到本地开发 Issue。
+- [x] 维护者单独授权激活 D09/D10 联合实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、D09 状态生产、D10 跨进程通道、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D09/D10 Independent Review
+
+- Procedure: 按 `.ai/REVIEW.md` 以独立审查角色核对任务合同、完整源码和测试差异、
+  用户及 AI 文档、锁定依赖版本/签名、最终离线门禁、凭证模式、二进制和生成物状态。
+- Findings: 首轮 P2 的观测队列创建/清理异常隔离已修复并增加回归；续接复核发现的
+  P3 陈旧当前状态和 127 条旧登记计数已校正。最终复核无开放 P0/P1/P2/P3 发现。
+- Missing evidence: 未执行真实 AtomGit、Windows/Linux、独立 Python 3.9 解释器或
+  D17 真实 CLI/快照/monitor 端到端链路；这些均为已记录的范围外或后续验证边界。
+- Verdict: `APPROVED`。该结论不授权提交、合并、推送、Issue 关闭、发布或远程写入。
+
 ### Current Handoff Snapshot
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d08-resumable-commit-recovery`，基线 `yuto@8e8ae07` 与 `github/yuto`
-  一致；D07 实现提交 `23e51d7` 已由 no-ff 合并提交
-  `d109e6b` 合入，任务分支保留在本地且不推送。
+  `codex/d09-d10-upload-observability`，基于 `yuto@75094a7`；D09/D10 已联合激活，
+  已通过最终离线门禁和独立审查，当前等待人工验收。D08 已通过任务提交 `16025c8` 和 no-ff 合并提交
+  `9ee013c` 完成限定交付，D08 任务分支保留在本地且不推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
 - D01 任务提交：`a4d7216`（fix(upload): remove total upload deadline）。
@@ -1297,9 +1726,9 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入后续 Issue；本次只在 `.ai/TASK.md` 和
-  `.ai/ISSUE_DISCUSSION.md` 叠加 D08 方案登记。D06 任务分支保留在本地且未推送，
-  没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
+  worktree，不能将其误归入后续 Issue；本次叠加了获授权的 D09/D10 源码、既有测试、
+  最小文档、开发底线和任务记录。D06–D08 任务分支保留在本地且未推送，没有修改
+  `main`、其他远端分支或真实 AtomGit 仓库。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -1335,8 +1764,28 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
 - D08 交付：任务提交 `16025c8`，no-ff 合并提交 `9ee013c`；仅推送并核验
   `github/yuto`，任务分支保留在本地且未推送。没有修改 `main`、其他远端分支或真实
   AtomGit 仓库。
-- 最近完成：D08 已完成最终复验、审查、提交、本地 no-ff 合并和限定推送交付；开发
-  Issue 当前 inactive。D07 及更早已交付项保持不变。
+- D09/D10 红灯：旧实现不接受 coordinator `observation_callback`，缺少
+  `UploadSession.observe`，并且 `spawn`、`fork`、`forkserver` 均无法通过显式通道把
+  Flow 状态交给父进程；原有恢复决策、结果分类和回收断言保持通过。
+- D09/D10 实现：协调器产生匿名完整 Flow 状态、独立 5 秒显示样本、30 秒正式窗口、
+  12 项趋势和有界事件；resumable 子进程使用独立 256 条、单条 16 KiB 的 v1 JSON
+  观测队列，父进程严格校验、去重、归并和收敛已知 Flow，且是快照唯一写入者。
+- D09/D10 专项：慢流恢复 33/33、上传观测 22/22、多进程恢复 81/81、resumable 入口
+  61/61、上传批次 16/16、dataset resumable 11/11、上传错误 29/29、开发底线 15/15、
+  结构 18/18、打包与格式 13/13 通过。`spawn`、`fork`、`forkserver` 均使用同一显式
+  合同；沙箱限制下的 forkserver 和用户缓存权限专项已在沙箱外离线运行。
+- D09/D10 完整门禁：首轮实现后为 92/93，唯一失败是既有 dataset inline Queue 替身
+  未接受新有界队列接口；补齐后为 93 passed in 101.07s。首轮审查发现观测队列创建和
+  清理异常未完全隔离（P2），修复并新增回归后多进程专项为 81/81，最终完整基线为
+  93 passed in 106.16s。最后一处文档校正后再次在 `atomgit_cli` 环境运行完整门禁，
+  结果为 **93 passed in 106.38s**；compileall、pip check、打包 13/13、锁定依赖
+  版本/签名、格式债务、凭证模式、二进制差异和 `git diff --check` 均通过。
+- D09/D10 交付复验：维护者授权后再次运行 `python tests/run_cli_baseline.py`，结果为
+  **93 passed in 106.13s**；compileall、pip check、打包 13/13、凭证模式、二进制、
+  未跟踪生成物和 `git diff --check` 再次通过，`github/yuto` 仍为基线 `75094a7`。
+- D09/D10 独立审查：首轮 P2 和续接复核的 P3 文档一致性问题均已修复；最终无开放
+  P0/P1/P2/P3 发现，结论 `APPROVED`。真实 AtomGit、Windows/Linux、独立 Python 3.9
+  和 D17 真实端到端链路未运行；该结论不授权提交、合并或推送。
 - D04 变更：`src/atomgit/adapters/upload/{projection,service}.py`、
   `tests/{test_upload_batching,development_floor_contract,packaging_contract,structure_contract}.py`、
   `docs/{upload_command_analysis,development_floor}.md`、`.ai/{TASK,ISSUE_DISCUSSION}.md`，
@@ -1360,11 +1809,12 @@ SDK 错误只显示 pointer 验证失败，用户不能区分远端已写入和�
   `.ai/{ARCHITECTURE,DEVELOPMENT_FLOOR,ISSUE_DISCUSSION,TASK,TESTING}.md`。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 的未提交修改继续原样保留；
-  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 还叠加了获授权的 D08 未激活方案记录；
+  `.ai/ISSUE_DISCUSSION.md` 和 `.ai/TASK.md` 还叠加了获授权的 D09/D10 方案与实施记录；
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：等待维护者继续 D09 讨论或发出新的明确任务，不实施 D09–D18。
+- 下一步：按维护者授权提交 D09/D10、本地 no-ff 合入 `yuto`、记录交付结果，并且
+  只推送和核验 `github/yuto`；不推送任务分支，不执行真实 AtomGit 或 D11–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。

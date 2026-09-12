@@ -3,8 +3,10 @@
 
 import importlib
 import io
+import json
 import multiprocessing
 import os
+import queue
 import sys
 import tempfile
 import time
@@ -24,7 +26,7 @@ def check(name, condition, detail=""):
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
-def offline_child(result_queue, outcome, ready):
+def offline_child(result_queue, outcome, ready, observation_queue=None):
     if outcome == "cancel":
         ready.set()
         time.sleep(30)
@@ -42,6 +44,39 @@ def offline_child(result_queue, outcome, ready):
     elif outcome == "invalid":
         result_queue.put(("yes", None))
     else:
+        if outcome == "invalid-observation" and observation_queue is not None:
+            observation_queue.put(b"not-json")
+        elif outcome in ("observe", "flood") and observation_queue is not None:
+            count = 1_000 if outcome == "flood" else 1
+            for sequence in range(1, count + 1):
+                encoded = json.dumps(
+                    {
+                        "version": 1,
+                        "type": "flow_state",
+                        "sequence": sequence,
+                        "flow_key": 1,
+                        "payload": {
+                            "file_abbrev": "source.bin",
+                            "type": "basic",
+                            "size": 100,
+                            "remaining_bytes": 80,
+                            "sample_speed": 20.0,
+                            "window_speed": None,
+                            "stable_baseline": None,
+                            "peer_baseline": None,
+                            "slow_windows": 0,
+                            "replacement_count": 0,
+                            "phase": "establishing_baseline",
+                            "last_decision": "none",
+                            "trend": [],
+                        },
+                    },
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                try:
+                    observation_queue.put_nowait(encoded)
+                except queue.Full:
+                    break
         result_queue.put((True, {"recovered": 0}))
 
 
@@ -58,12 +93,81 @@ def acquire_projection_lock(folder_path, acquired):
         acquired.set()
 
 
+def observation_failure_checks():
+    resumable = importlib.import_module("atomgit.adapters.upload.resumable")
+    result_queue = queue.Queue()
+
+    class FinishedProcess:
+        daemon = False
+        exitcode = 0
+
+        def __init__(self, args):
+            self._result_queue = args[2]
+
+        def start(self):
+            self._result_queue.put((True, {"recovered": 0}))
+
+        def is_alive(self):
+            return False
+
+        def join(self, timeout=None):
+            pass
+
+    queue_calls = 0
+
+    def queue_factory(maxsize=0):
+        nonlocal queue_calls
+        queue_calls += 1
+        if queue_calls == 1:
+            return result_queue
+        raise OSError("observation queue unavailable")
+
+    adapter = SimpleNamespace(
+        get_all_start_methods=lambda: ["spawn"],
+        get_context=lambda selected: SimpleNamespace(
+            Queue=queue_factory,
+            Process=lambda target, args: FinishedProcess(args),
+        ),
+    )
+    with patch.object(resumable, "multiprocessing", adapter):
+        result = resumable._execute_resumable_upload_process(
+            token="fake-token-never-print",
+            upload_kwargs={},
+            request_timeout=0.01,
+            batch_context=(1, 1),
+        )
+    check(
+        "observation queue creation failure cannot change upload success",
+        result == {"recovered": 0},
+    )
+
+    cleanup_calls = []
+
+    class BrokenCleanupQueue:
+        def close(self):
+            cleanup_calls.append("close")
+            raise OSError("close failed")
+
+        def join_thread(self):
+            cleanup_calls.append("join_thread")
+            raise OSError("join failed")
+
+    resumable._close_upload_observation_queue(BrokenCleanupQueue())
+    check(
+        "observation queue cleanup failures are isolated",
+        cleanup_calls == ["close", "join_thread"],
+    )
+
+
 def process_lifecycle_checks():
     resumable = importlib.import_module("atomgit.adapters.upload.resumable")
     for method in multiprocessing.get_all_start_methods():
         context = multiprocessing.get_context(method)
         for outcome in (
             "success",
+            "observe",
+            "flood",
+            "invalid-observation",
             "failure",
             "empty",
             "crash",
@@ -76,7 +180,13 @@ def process_lifecycle_checks():
 
             def process_factory(target, args):
                 child = context.Process(
-                    target=offline_child, args=(args[2], outcome, ready)
+                    target=offline_child,
+                    args=(
+                        args[2],
+                        outcome,
+                        ready,
+                        args[7] if len(args) > 7 else None,
+                    ),
                 )
                 children.append(child)
                 if outcome == "cancel":
@@ -109,20 +219,33 @@ def process_lifecycle_checks():
                 ),
             )
             error = None
+            observations = []
+            lfs_service = importlib.import_module("atomgit.adapters.lfs.service")
+            previous_observer = lfs_service._upload_observer
             try:
-                with patch.object(resumable, "multiprocessing", adapter):
-                    resumable._execute_resumable_upload_process(
-                        token="fake-token-never-print",
-                        upload_kwargs={},
-                        request_timeout=0.01,
-                        batch_context=(1, 1),
-                    )
+                lfs_service.set_upload_observer(observations.append)
+                try:
+                    with patch.object(resumable, "multiprocessing", adapter):
+                        resumable._execute_resumable_upload_process(
+                            token="fake-token-never-print",
+                            upload_kwargs={},
+                            request_timeout=0.01,
+                            batch_context=(1, 1),
+                        )
+                finally:
+                    lfs_service.set_upload_observer(previous_observer)
             except BaseException as exc:
                 error = exc
             try:
                 expected = (
                     error is None
-                    if outcome == "success"
+                    if outcome
+                    in (
+                        "success",
+                        "observe",
+                        "flood",
+                        "invalid-observation",
+                    )
                     else (
                         isinstance(error, KeyboardInterrupt)
                         if outcome == "cancel"
@@ -135,6 +258,26 @@ def process_lifecycle_checks():
                     )
                 )
                 check(f"{method} {outcome} result classified", expected)
+                if outcome == "observe":
+                    check(
+                        f"{method} observation crosses the explicit queue",
+                        len(observations) == 2
+                        and observations[0]["envelope"]["type"] == "flow_state"
+                        and observations[1]["terminal"] == "completed",
+                    )
+                if outcome == "flood":
+                    check(
+                        f"{method} observation flood cannot block result delivery",
+                        len(observations) >= 2
+                        and observations[0]["envelope"]["sequence"] == 1
+                        and observations[-1]["terminal"] == "completed",
+                    )
+                if outcome == "invalid-observation":
+                    check(
+                        f"{method} invalid observation is dropped",
+                        len(observations) == 1
+                        and observations[0].get("terminal") == "completed",
+                    )
                 check(
                     f"{method} {outcome} child reaped",
                     len(children) == 1
@@ -297,6 +440,7 @@ def main():
                     hf_constants.DEFAULT_REQUEST_TIMEOUT == before,
                 )
 
+            observation_failure_checks()
             process_lifecycle_checks()
 
             calls.clear()
