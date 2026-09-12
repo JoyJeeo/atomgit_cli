@@ -37,6 +37,7 @@ from .resumable import (
     _prefix_resumable_ignore_patterns,
     _print_upload_batch_plan,
     _print_upload_batch_summary,
+    _resumable_projection_lock,
     _validate_resumable_upload_target,
 )
 
@@ -419,16 +420,24 @@ class UploadServiceMixin:
                                 try:
                                     # Fully committed projections still enter HF
                                     # so authorization remains checked.
-                                    _execute_resumable_upload_process(
-                                        token=credentials["token"],
-                                        upload_kwargs=lf_kwargs,
-                                        request_timeout=request_timeout,
-                                        batch_context=(batch_number, batch_count),
-                                        auto_configure_lfs=auto_configure_lfs,
-                                        configured_lfs_patterns=_validated_lfs_patterns(
-                                            attempted_lfs_patterns
-                                        ),
-                                    )
+                                    with _resumable_projection_lock(upload_root):
+                                        process_result = (
+                                            _execute_resumable_upload_process(
+                                                token=credentials["token"],
+                                                upload_kwargs=lf_kwargs,
+                                                request_timeout=request_timeout,
+                                                batch_context=(
+                                                    batch_number,
+                                                    batch_count,
+                                                ),
+                                                auto_configure_lfs=auto_configure_lfs,
+                                                configured_lfs_patterns=(
+                                                    _validated_lfs_patterns(
+                                                        attempted_lfs_patterns
+                                                    )
+                                                ),
+                                            )
+                                        )
                                     break
                                 except ResumableWorkerError as error:
                                     if (
@@ -527,7 +536,14 @@ class UploadServiceMixin:
                                             f"{continuation}",
                                             flush=True,
                                         )
-                        except Exception:
+                        except Exception as error:
+                            if isinstance(
+                                error, ResumableWorkerError
+                            ) and error.category in (
+                                "remote_commit_conflict",
+                                "remote_recovery_state",
+                            ):
+                                batch_skipped += error.confirmed or 0
                             confirmed_in_batch = batch_skipped
                             batch_progress = None
                             if upload_root is not None:
@@ -566,6 +582,8 @@ class UploadServiceMixin:
                             )
                             raise
 
+                        recovered_files = process_result["recovered"]
+                        batch_skipped += recovered_files
                         skipped_files += batch_skipped
                         newly_submitted = batch_file_count - batch_skipped
                         submitted_files += newly_submitted

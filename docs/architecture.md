@@ -312,6 +312,12 @@ revision 和固定白名单 `confirmation_failure`；历史 SDK 的细分异常�
 异常。原因只取三次确认耗尽时的最后一次安全类别，resumable worker 只传递相同受
 校验状态、经校验 revision 和原因码，不会传递底层异常文本、触发降批、重复写入或
 提前写入 committed。
+resumable 在每个 create-commit 前把 base revision 与最多 20 个操作的路径、大小、
+SHA-256、模式和 regular Git blob SHA-1 原子写入稳定投影的私有凭据，并以该 base
+作为 `parent_commit`。重跑在任何 upload/preupload 前对同一不可变快照执行两次 HEAD
+夹持的强摘要核对；LFS 还复用严格三行 pointer 验证。只有 H1/H2 一致且内容匹配才
+恢复 committed；未知、损坏、409/412 或分支前进后的不匹配状态均保留凭据并禁止写入。
+同一投影由 0600 文件锁串行化，不同上传身份继续并行。
 
 resumable 通过显式 AtomGit endpoint 的 `HfApi(endpoint=..., token=...)` 认证，
 避免隔离子进程回落到 `huggingface.co`。私有 model 和 dataset 均已使用真实

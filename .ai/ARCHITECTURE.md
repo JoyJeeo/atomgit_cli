@@ -146,6 +146,11 @@ adapter boundaries.
   failure code, and legacy base catches remain compatible. Resumable workers
   propagate that state, validated revision, and code without exception text or
   another write.
+- Resumable commit intent is atomically persisted in a private projection file
+  before each write and guarded by the resolved `parent_commit`. A rerun performs
+  strong read-only reconciliation between two reads of the same immutable head;
+  only matching regular blobs or canonical LFS pointers become committed, while
+  unknown, corrupt, or concurrently changed state fails closed without a write.
 - Downloads reject unsafe paths, isolate redirect credentials, preserve
   revision in resume identity, verify optional checksums, and prune only files
   recorded by a successful manifest-scoped download.

@@ -35,14 +35,27 @@ def offline_child(result_queue, outcome, ready):
     elif outcome == "failure":
         result_queue.put((False, {"category": "timeout"}))
     elif outcome == "success-crash":
-        result_queue.put((True, None))
+        result_queue.put((True, {"recovered": 0}))
         result_queue.close()
         result_queue.join_thread()
         os._exit(3)
     elif outcome == "invalid":
         result_queue.put(("yes", None))
     else:
-        result_queue.put((True, None))
+        result_queue.put((True, {"recovered": 0}))
+
+
+def hold_projection_lock(folder_path, ready, release):
+    resumable = importlib.import_module("atomgit.adapters.upload.resumable")
+    with resumable._resumable_projection_lock(Path(folder_path)):
+        ready.set()
+        release.wait(5)
+
+
+def acquire_projection_lock(folder_path, acquired):
+    resumable = importlib.import_module("atomgit.adapters.upload.resumable")
+    with resumable._resumable_projection_lock(Path(folder_path)):
+        acquired.set()
 
 
 def process_lifecycle_checks():
@@ -134,6 +147,42 @@ def process_lifecycle_checks():
                         child.kill()
                         child.join()
                     child.close()
+
+    methods = multiprocessing.get_all_start_methods()
+    if "fork" not in methods:
+        check("projection lock cross-process check requires fork", True)
+        return
+    context = multiprocessing.get_context("fork")
+    with tempfile.TemporaryDirectory(prefix="atomgit-projection-lock-") as td:
+        ready = context.Event()
+        release = context.Event()
+        acquired = context.Event()
+        holder = context.Process(target=hold_projection_lock, args=(td, ready, release))
+        contender = context.Process(target=acquire_projection_lock, args=(td, acquired))
+        try:
+            holder.start()
+            holder_started = ready.wait(5)
+            contender.start()
+            contender_blocked = not acquired.wait(0.2)
+            release.set()
+            contender_acquired = acquired.wait(5)
+            holder.join(5)
+            contender.join(5)
+            check(
+                "projection lock serializes independent upload processes",
+                holder_started
+                and contender_blocked
+                and contender_acquired
+                and holder.exitcode == 0
+                and contender.exitcode == 0,
+            )
+        finally:
+            release.set()
+            for child in (holder, contender):
+                if child.is_alive():
+                    child.kill()
+                    child.join()
+                child.close()
 
 
 def main():

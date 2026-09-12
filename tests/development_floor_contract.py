@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 125
+BASELINE_INVARIANT_COUNT = 127
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -546,6 +546,12 @@ CAPABILITY_REGISTRY = {
                 "A failed resumable batch reports persisted hashed, LFS-preuploaded, and locally unconfirmed file and byte progress while unreadable metadata stays unknown and redacted.",
                 "test_upload_batching.py",
             ),
+            _invariant(
+                "RESUMEUP-006",
+                "Every resumable commit intent is persisted privately before the remote write; reruns reconcile an immutable snapshot before upload and use the recorded parent revision without replaying conflicts.",
+                "test_resumable_commit_policy.py",
+                "test_upload_batching.py",
+            ),
         ),
         (
             "test_dataset_resumable_route.py",
@@ -621,6 +627,11 @@ CAPABILITY_REGISTRY = {
                 "test_sdk_upload_timeout.py",
                 "test_upload_error_classify.py",
                 "test_upload_error_handling.py",
+            ),
+            _invariant(
+                "LFS-009",
+                "Pending LFS files become committed only when size, SHA-256, and the canonical pointer match on one unchanged immutable revision; unknown, mismatched, or concurrent state performs no new write.",
+                "test_resumable_commit_policy.py",
             ),
         ),
         (
@@ -1406,7 +1417,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "125 条可观察行为不变量",
+        "127 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),

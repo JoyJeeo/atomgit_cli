@@ -2,6 +2,7 @@
 """Offline regressions for AtomGit resumable commit retry policy."""
 
 import httpx
+import os
 import queue
 import sys
 import tempfile
@@ -41,10 +42,12 @@ class ScriptedClient:
     def __init__(self, outcomes):
         self.outcomes = list(outcomes)
         self.calls = []
+        self.kwarg_calls = []
 
     def create_commit(self, *args, **kwargs):
         operations = list(kwargs["operations"])
         self.calls.append([item.path_in_repo for item in operations])
+        self.kwarg_calls.append(dict(kwargs))
         outcome = self.outcomes.pop(0) if self.outcomes else None
         if isinstance(outcome, BaseException):
             raise outcome
@@ -62,11 +65,15 @@ class FatalHfApi:
         raise http_error(429, retry_after=0)
 
     def upload_large_folder(self, **kwargs):
+        operation = CommitOperationAdd(
+            path_in_repo="payload.bin", path_or_fileobj=b"payload"
+        )
+        operation._upload_mode = "regular"
         return self.create_commit(
             repo_id=kwargs["repo_id"],
             repo_type=kwargs["repo_type"],
             revision="main",
-            operations=[FakeOperation("payload.bin")],
+            operations=[operation],
             commit_message="batch",
         )
 
@@ -292,9 +299,477 @@ def main():
             and len(exhausted_client.calls) == 1,
             repr([type(error).__name__ for error in error_chain]),
         )
+        original_resolve_revision = api_mod._resolve_resumable_revision
+        original_checksum = api_mod._atomgit_file_checksum
+        original_verify = api_mod.verify_canonical_lfs_pointers
+        try:
+            with tempfile.TemporaryDirectory(prefix="atomgit-pending-commit-") as td:
+                projection = Path(td)
+                payload = projection / "payload.bin"
+                payload.write_bytes(b"content")
+                rerun_operation = CommitOperationAdd(
+                    path_in_repo="payload.bin",
+                    path_or_fileobj=payload,
+                )
+                rerun_operation._upload_mode = "lfs"
+                paths = api_mod.get_local_upload_paths(projection, "payload.bin")
+                metadata = api_mod.read_upload_metadata(projection, "payload.bin")
+                metadata.sha256 = rerun_operation.upload_info.sha256.hex()
+                metadata.upload_mode = "lfs"
+                metadata.is_uploaded = True
+                metadata.save(paths)
+
+                rerun_client = ScriptedClient([SimpleNamespace(oid="f" * 40)])
+                api_mod._resolve_resumable_revision = lambda **kwargs: "a" * 40
+                rerun_controller = api_mod._ResumableCommitController(
+                    rerun_client.create_commit,
+                    token="fake-token-never-print",
+                    canonical_payloads=pointer_expectations,
+                    verify_committed=lambda *args: (_ for _ in ()).throw(
+                        pointer_mod.CanonicalLfsPointerError._for_confirmation_failure(
+                            "persistent read failure",
+                            "request_timeout",
+                        )
+                    ),
+                    folder_path=projection,
+                )
+                try:
+                    rerun_controller.create_commit(
+                        repo_id="user/repo",
+                        repo_type="model",
+                        revision="main",
+                        operations=[rerun_operation],
+                        commit_message="batch",
+                    )
+                except api_mod.ResumableCommitError:
+                    pass
+
+                pending_after_failure = api_mod._read_pending_commit(projection)
+                _, pending_path, _ = api_mod._pending_commit_paths(projection)
+                pending_directory_mode = pending_path.parent.stat().st_mode & 0o777
+                pending_file_mode = pending_path.stat().st_mode & 0o777
+                api_mod._resolve_resumable_revision = lambda **kwargs: "f" * 40
+                api_mod._atomgit_file_checksum = lambda *args: (
+                    "sha256",
+                    rerun_operation.upload_info.sha256.hex(),
+                    rerun_operation.upload_info.size,
+                )
+                recovery_timeouts = []
+                api_mod.verify_canonical_lfs_pointers = (
+                    lambda **kwargs: recovery_timeouts.append(kwargs["timeout"])
+                )
+                recovery = api_mod._recover_pending_commit(
+                    folder_path=projection,
+                    token="fake-token-never-print",
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    request_timeout=17,
+                )
+                recovered_metadata = api_mod.read_upload_metadata(
+                    projection, "payload.bin"
+                )
+                check(
+                    "returned commit is persisted before pointer confirmation",
+                    pending_after_failure is not None
+                    and pending_after_failure["state"] == "created_unconfirmed"
+                    and pending_after_failure["commit_revision"] == "f" * 40,
+                )
+                check(
+                    "resumable create-commit uses the persisted base revision",
+                    rerun_client.kwarg_calls[0].get("parent_commit") == "a" * 40,
+                )
+                check(
+                    "pending commit credential uses private filesystem modes",
+                    pending_directory_mode == 0o700 and pending_file_mode == 0o600,
+                    f"{pending_directory_mode:o}/{pending_file_mode:o}",
+                )
+                check(
+                    "independent rerun confirms a returned commit without submitting again",
+                    len(rerun_client.calls) == 1
+                    and recovery["confirmed"] == 1
+                    and recovered_metadata.is_committed
+                    and recovery_timeouts == [17]
+                    and api_mod._read_pending_commit(projection) is None,
+                    repr(rerun_client.calls),
+                )
+
+                corrupt_projection = projection / "corrupt"
+                corrupt_directory, corrupt_path, _ = api_mod._pending_commit_paths(
+                    corrupt_projection
+                )
+                corrupt_directory.mkdir(parents=True, mode=0o700)
+                corrupt_path.write_text('{"version":2}', encoding="utf-8")
+                corrupt_path.chmod(0o600)
+                try:
+                    api_mod._read_pending_commit(corrupt_projection)
+                except api_mod.ResumableRecoveryStateError:
+                    corrupt_failed = True
+                else:
+                    corrupt_failed = False
+                check(
+                    "unknown pending schema fails closed and is preserved",
+                    corrupt_failed and corrupt_path.is_file(),
+                )
+                fatal_errors = []
+                corrupt_client = ScriptedClient([])
+                corrupt_controller = api_mod._ResumableCommitController(
+                    corrupt_client.create_commit,
+                    token="fake-token-never-print",
+                    folder_path=corrupt_projection,
+                    fatal_callback=fatal_errors.append,
+                )
+                try:
+                    corrupt_controller.create_commit(
+                        repo_id="user/repo",
+                        repo_type="model",
+                        revision="main",
+                        operations=[rerun_operation],
+                        commit_message="batch",
+                    )
+                except api_mod.ResumableCommitError:
+                    pass
+                check(
+                    "unsafe recovery state reaches the fatal path before commit",
+                    len(fatal_errors) == 1
+                    and isinstance(fatal_errors[0], api_mod.ResumableRecoveryStateError)
+                    and not corrupt_client.calls,
+                )
+
+                oversized_projection = projection / "oversized"
+                oversized_directory, oversized_path, _ = api_mod._pending_commit_paths(
+                    oversized_projection
+                )
+                oversized_directory.mkdir(parents=True, mode=0o700)
+                oversized_path.write_bytes(
+                    b"x" * (api_mod._PENDING_COMMIT_MAX_BYTES + 1)
+                )
+                oversized_path.chmod(0o600)
+                try:
+                    api_mod._read_pending_commit(oversized_projection)
+                except api_mod.ResumableRecoveryStateError:
+                    oversized_failed = True
+                else:
+                    oversized_failed = False
+                check(
+                    "oversized pending state fails closed and is preserved",
+                    oversized_failed and oversized_path.is_file(),
+                )
+
+                if os.name == "nt":
+                    check("pending commit lock rejects symbolic links", True)
+                else:
+                    lock_projection = projection / "unsafe-lock"
+                    lock_directory, _, lock_path = api_mod._pending_commit_paths(
+                        lock_projection
+                    )
+                    lock_directory.mkdir(parents=True, mode=0o700)
+                    lock_target = projection / "lock-target"
+                    lock_target.write_bytes(b"safe")
+                    lock_path.symlink_to(lock_target)
+                    try:
+                        with api_mod._resumable_projection_lock(lock_projection):
+                            pass
+                    except api_mod.ResumableRecoveryStateError:
+                        unsafe_lock_failed = True
+                    else:
+                        unsafe_lock_failed = False
+                    check(
+                        "pending commit lock rejects symbolic links",
+                        unsafe_lock_failed and lock_target.read_bytes() == b"safe",
+                    )
+        finally:
+            api_mod._resolve_resumable_revision = original_resolve_revision
+            api_mod._atomgit_file_checksum = original_checksum
+            api_mod.verify_canonical_lfs_pointers = original_verify
     finally:
         pointer_mod._read_raw_pointer = original_pointer_read
         pointer_mod.time.sleep = original_pointer_sleep
+
+    original_resolve_revision = api_mod._resolve_resumable_revision
+    try:
+        with tempfile.TemporaryDirectory(prefix="atomgit-parent-conflict-") as td:
+            api_mod._resolve_resumable_revision = lambda **kwargs: "a" * 40
+            conflict_operation = CommitOperationAdd(
+                path_in_repo="payload.bin", path_or_fileobj=b"payload"
+            )
+            conflict_operation._upload_mode = "regular"
+            conflict_client = ScriptedClient([http_error(409)])
+            conflict_controller = api_mod._ResumableCommitController(
+                conflict_client.create_commit,
+                token="fake-token-never-print",
+                folder_path=Path(td),
+                max_attempts=1,
+            )
+            try:
+                conflict_controller.create_commit(
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    operations=[conflict_operation],
+                    commit_message="batch",
+                )
+            except api_mod.ResumableCommitError as error:
+                conflict_envelope = api_mod._resumable_failure_envelope(error)
+            else:
+                conflict_envelope = None
+            check(
+                "parent revision conflict fails closed without replay",
+                len(conflict_client.calls) == 1
+                and conflict_envelope
+                == {
+                    "category": "remote_commit_conflict",
+                    "confirmed": 0,
+                    "remaining": 1,
+                }
+                and api_mod._read_pending_commit(Path(td)) is not None,
+                repr(conflict_envelope),
+            )
+    finally:
+        api_mod._resolve_resumable_revision = original_resolve_revision
+
+    original_resolve_revision = api_mod._resolve_resumable_revision
+    original_checksum = api_mod._atomgit_file_checksum
+    try:
+        with tempfile.TemporaryDirectory(prefix="atomgit-head-race-") as td:
+            projection = Path(td)
+            payload = projection / "payload.bin"
+            payload.write_bytes(b"payload")
+            operation = CommitOperationAdd(
+                path_in_repo="payload.bin", path_or_fileobj=payload
+            )
+            operation._upload_mode = "regular"
+            paths = api_mod.get_local_upload_paths(projection, "payload.bin")
+            metadata = api_mod.read_upload_metadata(projection, "payload.bin")
+            metadata.sha256 = operation.upload_info.sha256.hex()
+            metadata.upload_mode = "regular"
+            metadata.is_uploaded = True
+            metadata.save(paths)
+            api_mod._write_pending_commit(
+                projection,
+                api_mod._pending_commit_value(
+                    state="attempting",
+                    base_revision="a" * 40,
+                    commit_revision=None,
+                    operations=[operation],
+                ),
+            )
+            revisions = iter(["b" * 40, "c" * 40])
+            api_mod._resolve_resumable_revision = lambda **kwargs: next(revisions)
+            record = api_mod._read_pending_commit(projection)["operations"][0]
+            api_mod._atomgit_file_checksum = lambda *args: (
+                "git-sha1",
+                record["git_sha1"],
+                record["size"],
+            )
+            try:
+                api_mod._recover_pending_commit(
+                    folder_path=projection,
+                    token="fake-token-never-print",
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    request_timeout=17,
+                )
+            except api_mod.ResumableCommitConflictError:
+                head_race_failed = True
+            else:
+                head_race_failed = False
+            recovered_metadata = api_mod.read_upload_metadata(projection, "payload.bin")
+            check(
+                "changing H1/H2 fails before applying recovered metadata",
+                head_race_failed
+                and not recovered_metadata.is_committed
+                and api_mod._read_pending_commit(projection) is not None,
+            )
+    finally:
+        api_mod._resolve_resumable_revision = original_resolve_revision
+        api_mod._atomgit_file_checksum = original_checksum
+
+    original_resolve_revision = api_mod._resolve_resumable_revision
+    original_checksum = api_mod._atomgit_file_checksum
+    try:
+        with tempfile.TemporaryDirectory(prefix="atomgit-safe-retry-") as td:
+            projection = Path(td)
+            payload = projection / "payload.bin"
+            payload.write_bytes(b"payload")
+            operation = CommitOperationAdd(
+                path_in_repo="payload.bin", path_or_fileobj=payload
+            )
+            operation._upload_mode = "regular"
+            paths = api_mod.get_local_upload_paths(projection, "payload.bin")
+            metadata = api_mod.read_upload_metadata(projection, "payload.bin")
+            metadata.sha256 = operation.upload_info.sha256.hex()
+            metadata.upload_mode = "regular"
+            metadata.is_uploaded = True
+            metadata.save(paths)
+            api_mod._write_pending_commit(
+                projection,
+                api_mod._pending_commit_value(
+                    state="attempting",
+                    base_revision="a" * 40,
+                    commit_revision=None,
+                    operations=[operation],
+                ),
+            )
+
+            class MissingRemoteFile(Exception):
+                code = 404
+
+            api_mod._resolve_resumable_revision = lambda **kwargs: "a" * 40
+            api_mod._atomgit_file_checksum = lambda *args: (_ for _ in ()).throw(
+                MissingRemoteFile()
+            )
+            retry_client = ScriptedClient([SimpleNamespace(oid="b" * 40)])
+            retry_controller = api_mod._ResumableCommitController(
+                retry_client.create_commit,
+                token="fake-token-never-print",
+                folder_path=projection,
+            )
+            retry_result = retry_controller.create_commit(
+                repo_id="user/repo",
+                repo_type="model",
+                revision="main",
+                operations=[operation],
+                commit_message="batch",
+            )
+            check(
+                "unchanged base retries only the missing pending operation",
+                retry_result.oid == "b" * 40
+                and len(retry_client.calls) == 1
+                and retry_client.kwarg_calls[0]["parent_commit"] == "a" * 40
+                and api_mod._read_pending_commit(projection) is None,
+            )
+    finally:
+        api_mod._resolve_resumable_revision = original_resolve_revision
+        api_mod._atomgit_file_checksum = original_checksum
+
+    original_resolve_revision = api_mod._resolve_resumable_revision
+    original_checksum = api_mod._atomgit_file_checksum
+    try:
+        with tempfile.TemporaryDirectory(prefix="atomgit-partial-conflict-") as td:
+            projection = Path(td)
+            operations_by_path = {}
+            for path, content in (
+                ("matched.bin", b"matched"),
+                ("missing.bin", b"missing"),
+            ):
+                payload = projection / path
+                payload.write_bytes(content)
+                operation = CommitOperationAdd(
+                    path_in_repo=path, path_or_fileobj=payload
+                )
+                operation._upload_mode = "regular"
+                operations_by_path[path] = operation
+                paths = api_mod.get_local_upload_paths(projection, path)
+                metadata = api_mod.read_upload_metadata(projection, path)
+                metadata.sha256 = operation.upload_info.sha256.hex()
+                metadata.upload_mode = "regular"
+                metadata.is_uploaded = True
+                metadata.save(paths)
+            partial_operations = list(operations_by_path.values())
+            api_mod._write_pending_commit(
+                projection,
+                api_mod._pending_commit_value(
+                    state="attempting",
+                    base_revision="a" * 40,
+                    commit_revision=None,
+                    operations=partial_operations,
+                ),
+            )
+            pending_records = {
+                item["path"]: item
+                for item in api_mod._read_pending_commit(projection)["operations"]
+            }
+            api_mod._resolve_resumable_revision = lambda **kwargs: "b" * 40
+
+            def partial_checksum(*args):
+                path = args[2]
+                if path == "missing.bin":
+                    raise MissingRemoteFile()
+                record = pending_records[path]
+                return "git-sha1", record["git_sha1"], record["size"]
+
+            api_mod._atomgit_file_checksum = partial_checksum
+            try:
+                api_mod._recover_pending_commit(
+                    folder_path=projection,
+                    token="fake-token-never-print",
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    request_timeout=17,
+                )
+            except api_mod.ResumableCommitConflictError as error:
+                partial_conflict_failed = True
+                partial_conflict_envelope = api_mod._resumable_failure_envelope(error)
+            else:
+                partial_conflict_failed = False
+                partial_conflict_envelope = None
+            retained = api_mod._read_pending_commit(projection)
+            check(
+                "advanced revision confirms matches and retains only conflicts",
+                partial_conflict_failed
+                and api_mod.read_upload_metadata(projection, "matched.bin").is_committed
+                and not api_mod.read_upload_metadata(
+                    projection, "missing.bin"
+                ).is_committed
+                and [item["path"] for item in retained["operations"]] == ["missing.bin"]
+                and partial_conflict_envelope
+                == {
+                    "category": "remote_commit_conflict",
+                    "confirmed": 1,
+                    "remaining": 1,
+                },
+            )
+
+            local_payload = projection / "missing.bin"
+            local_payload.write_bytes(b"changed")
+            revision_reads = []
+            api_mod._resolve_resumable_revision = (
+                lambda **kwargs: revision_reads.append(kwargs)
+            )
+            try:
+                api_mod._recover_pending_commit(
+                    folder_path=projection,
+                    token="fake-token-never-print",
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    request_timeout=17,
+                )
+            except api_mod.ResumableRecoveryStateError as error:
+                local_change_envelope = api_mod._resumable_failure_envelope(error)
+            else:
+                local_change_envelope = None
+            check(
+                "local content changes fail before any remote recovery read",
+                local_change_envelope
+                == {
+                    "category": "remote_recovery_state",
+                    "confirmed": 0,
+                    "remaining": 1,
+                }
+                and not revision_reads
+                and api_mod._read_pending_commit(projection) is not None,
+            )
+
+            conflict_type, conflict_hint = api_mod._classify_upload_error(
+                api_mod.ResumableWorkerError(
+                    "remote_commit_conflict", confirmed=1, remaining=1
+                )
+            )
+            check(
+                "conflict output reports only bounded recovery counts",
+                conflict_type == "远端提交冲突"
+                and "确认复用 1" in conflict_hint
+                and "冲突 1" in conflict_hint
+                and "仍需提交 1" in conflict_hint,
+                conflict_hint,
+            )
+    finally:
+        api_mod._resolve_resumable_revision = original_resolve_revision
+        api_mod._atomgit_file_checksum = original_checksum
 
     sleeps = []
     timeout_client = ScriptedClient([httpx.ReadTimeout("response timed out")])
@@ -721,7 +1196,10 @@ def main():
             result_queue,
             300.0,
         )
-        check("child reports successful upload", result_queue.get_nowait() == (True, None))
+        check(
+            "child reports successful upload",
+            result_queue.get_nowait() == (True, {"recovered": 0}),
+        )
         check("existing repository reaches metadata recovery without create",
               ("metadata-recovery", "user/repo") in captured
               and not any(isinstance(item, tuple) and item[0] == "remote-create"
@@ -741,7 +1219,9 @@ def main():
     methods = api_mod.multiprocessing.get_all_start_methods()
     if "fork" in methods:
         original_api = api_mod.HfApi
+        original_resolve_revision = api_mod._resolve_resumable_revision
         api_mod.HfApi = FatalHfApi
+        api_mod._resolve_resumable_revision = lambda **kwargs: "a" * 40
         process = None
         try:
             context = api_mod.multiprocessing.get_context("fork")
@@ -771,6 +1251,7 @@ def main():
                 process.terminate()
                 process.join(2)
             api_mod.HfApi = original_api
+            api_mod._resolve_resumable_revision = original_resolve_revision
     else:
         check("persistent child failure test requires fork", True)
 

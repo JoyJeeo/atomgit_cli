@@ -190,6 +190,17 @@ def main():
             },
         ),
         (
+            "create_commit parent revision contract",
+            HfApi.create_commit,
+            (None, "user/repo", []),
+            {
+                "commit_message": "resumable batch",
+                "repo_type": "model",
+                "revision": "main",
+                "parent_commit": "a" * 40,
+            },
+        ),
+        (
             "upload projection filtering contract",
             filter_repo_objects,
             (["a.txt", "logs/a.txt"],),

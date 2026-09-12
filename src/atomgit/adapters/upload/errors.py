@@ -40,6 +40,8 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "lfs_attributes": "resumable worker LFS attributes need verification",
     "lfs_pointer": "resumable worker LFS pointer verification failed",
     "remote_commit_unconfirmed": "remote commit was created but remains unconfirmed",
+    "remote_commit_conflict": "remote revision changed during resumable recovery",
+    "remote_recovery_state": "resumable remote recovery state is unsafe",
     "client_resource": "resumable worker client resources are insufficient",
     "unknown": "resumable worker failed",
 }
@@ -86,6 +88,8 @@ class ResumableWorkerError(RuntimeError):
         *,
         commit_revision=None,
         confirmation_failure=None,
+        confirmed=None,
+        remaining=None,
     ):
         if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
             category = "unknown"
@@ -114,11 +118,40 @@ class ResumableWorkerError(RuntimeError):
             self.local_confirmation_status = state.local_confirmation_status
             self.commit_revision = state.commit_revision
             self.confirmation_failure = state.confirmation_failure
+        self.confirmed = _bounded_recovery_count(confirmed)
+        self.remaining = _bounded_recovery_count(remaining)
+        if self.confirmed is None or self.remaining is None:
+            self.confirmed = None
+            self.remaining = None
         super().__init__(_RESUMABLE_WORKER_ERROR_MESSAGES[category])
 
 
 class ResumableCommitError(RuntimeError):
     """A resumable commit could not complete under the bounded retry policy."""
+
+
+def _bounded_recovery_count(value):
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 20:
+        return value
+    return None
+
+
+class ResumableCommitConflictError(ResumableCommitError):
+    """The target revision changed while a pending commit was reconciled."""
+
+    def __init__(self, message, *, confirmed=None, remaining=None):
+        self.confirmed = _bounded_recovery_count(confirmed)
+        self.remaining = _bounded_recovery_count(remaining)
+        super().__init__(message)
+
+
+class ResumableRecoveryStateError(ResumableCommitError):
+    """Pending resumable state could not be validated safely."""
+
+    def __init__(self, message, *, confirmed=None, remaining=None):
+        self.confirmed = _bounded_recovery_count(confirmed)
+        self.remaining = _bounded_recovery_count(remaining)
+        super().__init__(message)
 
 
 def _resumable_error_chain(error: BaseException):
@@ -147,6 +180,10 @@ def _resumable_worker_error_category(error: BaseException) -> str:
     for cause in _resumable_error_chain(error):
         if isinstance(cause, ResumableWorkerError):
             return cause.category
+        if isinstance(cause, ResumableCommitConflictError):
+            return "remote_commit_conflict"
+        if isinstance(cause, ResumableRecoveryStateError):
+            return "remote_recovery_state"
         if isinstance(cause, ResumableUploadModeError):
             return "upload_mode"
         if isinstance(cause, ResumableLfsAttributesError):
@@ -233,6 +270,13 @@ def _resumable_failure_envelope(error: BaseException) -> dict:
             patterns = _validated_lfs_patterns(getattr(cause, "lfs_patterns", ()))
             if patterns:
                 envelope["lfs_patterns"] = list(patterns)
+                break
+    if category in ("remote_commit_conflict", "remote_recovery_state"):
+        for cause in _resumable_error_chain(error):
+            confirmed = _bounded_recovery_count(getattr(cause, "confirmed", None))
+            remaining = _bounded_recovery_count(getattr(cause, "remaining", None))
+            if confirmed is not None and remaining is not None:
+                envelope.update(confirmed=confirmed, remaining=remaining)
                 break
     return envelope
 
@@ -325,6 +369,16 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "远端提交状态：已创建；本地确认状态：失败。"
                 "请先确认远端状态再决定是否重试，断点状态已保留。",
             ),
+            "remote_commit_conflict": (
+                "远端提交冲突",
+                "目标分支在待对账期间已发生变化；本次没有创建新提交。"
+                "请先人工核对远端内容。",
+            ),
+            "remote_recovery_state": (
+                "断点对账状态异常",
+                "无法安全确认待对账提交；本次没有创建新提交。"
+                "请保留缓存并先人工核对远端内容。",
+            ),
             "client_resource": (
                 "客户端资源不足",
                 "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
@@ -337,6 +391,13 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
         error_type, hint = structured_errors[e.category]
         if e.category == "remote_commit_unconfirmed":
             hint += _lfs_confirmation_failure_hint(e)
+        if e.category in ("remote_commit_conflict", "remote_recovery_state"):
+            if e.confirmed is not None and e.remaining is not None:
+                state = "冲突" if e.category == "remote_commit_conflict" else "状态未知"
+                hint += (
+                    f" 对账统计：确认复用 {e.confirmed}，{state} {e.remaining}，"
+                    f"仍需提交 {e.remaining}。"
+                )
         return error_type, hint
 
     if isinstance(e, ResumableUploadModeError):

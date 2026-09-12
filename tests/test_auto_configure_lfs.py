@@ -254,7 +254,7 @@ def main():
         )
         check(
             "confirmed LFS extension proceeds without another policy stop",
-            result_queue.get_nowait() == (True, None)
+            result_queue.get_nowait() == (True, {"recovered": 0})
             and ProactivePolicyApi.events == ["preupload"],
             repr(ProactivePolicyApi.events),
         )
@@ -275,7 +275,7 @@ def main():
         )
         check(
             "disabled option leaves server-selected LFS flow unchanged",
-            result_queue.get_nowait() == (True, None)
+            result_queue.get_nowait() == (True, {"recovered": 0})
             and ProactivePolicyApi.events == ["upload-mode-returned"],
         )
         with tempfile.TemporaryDirectory(
@@ -718,6 +718,7 @@ def main():
                     raise api_mod.ResumableWorkerError(
                         "lfs_attributes", ("*.bag",)
                     )
+                return {"recovered": 0}
 
             def configure_once(**kwargs):
                 repairs.append(kwargs)
@@ -774,6 +775,7 @@ def main():
                     raise api_mod.ResumableWorkerError(
                         "lfs_attributes", ("*.bag",)
                     )
+                return {"recovered": 0}
 
             api_mod._execute_resumable_upload_process = (
                 execute_once_per_new_pattern

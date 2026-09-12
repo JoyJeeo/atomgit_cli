@@ -186,6 +186,8 @@ def main():
             "token": token,
             "timeout": timeout,
         })
+        if "/commits/" in path:
+            return {"sha": "a" * 40}
         if "/branches/" in path:
             return {"name": path.rsplit("/", 1)[-1]}
         return {"full_name": path.removeprefix("/repos/"),

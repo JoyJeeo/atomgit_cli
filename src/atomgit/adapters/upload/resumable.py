@@ -1,15 +1,20 @@
 """Isolated resumable upload orchestration and commit reconciliation."""
 
 import hashlib
+import json
 import multiprocessing
 import os
 import random
+import re
 import socket
+import stat
+import tempfile
 import time
 import urllib.error
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional, Set
 from urllib.parse import quote
 
@@ -24,14 +29,18 @@ from ..download.integrity import _atomgit_file_checksum
 from ..download.transport import _atomgit_hf_endpoint
 from ..lfs.pointer import (
     CanonicalLfsCommitUnconfirmedError,
+    CanonicalLfsPointer,
     CanonicalLfsPointerError,
     _validated_commit_revision,
     canonical_lfs_payloads,
+    canonical_lfs_pointer,
     verify_canonical_lfs_pointers,
 )
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 from .errors import (
+    ResumableCommitConflictError,
     ResumableCommitError,
+    ResumableRecoveryStateError,
     ResumableTargetRevisionError,
     ResumableWorkerError,
     _resumable_failure_envelope,
@@ -40,6 +49,7 @@ from .errors import (
 # Program-step 9 LFS policy slots are wired by atomgit.api.
 _atomgit_v5_get_json = None
 _atomgit_v5_repo_path = None
+_atomgit_v5_commit_sha = None
 ResumableUploadModeError = None
 ResumableLfsAttributesError = None
 _ResumableLfsAttributesPolicy = None
@@ -61,11 +71,431 @@ _RESUMABLE_COMMIT_BACKOFF_CAP = 300.0
 
 _RESUMABLE_COMMIT_BATCH_SIZES = (20, 10, 5, 2, 1)
 
+_PENDING_COMMIT_VERSION = 1
+
+_PENDING_COMMIT_MAX_BYTES = 64 * 1024
+
+_PENDING_COMMIT_MAX_OPERATIONS = 20
+
+_PENDING_COMMIT_DIRECTORY = Path(".cache/huggingface/atomgit")
+
+_PENDING_COMMIT_FILENAME = "pending-commit-v1.json"
+
+_PENDING_COMMIT_LOCK_FILENAME = "pending-commit-v1.lock"
+
+_SHA1_PATTERN = re.compile(r"[0-9a-f]{40}")
+
+_SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+
+
+def _pending_commit_paths(folder_path: Path):
+    directory = Path(folder_path) / _PENDING_COMMIT_DIRECTORY
+    return (
+        directory,
+        directory / _PENDING_COMMIT_FILENAME,
+        directory / _PENDING_COMMIT_LOCK_FILENAME,
+    )
+
+
+def _ensure_pending_commit_directory(directory: Path) -> None:
+    if directory.exists() and (not directory.is_dir() or directory.is_symlink()):
+        raise ResumableRecoveryStateError("pending commit directory is unsafe")
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(directory, 0o700)
+
+
+def _validated_pending_commit_operation(value) -> dict:
+    keys = {"path", "size", "sha256", "upload_mode", "git_sha1"}
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ResumableRecoveryStateError("pending commit operation is malformed")
+    path = value["path"]
+    parsed = PurePosixPath(path) if isinstance(path, str) else None
+    if (
+        parsed is None
+        or not path
+        or "\\" in path
+        or parsed.is_absolute()
+        or parsed.as_posix() != path
+        or any(part in ("", ".", "..") for part in parsed.parts)
+    ):
+        raise ResumableRecoveryStateError("pending commit path is invalid")
+    size = value["size"]
+    if not isinstance(size, int) or isinstance(size, bool) or size < 0:
+        raise ResumableRecoveryStateError("pending commit size is invalid")
+    sha256 = value["sha256"]
+    if not isinstance(sha256, str) or _SHA256_PATTERN.fullmatch(sha256) is None:
+        raise ResumableRecoveryStateError("pending commit digest is invalid")
+    upload_mode = value["upload_mode"]
+    if upload_mode not in ("regular", "lfs"):
+        raise ResumableRecoveryStateError("pending commit mode is invalid")
+    git_sha1 = value["git_sha1"]
+    if upload_mode == "regular":
+        if not isinstance(git_sha1, str) or _SHA1_PATTERN.fullmatch(git_sha1) is None:
+            raise ResumableRecoveryStateError("pending commit blob digest is invalid")
+    elif git_sha1 is not None:
+        raise ResumableRecoveryStateError("pending LFS blob digest is invalid")
+    return dict(value)
+
+
+def _validated_pending_commit(value) -> dict:
+    keys = {"version", "state", "base_revision", "commit_revision", "operations"}
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ResumableRecoveryStateError("pending commit state is malformed")
+    if value["version"] != _PENDING_COMMIT_VERSION:
+        raise ResumableRecoveryStateError("pending commit version is unsupported")
+    state = value["state"]
+    if state not in ("attempting", "created_unconfirmed"):
+        raise ResumableRecoveryStateError("pending commit status is invalid")
+    base_revision = value["base_revision"]
+    if base_revision is not None:
+        try:
+            base_revision = _validated_commit_revision(base_revision)
+        except CanonicalLfsPointerError as error:
+            raise ResumableRecoveryStateError(
+                "pending commit base revision is invalid"
+            ) from error
+    commit_revision = value["commit_revision"]
+    if state == "attempting" and commit_revision is not None:
+        raise ResumableRecoveryStateError("attempting commit revision is invalid")
+    if state == "created_unconfirmed":
+        try:
+            commit_revision = _validated_commit_revision(commit_revision)
+        except CanonicalLfsPointerError as error:
+            raise ResumableRecoveryStateError(
+                "pending commit revision is invalid"
+            ) from error
+    operations = value["operations"]
+    if (
+        not isinstance(operations, list)
+        or not operations
+        or len(operations) > _PENDING_COMMIT_MAX_OPERATIONS
+    ):
+        raise ResumableRecoveryStateError("pending commit operation count is invalid")
+    validated = [_validated_pending_commit_operation(item) for item in operations]
+    paths = [item["path"] for item in validated]
+    if len(paths) != len(set(paths)):
+        raise ResumableRecoveryStateError("pending commit paths are duplicated")
+    return {
+        "version": _PENDING_COMMIT_VERSION,
+        "state": state,
+        "base_revision": base_revision,
+        "commit_revision": commit_revision,
+        "operations": validated,
+    }
+
+
+def _read_pending_commit(folder_path: Path) -> Optional[dict]:
+    directory, pending_path, _ = _pending_commit_paths(folder_path)
+    if not pending_path.exists():
+        return None
+    if pending_path.is_symlink() or not pending_path.is_file():
+        raise ResumableRecoveryStateError("pending commit file is unsafe")
+    if os.name != "nt":
+        if stat.S_IMODE(directory.stat().st_mode) & 0o077:
+            raise ResumableRecoveryStateError(
+                "pending commit directory permissions are unsafe"
+            )
+        if stat.S_IMODE(pending_path.stat().st_mode) & 0o077:
+            raise ResumableRecoveryStateError(
+                "pending commit file permissions are unsafe"
+            )
+    with pending_path.open("rb") as stream:
+        payload = stream.read(_PENDING_COMMIT_MAX_BYTES + 1)
+    if len(payload) > _PENDING_COMMIT_MAX_BYTES:
+        raise ResumableRecoveryStateError("pending commit file is too large")
+    try:
+        value = json.loads(payload.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise ResumableRecoveryStateError("pending commit file is malformed") from error
+    return _validated_pending_commit(value)
+
+
+def _write_pending_commit(folder_path: Path, value: dict) -> None:
+    value = _validated_pending_commit(value)
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    if len(payload) > _PENDING_COMMIT_MAX_BYTES:
+        raise ResumableRecoveryStateError("pending commit file is too large")
+    directory, pending_path, _ = _pending_commit_paths(folder_path)
+    _ensure_pending_commit_directory(directory)
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".pending-", dir=directory)
+    try:
+        if callable(getattr(os, "fchmod", None)):
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, pending_path)
+        os.chmod(pending_path, 0o600)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            Path(temporary_name).unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _delete_pending_commit(folder_path: Path) -> None:
+    _, pending_path, _ = _pending_commit_paths(folder_path)
+    pending_path.unlink(missing_ok=True)
+
+
+@contextmanager
+def _resumable_projection_lock(folder_path: Path):
+    """Serialize one stable projection across local upload processes."""
+    directory, _, lock_path = _pending_commit_paths(folder_path)
+    _ensure_pending_commit_directory(directory)
+    if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
+        raise ResumableRecoveryStateError("pending commit lock file is unsafe")
+    with lock_path.open("a+b") as stream:
+        os.chmod(lock_path, 0o600)
+        if os.name == "nt":
+            import msvcrt
+
+            if stream.seek(0, os.SEEK_END) == 0:
+                stream.write(b"\0")
+                stream.flush()
+            stream.seek(0)
+            while True:
+                try:
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                    break
+                except OSError:
+                    time.sleep(0.1)
+        else:
+            import fcntl
+
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
 
 def _commit_error_status(error: BaseException) -> Optional[int]:
     response = getattr(error, "response", None)
     status_code = getattr(response, "status_code", None)
     return status_code if isinstance(status_code, int) else None
+
+
+def _resolve_resumable_revision(
+    *, token: str, repo_id: str, revision: str, request_timeout: float
+) -> str:
+    path = _atomgit_v5_repo_path(repo_id)
+    path += "/commits/" + quote(revision or "main", safe="")
+    payload = _atomgit_v5_get_json(path, token, timeout=request_timeout)
+    commit_sha = _atomgit_v5_commit_sha(payload)
+    try:
+        return _validated_commit_revision(commit_sha)
+    except CanonicalLfsPointerError as error:
+        raise ResumableRecoveryStateError(
+            "target revision could not be resolved"
+        ) from error
+
+
+def _operation_pending_record(operation) -> dict:
+    path = getattr(operation, "path_in_repo", None)
+    upload_info = getattr(operation, "upload_info", None)
+    size = getattr(upload_info, "size", None)
+    sha256 = getattr(upload_info, "sha256", None)
+    upload_mode = getattr(operation, "_upload_mode", None)
+    record = {
+        "path": path,
+        "size": size,
+        "sha256": sha256.hex() if isinstance(sha256, bytes) else None,
+        "upload_mode": upload_mode,
+        "git_sha1": (
+            _operation_git_sha1(operation) if upload_mode == "regular" else None
+        ),
+    }
+    return _validated_pending_commit_operation(record)
+
+
+def _pending_commit_value(
+    *, state: str, base_revision: str, commit_revision, operations
+) -> dict:
+    return _validated_pending_commit(
+        {
+            "version": _PENDING_COMMIT_VERSION,
+            "state": state,
+            "base_revision": base_revision,
+            "commit_revision": commit_revision,
+            "operations": [_operation_pending_record(item) for item in operations],
+        }
+    )
+
+
+def _local_pending_record_matches(folder_path: Path, record: dict) -> bool:
+    candidate = Path(folder_path).joinpath(*PurePosixPath(record["path"]).parts)
+    try:
+        if candidate.is_symlink() or not candidate.is_file():
+            return False
+        digest = hashlib.sha256()
+        with candidate.open("rb") as stream:
+            while True:
+                chunk = stream.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+        if candidate.stat().st_size != record["size"]:
+            return False
+        if digest.hexdigest() != record["sha256"]:
+            return False
+        if record["upload_mode"] == "regular":
+            operation = type(
+                "_PendingOperation",
+                (),
+                {
+                    "path_or_fileobj": candidate,
+                    "upload_info": type("_UploadInfo", (), {"size": record["size"]})(),
+                },
+            )()
+            return _operation_git_sha1(operation) == record["git_sha1"]
+        return True
+    except OSError:
+        return False
+
+
+def _mark_pending_records_committed(folder_path: Path, records) -> None:
+    for record in records:
+        paths = get_local_upload_paths(Path(folder_path), record["path"])
+        metadata = read_upload_metadata(Path(folder_path), record["path"])
+        if (
+            metadata.sha256 != record["sha256"]
+            or metadata.size != record["size"]
+            or metadata.upload_mode != record["upload_mode"]
+        ):
+            raise ResumableRecoveryStateError(
+                "resumable metadata changed before recovery"
+            )
+        metadata.is_committed = True
+        metadata.save(paths)
+
+
+def _remote_pending_record_matches(
+    *,
+    record: dict,
+    repo_id: str,
+    repo_type: str,
+    revision: str,
+    token: str,
+    request_timeout: float,
+) -> bool:
+    try:
+        algorithm, digest, size = _atomgit_file_checksum(
+            repo_id,
+            repo_type,
+            record["path"],
+            token,
+            revision,
+        )
+    except Exception as error:
+        if _commit_error_status(error) == 404 or getattr(error, "code", None) == 404:
+            return False
+        raise ResumableRecoveryStateError(
+            "remote pending commit state could not be read"
+        ) from error
+    if size != record["size"]:
+        return False
+    if record["upload_mode"] == "regular":
+        return algorithm == "git-sha1" and digest == record["git_sha1"]
+    if algorithm != "sha256" or digest != record["sha256"]:
+        return False
+    expectation = CanonicalLfsPointer(
+        path_in_repo=record["path"],
+        oid=record["sha256"],
+        size=record["size"],
+        content=canonical_lfs_pointer(record["sha256"], record["size"]),
+    )
+    try:
+        verify_canonical_lfs_pointers(
+            token=token,
+            repo_id=repo_id,
+            revision=revision,
+            expectations=[expectation],
+            timeout=request_timeout,
+        )
+    except CanonicalLfsPointerError as error:
+        raise ResumableRecoveryStateError(
+            "remote LFS pointer could not be confirmed"
+        ) from error
+    return True
+
+
+def _recover_pending_commit(
+    *,
+    folder_path: Path,
+    token: str,
+    repo_id: str,
+    repo_type: str,
+    revision: str,
+    request_timeout: float,
+) -> dict:
+    pending = _read_pending_commit(folder_path)
+    if pending is None:
+        return {"confirmed": 0, "remaining": 0, "confirmed_paths": ()}
+    for record in pending["operations"]:
+        if not _local_pending_record_matches(folder_path, record):
+            raise ResumableRecoveryStateError(
+                "local content changed while a commit remains pending",
+                confirmed=0,
+                remaining=len(pending["operations"]),
+            )
+    first_revision = _resolve_resumable_revision(
+        token=token,
+        repo_id=repo_id,
+        revision=revision,
+        request_timeout=request_timeout,
+    )
+    matched = [
+        record
+        for record in pending["operations"]
+        if _remote_pending_record_matches(
+            record=record,
+            repo_id=repo_id,
+            repo_type=repo_type,
+            revision=first_revision,
+            token=token,
+            request_timeout=request_timeout,
+        )
+    ]
+    second_revision = _resolve_resumable_revision(
+        token=token,
+        repo_id=repo_id,
+        revision=revision,
+        request_timeout=request_timeout,
+    )
+    if first_revision != second_revision:
+        raise ResumableCommitConflictError(
+            "target revision changed during resumable recovery",
+            confirmed=0,
+            remaining=len(pending["operations"]),
+        )
+    remaining = [item for item in pending["operations"] if item not in matched]
+    if matched:
+        _mark_pending_records_committed(folder_path, matched)
+    if not remaining:
+        _delete_pending_commit(folder_path)
+    else:
+        pending["operations"] = remaining
+        _write_pending_commit(folder_path, pending)
+        if first_revision != pending["base_revision"]:
+            raise ResumableCommitConflictError(
+                "pending commit conflicts with the target revision",
+                confirmed=len(matched),
+                remaining=len(remaining),
+            )
+    return {
+        "confirmed": len(matched),
+        "remaining": len(remaining),
+        "confirmed_paths": tuple(item["path"] for item in matched),
+    }
 
 
 def _commit_retry_after(error: BaseException) -> Optional[float]:
@@ -242,6 +672,8 @@ class _ResumableCommitController:
         fatal_callback=None,
         event_callback=None,
         lfs_attributes_policy=None,
+        folder_path=None,
+        request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
     ):
         self._create_commit = create_commit
         self._token = token
@@ -259,6 +691,64 @@ class _ResumableCommitController:
         self._fatal_callback = fatal_callback
         self._event_callback = event_callback
         self._lfs_attributes_policy = lfs_attributes_policy
+        self._folder_path = Path(folder_path) if folder_path is not None else None
+        self._request_timeout = request_timeout
+
+    def _recover_pending(self, kwargs, operations):
+        if self._folder_path is None:
+            return list(operations)
+        try:
+            recovery = _recover_pending_commit(
+                folder_path=self._folder_path,
+                token=self._token,
+                repo_id=kwargs.get("repo_id"),
+                repo_type=kwargs.get("repo_type") or "model",
+                revision=kwargs.get("revision") or "main",
+                request_timeout=self._request_timeout,
+            )
+        except (ResumableCommitConflictError, ResumableRecoveryStateError) as error:
+            self._raise_fatal(error, len(operations))
+        confirmed = set(recovery["confirmed_paths"])
+        if recovery["confirmed"]:
+            self._emit(
+                "recovery_result",
+                confirmed=recovery["confirmed"],
+                remaining=recovery["remaining"],
+            )
+        return [
+            operation
+            for operation in operations
+            if getattr(operation, "path_in_repo", None) not in confirmed
+        ]
+
+    def _write_attempt(self, kwargs, operations) -> str:
+        base_revision = _resolve_resumable_revision(
+            token=self._token,
+            repo_id=kwargs.get("repo_id"),
+            revision=kwargs.get("revision") or "main",
+            request_timeout=self._request_timeout,
+        )
+        _write_pending_commit(
+            self._folder_path,
+            _pending_commit_value(
+                state="attempting",
+                base_revision=base_revision,
+                commit_revision=None,
+                operations=operations,
+            ),
+        )
+        return base_revision
+
+    def _write_created(self, base_revision, commit_revision, operations) -> None:
+        _write_pending_commit(
+            self._folder_path,
+            _pending_commit_value(
+                state="created_unconfirmed",
+                base_revision=base_revision,
+                commit_revision=commit_revision,
+                operations=operations,
+            ),
+        )
 
     def _emit(self, kind: str, **details) -> None:
         if self._event_callback is None:
@@ -297,22 +787,40 @@ class _ResumableCommitController:
         attempts = 0
         last_error = None
         while operations and attempts < self._max_attempts:
+            operations = self._recover_pending(kwargs, operations)
+            if not operations:
+                return None
             attempts += 1
             call_kwargs = dict(kwargs)
             call_kwargs["operations"] = operations
             expectations = []
+            base_revision = None
             try:
+                if self._folder_path is not None:
+                    base_revision = self._write_attempt(call_kwargs, operations)
+                    call_kwargs["parent_commit"] = base_revision
                 with self._canonical_payloads() as expectations:
                     result = self._create_commit(*args, **call_kwargs)
-                if expectations:
+                if self._folder_path is not None:
                     try:
                         commit_revision = _validated_commit_revision(
                             getattr(result, "oid", None)
                         )
                     except CanonicalLfsPointerError as error:
-                        raise RuntimeError(
+                        raise ResumableRecoveryStateError(
                             "resumable commit revision is unavailable"
                         ) from error
+                    self._write_created(base_revision, commit_revision, operations)
+                if expectations:
+                    if self._folder_path is None:
+                        try:
+                            commit_revision = _validated_commit_revision(
+                                getattr(result, "oid", None)
+                            )
+                        except CanonicalLfsPointerError as error:
+                            raise RuntimeError(
+                                "resumable commit revision is unavailable"
+                            ) from error
                     try:
                         self._verify_committed(
                             expectations,
@@ -325,22 +833,44 @@ class _ResumableCommitController:
                             error.confirmation_failure,
                         ) from error
                 self._mark_committed(operations)
+                if self._folder_path is not None:
+                    _delete_pending_commit(self._folder_path)
                 return result
             except Exception as error:
                 last_error = error
+                status_code = _commit_error_status(error)
+                if status_code in (409, 412):
+                    self._raise_fatal(
+                        ResumableCommitConflictError(
+                            "target revision changed before commit",
+                            confirmed=0,
+                            remaining=len(operations),
+                        ),
+                        len(operations),
+                    )
                 if _is_ambiguous_commit_error(error):
                     self._emit(
                         "reconcile_start",
                         item_count=len(operations),
                         attempt=attempts,
                     )
-                    matched = self._reconcile(
-                        repo_id=call_kwargs.get("repo_id"),
-                        repo_type=call_kwargs.get("repo_type") or "model",
-                        revision=call_kwargs.get("revision") or "main",
-                        operations=operations,
-                        token=self._token,
-                    )
+                    if self._folder_path is not None:
+                        recovered_operations = self._recover_pending(
+                            call_kwargs, operations
+                        )
+                        matched = {
+                            getattr(operation, "path_in_repo", None)
+                            for operation in operations
+                            if operation not in recovered_operations
+                        }
+                    else:
+                        matched = self._reconcile(
+                            repo_id=call_kwargs.get("repo_id"),
+                            repo_type=call_kwargs.get("repo_type") or "model",
+                            revision=call_kwargs.get("revision") or "main",
+                            operations=operations,
+                            token=self._token,
+                        )
                     matched_operations = [
                         operation
                         for operation in operations
@@ -353,13 +883,14 @@ class _ResumableCommitController:
                             if expectation.path_in_repo in matched
                         ]
                         try:
-                            if matched_expectations:
+                            if matched_expectations and self._folder_path is None:
                                 self._verify_committed(
                                     matched_expectations,
                                     call_kwargs.get("repo_id"),
                                     call_kwargs.get("revision") or "main",
                                 )
-                            self._mark_committed(matched_operations)
+                            if self._folder_path is None:
+                                self._mark_committed(matched_operations)
                         except Exception as metadata_error:
                             self._raise_fatal(metadata_error, len(matched_operations))
                     operations = [
@@ -375,13 +906,23 @@ class _ResumableCommitController:
                     )
                     if not operations:
                         return None
-                if _commit_error_status(error) == 413:
+                if status_code == 413:
+                    if self._folder_path is not None:
+                        _delete_pending_commit(self._folder_path)
                     break
+                if self._folder_path is not None and status_code in (
+                    400,
+                    401,
+                    403,
+                    404,
+                    422,
+                    429,
+                ):
+                    _delete_pending_commit(self._folder_path)
                 if not _is_retryable_commit_error(error):
                     self._raise_fatal(error, len(operations))
                 if attempts < self._max_attempts:
                     delay = self._retry_delay(error, attempts)
-                    status_code = _commit_error_status(error)
                     if status_code == 429:
                         self._emit(
                             "rate_limit_wait",
@@ -469,6 +1010,12 @@ def _print_resumable_commit_event(event, batch_context) -> None:
             f"仍待提交 {event['remaining']}",
             flush=True,
         )
+    elif kind == "recovery_result":
+        print(
+            f"{prefix} 待对账提交已核对: 确认复用 {event['confirmed']}，"
+            f"仍待提交 {event['remaining']}",
+            flush=True,
+        )
     elif kind == "reduce":
         print(
             f"{prefix} 降低提交批量: {event['from_size']} -> " f"{event['to_size']}",
@@ -539,6 +1086,23 @@ def _run_resumable_upload(
         hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
         close_hf_session()
         client = HfApi(endpoint=_atomgit_hf_endpoint(), token=token)
+        recovery = _recover_pending_commit(
+            folder_path=Path(kwargs["folder_path"]),
+            token=token,
+            repo_id=kwargs["repo_id"],
+            repo_type=kwargs.get("repo_type") or "model",
+            revision=kwargs.get("revision") or "main",
+            request_timeout=request_timeout,
+        )
+        if recovery["confirmed"]:
+            _print_resumable_commit_event(
+                {
+                    "kind": "recovery_result",
+                    "confirmed": recovery["confirmed"],
+                    "remaining": recovery["remaining"],
+                },
+                batch_context,
+            )
         _refresh_unsafe_resumable_upload_modes(Path(kwargs["folder_path"]))
         if lfs_attributes_policy is not None:
             cached_patterns = _resumable_projection_lfs_patterns(
@@ -592,11 +1156,13 @@ def _run_resumable_upload(
                     event, batch_context
                 ),
                 lfs_attributes_policy=lfs_attributes_policy,
+                folder_path=Path(kwargs["folder_path"]),
+                request_timeout=request_timeout,
             )
             client.create_commit = controller.create_commit
         with _scoped_resumable_lfs_recovery(slow_flow_coordinator):
             client.upload_large_folder(**kwargs)
-        result_queue.put((True, None))
+        result_queue.put((True, {"recovered": recovery["confirmed"]}))
         result_sent = True
     except BaseException as exc:
         send_failure(exc)
@@ -635,7 +1201,7 @@ def _execute_resumable_upload_process(
     batch_context,
     auto_configure_lfs: bool = False,
     configured_lfs_patterns=(),
-) -> None:
+) -> dict:
     """Run one outer resumable batch and require an explicit child result."""
     methods = multiprocessing.get_all_start_methods()
     context = multiprocessing.get_context("fork" if "fork" in methods else "spawn")
@@ -671,14 +1237,27 @@ def _execute_resumable_upload_process(
             confirmation_failure = (
                 error.get("confirmation_failure") if isinstance(error, dict) else None
             )
+            confirmed = error.get("confirmed") if isinstance(error, dict) else None
+            remaining = error.get("remaining") if isinstance(error, dict) else None
             raise ResumableWorkerError(
                 category or "unknown",
                 patterns,
                 commit_revision=commit_revision,
                 confirmation_failure=confirmation_failure,
+                confirmed=confirmed,
+                remaining=remaining,
             )
-        if ok is not True or error is not None or getattr(process, "exitcode", 0) != 0:
+        if (
+            ok is not True
+            or not isinstance(error, dict)
+            or set(error) != {"recovered"}
+            or not isinstance(error["recovered"], int)
+            or isinstance(error["recovered"], bool)
+            or not 0 <= error["recovered"] <= _PENDING_COMMIT_MAX_OPERATIONS
+            or getattr(process, "exitcode", 0) != 0
+        ):
             raise RuntimeError("resumable upload worker returned an invalid result")
+        return error
     finally:
         if process.is_alive():
             process.terminate()
