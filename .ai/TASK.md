@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D09 and D10 delivered; awaiting next explicit activation)
+Status: inactive (D11 accepted and recorded; awaiting explicit activation)
 
 ## Successor Development Issue
 
@@ -11,13 +11,14 @@ Status: inactive (D09 and D10 delivered; awaiting next explicit activation)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
-  `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01` 和 `D10 / MON-02`；D02 已由
-  D01 解决并移除。
+  `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02` 和
+  `D11 / MON-03`；D02 已由 D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
   开发底线、最终完整离线门禁和独立审查；维护者已接受结果，任务提交 `f1b4c78`
-  已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。
+  已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。D11 完整方案已
+  接受并写入本 Issue，但保持 inactive，尚未授权实施。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -97,6 +98,10 @@ Status: inactive (D09 and D10 delivered; awaiting next explicit activation)
   维护者随后明确要求“自己验收一下 没问题就提交推送”；据此授权最终交付复验通过后
   接受 D09/D10，提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录
   交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D11–D18 仍未授权。
+  维护者随后接受 D11 的父进程批次生命周期直连方案，并明确要求“将完整方案落入
+  本地开发issue”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，
+  将 D11 登记为未激活的后继开发范围；不授权激活 D11、创建分支、修改源码/测试/
+  用户文档、运行实现验证、提交、合并、推送、真实 AtomGit 操作或实施 D12–D18。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -115,14 +120,17 @@ Status: inactive (D09 and D10 delivered; awaiting next explicit activation)
 - D09/D10 delivery mode: 最终交付复验通过后提交本地任务分支、no-ff 合入 `yuto`，
   并且只推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D11–D18。
-- Next exact action: 等待维护者继续 D11 讨论或明确激活新的开发 Issue；不得自行实施
-  D11–D18、执行真实 AtomGit 操作或其他远程写入。
+- D11 delivery mode: 当前只登记完整方案，保持 inactive；实施、分支、测试、提交、
+  合并、推送及任何真实 AtomGit 操作均需后续单独授权。
+- Next exact action: 等待维护者开始 D12 讨论或明确激活 D11；不得自行实施 D11–D18、
+  执行真实 AtomGit 操作或其他远程写入。
 
 ### Repository Reconciliation
 
 当前分支 `yuto`；D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 合入，
 并仅推送 `github/yuto` 后核验远端一致。任务分支保留在本地且未推送。当前 worktree
-仅保留五份既有 `.ai` 规范修改，未纳入 D09/D10 提交。Git 还包含 R9、D01、D03、D04、
+仅保留五份既有 `.ai` 规范修改，未纳入 D09/D10 提交；本次获授权叠加 D11 的
+`.ai/TASK.md` 与 `.ai/ISSUE_DISCUSSION.md` 记录。Git 还包含 R9、D01、D03、D04、
 D05、D06 和 D07 的历史或已交付提交；旧记录不恢复为活跃任务。历史矛盾的完整整理
 仍属于 D18，本次没有将 D18 标记为已解决。
 
@@ -1706,6 +1714,208 @@ git diff --check
   D17 真实 CLI/快照/monitor 端到端链路；这些均为已记录的范围外或后续验证边界。
 - Verdict: `APPROVED`。该结论不授权提交、合并、推送、Issue 关闭、发布或远程写入。
 
+### D11 Objective And Evidence
+
+修复 resumable 目录上传会话的批次状态长期停留在 `0/N`：上传服务在父进程完成
+实际文件选择并进入每个外层批次时，直接把当前批次和累计已确认文件数更新到父进程
+拥有的 `UploadSession`，使 `atomgit monitor upload status --list` 和详细监控反映
+真实外层批次，同时保证任何观测故障都不改变上传结果。
+
+当前 `interfaces/cli/commands/transfers.py` 只在会话创建时按 CLI 文件统计写一次
+`batch="0/N"`；`adapters/upload/service.py` 随后才应用真实文件选择并计算批次，且在
+批次开始、成功和失败处已经维护 `batch_number`、`batch_count`、`total_files` 与
+`completed_files`，但只打印日志。`UploadSession.update()` 已能刷新父进程状态并提交
+最新快照；历史 `upload_directory()` 签名还保留未使用的 `progress_callback`。
+因此根因位于父进程批次生命周期没有回写会话，不需要解析 stdout，也不需要修改
+D10 的子进程 JSON 观测协议。
+
+证据来自当前源码、`tests/test_upload_batching.py`、
+`tests/test_upload_observability.py`、`tests/test_upload_progress.py`、
+`tests/test_resumable_recovery.py`、开发底线和 `docs/features/upload-monitor.md` 的
+只读核对；本次方案登记没有运行测试或真实 AtomGit 上传。D09/D10 最近一次已记录
+完整离线基线为 93/93，但不能替代 D11 实施后的红灯、专项和完整复验。
+
+### D11 Accepted State And Ownership Contract
+
+- `batch` 继续使用现有 `i/N` 字符串，唯一含义是“当前外层批次/总批次”；不新增
+  `completed_batches`、批次阶段或快照版本字段。`files_done` 只表示远端已确认完成
+  文件，不计入仅哈希、仅 LFS 预上传或本地待确认的文件。
+- CLI 创建 resumable 会话时先写 `0/N`、`files_done=0`；上传服务应用忽略规则完成
+  实际文件选择后，再以真实 `files_total` 和 `batch_count` 提交一次 `0/N`，纠正
+  CLI 预估与实际选择之间可能存在的差异。
+- 第 `i` 个外层批次开始即提交 `i/N` 和此前累计确认数；成功后使用现有
+  `completed_files` 提交累计确认数。最后一批成功后的状态必须为 `N/N` 且
+  `files_done == files_total`。
+- 批次失败时先复用现有断点元数据、续传跳过和远端确认结果计算
+  `confirmed_in_batch`，再提交失败批次 `i/N` 及累计确认数。仓库、revision、权限等
+  批次开始前失败保持 `0/N`，不能伪造已开始或已完成进度。
+- 内部提交降批、LFS preupload 重试、远端对账、连接替换和同一外层批次内暂态不
+  增加批次号。单批执行期间 `files_done` 可以保持上一次确认值；当前批次和 D09 Flow
+  状态共同表示任务仍在活动。
+- 父进程继续是 `UploadSession`、批次状态和快照的唯一写入者。批次更新使用既有
+  `progress_callback` 在父进程内直达会话，不进入 D10 的 `flow_state` / `flow_event`
+  envelope、256 条 observation queue 或独立 result queue。
+- callback 每次只收到完整安全字典：`batch`、`files_total`、`files_done`。不得携带
+  session ID、仓库名、源/远程路径、文件名、OID、SHA、token、URL、请求头、响应正文、
+  异常原文或任何可重放请求信息。
+- callback 为可选 best-effort 观测边界。普通 `Exception` 被隔离，不改变上传返回、
+  异常分类、CLI 退出码、断点元数据或远端写入；`KeyboardInterrupt` / `SystemExit`
+  继续遵循现有取消和退出语义。
+- 既有 publisher 允许合并短时间内的中间状态，但内存中的最新状态和 `close()` 最终
+  刷新必须正确。旧 v1 快照缺少文件字段时继续可读，不显示伪造的 `0/0`。
+
+### D11 Implementation Scope
+
+1. 在 `src/atomgit/interfaces/cli/commands/transfers.py` 的 resumable 会话初始状态补充
+   `files_done=0`，并通过一个 CLI 私有参数把安全进度字典转换为
+   `observe_session.update(**progress)`；现有成功/失败终态和 observer 恢复逻辑保持。
+2. 在 `src/atomgit/interfaces/cli/runner.py` 的 `run()` 中先弹出私有批次 callback，
+   注入 `_CliTransferPort`，再调用公开 native SDK 方法；只有目录 resumable 路径把
+   callback 交给历史 `upload_directory(progress_callback=...)`。不修改
+   `UploadRequest`、`TransferPort` 或 `AtomGitClient.upload_folder()` 公开合同。
+3. 在 `src/atomgit/adapters/upload/service.py` 增加一个最小的安全通知 helper，只在
+   resumable 实际计划、外层批次开始、成功和失败边界发送完整进度字典。失败通知
+   必须位于现有 `completed_files` 核对完成之后；普通上传分支不新增监控行为。
+4. 在 `src/atomgit/infrastructure/upload_observe.py` 的详细渲染中，仅当
+   `files_total` 存在时显示“已确认文件 x/y”。`render_list()` 已读取 `batch`，无需
+   新列或 schema 变化；`UploadSession.update()` 和字段白名单已满足本 Issue，不新增
+   session 类型或存储层。
+5. 更新 `tests/test_upload_batching.py`、`tests/test_upload_observability.py`、
+   `tests/development_floor_contract.py`、`.ai/DEVELOPMENT_FLOOR.md`、
+   `docs/features/upload-monitor.md`、`docs/development_floor.md` 和必要的
+   `docs/architecture.md` 说明。不新增生产模块、测试脚本、依赖、CLI 参数或 SDK 参数。
+
+### D11 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`UPLOAD-RESUMABLE`、`CLI-DISPATCH`、`ARCHITECTURE`、
+`ERROR-REDACTION`、`RUNTIME`、`PORTABILITY` 和 `FLOOR-REGISTRY`。
+
+### D11 Protected Existing Invariants
+
+- `UPO-001`–`UPO-005`：快照继续只读、有界、原子、脱敏；父进程仍是唯一会话写入者；
+  D09 Flow 状态和 D10 跨进程观测/结果隔离不退化。
+- `RESUMEUP-002`、`RESUMEUP-005`、`RESUMEUP-006`：失败不误报成功，断点详情、待对账
+  提交、`parent_commit` 并发保护和现有累计确认口径保持。
+- `RUNTIME-002`：HF timeout、progress 和其他进程全局状态在所有出口恢复；批次 callback
+  不建立新的可泄漏全局状态。
+- `REDACT-001`：快照、callback、CLI 输出和测试中不出现 token、URL、OID、路径、响应
+  正文或异常原文。
+- `ARCH-001`、`ARCH-003`：公开 CLI/native SDK 继续通过共享 usecase，私有 observer
+  在 CLI adapter 边界消费，不扩展公开请求或结果。
+- `PORT-001`：Python >=3.9、Windows/POSIX 和当前多进程启动方式继续得到同义上传结果；
+  callback 不被序列化或传入子进程。
+- 公开 Click schema、历史 `upload_directory` 签名、native/legacy SDK 返回与异常、
+  普通目录上传、单文件上传、model/dataset、revision、timeout 和 batch 行为不变。
+- 当前 28 个能力、132 条不变量、93 个离线脚本在实施前保持基线；不得删减或弱化
+  既有登记来通过 D11。
+
+### D11 New Or Changed Invariants
+
+- `UPO-006`：resumable 外层批次在实际计划、开始、成功和失败时更新父进程拥有的
+  当前批次与累计已确认文件数；callback、publisher 或快照失败不得改变上传结果。
+- 实施完成后预计保持 28 个能力和 93 个测试脚本，不变量从 132 增至 133。实际计数
+  必须以实施时 Git 和可执行登记册为准，方案登记不能预先声称新增不变量已实现。
+
+### D11 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 21 个文件、20 文件批次，两批成功 | callback 顺序为实际 `0/2`、`1/2`、第一批完成 20、`2/2`、最终完成 21 |
+| 第二批失败 | 最终保留失败批次 `2/N` 和第一批累计确认数，不进入下一批 |
+| 第一批部分确认后失败 | 使用现有断点/远端核对后的确认数，不把待确认文件计入完成 |
+| 续传全部或部分跳过 | 跳过文件在现有成功口径下计入最终确认完成数，不重复提交 |
+| 批次开始前验证失败 | 会话终态为 failed，批次仍为 `0/N`，文件完成数不增加 |
+| callback、publisher 或快照写入抛错 | 上传结果、错误分类、退出码、断点元数据和远端调用次数不变 |
+| CLI→runner→API→UploadSession→JSON | 私有 callback 完整贯通，最终 JSON、详细渲染和 `--list` 使用真实批次 |
+| 旧 v1 快照缺少文件字段 | 正常加载，不崩溃、不显示伪造 `0/0` |
+| 普通目录、单文件和 native SDK | 不创建批次会话，不增加公开参数或改变结果 |
+| 敏感测试载荷 | callback 和快照只保留三个安全字段，不泄露路径、OID、URL 或 token |
+
+先扩展 `tests/test_upload_batching.py`，要求旧实现因完全不调用
+`progress_callback` 而红灯；不得用只测试新 helper 的方式代替真实批次循环证据。
+再扩展 `tests/test_upload_observability.py` 覆盖真实 CLI 私有接线、会话 JSON、详细
+渲染、列表、旧快照和脱敏。复验 `tests/test_upload_progress.py`、
+`tests/test_resumable_recovery.py`、`tests/test_upload_domain_ownership.py`、
+`tests/test_architecture_parity.py`、`tests/test_cli_error_redaction.py` 和
+`tests/test_development_floor.py`。不新增测试脚本，因此无需扩大 CLI baseline 的
+脚本 inventory。
+
+实施完成后在 `atomgit_cli` conda 环境运行：
+
+```bash
+python tests/test_upload_batching.py
+python tests/test_upload_observability.py
+python tests/test_upload_progress.py
+python tests/test_resumable_recovery.py
+python tests/test_upload_domain_ownership.py
+python tests/test_architecture_parity.py
+python tests/test_cli_error_redaction.py
+python tests/test_development_floor.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+最后一次代码、测试或文档修正后必须重跑完整离线基线和静态门禁，并按
+`.ai/REVIEW.md` 执行独立审查。真实 AtomGit 上传不是本地批次状态合同的必需证据，
+未获授权时不得执行或以 mock 结果声称远程验证。
+
+### D11 Implementation Phases And Acceptance
+
+1. 维护者单独激活后，从最新 `yuto` 创建本地 `codex/d11-upload-batch-progress`
+   任务分支；冻结 D09/D10、公开签名、批次统计和开发底线，在既有测试中添加红灯。
+   验证：旧实现只因没有批次 callback 回写而失败，既有断言继续通过。
+2. 接通 CLI 私有 callback、runner adapter 和父进程上传服务四个生命周期边界。
+   验证：两批成功、第二批失败、部分确认、续传跳过、前置失败和 callback 异常专项
+   全部通过，普通上传与 native SDK 不变。
+3. 更新详细渲染、用户说明、架构和 `UPO-006` 开发底线登记。验证：旧快照降级、
+   `--list`、详细文件计数、脱敏、结构和登记合同通过，预计计数为 28/133/93。
+4. 运行完整离线门禁、差异/凭证/生成物检查和独立审查。验证：实现、测试和文档一致，
+   原有五份未提交 `.ai` 规范修改未混入任务差异，无未解决 P0/P1/P2/P3 发现，再进入
+   人工验收。
+
+验收必须同时满足：第一批开始后不再显示 `0/N`；列表和详细视图显示实际当前外层
+批次；成功最终为 `N/N` 和全部文件确认；失败保留实际失败批次及核对后的累计确认数；
+前置失败不伪造进度；callback/持久化故障不影响上传；D09/D10、普通上传、SDK、公开
+参数和快照 v1 不退化；完整基线、静态门禁、开发底线和独立审查全部通过。
+
+### D11 Non-Goals And Residual Risks
+
+- 不处理 D12 heartbeat/更新时间、D13 自动退出、D14 时间格式、D15 刷屏、D16 仓库
+  类型警告、D17 真实 CLI 跨进程端到端覆盖或 D18 历史文档矛盾。
+- 不提供单个外层批次内部的逐文件实时确认，不填充精确 `bytes_done`，不为普通目录
+  或单文件上传新增 monitor，不提供下载监控、暂停/取消、daemon、socket 或新 TUI。
+- 单批最多 20 个文件的执行期间，`files_done` 可能保持上一确认值；`batch=i/N` 与
+  D09 Flow 速度/阶段用于表示仍在活动。若未来必须显示批次内提交进度，应另行讨论
+  是否扩展 D10 子进程协议，不能在 D11 中预留未验收的消息类型。
+- publisher 会合并快速中间状态，monitor 不是完整审计日志；只要求最新和最终状态
+  正确。真实 Windows/Linux 调度、独立 Python 3.9 和真实 AtomGit 网络节奏未验证，
+  交付时必须作为范围外证据报告。
+- 本次登记不授权实施、分支、测试、提交、合并、推送、PR、标签、发布或任何真实
+  AtomGit 写入。
+
+### D11 Compatibility And Rollback
+
+- 不改变公开 CLI/native SDK/legacy SDK 的命令、参数、函数签名、返回值或异常。
+  历史 `upload_directory(progress_callback=None)` 签名保持；只有显式提供 callback
+  的 resumable 调用在外层批次边界收到安全字典，callback 异常被隔离。
+- 快照继续为 v1，使用现有 `batch`、`files_total`、`files_done` 白名单字段；旧快照
+  继续可读，旧版本也会忽略已有但未展示的字段。没有 HF metadata、上传投影、源文件
+  或远端数据迁移。
+- 若实现回归，可整体回退单个 D11 实现提交恢复旧显示；无需清理或转换快照。不得只
+  保留半条 callback 接线，避免服务产生状态但 CLI 丢弃，或 CLI 注入 callback 但服务
+  从不通知。
+
+### D11 Activation Status
+
+- [x] 维护者接受 D11 完整方案并授权登记到本地开发 Issue。
+- [ ] 维护者单独授权激活 D11 实施。
+- [ ] 本地任务分支已创建。
+- [ ] 红灯、实现、文档和开发底线已完成。
+- [ ] 专项、完整离线门禁和独立审查通过。
+- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+
 ### Current Handoff Snapshot
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
@@ -1723,9 +1933,9 @@ git diff --check
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入后续 Issue；本次叠加了获授权的 D09/D10 源码、既有测试、
-  最小文档、开发底线和任务记录。D06–D08 任务分支保留在本地且未推送，没有修改
-  `main`、其他远端分支或真实 AtomGit 仓库。
+  worktree，不能将其误归入后续 Issue；D11 本次只叠加获授权的 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md` 方案记录。D06–D10 任务分支保留在本地且未推送，没有
+  修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -1813,8 +2023,10 @@ git diff --check
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- 下一步：等待维护者继续 D11 讨论或明确激活新的开发 Issue；不执行真实 AtomGit
-  操作，也不自行实施 D11–D18。
+- D11 方案状态：维护者已接受父进程 `progress_callback` 直连方案并授权写入本地
+  开发 Issue；未激活、未创建分支、未改源码/测试/用户文档、未运行实现验证。
+- 下一步：等待维护者开始 D12 讨论或明确激活 D11；不执行真实 AtomGit 操作，也不
+  自行实施 D11–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
