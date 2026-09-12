@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D12 upload session heartbeat timestamp)
+Status: inactive (D12 delivered; awaiting next authorization)
 
 ## Successor Development Issue
 
@@ -23,8 +23,9 @@ Status: active (D12 upload session heartbeat timestamp)
   `0e0f7bd` 合入并限定推送至 `github/yuto`，任务分支未推送。D12 的快照发布时刷新
   会话 `updated_at` 方案已获维护者接受并写入本 Issue。维护者随后明确要求“开始开发”，
   D12 已在本地任务分支激活；heartbeat 时间与默认选择红灯已按预期复现，最小实现、
-  回归、文档、开发底线、完整离线门禁和独立审查已完成；维护者已接受复验结果并授权
-  限定 Git 交付，当前进入提交、no-ff 合入 `yuto` 和仅推送 `github/yuto` 阶段。
+  回归、文档、开发底线、完整离线门禁和独立审查已完成；维护者接受复验结果后，任务
+  提交 `06e64ca` 已通过 no-ff 合并提交 `54f9931` 合入 `yuto`，并已仅推送、核验
+  `github/yuto`，任务分支未推送。D12 已完成限定交付。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -149,8 +150,8 @@ Status: active (D12 upload session heartbeat timestamp)
   D12–D18。
 - D12 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D13–D18。
-- Next exact action: 将 D12 任务文件提交到本地任务分支，no-ff 合入 `yuto`，写入交付
-  记录后仅推送并核验 `github/yuto`；D13 讨论继续暂停。
+- Next exact action: 等待维护者开始 D13 讨论或调整顺序；不自行实施 D13–D18，也不执行
+  真实 AtomGit、PR、标签或发布操作。
 
 ### Repository Reconciliation
 
@@ -2177,6 +2178,13 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
 - 人工验收：`accepted`。授权范围仅为 D12 本地任务提交、no-ff 合入 `yuto`、仅推送
   `github/yuto` 和交付记录；任务分支、真实 AtomGit、PR、标签、发布及 D13–D18 不推送
   或不执行。
+- 任务提交：`06e64ca127d3aded0bab5c9e686cb0d46db695bb`；本地 no-ff 合并提交：
+  `54f9931a3090892126da4660709e393933c684e8`。合并后的 `yuto` 完整离线基线为
+  **93 passed in 117.61s**，compileall、pip check、Python 3.9 AST、打包/格式债务、
+  diff check 和既存修改哈希核对通过。
+- `54f9931` 已仅推送并核验 `github/yuto` 一致；远端不存在
+  `codex/d12-upload-session-heartbeat`。交付记录写回后的完整离线基线为
+  **93 passed in 111.76s**；交付记录提交同样只进入 `yuto`，不推送任务分支。
 
 ### Current Handoff Snapshot
 
@@ -2232,8 +2240,8 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
 - D12 当前状态：维护者已接受发布边界刷新会话 `updated_at` 的完整方案并单独授权
   开始开发；本地任务分支已创建。旧实现专项 23/25 的两项新失败已由发布副本单行刷新
   修复；实现、文档、`UPO-007`、专项和最终 93/93 完整离线门禁均已完成，独立审查无
-  P0/P1/P2/P3 发现并 `APPROVED`，当前等待人工验收；尚未提交、合并、推送或执行真实
-  AtomGit 操作，D13 讨论暂停。
+  P0/P1/P2/P3 发现并 `APPROVED`。任务提交 `06e64ca` 已通过 `54f9931` no-ff 合入
+  `yuto`，仅推送并核验 `github/yuto`，任务分支未推送；未执行真实 AtomGit 操作。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
