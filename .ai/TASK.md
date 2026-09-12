@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D11 batch lifecycle progress implementation)
+Status: inactive (D11 delivered; awaiting next authorization)
 
 ## Successor Development Issue
 
@@ -18,9 +18,9 @@ Status: active (D11 batch lifecycle progress implementation)
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
   开发底线、最终完整离线门禁和独立审查；维护者已接受结果，任务提交 `f1b4c78`
   已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。D11 完整方案已
-  接受并写入本 Issue。维护者现已明确要求“开始开发”；D11 红灯、实现、专项、文档、
-  开发底线、最终完整离线门禁和独立审查已完成；维护者已接受结果并授权最终复验
-  通过后提交、本地 no-ff 合入 `yuto`，并仅推送 `github/yuto`。
+  接受并写入本 Issue。D11 已完成红灯、实现、专项、文档、开发底线、最终完整离线
+  门禁和独立审查；维护者接受结果后，任务提交 `6a9d6f7` 已通过 no-ff 合并提交
+  `0e0f7bd` 合入并限定推送至 `github/yuto`，任务分支未推送。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -131,8 +131,8 @@ Status: active (D11 batch lifecycle progress implementation)
 - D11 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D12–D18。
-- Next exact action: 在本地任务分支执行 D11 最终交付复验；全部通过后按限定权限提交、
-  no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验远端一致。
+- Next exact action: 等待维护者开始 D12 讨论或选择其他获授权任务；不自行实施
+  D12–D18 或执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
@@ -1928,8 +1928,9 @@ git diff --check
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `codex/d11-upload-batch-progress`，基于 `yuto@abed2f4` 创建；D09/D10 任务提交
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D11 任务提交
+  `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入并限定推送至 `github/yuto`，任务
+  分支保留在本地且未推送。D09/D10 任务提交
   `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
   并已仅推送和核验 `github/yuto`。D09/D10 任务分支保留在本地且未推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
@@ -1973,6 +1974,8 @@ git diff --check
   pip check、打包 13/13、Python 3.9 AST、
   锁定依赖和公开签名、凭证模式、二进制差异、未跟踪生成物及 `git diff --check`
   均通过。原有五份 `.ai` 规范修改哈希保持不变。
+- D11 交付：实现提交 `6a9d6f7`，no-ff 合并提交 `0e0f7bd`；已仅推送并核验
+  `github/yuto`，远端不存在 D11 任务分支，未修改 `main` 或其他远端分支。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -2060,10 +2063,9 @@ git diff --check
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- D11 当前状态：已激活并完成红灯、最小实现、文档、开发底线、专项、最终 93/93
-  完整离线门禁和独立审查，结论 `APPROVED`；维护者已接受并授权最终复验通过后
-  提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`。任务分支不推送，真实
-  AtomGit 及 D12–D18 实施仍未授权。
+- D11 当前状态：实现提交 `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入 `yuto`，
+  并仅推送和核验 `github/yuto`；任务分支保留在本地且未推送。真实 AtomGit 及
+  D12–D18 实施仍未授权。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
