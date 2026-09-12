@@ -73,6 +73,23 @@ def _print_resumable_upload_progress(batch_number, batch_count, progress) -> Non
     print(message, flush=True)
 
 
+def _notify_resumable_upload_progress(
+    callback, batch_number, batch_count, total_files, completed_files
+) -> None:
+    if callback is None:
+        return
+    try:
+        callback(
+            {
+                "batch": f"{batch_number}/{batch_count}",
+                "files_total": total_files,
+                "files_done": completed_files,
+            }
+        )
+    except Exception:
+        pass
+
+
 @contextmanager
 def scoped_upload_token(token):
     """Use an explicit SDK token without mutating saved user credentials."""
@@ -360,6 +377,9 @@ class UploadServiceMixin:
                 _print_upload_batch_plan(total_files, batch_count, batch_size)
 
                 if resumable:
+                    _notify_resumable_upload_progress(
+                        progress_callback, 0, batch_count, total_files, completed_files
+                    )
                     # 断点续传/分块上传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     normalized_repo_id = self._normalize_repo_id(repo_id)
@@ -373,6 +393,13 @@ class UploadServiceMixin:
                     for batch_index, batch in enumerate(batches):
                         batch_number = batch_index + 1
                         batch_file_count = len(batch)
+                        _notify_resumable_upload_progress(
+                            progress_callback,
+                            batch_number,
+                            batch_count,
+                            total_files,
+                            completed_files,
+                        )
                         print(
                             f"[批次 {batch_number}/{batch_count}] 开始: "
                             f"{batch_file_count} 个文件",
@@ -559,6 +586,13 @@ class UploadServiceMixin:
                                 0, confirmed_in_batch - batch_skipped
                             )
                             completed_files += confirmed_in_batch
+                            _notify_resumable_upload_progress(
+                                progress_callback,
+                                batch_number,
+                                batch_count,
+                                total_files,
+                                completed_files,
+                            )
                             remaining_files = total_files - completed_files
                             print(
                                 f"[批次 {batch_number}/{batch_count}] 失败: "
@@ -588,6 +622,13 @@ class UploadServiceMixin:
                         newly_submitted = batch_file_count - batch_skipped
                         submitted_files += newly_submitted
                         completed_files += batch_file_count
+                        _notify_resumable_upload_progress(
+                            progress_callback,
+                            batch_number,
+                            batch_count,
+                            total_files,
+                            completed_files,
+                        )
                         print(
                             f"[批次 {batch_number}/{batch_count}] 成功: "
                             f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"

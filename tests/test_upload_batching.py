@@ -305,10 +305,12 @@ def main():
                 ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                 resumable=False,
                 num_workers=3,
+                progress_callback=lambda progress: ordinary_calls.append(progress),
             )
             ordinary_ok = (
                 result is True
                 and len(ordinary_calls) == 2
+                and all("batch" not in call for call in ordinary_calls)
                 and [len(call["allow_patterns"]) for call in ordinary_calls] == [20, 1]
                 and thread_counts == [3, 3]
                 and all("batch_size" not in call for call in ordinary_calls)
@@ -443,6 +445,7 @@ def main():
             )
 
             lifecycle_output = StringIO()
+            lifecycle_progress = []
             resumable_calls.clear()
             target_validations.clear()
             with redirect_stdout(lifecycle_output):
@@ -452,6 +455,7 @@ def main():
                     ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                     progress_bar=False,
+                    progress_callback=lifecycle_progress.append,
                 )
             lifecycle_text = lifecycle_output.getvalue()
             lifecycle_ok = (
@@ -463,6 +467,14 @@ def main():
                 and lifecycle_text.index("[批次 1/2] 成功:")
                 < lifecycle_text.index("[批次 2/2] 开始:")
                 and "上传批次汇总: 计划 21，新增提交 21，续传跳过 0，确认完成 21" in lifecycle_text
+                and lifecycle_progress
+                == [
+                    {"batch": "0/2", "files_total": 21, "files_done": 0},
+                    {"batch": "1/2", "files_total": 21, "files_done": 0},
+                    {"batch": "1/2", "files_total": 21, "files_done": 20},
+                    {"batch": "2/2", "files_total": 21, "files_done": 20},
+                    {"batch": "2/2", "files_total": 21, "files_done": 21},
+                ]
             )
 
             for kwargs, files in resumable_calls:
@@ -475,6 +487,7 @@ def main():
                     metadata.save(paths)
             resumable_calls.clear()
             target_validations.clear()
+            skip_progress = []
             skip_output = StringIO()
             with redirect_stdout(skip_output):
                 skip_result = api_mod.api.upload_directory(
@@ -482,6 +495,7 @@ def main():
                     "user/repo-lifecycle",
                     ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
+                    progress_callback=skip_progress.append,
                 )
             skip_text = skip_output.getvalue()
             skip_ok = (
@@ -491,6 +505,8 @@ def main():
                 and "[批次 1/2] 续传跳过: 20 个已确认完成文件" in skip_text
                 and "[批次 2/2] 续传跳过: 1 个已确认完成文件" in skip_text
                 and "上传批次汇总: 计划 21，新增提交 0，续传跳过 21，确认完成 21" in skip_text
+                and skip_progress[-1]
+                == {"batch": "2/2", "files_total": 21, "files_done": 21}
             )
 
             def fail_metadata_read(*args, **kwargs):
@@ -517,6 +533,7 @@ def main():
             target_validations.clear()
             resumable_events.clear()
             FakeHfApi.missing_repo_id = "user/repo-missing"
+            missing_progress = []
             missing_output = StringIO()
             with redirect_stdout(missing_output):
                 missing_result = api_mod.api.upload_directory(
@@ -524,6 +541,7 @@ def main():
                     FakeHfApi.missing_repo_id,
                     ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
+                    progress_callback=missing_progress.append,
                 )
             FakeHfApi.missing_repo_id = None
             missing_text = missing_output.getvalue()
@@ -533,6 +551,8 @@ def main():
                 and not resumable_calls
                 and resumable_events == [("validate", "user/repo-missing")]
                 and "仓库不存在" in missing_text
+                and missing_progress
+                == [{"batch": "0/2", "files_total": 21, "files_done": 0}]
             )
 
             FakeHfApi.fail_repo_id = "user/repo-terminal-failure"
@@ -556,6 +576,7 @@ def main():
 
             checkpoint_repo = "user/repo-checkpoint-failure"
             FakeHfApi.checkpoint_repo_id = checkpoint_repo
+            checkpoint_progress = []
             checkpoint_failure_output = StringIO()
             with redirect_stdout(checkpoint_failure_output):
                 checkpoint_failure_result = api_mod.api.upload_directory(
@@ -564,6 +585,7 @@ def main():
                     ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                     path_in_repo="remote/prefix",
+                    progress_callback=checkpoint_progress.append,
                 )
             FakeHfApi.checkpoint_repo_id = None
             checkpoint_failure_text = checkpoint_failure_output.getvalue()
@@ -576,6 +598,8 @@ def main():
                 "本地待确认 19（19.0 B）" in checkpoint_failure_text
                 and "上传批次汇总: 计划 21，新增提交 1，续传跳过 0，确认完成 1"
                 in checkpoint_failure_text
+                and checkpoint_progress[-1]
+                == {"batch": "1/2", "files_total": 21, "files_done": 1}
             )
 
             corrupt_repo = "user/repo-corrupt-checkpoint"
@@ -605,6 +629,7 @@ def main():
             configured_failure_repo = "user/repo-configured-failure"
             FakeHfApi.fail_repo_on_call = (configured_failure_repo, 2)
             FakeHfApi.repo_upload_counts.pop(configured_failure_repo, None)
+            configured_failure_progress = []
             configured_failure_output = StringIO()
             with redirect_stdout(configured_failure_output):
                 configured_failure_result = api_mod.api.upload_directory(
@@ -613,6 +638,7 @@ def main():
                     ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
                     resumable=True,
                     batch_size=10,
+                    progress_callback=configured_failure_progress.append,
                 )
             FakeHfApi.fail_repo_on_call = None
             configured_failure_text = configured_failure_output.getvalue()
@@ -626,7 +652,21 @@ def main():
                 and "[批次 3/3] 开始" not in configured_failure_text
                 and "上传批次汇总: 计划 21，新增提交 10，续传跳过 0，确认完成 10"
                 in configured_failure_text
+                and configured_failure_progress[-1]
+                == {"batch": "2/3", "files_total": 21, "files_done": 10}
             )
+
+            def broken_progress_callback(progress):
+                raise RuntimeError("must not affect upload")
+
+            callback_failure_result = api_mod.api.upload_directory(
+                source,
+                "user/repo-callback-failure",
+                ignore_patterns=DEFAULT_IGNORES + ["*.tmp"],
+                resumable=True,
+                progress_callback=broken_progress_callback,
+            )
+            callback_failure_ok = callback_failure_result is True
 
             large_source = root / "large-source"
             large_source.mkdir()
@@ -664,6 +704,10 @@ def main():
                 f"[{'PASS' if corrupt_ok else 'FAIL'}] corrupt checkpoint remains unchanged and unknown"
             )
             print(f"[{'PASS' if configured_failure_ok else 'FAIL'}] configured mid-plan failure counts")
+            print(
+                f"[{'PASS' if callback_failure_ok else 'FAIL'}] "
+                "progress callback failures are isolated"
+            )
             print(f"[{'PASS' if large_plan_ok else 'FAIL'}] 700-file lifecycle plan with progress bar")
             print(
                 f"[{'PASS' if recovery_summary_ok else 'FAIL'}] "
@@ -690,6 +734,7 @@ def main():
                         checkpoint_failure_ok,
                         corrupt_ok,
                         configured_failure_ok,
+                        callback_failure_ok,
                         large_plan_ok,
                         recovery_summary_ok,
                         conflict_summary_ok,
