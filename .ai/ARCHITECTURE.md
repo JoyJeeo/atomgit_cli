@@ -136,6 +136,13 @@ adapter boundaries.
   call and clean them afterward.
 - Resumable uploads use revision- and destination-scoped metadata and restore
   global timeout/progress state.
+- Resumable LFS workers publish anonymous complete Flow states and bounded
+  critical events through a separate 256-entry, 16-KiB v1 JSON observation
+  queue. The parent process validates and deduplicates those messages, owns the
+  session Flow mapping and snapshot, and converges known Flows after the
+  independent upload result is classified. Display sampling never changes the
+  thirty-second recovery policy, and observation failures never change upload
+  success, failure, or cancellation.
 - AtomGit LFS pointers are canonical ASCII bytes ending in one LF and are
   verified against the returned raw V5 blob before success is reported. Each
   unconfirmed pointer receives at most three read-only checks at the same commit;
@@ -174,10 +181,10 @@ The complete offline baseline is the mandatory gate. The exact seven-directory,
 five-root-file layout is enforced by the structure, source-layout, packaging,
 wheel, sdist, and editable-install contracts. Post-deletion focused structure,
 layout, packaging, public-import, owner, lifecycle, LFS, and CLI gates pass; the
-artifact smoke passes 49/49 and the complete offline baseline passes 92/92 in
-96.34s. The independent review verdict is `APPROVED` with no findings. No live
-remote write is required for these offline architecture and compatibility
-claims.
+artifact smoke passes 49/49. The exact current baseline inventory contains 93
+isolated test scripts; D09/D10 final baseline and independent review evidence is
+recorded in `.ai/TASK.md`. No live remote write is required for these offline
+architecture and compatibility claims.
 
 Controlled remote upload/download/checksum/LFS evidence is intentionally not
 claimed in the local acceptance checkpoint. Multi-level namespace writes and

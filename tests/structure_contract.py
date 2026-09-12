@@ -255,6 +255,7 @@ CURRENT_INTERNAL_EDGES = {
     ("adapters.upload.resumable", "adapters.download.integrity"),
     ("adapters.upload.resumable", "adapters.download.transport"),
     ("adapters.upload.resumable", "adapters.lfs.pointer"),
+    ("adapters.upload.resumable", "adapters.lfs.service"),
     ("adapters.upload.resumable", "adapters.upload.contracts"),
     ("adapters.upload.resumable", "adapters.upload.errors"),
     ("adapters.upload.service", "adapters.lfs.pointer"),
