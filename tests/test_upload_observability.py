@@ -4,7 +4,9 @@
 import json
 import os
 import queue
+import sys
 import tempfile
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -63,6 +65,70 @@ def main():
     check("monitor status help", result.exit_code == 0 and "--list" in result.output)
     rejected = runner.invoke(atomgit.cli, ["monitor", "upload", "status", "--watch"])
     check("--watch rejected", rejected.exit_code == 2)
+
+    api_mod = sys.modules["atomgit.api"]
+    cfg_mod = sys.modules["atomgit.config"]
+    original_upload_directory = api_mod.api.upload_directory
+    original_logged_in = cfg_mod.config.is_logged_in
+    original_hf_home = os.environ.get("HF_HOME")
+    cli_progress = []
+
+    def fake_upload_directory(source, repo_id, **kwargs):
+        progress_callback = kwargs["progress_callback"]
+        for progress in (
+            {"batch": "0/2", "files_total": 21, "files_done": 0},
+            {"batch": "1/2", "files_total": 21, "files_done": 0},
+            {"batch": "1/2", "files_total": 21, "files_done": 20},
+            {"batch": "2/2", "files_total": 21, "files_done": 20},
+            {"batch": "2/2", "files_total": 21, "files_done": 21},
+        ):
+            cli_progress.append(progress)
+            progress_callback(progress)
+        return True
+
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            os.environ["HF_HOME"] = td
+            source = Path(td) / "source"
+            source.mkdir()
+            for index in range(21):
+                (source / f"file-{index:02d}.bin").write_bytes(b"x")
+            api_mod.api.upload_directory = fake_upload_directory
+            cfg_mod.config.is_logged_in = lambda: True
+            cli_result = runner.invoke(
+                atomgit.cli,
+                ["upload", str(source), "--repo-id", "owner/demo", "--resumable"],
+            )
+            sessions = upload_observe.load_sessions()
+            final_session = sessions[0] if sessions else {}
+            detailed = upload_observe.render_session(final_session)
+            listed = upload_observe.render_list(sessions)
+            check(
+                "CLI private callback publishes actual batch and file progress",
+                cli_result.exit_code == 0
+                and len(cli_progress) == 5
+                and final_session.get("status") == "finished"
+                and final_session.get("batch") == "2/2"
+                and final_session.get("files_total") == 21
+                and final_session.get("files_done") == 21
+                and "已确认文件 21/21" in detailed
+                and "2/2" in listed,
+            )
+    finally:
+        api_mod.api.upload_directory = original_upload_directory
+        cfg_mod.config.is_logged_in = original_logged_in
+        if original_hf_home is None:
+            os.environ.pop("HF_HOME", None)
+        else:
+            os.environ["HF_HOME"] = original_hf_home
+
+    legacy_rendered = upload_observe.render_session(
+        {"session_id": "legacy", "status": "finished", "batch": "1/1"}
+    )
+    check(
+        "old v1 snapshots omit unavailable file progress",
+        "已确认文件" not in legacy_rendered and "0/0" not in legacy_rendered,
+    )
     queued = []
 
     class ObservationQueue:

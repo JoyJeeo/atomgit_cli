@@ -102,9 +102,10 @@ class _CliRepositoryPort:
 
 
 class _CliTransferPort:
-    def __init__(self, context, *, repo_type_explicit=True):
+    def __init__(self, context, *, repo_type_explicit=True, progress_callback=None):
         self.context = context
         self.repo_type_explicit = repo_type_explicit
+        self.progress_callback = progress_callback
 
     def _legacy_repo_type(self, repo_type):
         return repo_type if self.repo_type_explicit else None
@@ -204,6 +205,7 @@ class _CliTransferPort:
                 num_workers=num_workers,
                 batch_size=batch_size,
                 auto_configure_lfs=auto_configure_lfs,
+                progress_callback=(self.progress_callback if resumable else None),
             )
         if not value:
             raise RuntimeError("目录上传失败")
@@ -312,10 +314,15 @@ class _CliTransferPort:
 def run(context, operation, *args, **kwargs):
     """Execute a shared usecase with historical CLI adapters."""
     repo_type_explicit = kwargs.pop("_cli_repo_type_explicit", True)
+    progress_callback = kwargs.pop("_cli_progress_callback", None)
     config = _CliConfigPort(context)
     client = AtomGitClient(
         config=config,
-        transfer=_CliTransferPort(context, repo_type_explicit=repo_type_explicit),
+        transfer=_CliTransferPort(
+            context,
+            repo_type_explicit=repo_type_explicit,
+            progress_callback=progress_callback,
+        ),
         repository=_CliRepositoryPort(context),
         authentication=_CliAuthenticationPort(context),
     )

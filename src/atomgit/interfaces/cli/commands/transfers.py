@@ -173,6 +173,7 @@ def upload(
             )
             observe_session.update(
                 files_total=file_count,
+                files_done=0,
                 bytes_total=upload_size,
                 batch=f"0/{max(1, (file_count + batch_size - 1) // batch_size)}",
             )
@@ -201,6 +202,11 @@ def upload(
                 message=message,
                 auto_configure_lfs=auto_configure_lfs,
                 _cli_repo_type_explicit=repo_type is not None,
+                _cli_progress_callback=(
+                    (lambda progress: observe_session.update(**progress))
+                    if observe_session is not None
+                    else None
+                ),
             )
             if observe_session is not None:
                 observe_session.finish("finished" if result.ok else "failed")

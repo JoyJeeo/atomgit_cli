@@ -337,11 +337,17 @@ def render_session(session: Dict[str, Any]) -> str:
         repo=session.get("repo_name", "-"),
         batch=session.get("batch", "-"),
     )
-    lines = [
-        header,
-        f"活跃 Flow {session.get('active_flows', 0)} | 累计替换 {session.get('replacement_total', 0)}",
-        "Flow  文件缩写  5秒速度  30秒速度  相对基线  低速  替换  最近6分钟  状态",
-    ]
+    lines = [header]
+    if "files_total" in session:
+        lines.append(
+            f"已确认文件 {session.get('files_done', 0)}/{session['files_total']}"
+        )
+    lines.extend(
+        [
+            f"活跃 Flow {session.get('active_flows', 0)} | 累计替换 {session.get('replacement_total', 0)}",
+            "Flow  文件缩写  5秒速度  30秒速度  相对基线  低速  替换  最近6分钟  状态",
+        ]
+    )
     for flow in session.get("flows", []):
         name = flow.get("file_abbrev") or abbreviate_basename(
             str(flow.get("basename", ""))

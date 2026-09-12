@@ -349,6 +349,9 @@ URL 内盲重试，而是回到有界 `_preupload_lfs` 边界重新取得 Batch 
 再把 `(source, flow_key)` 映射成会话内 Flow 编号。上传结果继续使用原有独立可靠
 队列，因此观测消息拥塞、非法或丢失不改变成功、失败或取消；父进程在结果确定后
 只收敛已知 Flow 的终态，并且是 `UploadSession` 和 JSON 快照的唯一写入者。
+外层 resumable 批次同样只由父进程更新：上传服务在实际计划、批次开始、成功和
+失败边界通过既有可选 callback 提交 `batch`、`files_total`、`files_done` 三个安全
+字段；该通路不进入子进程 observation queue，callback 失败不改变上传结果。
 
 子进程发现超过 regular 上限的文件时只向父进程返回经过白名单校验的扩展名规则。
 默认仍安全失败；显式 `--auto-configure-lfs` 才会在 `$HF_HOME/lfs-config/` 的私有

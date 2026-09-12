@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D11 accepted and recorded; awaiting explicit activation)
+Status: active (D11 batch lifecycle progress implementation)
 
 ## Successor Development Issue
 
@@ -18,7 +18,9 @@ Status: inactive (D11 accepted and recorded; awaiting explicit activation)
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
   开发底线、最终完整离线门禁和独立审查；维护者已接受结果，任务提交 `f1b4c78`
   已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。D11 完整方案已
-  接受并写入本 Issue，但保持 inactive，尚未授权实施。
+  接受并写入本 Issue。维护者现已明确要求“开始开发”；D11 红灯、实现、专项、文档、
+  开发底线、最终完整离线门禁和独立审查已完成；维护者已接受结果并授权最终复验
+  通过后提交、本地 no-ff 合入 `yuto`，并仅推送 `github/yuto`。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -102,6 +104,12 @@ Status: inactive (D11 accepted and recorded; awaiting explicit activation)
   本地开发issue”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，
   将 D11 登记为未激活的后继开发范围；不授权激活 D11、创建分支、修改源码/测试/
   用户文档、运行实现验证、提交、合并、推送、真实 AtomGit 操作或实施 D12–D18。
+  维护者随后于 `2026-09-12` 明确要求“开始开发”，据此单独授权激活 D11、创建本地
+  任务分支、修改 D11 范围内的源码、既有测试、用户文档和开发底线台账，并执行离线
+  验证；不授权提交、合并、推送、PR、发布、真实 AtomGit 操作或实施 D12–D18。
+  维护者随后明确要求“自己验收一下 没有问题就提交并推送”；据此接受 D11，并授权
+  最终复验通过后提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录
+  交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D12–D18 仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -120,10 +128,11 @@ Status: inactive (D11 accepted and recorded; awaiting explicit activation)
 - D09/D10 delivery mode: 最终交付复验通过后提交本地任务分支、no-ff 合入 `yuto`，
   并且只推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D11–D18。
-- D11 delivery mode: 当前只登记完整方案，保持 inactive；实施、分支、测试、提交、
-  合并、推送及任何真实 AtomGit 操作均需后续单独授权。
-- Next exact action: 等待维护者开始 D12 讨论或明确激活 D11；不得自行实施 D11–D18、
-  执行真实 AtomGit 操作或其他远程写入。
+- D11 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
+  推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
+  D12–D18。
+- Next exact action: 在本地任务分支执行 D11 最终交付复验；全部通过后按限定权限提交、
+  no-ff 合入 `yuto`、仅推送 `github/yuto` 并核验远端一致。
 
 ### Repository Reconciliation
 
@@ -1788,7 +1797,7 @@ D10 的子进程 JSON 观测协议。
 ### D11 Affected Capability IDs
 
 `UPLOAD-OBSERVABILITY`、`UPLOAD-RESUMABLE`、`CLI-DISPATCH`、`ARCHITECTURE`、
-`ERROR-REDACTION`、`RUNTIME`、`PORTABILITY` 和 `FLOOR-REGISTRY`。
+`ERROR-REDACTION`、`RUNTIME`、`PORTABILITY`、`PACKAGING` 和 `FLOOR-REGISTRY`。
 
 ### D11 Protected Existing Invariants
 
@@ -1804,6 +1813,7 @@ D10 的子进程 JSON 观测协议。
   在 CLI adapter 边界消费，不扩展公开请求或结果。
 - `PORT-001`：Python >=3.9、Windows/POSIX 和当前多进程启动方式继续得到同义上传结果；
   callback 不被序列化或传入子进程。
+- `PKG-002`：既有格式债务数量不增长；修改旧债务文件后只同步精确摘要。
 - 公开 Click schema、历史 `upload_directory` 签名、native/legacy SDK 返回与异常、
   普通目录上传、单文件上传、model/dataset、revision、timeout 和 batch 行为不变。
 - 当前 28 个能力、132 条不变量、93 个离线脚本在实施前保持基线；不得删减或弱化
@@ -1910,16 +1920,17 @@ git diff --check
 ### D11 Activation Status
 
 - [x] 维护者接受 D11 完整方案并授权登记到本地开发 Issue。
-- [ ] 维护者单独授权激活 D11 实施。
-- [ ] 本地任务分支已创建。
-- [ ] 红灯、实现、文档和开发底线已完成。
-- [ ] 专项、完整离线门禁和独立审查通过。
-- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+- [x] 维护者单独授权激活 D11 实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
 
 ### Current Handoff Snapshot
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支
-  `yuto`；D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
+  `codex/d11-upload-batch-progress`，基于 `yuto@abed2f4` 创建；D09/D10 任务提交
+  `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
   并已仅推送和核验 `github/yuto`。D09/D10 任务分支保留在本地且未推送。
 - D03 no-ff 合并提交：`6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   `github/yuto` 并核验当时远端一致。
@@ -1936,6 +1947,32 @@ git diff --check
   worktree，不能将其误归入后续 Issue；D11 本次只叠加获授权的 `.ai/TASK.md` 和
   `.ai/ISSUE_DISCUSSION.md` 方案记录。D06–D10 任务分支保留在本地且未推送，没有
   修改 `main`、其他远端分支或真实 AtomGit 仓库。
+- D11 红灯：`python tests/test_upload_batching.py` 退出 1；既有 15 个场景通过，仅新增
+  的 21 文件两批 callback 生命周期失败，确认旧实现从不调用 `progress_callback`。
+- D11 实现：上传服务在 resumable 实际计划、外层批次开始、成功和失败后发送三个
+  安全字段；CLI 私有 callback 经 runner 到历史 API 并更新父进程 `UploadSession`；
+  详细视图仅在存在 `files_total` 时显示累计确认数，公开合同和 D10 队列不变。
+- D11 专项：batching 17/17、上传观测 24/24、上传进度 28/28、多进程恢复 81/81、
+  上传 ownership 17/17、架构 parity 23/23、CLI 脱敏 20/20、开发底线 15/15、
+  resumable 入口 61/61、SDK 参数 14/14、结构 18/18、CLI surface 54/54 和打包 13/13
+  通过。登记为 28 个能力、133 条不变量、93 个离线脚本。
+- D11 完整门禁：`python tests/run_cli_baseline.py` 为 **93 passed in 116.51s**；
+  compileall、pip check、8 个变更 Python 文件的 Python 3.9 AST、HF 1.1.7 真实签名、
+  格式债务、凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 均通过。
+  原有五份 `.ai` 规范修改哈希保持不变；未运行真实 AtomGit、Windows/Linux 或独立
+  Python 3.9 解释器。当前进入独立审查，未授权提交、合并或推送。
+- D11 最终复验：独立审查前，`python tests/run_cli_baseline.py` 为
+  **93 passed in 117.79s**；compileall、pip check、打包 13/13、公开 legacy/native
+  SDK 签名、凭证模式和 `git diff --check` 再次通过。
+- D11 独立审查：无 P0/P1/P2/P3 发现，结论 `APPROVED`。审查确认批次状态口径、
+  失败后确认数、callback 隔离、D10 队列边界、公开兼容和文档一致；真实 AtomGit、
+  Windows/Linux、独立 Python 3.9 解释器和 D17 真实端到端链路未运行。该结论不授权
+  提交、合并或推送。
+- D11 交付复验：维护者授权后，`python tests/run_cli_baseline.py` 首轮为
+  **93 passed in 118.03s**，证据写回后终轮为 **93 passed in 117.61s**；compileall、
+  pip check、打包 13/13、Python 3.9 AST、
+  锁定依赖和公开签名、凭证模式、二进制差异、未跟踪生成物及 `git diff --check`
+  均通过。原有五份 `.ai` 规范修改哈希保持不变。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -2023,10 +2060,10 @@ git diff --check
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- D11 方案状态：维护者已接受父进程 `progress_callback` 直连方案并授权写入本地
-  开发 Issue；未激活、未创建分支、未改源码/测试/用户文档、未运行实现验证。
-- 下一步：等待维护者开始 D12 讨论或明确激活 D11；不执行真实 AtomGit 操作，也不
-  自行实施 D11–D18。
+- D11 当前状态：已激活并完成红灯、最小实现、文档、开发底线、专项、最终 93/93
+  完整离线门禁和独立审查，结论 `APPROVED`；维护者已接受并授权最终复验通过后
+  提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`。任务分支不推送，真实
+  AtomGit 及 D12–D18 实施仍未授权。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
