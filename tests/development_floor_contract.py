@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 133
+BASELINE_INVARIANT_COUNT = 134
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -1422,6 +1422,11 @@ CAPABILITY_REGISTRY = {
                 "test_upload_batching.py",
                 "test_upload_observability.py",
             ),
+            _invariant(
+                "UPO-007",
+                "Every persisted upload snapshot refreshes only the copied session update time so heartbeat freshness and active-session selection stay accurate without claiming upload progress.",
+                "test_upload_observability.py",
+            ),
         ),
         (
             "test_lfs_slow_flow_recovery.py",
@@ -1460,7 +1465,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "133 条可观察行为不变量",
+        "134 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),

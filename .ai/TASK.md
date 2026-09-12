@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D11 delivered; awaiting next authorization)
+Status: active (D12 upload session heartbeat timestamp)
 
 ## Successor Development Issue
 
@@ -11,8 +11,8 @@ Status: inactive (D11 delivered; awaiting next authorization)
 - Priority: `P1`（正常长时间上传可能被错误总时限终止）
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
-  `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02` 和
-  `D11 / MON-03`；D02 已由 D01 解决并移除。
+  `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02`、
+  `D11 / MON-03` 和 `D12 / MON-04`；D02 已由 D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
@@ -20,7 +20,11 @@ Status: inactive (D11 delivered; awaiting next authorization)
   已通过 no-ff 合并提交 `85167bd` 合入并限定推送至 `github/yuto`。D11 完整方案已
   接受并写入本 Issue。D11 已完成红灯、实现、专项、文档、开发底线、最终完整离线
   门禁和独立审查；维护者接受结果后，任务提交 `6a9d6f7` 已通过 no-ff 合并提交
-  `0e0f7bd` 合入并限定推送至 `github/yuto`，任务分支未推送。
+  `0e0f7bd` 合入并限定推送至 `github/yuto`，任务分支未推送。D12 的快照发布时刷新
+  会话 `updated_at` 方案已获维护者接受并写入本 Issue。维护者随后明确要求“开始开发”，
+  D12 已在本地任务分支激活；heartbeat 时间与默认选择红灯已按预期复现，最小实现、
+  回归、文档、开发底线、完整离线门禁和独立审查已完成；维护者已接受复验结果并授权
+  限定 Git 交付，当前进入提交、no-ff 合入 `yuto` 和仅推送 `github/yuto` 阶段。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -110,6 +114,18 @@ Status: inactive (D11 delivered; awaiting next authorization)
   维护者随后明确要求“自己验收一下 没有问题就提交并推送”；据此接受 D11，并授权
   最终复验通过后提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录
   交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D12–D18 仍未授权。
+  维护者随后于 `2026-09-12` 接受 D12 的最小修复：在每次实际持久化快照时，只刷新
+  即将写入副本的会话 `updated_at`，Flow/事件时间和上传状态不变；并明确要求“将开发
+  方案落入本地开发issue中”。本次只授权更新 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md`，将 D12 登记为未激活的后继开发范围；不授权创建分支、
+  修改源码/测试/用户文档、运行实现验证、提交、合并、推送、真实 AtomGit 操作或实施
+  D13–D18。
+  维护者随后明确要求“开始开发”，据此单独授权激活 D12、创建本地任务分支、修改
+  D12 范围内的源码、既有测试、用户文档和开发底线台账，并执行离线验证；不授权提交、
+  合并、推送、PR、发布、真实 AtomGit 操作或实施 D13–D18。
+  维护者随后明确要求“自己验收一下 没有问题就推送”；据此在最终复验通过后接受 D12，
+  授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录交付结果。
+  任务分支不推送，真实 AtomGit、PR、标签、发布和 D13–D18 实施仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -131,17 +147,21 @@ Status: inactive (D11 delivered; awaiting next authorization)
 - D11 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D12–D18。
-- Next exact action: 等待维护者开始 D12 讨论或选择其他获授权任务；不自行实施
-  D12–D18 或执行真实 AtomGit 操作。
+- D12 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
+  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D13–D18。
+- Next exact action: 将 D12 任务文件提交到本地任务分支，no-ff 合入 `yuto`，写入交付
+  记录后仅推送并核验 `github/yuto`；D13 讨论继续暂停。
 
 ### Repository Reconciliation
 
-当前分支 `yuto`；D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 合入，
+当前任务分支 `codex/d12-upload-session-heartbeat` 基于 `yuto@611a468` 创建；创建时
+`github/yuto` 也是 `611a468`。D09/D10 任务提交 `f1b4c78` 已通过 no-ff 合并提交
+`85167bd` 合入，
 并仅推送 `github/yuto` 后核验远端一致。任务分支保留在本地且未推送。当前 worktree
-仅保留五份既有 `.ai` 规范修改，未纳入 D09/D10 提交；本次获授权叠加 D11 的
-`.ai/TASK.md` 与 `.ai/ISSUE_DISCUSSION.md` 记录。Git 还包含 R9、D01、D03、D04、
-D05、D06 和 D07 的历史或已交付提交；旧记录不恢复为活跃任务。历史矛盾的完整整理
-仍属于 D18，本次没有将 D18 标记为已解决。
+保留五份既有 `.ai` 规范修改，未纳入 D09/D10 或 D11 提交；本次仅叠加获授权的 D12
+`.ai/TASK.md` 与 `.ai/ISSUE_DISCUSSION.md` 方案记录。Git 还包含 R9、D01、D03、
+D04、D05、D06 和 D07 的历史或已交付提交；旧记录不恢复为活跃任务。历史矛盾的
+完整整理仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -1926,9 +1946,242 @@ git diff --check
 - [x] 专项、完整离线门禁和独立审查通过。
 - [x] 维护者完成人工验收并授权适用的 Git/远程交付。
 
+### D12 Objective And Evidence
+
+修复 resumable 上传监控会话的更新时间不能反映观测发布存活的问题：后台 publisher
+每次实际写出快照时刷新会话 `updated_at`，使活动会话排序、默认选择和后续陈旧判断
+使用最近一次成功发布的时间，同时不伪造上传进度或改变上传结果。
+
+当前 `src/atomgit/infrastructure/upload_observe.py` 中 `SnapshotPublisher` 会在状态唤醒
+和空闲约两秒 heartbeat 时重复调用 `publish_snapshot()`，但 `_latest` 只是
+`UploadSession.update()` 当时的浅副本；只有业务 `update()` 会刷新 `updated_at`。
+因此磁盘快照可以持续原子替换，JSON 中的会话时间却长期不变。`load_sessions()` 和
+`select_session()` 又直接按该字段排序并选择默认会话，导致仍在发布的会话可能排在
+已经停止更新的旧活动会话之后。
+
+证据来自当前 `publish_snapshot()`、`SnapshotPublisher`、`UploadSession`、
+`load_sessions()`、`select_session()`、`tests/test_upload_observability.py`、
+`docs/features/upload-monitor.md` 和 `UPLOAD-OBSERVABILITY` 开发底线的只读核对。本次
+仅登记方案，没有运行实现测试或真实 AtomGit 上传；D11 的 93/93 交付基线不能替代
+D12 红灯和实施后的完整复验。
+
+### D12 Accepted Timestamp Contract
+
+- 会话 `updated_at` 表示上传进程最近一次成功发布可读快照的时间，用于同类会话排序、
+  默认会话选择和观测通路陈旧判断。新鲜时间只证明 publisher 仍在发布，不证明文件
+  字节、批次或远端提交正在推进，也不能单独证明上传成功或失败。
+- `publish_snapshot()` 在既有白名单复制之后、序列化之前，用 `str(time.time())` 覆盖
+  即将发布副本的会话 `updated_at`。该统一边界覆盖首次写入、业务状态唤醒、空闲
+  heartbeat、直接发布和 `close()` 最终刷新，不在各调用者重复更新时间逻辑。
+- 时间刷新不得反向修改调用者字典、`UploadSession.data`、Flow 或事件。Flow/事件各自
+  的 `updated_at` 继续只表示对应业务状态变化；`batch`、`files_total`、`files_done`、
+  速度、阶段、累计值、终态和上传结果均保持原值。
+- `publish_snapshot()` 继续先复制和过滤允许字段，并沿用异常吞吐边界。只有成功写入并
+  原子替换后的磁盘快照才暴露新时间；临时文件、序列化、权限或替换失败仍只导致本次
+  观测丢失，不改变上传返回、异常、CLI 退出码、断点数据或远程状态。
+- 保留快照 version 1、字符串 Unix 秒格式、最多每秒一次持久化、空闲约两秒 heartbeat、
+  `0700` 目录、`0600` 文件、原子替换和现有清理行为；不新增 `heartbeat_at`、
+  `progress_at` 或文件 mtime 回退模型。
+
+### D12 Implementation Scope
+
+1. 在 `src/atomgit/infrastructure/upload_observe.py` 的 `publish_snapshot()` 白名单副本上
+   统一刷新 `updated_at`。不修改 `SnapshotPublisher` 调度、`UploadSession.update()`、
+   `load_sessions()`、`select_session()` 或 monitor 命令接口；现有消费者自然读取新时间。
+2. 扩展 `tests/test_upload_observability.py`：先建立旧实现下 heartbeat 重写但时间不变的
+   红灯，再覆盖副本不回写、连续 heartbeat、状态唤醒、关闭最终刷新、活动会话排序/
+   默认选择、旧 v1 快照和写入失败隔离。测试使用受控短间隔或有界轮询，不真实等待两秒。
+3. 为 `UPLOAD-OBSERVABILITY` 在 `tests/development_floor_contract.py` 增加 `UPO-007`，并
+   同步 `.ai/DEVELOPMENT_FLOOR.md`、`docs/development_floor.md`、
+   `docs/features/upload-monitor.md` 以及必要的 `.ai/ARCHITECTURE.md`、
+   `docs/architecture.md`。不新增测试脚本、生产模块、依赖、CLI/SDK 参数或 schema 版本。
+
+### D12 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`UPLOAD-RESUMABLE`、`RUNTIME`、`PORTABILITY`、
+`ARCHITECTURE`、`ERROR-REDACTION` 和 `FLOOR-REGISTRY`。
+
+### D12 Protected Existing Invariants
+
+- `UPO-001`–`UPO-006`：快照继续只读、有界、原子、脱敏；父进程仍是会话唯一状态
+  所有者，D09 Flow、D10 跨进程观测/结果隔离和 D11 批次/文件进度不退化。
+- `RESUMEUP-002`、`RESUMEUP-005`、`RESUMEUP-006`：失败不误报成功，断点、待对账提交、
+  `parent_commit` 并发保护及结果分类不受 heartbeat 影响。
+- `RUNTIME-002`：后台 publisher 的异常和生命周期继续被隔离；不增加全局状态、线程、
+  进程、锁、队列或同步磁盘等待到上传热路径。
+- `REDACT-001`：时间刷新不增加仓库、路径、文件名、OID、token、URL、请求头、响应正文、
+  异常原文或其他敏感字段。
+- `ARCH-001`、`ARCH-003`：修改留在现有 infrastructure 持久化边界，不把渲染、上传
+  编排或跨进程协议引入 `publish_snapshot()`。
+- `PORT-001`：继续使用 Python 3.9 标准库时间和文件操作；Windows/POSIX 的快照格式及
+  上传结果保持一致。
+- 公开 Click schema、CLI/native/legacy SDK 签名、返回与异常、普通上传、model/dataset、
+  revision、timeout、批次、Flow、缓存清理和快照读取行为不变。
+- 实施前基线为 28 个能力、133 条不变量和 93 个离线脚本；不得删除、跳过、弱化或改写
+  既有证据来通过 D12。
+
+### D12 New Or Changed Invariants
+
+- `UPO-007`：每次成功持久化上传会话快照均以发布时的会话 `updated_at` 表示观测存活；
+  heartbeat 只更新发布副本的会话时间，不修改调用者状态、业务进度、Flow/事件时间或
+  上传结果，失败仍保持 best-effort 隔离。
+- 实施完成后预计保持 28 个能力和 93 个测试脚本，不变量从 133 增至 134；实际数字必须
+  以实施时 Git 和可执行登记册为准，方案登记不代表不变量已经实现。
+
+### D12 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 同一活动会话无业务提交，publisher 连续 heartbeat | 磁盘 `updated_at` 递增，其余会话、批次、文件、Flow 和事件内容不变 |
+| 调用方传入固定旧时间后直接发布 | 写出副本使用发布时间，原始字典和 `UploadSession.data` 不被后台修改 |
+| 业务状态唤醒和 `close()` 最终刷新 | 最新及最终快照时间不会被旧 `_latest` 恢复，真实 status 和业务字段保留 |
+| 两个活动会话具有不同最近发布时间 | `load_sessions()` 排序和 `select_session()` 默认选择最新发布者 |
+| 旧 v1、字段缺失、非法 session ID 和畸形快照 | 旧快照继续可读或按现有规则安全忽略，不要求迁移或新增字段 |
+| 序列化、目录、权限、临时文件或原子替换失败 | 只丢失观测更新，不改变上传结果、错误分类、退出码、断点或远端调用 |
+| publisher 存活但批次/Flow 长期不变 | 只刷新会话时间，不伪装业务推进或生成成功/失败结论 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_observability.py
+python tests/test_resumable_recovery.py
+python tests/test_upload_batching.py
+python tests/test_development_floor.py
+python tests/test_architecture_parity.py
+python tests/test_cli_error_redaction.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+最后一次代码、测试或文档修正后必须重新运行完整离线基线和静态门禁，并按
+`.ai/REVIEW.md` 执行独立审查。真实 AtomGit 上传不是本地 heartbeat 合同的必需证据，
+未获授权时不得执行或以 mock 结果声称远程验证。
+
+### D12 Implementation Phases And Acceptance
+
+1. 维护者单独激活后，从最新 `yuto` 创建本地
+   `codex/d12-upload-session-heartbeat` 任务分支；冻结快照 v1、发布频率、D09–D11
+   合同和开发底线，在既有上传观测脚本中增加红灯。验证：旧实现仅因 heartbeat
+   重写旧 `updated_at` 而失败，其他断言继续通过。
+2. 在 `publish_snapshot()` 的白名单副本上增加一次发布时间刷新，不新增 helper、字段
+   或调用方接线。验证：直接发布、状态唤醒、连续 heartbeat、最终刷新和失败隔离专项
+   通过，调用方及业务字段不变。
+3. 更新 `UPO-007`、用户说明和必要架构文档。验证：能力登记预计为 28/134/93，旧 v1、
+   脱敏、结构、权限、缓存清理和 Python 3.9 合同通过。
+4. 运行完整离线门禁、差异/凭证/生成物检查和独立审查。验证：实现、测试和文档一致，
+   原有五份未提交 `.ai` 规范修改未混入任务差异，无未解决 P0/P1/P2/P3 发现，再进入
+   人工验收。
+
+验收必须同时满足：空闲活动会话每次成功 heartbeat 发布后会话时间更新；排序和默认
+选择使用最近发布者；状态唤醒及关闭最终快照正确；调用方、Flow、事件、批次、文件和
+上传结果未被 heartbeat 修改；写入失败仍隔离；快照 v1、公开接口、D09–D11、普通上传、
+SDK、安全和可移植性不退化；完整基线、静态门禁、开发底线和独立审查全部通过。
+
+### D12 Non-Goals And Residual Risks
+
+- 不处理 D13 终态自动退出、D14 Unix 时间格式、D15 终端刷屏、D16 仓库类型警告、
+  D17 真实跨进程端到端测试或 D18 历史文档矛盾。
+- 不新增 `heartbeat_at`、`progress_at`、mtime 回退、停滞看门狗、daemon、socket、TUI、
+  下载监控、普通上传或单文件 monitor，也不改变 publisher 的 1 秒限频与约 2 秒心跳。
+- publisher 存活但上传 worker 停滞时，会话 `updated_at` 仍会保持新鲜；用户必须结合
+  `batch`、`files_done` 和 Flow 状态判断业务是否推进。D12 不把该情况误报为成功或失败。
+- 继续使用现有 wall-clock Unix 秒；系统时间回拨可能短暂影响排序。真实 Windows/Linux
+  调度、独立 Python 3.9 解释器和真实网络节奏未在方案登记阶段验证，交付时必须报告。
+- 本次登记不授权实施、分支、测试、提交、合并、推送、PR、标签、发布或任何真实
+  AtomGit 操作。
+
+### D12 Compatibility And Rollback
+
+- 快照继续为 version 1，`updated_at` 保持现有字符串 Unix 秒格式；旧快照和旧读取方
+  无需迁移。内部直接调用 `publish_snapshot()` 时，传入的历史 `updated_at` 将按已接受
+  的新语义被发布时间覆盖，但调用方字典保持不变。
+- 不改变 CLI/native SDK/legacy SDK 的命令、参数、签名、返回、异常、上传协议、HF
+  metadata、缓存投影、源文件或远端内容；无需数据迁移或清理已有快照。
+- 若实现回归，可整体回退单个 D12 实现提交；新版本写出的快照仍是旧代码可读的 v1
+  JSON。不得保留文档/台账而只回退实现，或保留实现而删除 `UPO-007` 回归证据。
+
+### D12 Activation Status
+
+- [x] 维护者接受 D12 完整方案并授权登记到本地开发 Issue。
+- [x] 维护者单独授权激活 D12 实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D12 Implementation And Focused Evidence
+
+- 红灯：在旧实现上运行 `python tests/test_upload_observability.py` 为 23/25；新增的
+  heartbeat 时间和活动会话默认选择两项失败，既有 23 项通过，根因确认为发布副本
+  沿用旧 `updated_at`。
+- 实现：`publish_snapshot()` 在白名单复制后用 `str(time.time())` 只刷新待写副本的
+  会话时间；未修改调用者、Flow/事件时间、批次/文件进度、上传结果、发布调度、公开
+  接口、快照 version 或依赖。
+- 回归与文档：扩展既有上传观测脚本，覆盖连续 heartbeat、状态唤醒、活动会话排序和
+  默认选择、关闭最终刷新、调用方不回写及 Flow/事件不变；登记 `UPO-007` 并同步上传
+  监控、架构、测试和开发底线文档。登记册为 28 个能力、134 条不变量、93 个脚本。
+- 专项（离线，`atomgit_cli` 环境）：上传观测 25/25、resumable 恢复 81/81、上传批次
+  17/17、开发底线 15/15、架构 parity 23/23、CLI 脱敏 20/20 通过。
+- 原有五份未提交 `.ai` 规范修改的差异哈希保持为
+  `3b97e958e3fd66ea382d1164e9fd0802469542f0ed996be8448bacba9f69b794`、
+  `062c160b446f4a2f5f135e098ab424434c4512ec6bba7651e451971cd4ab746c`、
+  `f656f5fc112147b2a5b652171d0f5598ae18239a4823ad3da6c029fee300f8c2`、
+  `e0821287447ba0301d272ee9e504594c9becf1255c8897b0580a0886749fb03f`、
+  `89790cfb07499e86735b2a3ffe3f73ec884544fb8019b13224b1e3189c6ca277`。
+- 本实施检查点之后继续运行完整离线基线、最终静态/安全检查和独立审查；Issue 保持
+  active，未授权提交、合并、推送或真实 AtomGit 操作。
+
+### D12 Complete Gate Evidence
+
+- 最后一次测试修改后，`python tests/test_upload_observability.py` 为 **25/25**，完整
+  基线为 **93 passed in 114.57s**；审查记录写回后的终局
+  `python tests/run_cli_baseline.py` 为 **93 passed in 119.77s**。均在 `atomgit_cli`
+  conda 环境离线运行。
+- `python -m compileall -q .`、`python -m pip check`、3 个变更 Python 文件的
+  Python 3.9 AST、Black、Ruff、任务拥有的两个导入文件 isort、打包/格式债务 13/13、
+  `git diff --check`、凭证模式、二进制差异和未跟踪生成物检查通过。运行环境为
+  Python 3.10.20，锁定版本为 `huggingface-hub==1.1.7`、`datasets==4.4.1`；D12 未新增
+  或修改第三方依赖调用。
+- `tests/development_floor_contract.py` 的全文件 isort 在当前和 `HEAD` 均退出 1，且本次
+  差异不含 import；这是登记册已锁定的既存格式债务，没有增长，不在 D12 范围内改写。
+- 原有五份 `.ai` 规范修改哈希再次核对不变。未运行真实 AtomGit、Windows/Linux、
+  独立 Python 3.9 解释器或 D17 真实跨进程端到端链路；这些不是本地 heartbeat 合同的
+  必需证据，作为残余风险保留。完整门禁通过后进入独立审查，仍未授权提交、合并或推送。
+
+### D12 Independent Review
+
+- Findings: 无 P0/P1/P2/P3 发现。
+- Review scope: 核对活动 Issue、任务差异、`publish_snapshot()` 全部调用方、
+  `SnapshotPublisher.stop()` 与后台写入顺序、CLI 上传的 finish/close 顺序、回归强度、
+  `UPO-007`、文档、锁定依赖版本、93/93 完整基线和静态/安全证据。
+- Conclusion: 发布时间只写入白名单副本；并发最终刷新即使与后台发布重叠，也只会原子
+  发布同一终态副本和更晚 heartbeat，不会回退调用方、Flow/事件、批次/文件进度或上传
+  结果。未发现需要扩大 D12 的可复现问题。
+- Missing evidence and residual risks: 未运行真实 AtomGit、Windows/Linux、独立 Python
+  3.9 解释器或 D17 真实跨进程链路；系统 wall clock 回拨和 publisher 存活但 worker
+  停滞仍是已接受限制。
+- Verdict: `APPROVED`。该结论不代表人工验收，也不授权提交、合并或推送。
+
+### D12 Delivery Verification
+
+- 维护者授权交付后，`python tests/test_upload_observability.py` 为 **25/25**，
+  `python tests/run_cli_baseline.py` 为 **93 passed in 118.02s**；验收与授权记录写回后的
+  提交前完整基线为 **93 passed in 114.83s**。
+- compileall、pip check、Python 3.9 AST、Black、任务拥有文件的 isort、Ruff、打包与
+  格式债务 13/13、凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 通过；
+  原有五份未提交 `.ai` 规范修改哈希不变。
+- 人工验收：`accepted`。授权范围仅为 D12 本地任务提交、no-ff 合入 `yuto`、仅推送
+  `github/yuto` 和交付记录；任务分支、真实 AtomGit、PR、标签、发布及 D13–D18 不推送
+  或不执行。
+
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支 `yuto`；D11 任务提交
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前任务分支
+  `codex/d12-upload-session-heartbeat` 基于 `yuto@611a468` 创建；D11 任务提交
   `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入并限定推送至 `github/yuto`，任务
   分支保留在本地且未推送。D09/D10 任务提交
   `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
@@ -1945,8 +2198,8 @@ git diff --check
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
   `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入后续 Issue；D11 本次只叠加获授权的 `.ai/TASK.md` 和
-  `.ai/ISSUE_DISCUSSION.md` 方案记录。D06–D10 任务分支保留在本地且未推送，没有
+  worktree，不能将其误归入后续 Issue；本次只叠加获授权的 D12 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md` 方案记录。D06–D11 任务分支保留在本地且未推送，没有
   修改 `main`、其他远端分支或真实 AtomGit 仓库。
 - D11 红灯：`python tests/test_upload_batching.py` 退出 1；既有 15 个场景通过，仅新增
   的 21 文件两批 callback 生命周期失败，确认旧实现从不调用 `progress_callback`。
@@ -1976,6 +2229,11 @@ git diff --check
   均通过。原有五份 `.ai` 规范修改哈希保持不变。
 - D11 交付：实现提交 `6a9d6f7`，no-ff 合并提交 `0e0f7bd`；已仅推送并核验
   `github/yuto`，远端不存在 D11 任务分支，未修改 `main` 或其他远端分支。
+- D12 当前状态：维护者已接受发布边界刷新会话 `updated_at` 的完整方案并单独授权
+  开始开发；本地任务分支已创建。旧实现专项 23/25 的两项新失败已由发布副本单行刷新
+  修复；实现、文档、`UPO-007`、专项和最终 93/93 完整离线门禁均已完成，独立审查无
+  P0/P1/P2/P3 发现并 `APPROVED`，当前等待人工验收；尚未提交、合并、推送或执行真实
+  AtomGit 操作，D13 讨论暂停。
 - D06 红灯：`test_canonical_lfs_pointer.py` 为 34/35、
   `test_resumable_commit_policy.py` 为 55/56；旧实现仅缺少有效 commit 返回后的
   `created/unconfirmed` 细分状态，原有断言全部通过。
@@ -2064,8 +2322,8 @@ git diff --check
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
 - D11 当前状态：实现提交 `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入 `yuto`，
-  并仅推送和核验 `github/yuto`；任务分支保留在本地且未推送。真实 AtomGit 及
-  D12–D18 实施仍未授权。
+  并仅推送和核验 `github/yuto`；任务分支保留在本地且未推送。D12 已单独激活本地
+  实施与离线验证；真实 AtomGit、D13–D18 实施及 D12 提交/合并/推送仍未授权。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
