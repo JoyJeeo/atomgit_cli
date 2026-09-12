@@ -352,6 +352,9 @@ URL 内盲重试，而是回到有界 `_preupload_lfs` 边界重新取得 Batch 
 外层 resumable 批次同样只由父进程更新：上传服务在实际计划、批次开始、成功和
 失败边界通过既有可选 callback 提交 `batch`、`files_total`、`files_done` 三个安全
 字段；该通路不进入子进程 observation queue，callback 失败不改变上传结果。
+后台发布器每次成功持久化快照时，只在即将写出的白名单副本中刷新会话
+`updated_at`，将其作为观测发布存活时间；父进程业务状态、Flow/事件时间、批次进度
+和上传结果均不被 heartbeat 修改。
 
 子进程发现超过 regular 上限的文件时只向父进程返回经过白名单校验的扩展名规则。
 默认仍安全失败；显式 `--auto-configure-lfs` 才会在 `$HF_HOME/lfs-config/` 的私有

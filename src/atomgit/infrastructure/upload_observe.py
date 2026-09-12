@@ -152,6 +152,7 @@ def publish_snapshot(session: Dict[str, Any]) -> Path:
     """Atomically publish a sanitized snapshot; failures never escape callers."""
     try:
         session = {k: v for k, v in dict(session).items() if k in _SESSION_FIELDS}
+        session["updated_at"] = str(time.time())
         session.setdefault("version", 1)
         session["events"] = list(session.get("events", []))[-MAX_EVENTS:]
         flows = []

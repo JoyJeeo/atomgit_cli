@@ -6,6 +6,7 @@ import os
 import queue
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -368,24 +369,79 @@ def main():
         publisher = upload_observe.SnapshotPublisher(
             interval=0.05, heartbeat=0.05
         ).start()
-        publisher.submit({"session_id": "background", "status": "active"})
-        import time
-
-        time.sleep(0.12)
+        submitted = {
+            "session_id": "background",
+            "status": "active",
+            "updated_at": "1",
+            "batch": "1/2",
+            "events": [{"message": "still active", "updated_at": "2"}],
+            "flows": [
+                {
+                    "flow_id": "Flow-01",
+                    "phase": "stable",
+                    "updated_at": "3",
+                }
+            ],
+        }
+        publisher.submit(submitted)
+        background_path = upload_observe.observe_root() / "background.json"
+        deadline = time.monotonic() + 1.0
+        first = None
+        while time.monotonic() < deadline:
+            if background_path.exists():
+                first = json.loads(background_path.read_text(encoding="utf-8"))
+                break
+            time.sleep(0.01)
+        latest = first
+        deadline = time.monotonic() + 1.0
+        while first is not None and time.monotonic() < deadline:
+            candidate = json.loads(background_path.read_text(encoding="utf-8"))
+            if float(candidate["updated_at"]) > float(first["updated_at"]):
+                latest = candidate
+                break
+            time.sleep(0.01)
         publisher.stop()
         check(
-            "background publisher writes latest snapshot",
-            (upload_observe.observe_root() / "background.json").exists(),
+            "background heartbeat refreshes only the published session time",
+            first is not None
+            and latest is not None
+            and float(first["updated_at"]) > 1
+            and float(latest["updated_at"]) > float(first["updated_at"])
+            and latest["batch"] == "1/2"
+            and latest["events"] == submitted["events"]
+            and latest["flows"][0]["updated_at"] == "3"
+            and submitted["updated_at"] == "1",
+        )
+        (upload_observe.observe_root() / "stale.json").write_text(
+            json.dumps(
+                {
+                    "session_id": "stale",
+                    "status": "active",
+                    "updated_at": "1000000000.0",
+                }
+            ),
+            encoding="utf-8",
+        )
+        check(
+            "live heartbeat wins active-session ordering and default selection",
+            upload_observe.load_sessions()[0]["session_id"] == "background"
+            and upload_observe.select_session()["session_id"] == "background",
         )
         session = upload_observe.UploadSession("lifecycle", repo_name="owner/demo")
         session.finish("finished")
+        session.data["updated_at"] = "1"
+        session.publisher.submit(session.data)
+        business_updated_at = session.data["updated_at"]
         session.close()
         final = json.loads(
             (upload_observe.observe_root() / "lifecycle.json").read_text()
         )
         check(
-            "session close flushes final state",
-            final["status"] == "finished" and final["repo_name"] == "demo",
+            "session close refreshes only the final published state",
+            final["status"] == "finished"
+            and final["repo_name"] == "demo"
+            and float(final["updated_at"]) > float(business_updated_at)
+            and session.data["updated_at"] == business_updated_at,
         )
     print(f"summary: {sum(checks)}/{len(checks)} passed")
     return 0 if all(checks) else 1
