@@ -181,6 +181,15 @@ UploadSession、resumable worker、观测队列、JSON 快照和独立 monitor�
 将 D17 登记为未激活的后继开发范围；不授权激活 D15/D16/D17、创建分支、修改源码/
 测试/用户文档、运行实施验证、提交、合并、推送、真实 AtomGit 操作或实施 D18。
 
+维护者随后明确要求“开始继续开发”，据此单独授权激活 D15、创建基于最新 `yuto`
+的本地任务分支、修改 D15 范围内源码、既有测试、最小用户文档和开发底线台账，并
+执行离线验证；不授权提交、合并、推送、真实 AtomGit 操作或实施 D16–D18。
+
+维护者随后明确要求“自己验收一下 没有问题就提交并推送”；据此接受 D15 在最终
+复验无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
+`github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
+D16–D18 仍未授权。
+
 ## 强制讨论与关闭规则
 
 1. 18 个问题按 `D01` 至 `D18` 排序，每次只讨论当前问题。
@@ -1166,10 +1175,12 @@ UploadSession、resumable worker、观测队列、JSON 快照和独立 monitor�
 | 2026-09-13 | 接受 D15 的变化驱动重绘方案：保持每秒读取固定会话，仅在最终渲染画面变化时清屏和输出；相同或暂时不可读快照保持现有画面，真实终态仍显示并退出。完整方案写入未激活的开发 Issue，并顺序进入 D16 | 维护者明确要求“好的 将完整方案落入开发issue中” |
 | 2026-09-13 | 接受 D16 的业务类型感知警告过滤方案：保留 dataset 到 model 兼容传输，只在原始 dataset 场景精确过滤 HF 1.1.7 的指定误报警，model 和其他警告继续显示；完整方案写入未激活的开发 Issue，并顺序进入 D17 | 维护者明确要求“将方案落入开发issue” |
 | 2026-09-13 | 接受 D17 的纯离线真实 spawn 进程端到端测试方案：贯通上传 CLI、UploadSession、resumable worker、观测队列、原子 JSON 快照和独立 monitor，验证活动态、真实终态、自动退出、脱敏和进程回收；完整方案写入未激活的开发 Issue，并顺序进入 D18 | 维护者明确要求“将完整开发方案落入开发issue中” |
+| 2026-09-13 | 单独激活 D15，创建基于 `yuto@0a8ace6` 的本地任务分支并授权范围内源码、既有测试、最小用户文档、开发底线和离线验证；D16–D18、提交、合并、推送及真实 AtomGit 操作不授权 | 维护者明确要求“开始继续开发” |
+| 2026-09-13 | D15 最终复验无误后接受结果，授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`；任务分支不推送 | 维护者明确要求“自己验收一下 没有问题就提交并推送” |
 
 ## 后继开发 Issue 交接
 
-- 状态: `inactive; D01–D14 delivered except removed D02; D15/D16/D17 accepted and unactivated`
+- 状态: `active; D01–D14 delivered except removed D02; D15 activated; D16/D17 accepted and unactivated`
 - 目标文件: `.ai/TASK.md`
 - 开发 Issue ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
 - 已映射问题: `D01 / UPLOAD-01`、`D03 / UPLOAD-03`、`D04 / UPLOAD-04`、

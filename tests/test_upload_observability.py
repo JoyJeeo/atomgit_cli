@@ -150,6 +150,7 @@ def main():
 
     def run_monitor_sequence(initial, updates, session_id=None, interrupt_at=None):
         calls = []
+        clears = []
         sleeps = []
         pending = list(updates)
         original_select_session = monitor_command.select_session
@@ -174,9 +175,12 @@ def main():
             if len(sleeps) > 4 or len(sleeps) == interrupt_at:
                 raise KeyboardInterrupt
 
+        def fake_clear():
+            clears.append(None)
+
         monitor_command.select_session = fake_select_session
         monitor_command.time.sleep = fake_sleep
-        monitor_command.click.clear = lambda: None
+        monitor_command.click.clear = fake_clear
         args = ["monitor", "upload", "status"]
         if session_id is not None:
             args.append(session_id)
@@ -186,60 +190,125 @@ def main():
             monitor_command.select_session = original_select_session
             monitor_command.time.sleep = original_sleep
             monitor_command.click.clear = original_clear
-        return result, calls, sleeps
+        return result, calls, sleeps, clears
 
     active = {"session_id": "chosen", "status": "active", "batch": "1/2"}
     finished = {"session_id": "chosen", "status": "finished", "batch": "2/2"}
     failed = {"session_id": "chosen", "status": "failed", "batch": "1/2"}
-    default_result, default_calls, default_sleeps = run_monitor_sequence(
-        active, [finished]
+    default_result, default_calls, default_sleeps, default_clears = (
+        run_monitor_sequence(active, [finished])
     )
     check(
         "default monitor pins the first session and exits after its final frame",
         default_result.exit_code == 0
         and default_calls == [None, "chosen"]
         and default_sleeps == [1, 2]
-        and "会话 chosen | finished" in default_result.output
+        and default_clears == [None]
+        and default_result.output.count(upload_observe.render_session(active)) == 1
+        and default_result.output.count(upload_observe.render_session(finished)) == 1
         and "会话 other" not in default_result.output,
     )
-    explicit_result, explicit_calls, explicit_sleeps = run_monitor_sequence(
-        active, [failed], "chosen"
+    explicit_result, explicit_calls, explicit_sleeps, explicit_clears = (
+        run_monitor_sequence(active, [failed], "chosen")
     )
     check(
         "explicit monitor exits after a failed final frame",
         explicit_result.exit_code == 0
         and explicit_calls == ["chosen", "chosen"]
         and explicit_sleeps == [1, 2]
-        and "会话 chosen | failed" in explicit_result.output,
+        and explicit_clears == [None]
+        and explicit_result.output.count(upload_observe.render_session(active)) == 1
+        and explicit_result.output.count(upload_observe.render_session(failed)) == 1,
     )
-    restored_result, restored_calls, restored_sleeps = run_monitor_sequence(
-        active, [None, finished], "chosen"
+    restored_result, restored_calls, restored_sleeps, restored_clears = (
+        run_monitor_sequence(active, [None, finished], "chosen")
     )
     check(
         "temporarily unreadable pinned session waits for a real terminal state",
         restored_result.exit_code == 0
         and restored_calls == ["chosen", "chosen", "chosen"]
         and restored_sleeps == [1, 1, 2]
-        and "会话 chosen | finished" in restored_result.output,
+        and restored_clears == [None]
+        and restored_result.output.count(upload_observe.render_session(active)) == 1
+        and restored_result.output.count(upload_observe.render_session(finished)) == 1,
     )
-    terminal_result, terminal_calls, terminal_sleeps = run_monitor_sequence(
-        finished, [finished], "chosen"
+    terminal_result, terminal_calls, terminal_sleeps, terminal_clears = (
+        run_monitor_sequence(finished, [finished], "chosen")
     )
     check(
         "initial terminal snapshot keeps the final frame before exiting",
         terminal_result.exit_code == 0
         and terminal_calls == ["chosen"]
         and terminal_sleeps == [2]
+        and terminal_clears == []
         and "会话 chosen | finished" in terminal_result.output,
     )
-    terminal_interrupt, terminal_interrupt_calls, terminal_interrupt_sleeps = (
-        run_monitor_sequence(finished, [finished], "chosen", interrupt_at=1)
-    )
+    (
+        terminal_interrupt,
+        terminal_interrupt_calls,
+        terminal_interrupt_sleeps,
+        terminal_interrupt_clears,
+    ) = run_monitor_sequence(finished, [finished], "chosen", interrupt_at=1)
     check(
         "Ctrl+C during the initial final-frame delay exits the monitor cleanly",
         terminal_interrupt.exit_code == 0
         and terminal_interrupt_calls == ["chosen"]
-        and terminal_interrupt_sleeps == [2],
+        and terminal_interrupt_sleeps == [2]
+        and terminal_interrupt_clears == [],
+    )
+
+    static_result, static_calls, static_sleeps, static_clears = run_monitor_sequence(
+        active, [active], "chosen", interrupt_at=3
+    )
+    check(
+        "unchanged active frames do not clear or repeat terminal output",
+        static_result.exit_code == 0
+        and static_calls == ["chosen", "chosen", "chosen"]
+        and static_sleeps == [1, 1, 1]
+        and static_clears == []
+        and static_result.output.count("会话 chosen | active") == 1,
+    )
+
+    hidden_update = {**active, "updated_at": 2_000_001.0}
+    hidden_result, hidden_calls, hidden_sleeps, hidden_clears = run_monitor_sequence(
+        active, [hidden_update], "chosen", interrupt_at=3
+    )
+    check(
+        "hidden snapshot changes do not redraw an unchanged rendered frame",
+        hidden_result.exit_code == 0
+        and hidden_calls == ["chosen", "chosen", "chosen"]
+        and hidden_sleeps == [1, 1, 1]
+        and hidden_clears == []
+        and hidden_result.output.count(upload_observe.render_session(active)) == 1,
+    )
+
+    recovered_result, recovered_calls, recovered_sleeps, recovered_clears = (
+        run_monitor_sequence(active, [None, active], "chosen", interrupt_at=3)
+    )
+    check(
+        "an unreadable snapshot followed by the same frame keeps the display",
+        recovered_result.exit_code == 0
+        and recovered_calls == ["chosen", "chosen", "chosen"]
+        and recovered_sleeps == [1, 1, 1]
+        and recovered_clears == []
+        and recovered_result.output.count(upload_observe.render_session(active)) == 1,
+    )
+
+    changed_active = {**active, "batch": "2/3"}
+    changed_result, changed_calls, changed_sleeps, changed_clears = (
+        run_monitor_sequence(
+            active, [changed_active, changed_active], "chosen", interrupt_at=3
+        )
+    )
+    check(
+        "each distinct visible frame redraws exactly once",
+        changed_result.exit_code == 0
+        and changed_calls == ["chosen", "chosen", "chosen"]
+        and changed_sleeps == [1, 1, 1]
+        and changed_clears == [None]
+        and changed_result.output.count(upload_observe.render_session(active)) == 1
+        and changed_result.output.count(upload_observe.render_session(changed_active))
+        == 1,
     )
 
     original_select_session = monitor_command.select_session

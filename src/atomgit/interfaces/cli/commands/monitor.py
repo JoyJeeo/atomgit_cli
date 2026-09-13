@@ -25,7 +25,8 @@ def status(_context, session_id=None, list_only=False):
         click.echo("没有可监控的上传会话")
         return
     try:
-        click.echo(render_session(session))
+        last_frame = render_session(session)
+        click.echo(last_frame)
         if session.get("status") in _TERMINAL_STATUSES:
             time.sleep(2)
             return
@@ -34,8 +35,11 @@ def status(_context, session_id=None, list_only=False):
             time.sleep(1)
             current = select_session(selected_session_id)
             if current is not None:
-                click.clear()
-                click.echo(render_session(current))
+                current_frame = render_session(current)
+                if current_frame != last_frame:
+                    click.clear()
+                    click.echo(current_frame)
+                    last_frame = current_frame
                 if current.get("status") in _TERMINAL_STATUSES:
                     time.sleep(2)
                     return
