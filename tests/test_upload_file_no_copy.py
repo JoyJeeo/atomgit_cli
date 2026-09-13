@@ -21,6 +21,7 @@
 """
 import sys
 import tempfile
+import warnings
 from pathlib import Path
 
 import huggingface_hub
@@ -37,6 +38,22 @@ cfg_mod = sys.modules["atomgit.config"]
 from atomgit.cli import cli
 
 results = []
+HF_DATASET_REPO_WARNING = (
+    "It seems that you are about to commit a data file (weights.parquet) to a "
+    "model repository. You are sure this is intended? If you are trying to "
+    "upload a dataset, please set `repo_type='dataset'` or "
+    "`--repo-type=dataset` in a CLI."
+)
+
+
+def warn_hf_dataset_repo():
+    warnings.warn_explicit(
+        HF_DATASET_REPO_WARNING,
+        UserWarning,
+        filename="huggingface_hub/hf_api.py",
+        lineno=1,
+        module="huggingface_hub.hf_api",
+    )
 
 
 def check(name, cond, detail=""):
@@ -199,6 +216,46 @@ def main():
             check("T8 原生 SDK 单文件上传成功", native_result.ok)
             check("T8 原生 SDK LFS 确认保留请求超时",
                   native_timeouts == [300], repr(native_timeouts))
+
+            # --- T9: 原生 SDK 仅过滤 dataset 兼容路由误报警 ---
+            def warning_upload_file(**kwargs):
+                warn_hf_dataset_repo()
+                return fake_upload_file(**kwargs)
+
+            huggingface_hub.upload_file = warning_upload_file
+            pointer_mod.run_canonical_lfs_upload = capture_native_upload
+            try:
+                with warnings.catch_warnings(record=True) as dataset_warnings:
+                    warnings.simplefilter("always")
+                    native_dataset_result = AtomGitClient(
+                        token="fake-token"
+                    ).upload_file(
+                        fpath,
+                        "user/repo",
+                        token="fake-token",
+                        repo_type="dataset",
+                    )
+                with warnings.catch_warnings(record=True) as model_warnings:
+                    warnings.simplefilter("always")
+                    native_model_result = AtomGitClient(token="fake-token").upload_file(
+                        fpath,
+                        "user/repo",
+                        token="fake-token",
+                        repo_type="model",
+                    )
+            finally:
+                huggingface_hub.upload_file = original_hf_upload_file
+                pointer_mod.run_canonical_lfs_upload = original_pointer_upload
+            check(
+                "T9 原生 SDK dataset 误报警已过滤",
+                native_dataset_result.ok and not dataset_warnings,
+            )
+            check(
+                "T9 原生 SDK model 警告仍可见",
+                native_model_result.ok
+                and len(model_warnings) == 1
+                and str(model_warnings[0].message) == HF_DATASET_REPO_WARNING,
+            )
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

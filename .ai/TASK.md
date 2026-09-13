@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D15 delivered; D16 and D17 awaiting activation)
+Status: active (D16 accepted; authorized delivery in progress)
 
 ## Successor Development Issue
 
@@ -48,8 +48,14 @@ Status: inactive (D15 delivered; D16 and D17 awaiting activation)
   离线基线为 **93/93**。交付记录已仅推送并核验 `github/yuto`，任务分支未推送，
   D15 已完成限定交付。
   D16 的“保留 dataset 到 model 兼容传输路由，仅在原始业务类型为 dataset 时精确
-  过滤 HF 1.1.7 指定误报警”方案已获维护者接受并写入本 Issue；D16 当前未激活，
-  尚未创建分支、修改源码/测试/用户文档或运行实施验证。
+  过滤 HF 1.1.7 指定误报警”方案已获维护者接受并写入本 Issue。维护者现已明确
+  要求“继续开发”，D16 已在现有本地分支
+  `codex/d16-dataset-warning-filter`上单独激活。恢复时发现 6 份源码/测试文件
+  含有未提交的部分实现，其中 `service.py` 与测试文件存在语法缩进错误，
+  warning 规则也尚未正确绑定标准库 API。现已完成恢复修复、精确规则、
+  全入口接线、resumable 显式进程参数、受控红灯、回归、`DEP-004`、最小文档、
+  结构登记、完整离线门禁、静态/安全检查和独立审查。维护者已接受结果并授权交付，
+  最终交付复验通过，当前进入任务提交与本地合并。
   D17 的“新增纯离线真实 spawn 进程端到端测试，贯通上传 CLI、UploadSession、
   resumable worker、观测队列、JSON 快照和独立 monitor”方案已获维护者接受并写入
   本 Issue；D17 当前未激活，尚未创建分支、修改测试/开发底线/用户文档或运行实施
@@ -202,6 +208,14 @@ Status: inactive (D15 delivered; D16 and D17 awaiting activation)
   复验无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
   `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
   D16–D18 仍未授权。
+  维护者随后于 `2026-09-13` 明确要求“继续开发”，据此单独激活 D16，授权在
+  现有本地任务分支上恢复并完成 D16 范围内的源码、既有测试、最小用户文档、
+  开发底线登记和离线验证；不授权提交、合并、推送、PR、发布、真实 AtomGit
+  操作或实施 D17–D18。
+  维护者随后明确要求“你自己验证一下，没有问题就提交推送”；据此接受 D16 在最终
+  复验无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
+  `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
+  D17–D18 实施仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   D01 交付时未纳入原有五份开发规范变更；这些文档后续已单独获得提交与
@@ -234,16 +248,21 @@ Status: inactive (D15 delivered; D16 and D17 awaiting activation)
 - D15 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；D15 已按该模式交付。任务分支未推送，未执行真实 AtomGit、
   PR、标签或发布。
-- D16 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
-  未授权。实施完成后仍需维护者单独验收并授权适用交付。
+- D16 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
+  推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
+  D17–D18。
 - D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
   未授权。实施完成后仍需维护者单独验收并授权适用交付。
-- Next exact action: 等待维护者单独授权激活 D16 或 D17，或授权开始 D18 讨论；不自动
-  实施 D16–D18，也不执行真实 AtomGit 操作。
+- Next exact action: 执行 D16 最终交付复验；全部通过后提交任务分支、本地 no-ff
+  合入 `yuto`、复验合并树、记录交付并仅推送 `github/yuto`。不推送任务分支，
+  不实施 D17–D18，不执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
-当前工作树已切回 `yuto`。D15 任务提交 `500182f` 已通过 no-ff 合并提交 `87ddb52`
+当前工作树位于 `codex/d16-dataset-warning-filter@560b7ac`，基线为已交付的
+`yuto@560b7ac`。恢复时工作树含 6 份未提交 D16 源码/测试修改，必须继续使用
+当前 worktree，不重新应用历史 stash，不为交接创建未授权提交。D15 任务提交
+`500182f` 已通过 no-ff 合并提交 `87ddb52`
 合入，交付记录已仅推送并核验 `github/yuto`；D15 任务分支保留在本地且未推送。
 D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
 `1af6d27` 合入，D14 交付记录提交为 `1a1b89e`；远端不存在 D14 任务分支。
@@ -251,8 +270,8 @@ D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
 D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15 已完成限定交付，
-D16 和 D17 仍已接受但未激活；历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为
-已解决。
+D16 已按当前维护者请求单独激活；D17 仍已接受但未激活。历史矛盾的完整整理
+仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -2990,16 +3009,16 @@ AtomGit 能力判断，但 `src/atomgit/adapters/huggingface.py`、
   改写既有测试与强制基线。
 - dataset 到 model 的既有兼容传输、CLI 显示、repo ID、revision、path、ignore、worker、
   batch、message、token、LFS pointer、观测 envelope、上传返回和退出码均保持兼容。
-- 当前可执行登记为 28 个能力、136 条不变量和 93 个离线 pytest case；D15 与 D16
-  实施顺序尚未确定，激活时必须读取真实登记数量，不得照抄方案预测。
+- D16 激活前可执行登记为 28 个能力、137 条不变量和 93 个离线 pytest case；
+  D15 已先完成交付。
 
 ### D16 New Or Changed Invariants
 
-- 候选 `DEP-004`：AtomGit dataset 业务类型使用共享 model 兼容传输路由时，只过滤
+- `DEP-004`：AtomGit dataset 业务类型使用共享 model 兼容传输路由时，只过滤
   HF 1.1.7 指定的数据文件/model 仓库误报警；真正 model 上传、其他来源或其他消息的
   警告继续显示，过滤状态在成功、失败和隔离 worker 退出后恢复。
-- D16 单独实施时预计保持 28 个能力和 93 个离线 pytest case，只增加一条不变量；若
-  D15 先实施，数量应在 D15 实际登记基础上继续单调增加。方案登记不代表不变量已实现。
+- 实施后登记为 28 个能力、138 条不变量和 93 个离线 pytest case；`DEP-004`
+已由现有 repo type、原生/历史 SDK、resumable、多进程恢复和真实锁定依赖测试支撑。
 
 ### D16 Focused Tests And Evidence
 
@@ -3086,19 +3105,50 @@ legacy SDK、LFS、批次、恢复、观测、返回和退出码不退化；开�
   LFS、批次、恢复和观测保持兼容；有意变化仅是原始 dataset 场景不再显示指定误报警。
 - 没有数据、配置、缓存、快照、投影或远端仓库迁移。model 上传和其他警告的可见行为
   不变。
-- 如实现回归，整体回退 D16 的上下文、各入口接线、resumable 布尔参数、测试、候选
+- 如实现回归，整体回退 D16 的上下文、各入口接线、resumable 布尔参数、测试、
   `DEP-004` 和对应文档；回退后只恢复旧误报警，不影响已上传数据。不能把 HF 传输类型
   改回 dataset，也不能只删除测试、放宽正则反例或降低登记数量。
 
 ### D16 Activation Status
 
 - [x] 维护者接受 D16 完整方案并授权登记到本地开发 Issue。
-- [ ] 维护者明确 D15/D16 实施顺序并单独授权激活 D16。
-- [ ] 基于最新 `yuto` 的本地任务分支已创建，用户修改已受保护并核验。
-- [ ] 实施前基线和受控红灯已完成。
-- [ ] 最小实现、文档和开发底线登记已完成。
-- [ ] 专项、完整离线门禁和独立审查通过。
-- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+- [x] D15 已交付，维护者单独授权激活 D16。
+- [x] 基于最新 `yuto@560b7ac` 的本地任务分支已存在，未提交修改已核验并保留。
+- [x] 基线由 D15 交付树 93/93 证据恢复；运行时反向禁用过滤的受控红灯已按预期
+  仅使 D16 dataset 告警断言失败，原有 repo type、model 告警和路径断言保持通过。
+- [x] 最小实现、文档、`DEP-004`、结构边和开发底线登记已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D16 Implementation Evidence
+
+- 恢复与红灯：恢复到的未提交实现含有 `service.py` 缩进错误、向
+  `warnings.filterwarnings()` 传入已编译正则的错误用法，且测试未模拟 HF 模块来源。
+  修复后临时把实际 service 过滤边界替换为 `nullcontext()`，
+  `tests/test_upload_repo_type.py` 为 21/25，失败项均是 dataset 指定误报警重新可见。
+- 专项：`test_upload_repo_type.py` 25/25，`test_upload_file_no_copy.py` 23/23，
+  `test_sdk_upload_parameters.py` 16/16，`test_dataset_resumable_route.py` 13/13，
+  `test_hf_api_contract.py` 18/18，`test_resumable_recovery.py` 84/84，
+  `test_upload_resumable.py` 61/61，`test_sdk_upload_timeout.py` 11/11，
+  `test_development_floor.py` 15/15，`test_windows_compatibility.py` 13/13，
+  `test_structure_guard.py` 18/18，`test_lfs_domain_ownership.py` 14/14，
+  `test_packaging_metadata.py` 13/13。全部为 `atomgit_cli` 环境中的离线验证。
+- 完整门禁：首次完整基线暴露两条未登记的合法内部依赖边，补齐后通过。
+  独立审查修正过滤范围后，`python tests/run_cli_baseline.py` 最终为
+  **93 passed in 109.58s**。未运行真实 AtomGit、独立 Windows/Linux 主机或独立
+  Python 3.9 解释器。
+- 最终交付复验：维护者接受后两次运行 `python tests/run_cli_baseline.py`，结果为
+  **93 passed in 104.91s**；交接状态补正后再次为 **93 passed in 102.49s**。
+  compileall、pip check、Black、isort、Ruff、Python 3.9 AST、`git diff --check`、
+  凭证特征、二进制差异、生成物和未跟踪文件检查均通过。
+- 静态与安全：`python -m compileall -q .`、`python -m pip check`、本次 5 份生产
+  Python 文件的 Black/isort/Ruff、14 份已改 Python 文件的 Python 3.9 AST、
+  `git diff --check`、二进制差异、未跟踪文件和凭证特征扫描均通过。现有精确工具债务
+  数量未增加，因本次内容变化而产生的摘要已同步锁定。
+- 独立审查：首轮发现 1 个 P2：普通/原生/历史 SDK 路径把 warning 上下文
+  包在整个 `run_canonical_lfs_upload()` 外层，超出“只包围实际 HF 上传”的既定范围。
+  实现已把上下文收窄到上传回调内，并增加 LFS 校验阶段同文警告仍可见的断言。
+  复审无 P0–P3 发现，结论 `APPROVED`。`APPROVED` 不授权提交、合并或推送。
 
 ### D17 Objective And Evidence
 

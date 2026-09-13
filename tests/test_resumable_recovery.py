@@ -163,6 +163,7 @@ def process_lifecycle_checks():
     resumable = importlib.import_module("atomgit.adapters.upload.resumable")
     for method in multiprocessing.get_all_start_methods():
         context = multiprocessing.get_context(method)
+        serialized_warning_flags = []
         for outcome in (
             "success",
             "observe",
@@ -179,6 +180,7 @@ def process_lifecycle_checks():
             children = []
 
             def process_factory(target, args):
+                serialized_warning_flags.append(args[-1])
                 child = context.Process(
                     target=offline_child,
                     args=(
@@ -231,6 +233,7 @@ def process_lifecycle_checks():
                             upload_kwargs={},
                             request_timeout=0.01,
                             batch_context=(1, 1),
+                            suppress_dataset_warning=True,
                         )
                 finally:
                     lfs_service.set_upload_observer(previous_observer)
@@ -290,6 +293,11 @@ def process_lifecycle_checks():
                         child.kill()
                         child.join()
                     child.close()
+        check(
+            f"{method} serializes the dataset warning policy explicitly",
+            len(serialized_warning_flags) == 10
+            and all(flag is True for flag in serialized_warning_flags),
+        )
 
     methods = multiprocessing.get_all_start_methods()
     if "fork" not in methods:

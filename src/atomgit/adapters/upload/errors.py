@@ -2,6 +2,8 @@
 
 import errno
 import socket
+import warnings
+from contextlib import contextmanager
 from typing import Optional
 
 import httpx
@@ -16,6 +18,28 @@ ResumableUploadModeError = None
 ResumableLfsAttributesError = None
 ResumableLfsPreuploadError = None
 _validated_lfs_patterns = None
+_HF_DATASET_REPO_WARNING_MESSAGE_PATTERN = (
+    r"^It seems that you are about to commit a data file \(.*\.(?:arrow|parquet)\)"
+    r" to a model repository\. You are sure this is intended\? "
+    r"If you are trying to upload a dataset, please set `repo_type='dataset'` "
+    r"or `--repo-type=dataset` in a CLI\.$"
+)
+
+
+@contextmanager
+def _suppress_hf_model_repo_warning(enabled=True):
+    """Ignore one known HF 1.1.7 `.arrow`/`.parquet` mis-route warning."""
+    if not enabled:
+        yield
+        return
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=_HF_DATASET_REPO_WARNING_MESSAGE_PATTERN,
+            category=UserWarning,
+            module=r"^huggingface_hub\.hf_api$",
+        )
+        yield
 
 
 class ResumableTargetRevisionError(RuntimeError):

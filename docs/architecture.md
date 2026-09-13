@@ -468,6 +468,9 @@ CLI 仍单独负责 Click 参数、提示、进度和退出码；原生 SDK 不�
 - 非根 `path_in_repo` 的临时目录覆盖完整 HF 调用，并在所有路径清理；
 - `repo_type`、`revision`、`commit_description`、`ignore_patterns` 均有严格
   参数契约；dataset 传输使用 AtomGit 兼容的 model 路由；
+- 映射前的 dataset 业务语义会传到实际 HF 调用边界，只过滤 HF 1.1.7
+  对 `.arrow` / `.parquet` 产生的指定 model 仓库误报警；model 和其他
+  warning 保持可见，上下文退出后进程级 warning 状态恢复；
 - upload timeout 在成功和失败后恢复；
 - 旧 snapshot 兼容形参仍保留，但不再传给 HF 1.1.7；非默认使用会明确警告；
 - SDK 使用公开的 `AtomGitError` 层次区分认证、仓库、revision、网络、超时和

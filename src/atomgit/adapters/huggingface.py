@@ -7,6 +7,8 @@ seam requires it.
 
 from pathlib import Path
 
+from .upload.errors import _suppress_hf_model_repo_warning
+
 
 class _LegacySdkProxy:
     """Resolve historical SDK adapter functions at each call site."""
@@ -85,8 +87,13 @@ class HuggingFaceAdapter:
             kwargs["repo_type"] = "model" if repo_type == "dataset" else repo_type
         if revision:
             kwargs["revision"] = revision
+
+        def upload():
+            with _suppress_hf_model_repo_warning(repo_type == "dataset"):
+                return upload_file(**kwargs)
+
         return run_canonical_lfs_upload(
-            lambda: upload_file(**kwargs),
+            upload,
             token=token,
             repo_id=repo_id,
             timeout=timeout,

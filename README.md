@@ -359,6 +359,9 @@ atomgit cache clear
 > 重试。large-folder 仍不支持单一提交说明，需指定
 > `--message`（自动普通上传）或显式 `--no-resumable`。HF 底层要求 `repo_type`，
 > CLI 未指定时自动使用 `model`。
+> 显式选择 `dataset` 时仍使用 AtomGit 已验证的 `model` 兼容传输路由，但
+> `.arrow` / `.parquet` 不再显示 HF 1.1.7 因该映射产生的 model 仓库误报警；
+> 真正的 model 上传和其他警告仍会显示。
 > 每次 resumable 提交前还会在对应稳定投影中私密、原子地记录待对账状态，并把
 > 当前远端提交作为 `parent_commit`。若写响应或 pointer 确认不明确，下一次同身份
 > 运行会先在同一不可变 revision 上核对大小、强摘要和规范 pointer；完全匹配时只

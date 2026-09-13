@@ -13,7 +13,7 @@
 当前完整离线基线包含：
 
 - 28 个稳定能力 ID；
-- 137 条可观察行为不变量；
+- 138 条可观察行为不变量；
 - 93 个隔离 pytest case，每个 case 对应一个可直接执行的
   `tests/test_*.py` 回归脚本；
 - 精确 CLI schema、叶子命令分派、依赖、安全、打包和跨平台合同。
@@ -67,7 +67,7 @@ CLI command owner 与 `cli/__init__.py` package facade 还锁定历史 Click sch
 | `REPO-ID` | 仓库 ID | 所有入口使用一致校验和多层映射 |
 | `RUNTIME` | 运行时策略 | endpoint、cache、timeout 和 progress 状态 |
 | `CACHE` | 缓存清理 | 只清理 AtomGit 管理内容 |
-| `DEPENDENCY-CONTRACT` | 锁定依赖 | 真实 HF/datasets 签名拒绝宽松 fake |
+| `DEPENDENCY-CONTRACT` | 锁定依赖 | 真实 HF/datasets 签名及 dataset 警告合同拒绝宽松 fake |
 | `PACKAGING` | 分发安装 | wheel、入口、导入、installer 和 deploy |
 | `PORTABILITY` | 平台兼容 | Python 3.9+、Windows、POSIX 和多进程启动方式结果一致 |
 | `ERROR-REDACTION` | 错误脱敏 | 保留错误类别但不暴露凭证或签名 URL |

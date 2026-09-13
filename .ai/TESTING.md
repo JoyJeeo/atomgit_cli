@@ -36,6 +36,8 @@ configuration access with clearly fake values.
 
 - Inspect or bind against the actual installed `huggingface_hub==1.1.7`
   signatures.
+- Lock the exact HF 1.1.7 data-file/model-repository warning source and message;
+  dataset compatibility filtering must fail open if that contract changes.
 - Test `HfApi` constructor authentication separately from method arguments.
 - Prevent `**kwargs` fakes from accepting arguments the real dependency rejects.
 - Verify deprecated SDK arguments intentionally rather than relying on warnings.
@@ -195,7 +197,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 28 capabilities, 137 invariants, and 93
+The current monotonic ledger has 28 capabilities, 138 invariants, and 93
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.
