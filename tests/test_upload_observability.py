@@ -68,6 +68,86 @@ def main():
     rejected = runner.invoke(atomgit.cli, ["monitor", "upload", "status", "--watch"])
     check("--watch rejected", rejected.exit_code == 2)
 
+    fixed_now = 2_000_000.0
+    time_calls = []
+    original_time = upload_observe.time.time
+    original_load_sessions = monitor_command.load_sessions
+
+    def fixed_time():
+        time_calls.append(None)
+        return fixed_now
+
+    upload_observe.time.time = fixed_time
+    try:
+        deltas = (0, 59, 60, 3599, 3600, 86399, 86400, 59.9)
+        expected = (
+            "0秒前",
+            "59秒前",
+            "1分钟前",
+            "59分钟前",
+            "1小时前",
+            "23小时前",
+            "1天前",
+            "59秒前",
+        )
+        sessions = [
+            {
+                "session_id": f"age-{index}",
+                "status": "active",
+                "batch": "1/1",
+                "updated_at": str(fixed_now - delta),
+            }
+            for index, delta in enumerate(deltas)
+        ]
+        rendered = upload_observe.render_list(sessions)
+        rendered_lines = rendered.splitlines()[1:]
+        check(
+            "list renders floored relative-time boundaries",
+            len(rendered_lines) == len(expected)
+            and all(
+                line.endswith(f"  {relative}")
+                for line, relative in zip(rendered_lines, expected)
+            )
+            and str(fixed_now) not in rendered,
+        )
+        check("one list render shares one wall clock", len(time_calls) == 1)
+
+        invalid_sessions = [
+            {"session_id": "missing"},
+            {"session_id": "none", "updated_at": None},
+            {"session_id": "bool", "updated_at": True},
+            {"session_id": "text", "updated_at": "not-a-time"},
+            {"session_id": "nan", "updated_at": "nan"},
+            {"session_id": "positive-infinity", "updated_at": "inf"},
+            {"session_id": "negative-infinity", "updated_at": "-inf"},
+            {"session_id": "negative", "updated_at": -1},
+            {"session_id": "future", "updated_at": fixed_now + 1},
+            {"session_id": "valid", "updated_at": fixed_now - 1},
+        ]
+        invalid_lines = upload_observe.render_list(invalid_sessions).splitlines()[1:]
+        check(
+            "invalid and future times degrade per row",
+            all(line.endswith("  --") for line in invalid_lines[:-1])
+            and invalid_lines[-1].endswith("  1秒前"),
+        )
+        check("each list render reads one new wall clock", len(time_calls) == 2)
+
+        monitor_command.load_sessions = lambda: [sessions[1]]
+        list_result = runner.invoke(
+            atomgit.cli, ["monitor", "upload", "status", "--list"]
+        )
+        check(
+            "--list remains one-shot and renders relative time",
+            list_result.exit_code == 0
+            and "SESSION  状态  批次  最近更新" in list_result.output
+            and "age-1  active  1/1  59秒前" in list_result.output
+            and str(fixed_now - 59) not in list_result.output
+            and len(time_calls) == 3,
+        )
+    finally:
+        upload_observe.time.time = original_time
+        monitor_command.load_sessions = original_load_sessions
+
     def run_monitor_sequence(initial, updates, session_id=None, interrupt_at=None):
         calls = []
         sleeps = []

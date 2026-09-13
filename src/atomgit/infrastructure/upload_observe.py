@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import tempfile
@@ -370,11 +371,33 @@ def render_session(session: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_relative_time(value: Any, now: float) -> str:
+    if isinstance(value, bool):
+        return "--"
+    try:
+        timestamp = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return "--"
+    if not math.isfinite(timestamp) or timestamp < 0 or timestamp > now:
+        return "--"
+    elapsed = math.floor(now - timestamp)
+    if elapsed < 60:
+        return f"{elapsed}秒前"
+    if elapsed < 3600:
+        return f"{elapsed // 60}分钟前"
+    if elapsed < 86400:
+        return f"{elapsed // 3600}小时前"
+    return f"{elapsed // 86400}天前"
+
+
 def render_list(sessions: Iterable[Dict[str, Any]]) -> str:
     lines = ["SESSION  状态  批次  最近更新"]
+    now = time.time()
     for session in sessions:
         lines.append(
-            f"{session.get('session_id', '-')}  {session.get('status', '-')}  {session.get('batch', '-')}  {session.get('updated_at', '-')}"
+            f"{session.get('session_id', '-')}  {session.get('status', '-')}  "
+            f"{session.get('batch', '-')}  "
+            f"{_format_relative_time(session.get('updated_at'), now)}"
         )
     return "\n".join(lines)
 
