@@ -146,6 +146,9 @@ adapter boundaries.
 - Every successful snapshot persistence refreshes the copied session
   `updated_at` as an observation-publisher heartbeat. It does not mutate the
   parent-owned session, Flow/event timestamps, upload progress, or upload result.
+- Detailed monitoring pins the first selected session, retries unreadable
+  snapshots without switching targets, and exits only after rendering a real
+  terminal snapshot for two seconds.
 - AtomGit LFS pointers are canonical ASCII bytes ending in one LF and are
   verified against the returned raw V5 blob before success is reported. Each
   unconfirmed pointer receives at most three read-only checks at the same commit;
