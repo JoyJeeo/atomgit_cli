@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D13 delivered; awaiting next authorization)
+Status: inactive (D14 delivered; awaiting next authorization)
 
 ## Successor Development Issue
 
@@ -12,7 +12,8 @@ Status: inactive (D13 delivered; awaiting next authorization)
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
   `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02`、
-  `D11 / MON-03`、`D12 / MON-04` 和 `D13 / MON-05`；D02 已由 D01 解决并移除。
+  `D11 / MON-03`、`D12 / MON-04`、`D13 / MON-05` 和 `D14 / MON-06`；D02 已由
+  D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
@@ -29,6 +30,9 @@ Status: inactive (D13 delivered; awaiting next authorization)
   D13 已完成红灯、最小实现、回归、文档、开发底线、完整离线门禁和独立审查；
   维护者接受结果后，任务提交 `7f13071` 已通过 no-ff 合并提交 `6d44577` 合入
   `yuto`，任务分支未推送。D13 已完成限定交付。
+  D14 已完成相对时间红灯、最小实现、回归、文档、开发底线、完整离线门禁和独立
+  审查；维护者接受结果后，任务提交 `f7fdcb9` 已通过 no-ff 合并提交 `1af6d27`
+  合入 `yuto`，任务分支未推送。D14 已完成限定交付。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -135,6 +139,10 @@ Status: inactive (D13 delivered; awaiting next authorization)
   维护者最终明确要求“你自己验证一下 没有问题就提交推送”；完整复验通过后，据此
   接受 D13 并授权提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 和记录交付
   结果。任务分支不推送，真实 AtomGit、PR、标签、发布及 D14–D18 实施仍未授权。
+  维护者随后明确要求“继续开发”，据此单独激活 D14 的本地实现和离线验证；最终又
+  要求“自己验收一下 没有问题就提交推送”。完整复验与独立审查通过后，据此接受
+  D14，并授权提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 和记录交付
+  结果。任务分支不推送，真实 AtomGit、PR、标签、发布及 D15–D18 实施仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
@@ -160,14 +168,17 @@ Status: inactive (D13 delivered; awaiting next authorization)
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D13–D18。
 - D13 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D14–D18。
-- Next exact action: 等待维护者下一项明确授权；不自行实施 D14–D18，也不执行真实
+- D14 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
+  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D15–D18。
+- Next exact action: 等待维护者下一项明确授权；不自行实施 D15–D18，也不执行真实
   AtomGit、PR、标签或发布操作。
 
 ### Repository Reconciliation
 
-当前 `yuto` 为 D13 no-ff 合并提交 `6d44577`；任务提交 `7f13071` 位于本地分支
-`codex/d13-monitor-terminal-exit`，任务分支未推送。D13 未执行真实 AtomGit、PR、
-标签或发布。历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
+当前 `yuto` 为 D14 no-ff 合并提交 `1af6d27`；任务提交 `f7fdcb9` 位于本地分支
+`codex/d14-monitor-relative-time`，任务分支未推送。隔离合并树完整离线基线
+93/93 通过。D14 未执行真实 AtomGit、PR、标签或发布。历史矛盾的完整整理仍属于
+D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -2209,6 +2220,26 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
   `github/yuto`，任务分支不推送。
 - Residual risk: 快照永久丢失或上传在发布真实终态前被强制杀死时，monitor 仍需用户
   `Ctrl+C`；未运行真实 AtomGit、独立 Windows/Linux 主机或独立 Python 3.9 解释器。
+
+### D14 Delivery Verification
+
+- Objective: `atomgit monitor upload status --list` 将有效会话更新时间显示为向下取整的
+  秒、分钟、小时或天前；缺失、布尔、不可解析、非有限、负数和未来值逐行显示 `--`。
+- Scope: 仅修改列表渲染、既有上传观测回归、`UPLOAD-OBSERVABILITY` 开发底线和
+  最小监控文档；快照 v1、磁盘值、排序、默认选择、heartbeat、详细 monitor、上传与
+  SDK 均不变。
+- Invariant: 新增 `UPO-009`；登记为 28 个能力、136 条不变量、93 个离线脚本。
+- Evidence: 旧实现红灯 **31/36**；最终观测专项 **36/36**、开发底线 **15/15**。
+  任务分支完整基线最终 **93 passed in 114.51s**；隔离合并树临时切换 editable 后
+  完整基线 **93 passed in 111.14s**。首次直接运行隔离树因 editable 仍指向原工作树
+  导致两个路径/导入合同失败，修正测试环境后全部通过，未修改产品代码掩盖失败。
+- Static and review: compileall、pip check、Python 3.9 AST、Black、Ruff、任务拥有文件
+  isort、打包、凭证、二进制、生成物和 diff 检查通过；独立审查无 P0/P1/P2/P3
+  发现，结论 `APPROVED`。维护者人工验收为 `accepted`。
+- Delivery: 任务提交 `f7fdcb9`；no-ff 合并提交 `1af6d27`。只允许推送
+  `github/yuto`，任务分支不推送；本交付记录同样只进入 `yuto`。
+- Residual risk: 相对时间随每次执行变化，不是稳定机读或审计时间；未运行真实
+  AtomGit、独立 Windows/Linux 主机或独立 Python 3.9 解释器。
 
 ### Current Handoff Snapshot
 
