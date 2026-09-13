@@ -510,7 +510,10 @@ BASELINE_TEST_GROUPS = {
         "test_uninstaller.py",
     ),
     "cache": ("test_cache_clear.py",),
-    "upload-observability": ("test_upload_observability.py",),
+    "upload-observability": (
+        "test_upload_monitor_cross_process.py",
+        "test_upload_observability.py",
+    ),
     "authentication-configuration-and-git": (
         "test_anonymous_token_isolation.py",
         "test_auth_status_semantics.py",
@@ -599,7 +602,7 @@ BASELINE_TEST_GROUPS = {
 BASELINE_PUBLIC_COMMAND_COUNT = 26
 BASELINE_PUBLIC_PARAMETER_COUNT = 50
 BASELINE_LEAF_COMMAND_COUNT = 19
-BASELINE_TEST_SCRIPT_COUNT = 93
+BASELINE_TEST_SCRIPT_COUNT = 94
 
 
 def _normalize_default(value):

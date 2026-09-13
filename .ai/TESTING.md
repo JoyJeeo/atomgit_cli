@@ -197,7 +197,7 @@ offline regressions, documentation, and controlled-remote evidence status.
 test, document, or required workflow marker is missing, duplicate, stale, or
 incomplete.
 
-The current monotonic ledger has 28 capabilities, 138 invariants, and 93
+The current monotonic ledger has 28 capabilities, 139 invariants, and 94
 isolated offline pytest cases. Every offline test maps to at least one
 capability; every invariant maps to executable evidence assigned to that
 capability. New behavior updates the ledger in the same Issue.
