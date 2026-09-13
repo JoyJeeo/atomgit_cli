@@ -82,6 +82,19 @@ def main():
         datasets.__version__ == "4.4.1",
         datasets.__version__,
     )
+    create_commit_source = inspect.getsource(HfApi.create_commit)
+    check(
+        "HF dataset repository warning contract",
+        HfApi.create_commit.__module__ == "huggingface_hub.hf_api"
+        and 'repo_type != "dataset"' in create_commit_source
+        and 'endswith((".arrow", ".parquet"))' in create_commit_source
+        and "warnings.warn(" in create_commit_source
+        and "about to commit a data file" in create_commit_source
+        and "to a {repo_type}" in create_commit_source
+        and "set `repo_type='dataset'`" in create_commit_source
+        and "`--repo-type=dataset` in a CLI." in create_commit_source,
+        HfApi.create_commit.__module__,
+    )
 
     calls = [
         (

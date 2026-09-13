@@ -5,6 +5,7 @@ import queue
 import sys
 import tempfile
 import urllib.error
+import warnings
 from pathlib import Path
 
 import atomgit  # noqa: F401
@@ -13,6 +14,20 @@ import atomgit  # noqa: F401
 api_mod = sys.modules["atomgit.api"]
 config = sys.modules["atomgit.config"].config
 results = []
+process_args = []
+
+
+def warn_hf_dataset_repo():
+    warnings.warn_explicit(
+        "It seems that you are about to commit a data file (data.parquet) to a "
+        "model repository. You are sure this is intended? If you are trying to "
+        "upload a dataset, please set `repo_type='dataset'` or "
+        "`--repo-type=dataset` in a CLI.",
+        UserWarning,
+        filename="huggingface_hub/hf_api.py",
+        lineno=1,
+        module="huggingface_hub.hf_api",
+    )
 
 
 def check(name, condition, detail=""):
@@ -67,6 +82,7 @@ class InlineContext:
         return InlineQueue()
 
     def Process(self, target, args):
+        process_args.append(args)
         return InlineProcess(target, args)
 
 
@@ -98,6 +114,7 @@ def main():
             print_report=True,
             print_report_every=60,
         ):
+            warn_hf_dataset_repo()
             upload_calls.append(
                 {
                     "repo_id": repo_id,
@@ -128,18 +145,25 @@ def main():
         with tempfile.TemporaryDirectory() as name:
             root = Path(name) / "dataset"
             root.mkdir()
-            (root / "data.csv").write_text("x\n", encoding="utf-8")
-            result = api_mod.api.upload_directory(
-                root,
-                "user/dataset",
-                repo_type="dataset",
-                revision="dev",
-                ignore_patterns=["*.tmp"],
-                resumable=True,
-                num_workers=3,
-            )
+            (root / "data.parquet").write_bytes(b"offline parquet fixture")
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = api_mod.api.upload_directory(
+                    root,
+                    "user/dataset",
+                    repo_type="dataset",
+                    revision="dev",
+                    ignore_patterns=["*.tmp"],
+                    resumable=True,
+                    num_workers=3,
+                )
 
         check("dataset resumable succeeds", result is True)
+        check("dataset resumable warning is suppressed", not caught)
+        check(
+            "dataset warning policy crosses the process boundary explicitly",
+            len(process_args) == 1 and process_args[0][-1] is True,
+        )
         check(
             "token authenticates HfApi instance",
             constructor_calls == [

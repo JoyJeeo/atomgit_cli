@@ -3,6 +3,7 @@
 
 import inspect
 import tempfile
+import warnings
 from pathlib import Path
 
 import atomgit_hub
@@ -10,6 +11,22 @@ from huggingface_hub import upload_folder as real_upload_folder
 
 
 results = []
+HF_DATASET_REPO_WARNING = (
+    "It seems that you are about to commit a data file (records/data.parquet) "
+    "to a model repository. You are sure this is intended? If you are trying "
+    "to upload a dataset, please set `repo_type='dataset'` or "
+    "`--repo-type=dataset` in a CLI."
+)
+
+
+def warn_hf_dataset_repo():
+    warnings.warn_explicit(
+        HF_DATASET_REPO_WARNING,
+        UserWarning,
+        filename="huggingface_hub/hf_api.py",
+        lineno=1,
+        module="huggingface_hub.hf_api",
+    )
 
 
 def check(name, condition, detail=""):
@@ -24,6 +41,7 @@ def main():
 
     def strict_upload(**kwargs):
         inspect.signature(real_upload_folder).bind(**kwargs)
+        warn_hf_dataset_repo()
         check(
             "upload source exists at strict boundary",
             Path(kwargs["folder_path"]).exists(),
@@ -35,20 +53,23 @@ def main():
     try:
         with tempfile.TemporaryDirectory() as source_dir:
             source = Path(source_dir)
-            (source / "data.csv").write_text("value\n1\n", encoding="utf-8")
+            (source / "data.parquet").write_bytes(b"offline parquet fixture")
 
-            result = atomgit_hub.upload_folder(
-                source,
-                "team/dataset",
-                token="fake-token",
-                repo_type="dataset",
-                revision="main",
-                commit_message="upload data",
-                commit_description="offline parameter contract",
-                path_in_repo="records/",
-                ignore_patterns=["*.tmp", "logs/"],
-            )
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = atomgit_hub.upload_folder(
+                    source,
+                    "team/dataset",
+                    token="fake-token",
+                    repo_type="dataset",
+                    revision="main",
+                    commit_message="upload data",
+                    commit_description="offline parameter contract",
+                    path_in_repo="records/",
+                    ignore_patterns=["*.tmp", "logs/"],
+                )
             check("SDK result preserved", result == "commit-url")
+            check("legacy dataset warning is suppressed", not caught)
             call = calls[-1]
             check(
                 "dataset uses compatible model transfer route",
@@ -66,14 +87,20 @@ def main():
             )
             check("commit message forwarded", call.get("commit_message") == "upload data")
 
-            atomgit_hub.upload_folder(
-                source,
-                "team/model",
-                token="fake-token",
-                repo_type="model",
-            )
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                atomgit_hub.upload_folder(
+                    source,
+                    "team/model",
+                    token="fake-token",
+                    repo_type="model",
+                )
             check("model type forwarded", calls[-1].get("repo_type") == "model")
             check("unset revision omitted", "revision" not in calls[-1])
+            check(
+                "legacy model warning remains visible",
+                len(caught) == 1 and str(caught[0].message) == HF_DATASET_REPO_WARNING,
+            )
 
             before = len(calls)
             try:

@@ -68,6 +68,8 @@ CLI 允许尝试下载公开仓库。私有仓库需要有效 token。是否真�
 分别对私有 model 和 dataset 使用
 399,300,506 字节文件执行了 CLI 超时中断、同目录续传、下载回读；两者最终
 SHA-256 均一致。dataset 的用户类型保持不变，底层自动使用共享 model 兼容路由。
+dataset 中的 `.arrow` / `.parquet` 不再显示 HF 1.1.7 因该映射产生的
+model 仓库误报警；真正的 model 上传和其他警告不受影响。
 CLI 目录上传现在默认选择 resumable；`--path-in-repo` 通过稳定的本地投影表达
 远端前缀并保留 HF 元数据。需要单一提交说明或普通目录上传时使用 `--message`
 （未显式选模式时自动普通上传）或 `--no-resumable`。

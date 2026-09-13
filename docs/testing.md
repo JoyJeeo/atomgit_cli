@@ -303,6 +303,8 @@ SHA-256 为 `2bb82b98…f7ad1c5`；dataset 目录上传仍返回 `BadRequestErro
 
 - 依赖签名契约固定在 `huggingface-hub==1.1.7` 和 `datasets==4.4.1`；任一
   版本变更都必须先更新真实签名测试，不能仅放宽 fake。
+- HF 1.1.7 的 data-file/model-repository `UserWarning` 来源与完整文案也是依赖
+  契约；dataset 兼容路由只过滤这一指定误报警，契约变化时安全恢复显示。
 - 远程 revision 行为不能仅根据 HF 文档推断，必须验证 AtomGit 服务端。
 - 测试使用已有仓库无法证明建仓功能成功。
 - 非法占位 repo ID 只能证明输入校验有效，不能证明 dataset 功能失败。

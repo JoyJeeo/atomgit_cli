@@ -15,6 +15,7 @@ from ..infrastructure.validation import (
     validate_upload_path_no_symlinks,
 )
 from .lfs.pointer import CanonicalLfsCommitUnconfirmedError, run_canonical_lfs_upload
+from .upload.errors import _suppress_hf_model_repo_warning
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -117,8 +118,13 @@ def upload_folder(
                 upload_kwargs["ignore_patterns"] = _project_ignore_patterns(
                     ignore_patterns, path_in_repo
                 )
+
+            def upload():
+                with _suppress_hf_model_repo_warning(repo_type == "dataset"):
+                    return hf_upload_folder(**upload_kwargs)
+
             return run_canonical_lfs_upload(
-                lambda: hf_upload_folder(**upload_kwargs),
+                upload,
                 token=token,
                 repo_id=normalized_repo_id,
                 timeout=upload_timeout,

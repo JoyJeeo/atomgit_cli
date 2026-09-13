@@ -19,7 +19,11 @@ from ...infrastructure.validation import (
 )
 from ..lfs.pointer import run_canonical_lfs_upload
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_SIZE
-from .errors import ResumableWorkerError, _classify_upload_error
+from .errors import (
+    ResumableWorkerError,
+    _classify_upload_error,
+    _suppress_hf_model_repo_warning,
+)
 from .ordinary import (
     _capture_progress_bar_state,
     _restore_progress_bar_state,
@@ -191,6 +195,7 @@ class UploadServiceMixin:
             close_hf_session()
 
             try:
+                suppress_dataset_warning = repo_type == "dataset"
                 # 路径2（推荐）：直接 upload_file，无本地拷贝
                 if hf_upload_file is not None and not ignore_patterns:
                     # upload_file 需要完整的 path_in_repo（含文件名）
@@ -209,8 +214,13 @@ class UploadServiceMixin:
                         file_kwargs["repo_type"] = upload_repo_type
                     if revision is not None:
                         file_kwargs["revision"] = revision
+
+                    def upload():
+                        with _suppress_hf_model_repo_warning(suppress_dataset_warning):
+                            return hf_upload_file(**file_kwargs)
+
                     run_canonical_lfs_upload(
-                        lambda: hf_upload_file(**file_kwargs),
+                        upload,
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
                         timeout=request_timeout,
@@ -247,8 +257,13 @@ class UploadServiceMixin:
                         upload_kwargs["revision"] = revision
                     if ignore_patterns:
                         upload_kwargs["ignore_patterns"] = ignore_patterns
+
+                    def upload():
+                        with _suppress_hf_model_repo_warning(suppress_dataset_warning):
+                            return upload_folder(**upload_kwargs)
+
                     run_canonical_lfs_upload(
-                        lambda: upload_folder(**upload_kwargs),
+                        upload,
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
                         timeout=request_timeout,
@@ -359,6 +374,7 @@ class UploadServiceMixin:
                     if upload_timeout is not None
                     else _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
                 )
+                suppress_dataset_warning = repo_type == "dataset"
                 hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
                 close_hf_session()
 
@@ -457,7 +473,10 @@ class UploadServiceMixin:
                                                     batch_number,
                                                     batch_count,
                                                 ),
-                                                auto_configure_lfs=auto_configure_lfs,
+                                                auto_configure_lfs=(auto_configure_lfs),
+                                                suppress_dataset_warning=(
+                                                    suppress_dataset_warning
+                                                ),
                                                 configured_lfs_patterns=(
                                                     _validated_lfs_patterns(
                                                         attempted_lfs_patterns
@@ -665,10 +684,17 @@ class UploadServiceMixin:
                                 ]
                             if ignore_patterns:
                                 upload_kwargs["ignore_patterns"] = ignore_patterns
+
+                            def upload():
+                                with _suppress_hf_model_repo_warning(
+                                    suppress_dataset_warning
+                                ):
+                                    return _upload_folder_with_workers(
+                                        upload_kwargs, num_workers or 5
+                                    )
+
                             run_canonical_lfs_upload(
-                                lambda: _upload_folder_with_workers(
-                                    upload_kwargs, num_workers or 5
-                                ),
+                                upload,
                                 token=credentials["token"],
                                 repo_id=upload_kwargs["repo_id"],
                                 timeout=request_timeout,

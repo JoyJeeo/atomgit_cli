@@ -46,6 +46,7 @@ from .errors import (
     ResumableTargetRevisionError,
     ResumableWorkerError,
     _resumable_failure_envelope,
+    _suppress_hf_model_repo_warning,
 )
 
 # Program-step 9 LFS policy slots are wired by atomgit.api.
@@ -1127,6 +1128,7 @@ def _run_resumable_upload(
     auto_configure_lfs=False,
     configured_lfs_patterns=(),
     observation_queue=None,
+    suppress_dataset_warning=False,
 ):
     """Run HF's resumable uploader in an isolated child process.
 
@@ -1261,7 +1263,8 @@ def _run_resumable_upload(
             )
             client.create_commit = controller.create_commit
         with _scoped_resumable_lfs_recovery(slow_flow_coordinator):
-            client.upload_large_folder(**kwargs)
+            with _suppress_hf_model_repo_warning(suppress_dataset_warning):
+                client.upload_large_folder(**kwargs)
         result_queue.put((True, {"recovered": recovery["confirmed"]}))
         result_sent = True
     except BaseException as exc:
@@ -1301,6 +1304,7 @@ def _execute_resumable_upload_process(
     request_timeout: float,
     batch_context,
     auto_configure_lfs: bool = False,
+    suppress_dataset_warning: bool = False,
     configured_lfs_patterns=(),
 ) -> dict:
     """Run one outer resumable batch and require an explicit child result."""
@@ -1323,6 +1327,7 @@ def _execute_resumable_upload_process(
             auto_configure_lfs,
             configured_lfs_patterns,
             observation_queue,
+            suppress_dataset_warning,
         ),
     )
     process.daemon = True

@@ -14,7 +14,10 @@
 """
 import sys
 import tempfile
+import warnings
+from importlib import import_module
 from pathlib import Path
+
 from click.testing import CliRunner
 
 import atomgit  # noqa: F401  触发包初始化
@@ -22,6 +25,7 @@ import atomgit  # noqa: F401  触发包初始化
 # 覆盖为 HuggingFaceAPI 实例，故用 sys.modules 取真正的 api 模块。
 api_mod = sys.modules["atomgit.api"]
 cfg_mod = sys.modules["atomgit.config"]
+service_mod = import_module("atomgit.adapters.upload.service")
 from atomgit.cli import cli
 
 results = []
@@ -35,6 +39,23 @@ def check(name, cond, detail=""):
 
 # 假的 HF upload_folder：捕获调用参数
 captured = []
+HF_DATASET_REPO_WARNING = (
+    "It seems that you are about to commit a data file (file.parquet) to a model "
+    "repository. You are sure this is intended? If you are trying to upload a "
+    "dataset, please set `repo_type='dataset'` or `--repo-type=dataset` in a CLI."
+)
+
+
+def warn_hf_dataset_repo(
+    message=HF_DATASET_REPO_WARNING, module="huggingface_hub.hf_api"
+):
+    warnings.warn_explicit(
+        message,
+        UserWarning,
+        filename="huggingface_hub/hf_api.py",
+        lineno=1,
+        module=module,
+    )
 
 
 def fake_upload_folder(**kwargs):
@@ -153,7 +174,222 @@ def main():
 
             # --- T8: 临时目录清理（文件分支会复制到 .tmp_upload） ---
             leftover = Path.cwd() / ".tmp_upload"
-            check("T8 .tmp_upload 已清理", not leftover.exists(), f"exists={leftover.exists()}")
+            check(
+                "T8 .tmp_upload 已清理",
+                not leftover.exists(),
+                f"exists={leftover.exists()}",
+            )
+
+            def warning_upload_folder(**kwargs):
+                warn_hf_dataset_repo()
+                warn_hf_dataset_repo(
+                    HF_DATASET_REPO_WARNING.replace("file.parquet", "file.arrow")
+                )
+                return fake_upload_folder(**kwargs)
+
+            api_mod.hf_upload_file = warning_upload_folder
+
+            # Dataset upload warnings are suppressed, but later LFS checks are not.
+            original_canonical_upload = service_mod.run_canonical_lfs_upload
+
+            def canonical_upload_with_warning(upload, **kwargs):
+                result = upload()
+                warn_hf_dataset_repo()
+                return result
+
+            service_mod.run_canonical_lfs_upload = canonical_upload_with_warning
+            captured.clear()
+            try:
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always")
+                    dataset_warning_result = runner.invoke(
+                        cli,
+                        [
+                            "upload",
+                            str(tdpath / "file.bin"),
+                            "--repo-id",
+                            "user/repo",
+                            "--repo-type",
+                            "dataset",
+                        ],
+                    )
+            finally:
+                service_mod.run_canonical_lfs_upload = original_canonical_upload
+            check(
+                "T9 only the dataset upload warning is suppressed",
+                dataset_warning_result.exit_code == 0
+                and [str(item.message) for item in caught] == [HF_DATASET_REPO_WARNING],
+            )
+
+            # 非 dataset 场景仍保留同源 warning，避免放大过滤。
+            captured.clear()
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                model_warning_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "model",
+                    ],
+                )
+            check(
+                "T10 model warning keeps dataset alert",
+                model_warning_result.exit_code == 0
+                and len(caught) == 2
+                and "set `repo_type='dataset'`" in str(caught[0].message),
+            )
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                default_model_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                    ],
+                )
+            check(
+                "T10 default model warning keeps dataset alert",
+                default_model_result.exit_code == 0 and len(caught) == 2,
+            )
+
+            # 文件回退路径沿用同一抑制合同（repo_type dataset）。
+            captured.clear()
+            api_mod.hf_upload_file = None
+            api_mod.upload_folder = warning_upload_folder
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                dataset_fallback_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "dataset",
+                    ],
+                )
+            check(
+                "T11 dataset file fallback warning is suppressed",
+                dataset_fallback_result.exit_code == 0 and not caught,
+            )
+
+            # 普通目录的每个 HF 调用也使用相同合同。
+            captured.clear()
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                dataset_directory_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(sub),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "dataset",
+                        "--no-resumable",
+                    ],
+                )
+            check(
+                "T12 dataset ordinary directory warning is suppressed",
+                dataset_directory_result.exit_code == 0 and not caught,
+            )
+
+            def other_warning_upload_folder(**kwargs):
+                warn_hf_dataset_repo()
+                warn_hf_dataset_repo("another HF user warning")
+                return fake_upload_folder(**kwargs)
+
+            api_mod.hf_upload_file = other_warning_upload_folder
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                other_warning_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "dataset",
+                    ],
+                )
+            check(
+                "T13 dataset keeps unrelated HF warning",
+                other_warning_result.exit_code == 0
+                and [str(item.message) for item in caught]
+                == ["another HF user warning"],
+            )
+
+            def other_module_upload_folder(**kwargs):
+                warn_hf_dataset_repo(module="tests.fake_hf_api")
+                return fake_upload_folder(**kwargs)
+
+            api_mod.hf_upload_file = other_module_upload_folder
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                other_module_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "dataset",
+                    ],
+                )
+            check(
+                "T14 same warning from another module remains visible",
+                other_module_result.exit_code == 0
+                and len(caught) == 1
+                and str(caught[0].message) == HF_DATASET_REPO_WARNING,
+            )
+
+            def failed_upload(**kwargs):
+                warn_hf_dataset_repo()
+                raise RuntimeError("offline upload failure")
+
+            api_mod.hf_upload_file = failed_upload
+            failed_result = runner.invoke(
+                cli,
+                [
+                    "upload",
+                    str(tdpath / "file.bin"),
+                    "--repo-id",
+                    "user/repo",
+                    "--repo-type",
+                    "dataset",
+                ],
+            )
+            api_mod.hf_upload_file = warning_upload_folder
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                restored_result = runner.invoke(
+                    cli,
+                    [
+                        "upload",
+                        str(tdpath / "file.bin"),
+                        "--repo-id",
+                        "user/repo",
+                        "--repo-type",
+                        "model",
+                    ],
+                )
+            check(
+                "T15 warning state is restored after upload failure",
+                failed_result.exit_code != 0
+                and restored_result.exit_code == 0
+                and len(caught) == 2,
+            )
+            api_mod.upload_folder = fake_upload_folder
+            api_mod.hf_upload_file = fake_upload_folder
 
     print("\n" + "=" * 50)
     passed = sum(1 for _, c, _ in results if c)

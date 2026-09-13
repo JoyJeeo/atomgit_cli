@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 137
+BASELINE_INVARIANT_COUNT = 138
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -1024,13 +1024,33 @@ CAPABILITY_REGISTRY = {
                 "Representative production dependency call sites bind their extracted arguments against the real locked signatures.",
                 "test_hf_api_contract.py",
             ),
+            _invariant(
+                "DEP-004",
+                "Dataset uploads retain AtomGit's model transport route while suppressing only HF 1.1.7's exact data-file warning; model and unrelated warnings remain visible and warning state is restored.",
+                "test_hf_api_contract.py",
+                "test_upload_repo_type.py",
+                "test_upload_file_no_copy.py",
+                "test_sdk_upload_parameters.py",
+                "test_dataset_resumable_route.py",
+                "test_resumable_recovery.py",
+            ),
         ),
         (
+            "test_dataset_resumable_route.py",
             "test_hf_api_contract.py",
             "test_load_dataset.py",
+            "test_resumable_recovery.py",
             "test_sdk_upload_parameters.py",
+            "test_upload_file_no_copy.py",
+            "test_upload_repo_type.py",
         ),
-        ("docs/testing.md", ".ai/TESTING.md"),
+        (
+            "README.md",
+            "docs/architecture.md",
+            "docs/testing.md",
+            "docs/upload_command_analysis.md",
+            ".ai/TESTING.md",
+        ),
         ("offline-contract", "dependency-contract"),
     ),
     "PACKAGING": _capability(
@@ -1480,7 +1500,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "137 条可观察行为不变量",
+        "138 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),
