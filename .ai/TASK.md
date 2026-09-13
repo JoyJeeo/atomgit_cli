@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D17 delivered; D18 discussion pending)
+Status: active (D18 R9 historical state reconciliation)
 
 ## Successor Development Issue
 
@@ -13,7 +13,8 @@ Status: inactive (D17 delivered; D18 discussion pending)
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
   `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02`、
   `D11 / MON-03`、`D12 / MON-04`、`D13 / MON-05`、`D14 / MON-06`、
-  `D15 / MON-07`、`D16 / TYPE-01` 和 `D17 / TEST-01`；D02 已由 D01 解决并移除。
+  `D15 / MON-07`、`D16 / TYPE-01`、`D17 / TEST-01` 和 `D18 / DOC-01`；D02 已由
+  D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
@@ -68,6 +69,10 @@ Status: inactive (D17 delivered; D18 discussion pending)
   D17 最终交付复验通过；任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入
   `yuto`，合并树跨进程专项为 **9/9**、完整离线基线为 **94/94**。交付记录提交
   `ebe08b9` 已仅推送并核验 `github/yuto`，任务分支未推送；D17 已完成限定交付。
+  D18 的“原地收敛 R9 历史记录、保留最终合同与提交证据、删除或改写过期状态”方案
+  已获维护者接受并写入本 Issue。维护者现已明确要求“开始开发”，据此单独激活 D18；
+  当前只整理 R9 历史正文和同步讨论交接，不修改源码、测试、用户文档或运行行为。
+  D18 最终交付复验已通过，维护者的条件验收与限定交付授权已生效。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -231,6 +236,16 @@ Status: inactive (D17 delivered; D18 discussion pending)
   维护者随后明确要求“自己验收一下 没问题就提交并推送”；据此接受 D17 在最终复验
   无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`
   及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D18 仍未授权。
+  维护者随后要求“将开发方案落入本地开发issue”，据此接受 D18 的 R9 历史状态原地
+  收敛方案，并授权只更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md` 以登记未激活
+  开发合同；不授权激活 D18、修改 R9 历史正文、创建分支、运行实施验证、提交、合并、
+  推送或执行真实 AtomGit 操作。
+  维护者随后明确要求“开始开发”，据此授权激活 D18、创建本地任务分支、整理
+  `.ai/TASK.md` 的 R9 历史正文、同步 `.ai/ISSUE_DISCUSSION.md` 并执行合同内离线
+  验证；不授权提交、合并、推送或任何真实 AtomGit 操作。
+  维护者随后明确要求“自己检查一下，没有问题就提交推送”，据此授权在最终复验无误
+  后接受 D18，提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录
+  交付结果；任务分支不推送，不执行真实 AtomGit、PR、标签或发布操作。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   D01 交付时未纳入原有五份开发规范变更；这些文档后续已单独获得提交与
@@ -270,8 +285,10 @@ Status: inactive (D17 delivered; D18 discussion pending)
 - D17 delivery mode: 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；
   交付记录提交 `ebe08b9` 已仅推送并核验 `github/yuto`。任务分支未推送，未执行真实
   AtomGit、PR、标签、发布或 D18。
-- Next exact action: 等待维护者继续 D18 讨论；不自动实施 D18，不执行真实 AtomGit
-  操作。
+- D18 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`、仅推送
+  `github/yuto` 并记录交付结果；任务分支不推送，不执行其他远程操作。
+- Next exact action: 提交 D18 本地任务分支、no-ff 合入 `yuto`，在合并树复验后仅推送
+  `github/yuto` 并核验远端一致；任务分支不推送。
 
 ### Repository Reconciliation
 
@@ -288,8 +305,8 @@ D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
 D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15、D16 已完成限定
-交付，D17 已激活、实现并获条件交付授权。历史矛盾的完整整理
-仍属于 D18，本次没有将 D18 标记为已解决。
+交付，D17 已完成限定交付。D18 已在 `codex/d18-r9-state-reconciliation` 激活并完成
+R9 历史状态整理；当前等待最终门禁和独立复审，不能将未验收结果误报为已交付。
 
 ### D01 Objective And Evidence
 
@@ -3587,28 +3604,199 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。
 
+### D18 Objective And Evidence
+
+统一本文件中的 R9 上传观测历史状态，使后续会话只能得出“R9 已实现、验收、no-ff
+合并并交付”的单一结论，同时保留当时接受的行为合同、提交链、验证证据和残余限制。
+
+Git 与当前仓库证明 R9 已交付：实现提交 `5c108f6` 从设计基点 `af3a30e` 开发，随后
+通过 no-ff 合并提交 `4298043` 合入 `yuto`，交付记录提交为 `2c5d351`；三个提交均为
+当前 `yuto` 的祖先，当前源码、CLI schema 和测试仍包含 monitor、快照与上传观测能力。
+R9 当时记录的最终完整离线基线为 **93 passed in 109.38s**。
+
+本文件的历史 R9 区域同时残留“仅激活”“仅设计、未实现”“实现未开始”“存在未提交
+实现”和“等待人工验收”等旧阶段文字，与上述 Git、源码和交付记录冲突。新会话可能
+因此重复激活 R9、误判功能缺失或扩大历史权限。
+
+### D18 Accepted Reconciliation Contract
+
+- 原地整理历史 R9 区域，不新建归档文件。Git 保留完整过程，本文件保留实施所需的
+  最终合同和可追溯证据，避免增加新的文档入口。
+- R9 最终状态统一为 `completed, accepted, merged, and delivered on yuto`，明确记录
+  `af3a30e -> 5c108f6 -> 4298043 -> 2c5d351` 和最终 93/93 离线基线。
+- 保留 R9 的目标、已接受行为、安全边界、验证要求、旧设计文档兼容重定向和未运行
+  真实远端/Python 3.9 解释器的残余限制。
+- 将 R9 合同标为“R9 交付时的历史基线”，明确 D09–D17 是后续独立修复与增强；当前
+  行为以源码、测试和后续合同为准，不能把 R9 基线误称为当前完整实现。
+- 删除或改写仍作为有效状态出现的“仅设计”“未实现”“实现未开始”“存在未提交实现”
+  “等待人工验收”和“需要未来重新激活 R9”等文字。
+- 将位置含混的旧 `Handoff Snapshot` 收敛为 R9 区域内的
+  `Historical R9 Final Delivery Snapshot`，只保留最终状态、提交链、门禁、审查、
+  接受、残余限制和“后续使用独立 Issue”的下一步。
+- 只修正文档事实和权限解释；不修改任何生产行为、公开接口、测试、开发底线登记、
+  当前缓存或远端状态。
+
+### D18 Implementation Scope
+
+1. 激活前确认 D17 已交付、`TASK.md` 没有其他活动开发 Issue、工作树干净且本地
+   `yuto` 与 `github/yuto` 一致；从当时最新 `yuto` 创建本地分支
+   `codex/d18-r9-state-reconciliation`。
+2. 用 `git show` 和 `git merge-base --is-ancestor` 重新核对 `af3a30e`、`5c108f6`、
+   `4298043`、`2c5d351`，并从当前源码、CLI schema、`tests/test_upload_observability.py`
+   与开发底线核对 R9 已实现事实。若证据不一致，停止并回到讨论，不强改记录。
+3. 只编辑 `.ai/TASK.md` 的历史 R9 区域，统一终态、提交链和证据，重写设计状态和最终
+   交付快照；不得改写 R8、D01–D17 的真实合同或历史交付证据。
+4. 同步 `.ai/ISSUE_DISCUSSION.md` 的 D18 实施状态和关闭交接；讨论 Issue 只有在维护者
+   明确同意后才能关闭，方案接受和写入不等于实施或关闭。
+5. 运行文档一致性检查、上传观测/CLI/开发底线专项、强制完整离线基线和静态门禁，
+   再执行不编辑文件的独立复审；无未解决发现后进入人工验收。
+
+除 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md` 外不得修改其他文件。尤其不得修改
+`src/`、`tests/`、`docs/`、依赖、打包配置或运行时状态。
+
+### D18 Affected Capability IDs
+
+`FLOOR-REGISTRY` 和 `UPLOAD-OBSERVABILITY`。这里只核对并保护两项能力的历史交付
+记录，不修改可执行登记册。
+
+### D18 Protected Existing Invariants
+
+- 实施激活时实际登记的全部能力、不变量和离线测试保持不变；当前基线为 28 个能力、
+  139 条不变量和 94 个离线 pytest case，激活时必须重新读取真实登记而非只依赖本记录。
+- `atomgit monitor upload status`、`--list`、显式 session、快照 v1、固定会话、终态
+  退出、相对时间、变化驱动重绘、脱敏和上传隔离等已交付行为保持不变。
+- D09–D17 的独立合同、提交、验证和残余风险不得被回退、合并或改写为 R9 原始范围。
+- CLI/SDK 签名、锁定依赖、缓存、上传结果、退出码和真实远端权限均保持不变。
+- `FLOOR-001`–`FLOOR-003` 和 `UPO-001`–`UPO-011` 的可执行证据不得删除、跳过、
+  弱化或重新归属。
+
+### D18 New Or Changed Invariants
+
+无。D18 是持久交接事实纠错，不增加、迁移或删除产品能力、行为不变量和测试脚本。
+
+### D18 Focused Tests And Evidence
+
+激活后必须在 `atomgit_cli` conda 环境运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_observability.py
+python tests/test_cli_feature_baseline.py
+python tests/test_development_floor.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+还必须检查 R9 提交祖先关系、历史区域中的冲突状态、两份变更文件的完整差异、凭证
+特征和未跟踪生成物。完整离线基线必须在最后一次文档修正后重跑并记录实际结果；
+不得执行真实 AtomGit 操作，也不得用离线结果声称远端证据。
+
+### D18 Implementation Phases And Acceptance
+
+1. 在问题讨论 Issue 获维护者明确关闭、D18 又获单独激活授权后，从最新干净 `yuto`
+   创建任务分支并记录真实 Git/开发底线基线。验证：唯一活动 Issue、分支、HEAD、远端
+   跟踪和工作树一致。
+2. 重新核对 R9 提交链、源码、CLI schema、测试和历史证据。验证：实现、合并、交付和
+   93/93 历史基线均有仓库证据，任何不一致都会阻断编辑。
+3. 原地收敛 R9 历史状态、设计说明和最终交付快照。验证：新会话只能读出 R9 已交付，
+   且能区分 R9 历史基线与 D09–D17 当前扩展。
+4. 运行专项、强制完整离线基线、静态/安全/差异门禁，并按 `.ai/REVIEW.md` 独立复审。
+   验证：只改两份 `.ai` 文件，无行为或登记变化，无未解决 P0–P3 发现。
+5. 人工验收后等待单独的提交、no-ff 合并和仅推送 `github/yuto` 授权；任务分支不推送，
+   交付记录写回后重新运行完整门禁并恢复 `TASK.md` inactive。
+
+验收必须同时满足：R9 只有一个有效最终状态；完整记录
+`af3a30e -> 5c108f6 -> 4298043 -> 2c5d351`；旧设计路径与 R9 合同仍可追溯；
+D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或待激活的有效指令；只有
+两份 `.ai` 文件发生变化；专项、完整离线门禁、差异检查和独立复审通过。
+
+### D18 Non-Goals And Residual Risks
+
+- 不压缩或重写全部历史 Issue，不清理与 R9 矛盾无关的旧交接债务，不移动 R8 历史，
+  不创建新归档体系。
+- 不修改 CLI、SDK、monitor、快照、上传、测试、开发底线、用户文档、依赖或打包行为。
+- Git 已保存过程，但过度删除本文件的决策合同仍可能损失后续任务引用；因此只收敛阶段
+  状态和重复快照，保留行为合同、提交和残余风险。
+- R9 历史基线可能与 D09–D17 后的当前行为不同；必须清楚标为历史基线并指向后续合同。
+- 本地验证不代替真实 AtomGit、独立 Windows/Linux 或独立 Python 3.9 解释器证据；
+  D18 不需要也不授权补跑这些证据。
+
+### D18 Compatibility And Rollback
+
+- 没有 CLI、SDK、数据、配置、缓存、快照、依赖或远端迁移，用户可见行为完全不变。
+- D18 应形成一个原子文档提交。交付前发现错误时只在任务分支修正并重跑门禁；交付后
+  如记录本身严重错误，需获授权后整体 revert 并重新打开 D18，不能只恢复一条过期
+  状态或借回滚改变产品行为。
+
+### D18 Activation Status
+
+- [x] 维护者接受 D18 完整方案并授权登记到本地开发 Issue。
+- [x] 维护者明确确认问题讨论 Issue 可以关闭。
+- [x] 维护者在讨论关闭后单独授权激活 D18。
+- [x] 基于 `yuto@b0d91c1` 的本地任务分支
+  `codex/d18-r9-state-reconciliation` 已创建并核验；分支继承两份已授权但未提交的
+  D18 方案登记和讨论关闭变更，未覆盖或拆分既有工作。
+- [x] R9 证据复核、历史状态整理和两份 `.ai` 文件同步已完成。
+- [x] 专项、完整离线门禁、静态检查和独立复审通过。
+- [x] 最终交付复验通过，维护者条件验收已生效并授权限定 Git 交付。
+
+### D18 Implementation Evidence
+
+- Branch and base: `codex/d18-r9-state-reconciliation` from `yuto@b0d91c1`;
+  the branch retained the two previously authorized uncommitted planning/closure files.
+- R9 traceability: `af3a30e`, `5c108f6`, `4298043`, and `2c5d351` exist and are
+  ancestors of the task base; source, CLI schema, tests, and the executable ledger
+  confirm the monitor and upload-observability capability remain implemented.
+- Focused offline checks: `python tests/test_upload_observability.py` 40/40,
+  `python tests/test_cli_feature_baseline.py` 75/75, and
+  `python tests/test_development_floor.py` 15/15 passed.
+- Complete offline gate: final pre-delivery `python tests/run_cli_baseline.py` passed
+  94/94 in 121.33s; earlier post-correction runs also passed 94/94.
+- Static and safety checks: `python -m compileall -q .`, `python -m pip check`,
+  `git diff --check`, task-scope comparison, dependency-version check, commit-ancestry
+  check, and high-confidence credential scan passed.
+- Changed paths: `.ai/TASK.md` and `.ai/ISSUE_DISCUSSION.md` only. No source, tests,
+  human documentation, dependency, packaging, runtime, generated artifact, or remote
+  state changed.
+- Not run by scope: live AtomGit operations and a separate Python 3.9 interpreter.
+- Next exact action: complete the authorized task commit, local no-ff merge, merge-tree
+  verification, and `github/yuto`-only push; the task branch and all other remote
+  operations remain unauthorized.
+
+### D18 Independent Review
+
+- Initial finding: `P2` — the repository reconciliation and discussion handoff still
+  described D18 as unactivated and the worktree as clean `yuto`; both were corrected
+  before the final verification run.
+- Final findings: none; no open P0, P1, P2, or P3 issue.
+- Missing evidence: live AtomGit behavior and a separate Python 3.9 interpreter were not
+  run by scope and are not claimed.
+- Verdict: `APPROVED`.
+
 # Historical R9 Contract (retained evidence, not current execution authority)
 
-Historical status text (stale): `active (R9 upload observability monitor; issue activation only)`
+Historical status: `completed, accepted, merged, and delivered on yuto`
 
 ## Historical R9 Development Issue
 
-- Updated: `2026-08-26`
+- Updated: `2026-09-13`（交付日期为 `2026-08-26`，本次只纠正历史状态）
 - ID: `LOCAL-R9-UPLOAD-OBSERVABILITY-MONITOR`
 - Title: `Implement the read-only upload observability monitor window`
 - Type: `cli`, `architecture`, `compatibility`, `security`, `testing`, `packaging`,
   `portability`, `documentation`
 - Priority: `P1` (new public CLI surface with upload-process isolation and cache safety)
-- User authorization: explicit request on `2026-08-26` to record the approved
-  development plan as a project Issue; this turn does not authorize source edits or
-  implementation execution.
-- Delivery mode: local implementation and acceptance first; commit, push, merge,
-  release, publication, and remote repository mutation require separate explicit
-  authorization.
-- Canonical design: `docs/features/upload-monitor.md`; it is the feature-level
-  source of truth and must be kept consistent with this Issue and the executable
-  capability/CLI ledgers.
-- Current phase: implementation complete; human acceptance recorded on `2026-08-26`.
+- Historical authorization: the maintainer separately authorized the R9 plan,
+  implementation, human acceptance, task commit, local no-ff merge into `yuto`, and
+  delivery recording. This history grants no current implementation or remote authority.
+- Delivery: design base `af3a30e` -> implementation `5c108f6` -> no-ff merge
+  `4298043` -> delivery record `2c5d351`.
+- Historical canonical design: `docs/features/upload-monitor.md`; the R9 contract below
+  is the delivery-time baseline. Current behavior is defined by source, tests, and the
+  later D09–D17 contracts.
+- Current phase: completed, accepted, merged, and delivered on `yuto` on `2026-08-26`.
 - Next exact action: none for this Issue; follow-up work requires a new authorized Issue.
 
 ### Objective
@@ -3813,15 +4001,36 @@ complete baseline, packaging smoke, security checks, and any explicitly authoriz
 remote evidence all agree. Remaining remote or Python-version limitations must be
 reported rather than hidden.
 
-## Deferred Design Record
+## Historical Design Record
 
 - `docs/features/upload-monitor.md` records the maintainer-approved design
   conclusions from the upload observability discussion; the old
   `docs/upload_observability_design.md` path is a compatibility redirect.
-- The design is documentation only: no `monitor` command, upload status command,
-  telemetry snapshot, or runtime behavior has been implemented.
-- A future conversation must reconcile the design with the then-current CLI and
-  activate a separate maintainer-authorized Issue before implementation.
+- R9 implemented the `monitor` command, upload status command, structured snapshots,
+  renderer, cache integration, and upload observation path in `5c108f6`; the result was
+  merged by `4298043` and recorded as delivered by `2c5d351`.
+- This is the R9 delivery-time design baseline, not a complete description of current
+  behavior. D09–D17 later extended and corrected upload observability independently;
+  current behavior must be read from source, tests, and those later contracts.
+
+## Historical R9 Final Delivery Snapshot
+
+- Delivery date: `2026-08-26`
+- Final status: `completed, accepted, merged, and delivered on yuto`
+- Design base: `af3a30e docs(features): add upload monitor specification`
+- Task commit: `5c108f6 feat(monitor): add upload observability window`
+- No-ff merge: `4298043 merge: add upload observability monitor`
+- Delivery record: `2c5d351 docs(task): record monitor delivery`
+- Final verification: `python tests/run_cli_baseline.py` passed 93/93 in 109.38s;
+  `python -m compileall -q .`, `python -m pip check`, and `git diff --check` passed.
+- Review and acceptance: the child-process LFS observer finding was resolved, follow-up
+  review passed, and human acceptance was recorded before delivery.
+- Residual limits: no live remote behavior or separate Python 3.9 interpreter run was
+  claimed; locked dependency contracts, package metadata, and tooling retained Python
+  3.9 compatibility evidence.
+- Later evolution: D09–D17 are separate fixes and enhancements. Their contracts and
+  current source/tests supersede R9 wherever behavior differs.
+- Next exact action: none; any further work requires a separate authorized Issue.
 
 ## Prior R8 Test Issue (inactive for handoff)
 
@@ -3914,26 +4123,6 @@ reported rather than hidden.
   SDK snapshot and cross-surface downloads, manifest prune safety, legacy downloads, and
   `load_dataset` (1 row). Final baseline passed `92/92` in 103.51s; compileall, pip check,
   and diff check passed.
-
-## Handoff Snapshot
-
-- Updated: `2026-08-26`
-- Phase: `R9 issue activated; implementation not started`
-- Base branch: `yuto`
-- Base commit: `af3a30e docs(features): add upload monitor specification`
-- Task branch: `codex/r9-upload-observability-monitor` (local-only, created from yuto)
-- Prior delivery: `R7 task commit 2e781d9 and yuto merge commit 8a93aa6 were pushed; local yuto, github/yuto, and ls-remote all verified at 8a93aa6d8344f18b1be0edd6a44b6fb46054d3d3`
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`
-- Worktree state: `uncommitted R9 implementation, tests, registry, and documentation changes; no generated artifact, token, cache, or remote fixture`
-- Last completed action: `completed snapshot publisher/session facade, LFS observer hook, CLI/structure/packaging registrations, and full baseline`
-- Next exact action: `none; Issue delivered on yuto`
-- Blockers: `none; live remote behavior remains outside this Issue`
-- Latest verification: `python tests/run_cli_baseline.py: 93 passed in 109.38s; compileall, pip check, and git diff --check passed`
-- Review status: `finding resolved; follow-up review check passed` — child-process LFS
-  observer events now bridge into the UploadSession snapshot path. Human acceptance
-  and delivery authorization remain pending.
-- Current evidence: `pre-change baseline 92/92 in 99.84s; pre-deletion rootless artifact smoke 49/49 and baseline 92/92 in 92.13s; post-deletion structure 18/18, source layout 11/11, packaging metadata 13/13, public imports 11/11, utilities 17/17, lifecycle 26/26, completion 19/19, uninstaller 14/14, config permissions 15/15, runtime 9/9, canonical LFS 24/24, LFS ownership 14/14, CLI facade 9/9, architecture parity 21/21, artifact smoke 49/49, independent review APPROVED, and acceptance baseline 92/92 in 99.27s; compileall, pip check, diff check, exact deletion scope, credential-pattern, and generated-artifact checks pass`
-- Residual risk: `live remote behavior is outside this Issue and is not claimed; the active environment did not separately execute a Python 3.9 interpreter, while source/tool policy and the locked dependency contracts retain Python 3.9 support`
 
 ## Completed Issue
 
