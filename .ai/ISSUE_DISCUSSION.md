@@ -7,8 +7,8 @@
 - 创建日期: `2026-09-04`
 - 最近更新: `2026-09-13`
 - 当前议题: `无；D01–D18 已全部确认或移除并完成后继映射`
-- 下一步: 本 Issue 已关闭；D18 最终复验无误，维护者条件验收与限定交付授权已生效，
-  现提交任务分支、no-ff 合入 `yuto` 并仅推送 `github/yuto`
+- 下一步: 本 Issue 已关闭；D18 任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016`
+  合入 `yuto`，合并树复验通过；现提交交付记录并仅推送、核验 `github/yuto`
 - 后继开发 Issue: `LOCAL-UPLOAD-RELIABILITY-20260907`；D01、D03、D04、D05、D06 和
   D07 已交付，D08、D09、D10、D11、D12、D13、D14、D15 和 D16 也已完成限定交付；
   D17 已完成本地实现、验收、提交、no-ff 合并、合并树复验和限定推送
@@ -1234,10 +1234,11 @@ D16–D18 仍未授权。
 | 2026-09-13 | 单独激活 D18，在 `codex/d18-r9-state-reconciliation` 原地收敛 R9 历史状态并同步本讨论交接；提交、合并、推送和真实 AtomGit 操作不授权 | 维护者明确要求“开始开发” |
 | 2026-09-13 | D18 最终复验无误后接受结果，授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录交付结果；任务分支不推送 | 维护者明确要求“自己检查一下 没有问题就提交推送” |
 | 2026-09-13 | D18 最终专项 40/40、CLI 基线 75/75、开发底线 15/15、完整离线基线 94/94 和静态安全检查通过，条件验收与限定交付授权生效 | 授权范围内本地交付复验 |
+| 2026-09-13 | D18 任务提交 `072ac51` 通过 no-ff 合并提交 `f375016` 合入 `yuto`；合并树完整离线基线 94/94、compileall、pip check 和差异检查通过 | 授权范围内本地交付核验 |
 
 ## 后继开发 Issue 交接
 
-- 状态: `active; D01–D17 delivered except removed D02; D18 activated for local documentation reconciliation`
+- 状态: `active; D01–D17 delivered except removed D02; D18 merged and awaiting delivery-record push`
 - 目标文件: `.ai/TASK.md`
 - 开发 Issue ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
 - 已映射问题: `D01 / UPLOAD-01`、`D03 / UPLOAD-03`、`D04 / UPLOAD-04`、
@@ -1253,10 +1254,9 @@ D16–D18 仍未授权。
 
 ## 持久交接快照
 
-- 分支: 当前工作树位于 `codex/d18-r9-state-reconciliation@b0d91c1`，基于与
-  `github/yuto` 一致的 `yuto@b0d91c1` 创建；`.ai/TASK.md` 和
-  `.ai/ISSUE_DISCUSSION.md` 含 D18 未提交变更，必须在本工作树续接。D17 任务提交
-  `9e51470` 已通过 no-ff 合并提交 `c157555` 合入，交付记录提交 `ebe08b9` 已限定推送。
+- 分支: 当前工作树位于 `yuto@f375016`；D18 任务提交 `072ac51` 已通过 no-ff 合并
+  提交 `f375016` 合入，合并树完整离线基线 94/94 通过。两份 `.ai` 文件含未提交的
+  D18 交付记录，必须在本工作树续接；`github/yuto` 暂仍为 `b0d91c1`。
 - D03 实现提交: `c87c62e54f36a85f497780dc454bf5539cff6643`
 - D03 no-ff 合并提交: `6b5a9687cf461bf99a4e6d30445b5e17a4894c25`，已仅推送
   github/yuto 并核验当时远端一致；远端不存在 D03 任务分支
@@ -1304,8 +1304,8 @@ D16–D18 仍未授权。
   生成物和 diff check 通过，独立审查 `APPROVED`。任务提交 `f7fdcb9`、no-ff 合并
   提交 `1af6d27`、交付记录提交 `1a1b89e` 已仅推送并核验 `github/yuto`，任务分支
   未推送。
-- 下一步: 本问题讨论 Issue 已关闭；D18 最终复验通过，按授权提交任务分支、no-ff 合入
-  `yuto`、仅推送 `github/yuto` 并记录交付结果。
+- 下一步: 本问题讨论 Issue 已关闭；提交 D18 交付记录，复验后仅推送并核验
+  `github/yuto`，任务分支不推送。
 - 阻塞: `无`
 - 续接要求: D18 未提交工作必须在当前工作树续接；不要重新应用仅作历史备份的保护性
   stash

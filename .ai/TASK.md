@@ -72,6 +72,8 @@ Status: active (D18 R9 historical state reconciliation)
   D18 的“原地收敛 R9 历史记录、保留最终合同与提交证据、删除或改写过期状态”方案
   已获维护者接受并写入本 Issue。维护者现已明确要求“开始开发”，据此单独激活 D18；
   当前只整理 R9 历史正文和同步讨论交接，不修改源码、测试、用户文档或运行行为。
+  D18 最终交付复验已通过；任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016` 合入
+  `yuto`，合并树完整离线基线为 **94/94**，当前等待交付记录提交和限定推送。
   D18 最终交付复验已通过，维护者的条件验收与限定交付授权已生效。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
@@ -287,8 +289,8 @@ Status: active (D18 R9 historical state reconciliation)
   AtomGit、PR、标签、发布或 D18。
 - D18 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`、仅推送
   `github/yuto` 并记录交付结果；任务分支不推送，不执行其他远程操作。
-- Next exact action: 提交 D18 本地任务分支、no-ff 合入 `yuto`，在合并树复验后仅推送
-  `github/yuto` 并核验远端一致；任务分支不推送。
+- Next exact action: 提交 D18 交付记录，重新核验文档门禁后仅推送 `github/yuto` 并
+  核验远端一致；任务分支不推送。
 
 ### Repository Reconciliation
 
@@ -3742,6 +3744,9 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
 - [x] R9 证据复核、历史状态整理和两份 `.ai` 文件同步已完成。
 - [x] 专项、完整离线门禁、静态检查和独立复审通过。
 - [x] 最终交付复验通过，维护者条件验收已生效并授权限定 Git 交付。
+- [x] 任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016` 合入 `yuto`；合并树完整
+  离线基线 94/94、compileall、pip check 和差异检查通过。
+- [ ] D18 交付记录已提交并仅推送、核验 `github/yuto`；任务分支未推送。
 
 ### D18 Implementation Evidence
 
@@ -3755,6 +3760,9 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
   `python tests/test_development_floor.py` 15/15 passed.
 - Complete offline gate: final pre-delivery `python tests/run_cli_baseline.py` passed
   94/94 in 121.33s; earlier post-correction runs also passed 94/94.
+- Merge-tree gate: `python tests/run_cli_baseline.py` passed 94/94 in 125.39s on
+  `yuto@f375016`; `python -m compileall -q .`, `python -m pip check`, and
+  `git diff --check` passed.
 - Static and safety checks: `python -m compileall -q .`, `python -m pip check`,
   `git diff --check`, task-scope comparison, dependency-version check, commit-ancestry
   check, and high-confidence credential scan passed.
@@ -3762,9 +3770,9 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
   human documentation, dependency, packaging, runtime, generated artifact, or remote
   state changed.
 - Not run by scope: live AtomGit operations and a separate Python 3.9 interpreter.
-- Next exact action: complete the authorized task commit, local no-ff merge, merge-tree
-  verification, and `github/yuto`-only push; the task branch and all other remote
-  operations remain unauthorized.
+- Delivery state: task commit `072ac51` and local no-ff merge `f375016` complete;
+  record delivery, rerun the document gate, then push and verify only `github/yuto`.
+  The task branch and all other remote operations remain unauthorized.
 
 ### D18 Independent Review
 
