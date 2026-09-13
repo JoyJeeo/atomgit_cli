@@ -251,18 +251,18 @@ Status: inactive (D16 delivered; D17 awaiting activation)
   PR、标签或发布。
 - D16 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
-  D17–D18。D16 已按该模式完成本地提交、合并和合并树复验，待本交付记录提交后
-  仅推送 `github/yuto`。
+  D17–D18。D16 已按该模式完成限定交付；交付记录已仅推送并核验
+  `github/yuto`，任务分支未推送。
 - D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
   未授权。实施完成后仍需维护者单独验收并授权适用交付。
-- Next exact action: 提交本交付记录并仅推送 `github/yuto`，随后核验远端一致；
-  之后等待维护者单独授权激活 D17 或继续 D18 讨论。不推送任务分支，不实施
+- Next exact action: 等待维护者单独授权激活 D17 或继续 D18 讨论；不自动实施
   D17–D18，不执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
-当前工作树位于 `yuto@46baa97`。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
-`46baa97` 合入；本交付记录尚未提交和推送。D16 任务分支保留在本地且未推送。
+当前工作树位于 `yuto`。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
+`46baa97` 合入；交付记录已仅推送并核验 `github/yuto`。D16 任务分支保留在本地
+且未推送。
 D15 任务提交
 `500182f` 已通过 no-ff 合并提交 `87ddb52`
 合入，交付记录已仅推送并核验 `github/yuto`；D15 任务分支保留在本地且未推送。
