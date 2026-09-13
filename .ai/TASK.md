@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D18 R9 historical state reconciliation)
+Status: inactive (D18 delivered)
 
 ## Successor Development Issue
 
@@ -73,8 +73,8 @@ Status: active (D18 R9 historical state reconciliation)
   已获维护者接受并写入本 Issue。维护者现已明确要求“开始开发”，据此单独激活 D18；
   当前只整理 R9 历史正文和同步讨论交接，不修改源码、测试、用户文档或运行行为。
   D18 最终交付复验已通过；任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016` 合入
-  `yuto`，合并树完整离线基线为 **94/94**，当前等待交付记录提交和限定推送。
-  D18 最终交付复验已通过，维护者的条件验收与限定交付授权已生效。
+  `yuto`，合并树完整离线基线为 **94/94**。交付记录提交 `5cafaa2` 已仅推送并核验
+  `github/yuto`，任务分支未推送；D18 已完成限定交付。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -288,9 +288,9 @@ Status: active (D18 R9 historical state reconciliation)
   交付记录提交 `ebe08b9` 已仅推送并核验 `github/yuto`。任务分支未推送，未执行真实
   AtomGit、PR、标签、发布或 D18。
 - D18 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`、仅推送
-  `github/yuto` 并记录交付结果；任务分支不推送，不执行其他远程操作。
-- Next exact action: 提交 D18 交付记录，重新核验文档门禁后仅推送 `github/yuto` 并
-  核验远端一致；任务分支不推送。
+  `github/yuto` 并记录交付结果；D18 已按该模式完成，任务分支未推送。
+- Next exact action: 等待维护者选择新的讨论或开发 Issue；不自动开始后续工作，不执行
+  真实 AtomGit 或其他远程操作。
 
 ### Repository Reconciliation
 
@@ -307,8 +307,9 @@ D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
 D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15、D16 已完成限定
-交付，D17 已完成限定交付。D18 已在 `codex/d18-r9-state-reconciliation` 激活并完成
-R9 历史状态整理；当前等待最终门禁和独立复审，不能将未验收结果误报为已交付。
+交付，D17 已完成限定交付。D18 任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016`
+合入，交付记录提交 `5cafaa2` 已仅推送并核验 `github/yuto`；任务分支未推送，D18
+已完成限定交付。
 
 ### D01 Objective And Evidence
 
@@ -3746,7 +3747,7 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
 - [x] 最终交付复验通过，维护者条件验收已生效并授权限定 Git 交付。
 - [x] 任务提交 `072ac51` 已通过 no-ff 合并提交 `f375016` 合入 `yuto`；合并树完整
   离线基线 94/94、compileall、pip check 和差异检查通过。
-- [ ] D18 交付记录已提交并仅推送、核验 `github/yuto`；任务分支未推送。
+- [x] D18 交付记录 `5cafaa2` 已仅推送、核验 `github/yuto`；任务分支未推送。
 
 ### D18 Implementation Evidence
 
@@ -3763,6 +3764,9 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
 - Merge-tree gate: `python tests/run_cli_baseline.py` passed 94/94 in 125.39s on
   `yuto@f375016`; `python -m compileall -q .`, `python -m pip check`, and
   `git diff --check` passed.
+- Post-record gate: `python tests/run_cli_baseline.py` passed 94/94 in 120.96s before
+  the authorized push; compileall, pip check, diff check, clean-worktree, branch-
+  containment, and remote-equality checks passed.
 - Static and safety checks: `python -m compileall -q .`, `python -m pip check`,
   `git diff --check`, task-scope comparison, dependency-version check, commit-ancestry
   check, and high-confidence credential scan passed.
@@ -3770,9 +3774,9 @@ D09–D17 明确为后续演进；不存在会让新会话误判 R9 未实现或
   human documentation, dependency, packaging, runtime, generated artifact, or remote
   state changed.
 - Not run by scope: live AtomGit operations and a separate Python 3.9 interpreter.
-- Delivery state: task commit `072ac51` and local no-ff merge `f375016` complete;
-  record delivery, rerun the document gate, then push and verify only `github/yuto`.
-  The task branch and all other remote operations remain unauthorized.
+- Delivery state: task commit `072ac51`, local no-ff merge `f375016`, and delivery
+  record `5cafaa2` are complete; only `github/yuto` was pushed and verified, while the
+  task branch was not pushed. All other remote operations remain unauthorized.
 
 ### D18 Independent Review
 
