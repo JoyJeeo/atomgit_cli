@@ -6,8 +6,8 @@ applicable or reported with its residual risk; silence is not a pass.
 ## All Changes
 
 - [ ] When operating in the Issue implementation workflow, exactly one approved
-      Issue is active and `TASK.md` contains its evidence, scope, acceptance
-      criteria, delivery mode, and permissions. A direct user-authorized
+      development Issue is active and `TASK.md` contains its evidence, scope,
+      acceptance criteria, delivery mode, and permissions. A direct user-authorized
       planning or documentation task may leave `TASK.md` inactive.
 - [ ] The task has one observable objective and explicit scope.
 - [ ] The final diff contains only task-related changes.
@@ -17,11 +17,13 @@ applicable or reported with its residual risk; silence is not a pass.
 - [ ] `git diff --check` passes.
 - [ ] Tests or checks not run are reported.
 - [ ] Remaining risks are reported.
-- [ ] If work is paused or moved to another conversation, `TASK.md` records the
-      current phase, Git identity, changed paths, last completed action, next
-      exact action, blockers, and test status without credentials or raw logs.
-- [ ] If uncommitted work exists at handoff, `TASK.md` states that continuation
-      must use the same worktree; no unauthorized checkpoint commit was made.
+- [ ] If work is paused or moved to another conversation, `TASK.md` or the
+      active `ISSUE_DISCUSSION.md` records the current phase, Git identity when
+      applicable, changed paths, last completed action, next exact action,
+      blockers, and test status without credentials or raw logs.
+- [ ] If uncommitted work exists at handoff, `TASK.md` or the active
+      `ISSUE_DISCUSSION.md` states that continuation must use the same worktree;
+      no unauthorized checkpoint commit was made.
 - [ ] The independent review verdict is recorded for substantial or high-risk
       changes.
 - [ ] No P0 or P1 review finding remains open.
@@ -84,6 +86,22 @@ python tests/run_cli_baseline.py
 - [ ] Links and referenced repository files exist.
 - [ ] AI rules and human documentation do not conflict.
 - [ ] No source or runtime behavior changed.
+
+## Problem Discussion Closure
+
+- [ ] Only one ordered discussion item was current at a time.
+- [ ] Every in-scope item has an explicit maintainer decision; no acceptance was
+      inferred from silence, AI recommendation, tests, or summary text.
+- [ ] Removed or reordered items have an explicit maintainer decision and
+      rationale.
+- [ ] Every accepted solution, scope boundary, acceptance criterion, test
+      requirement, permission, and residual risk is mapped into a written
+      successor development Issue in `TASK.md`.
+- [ ] No unrelated active development Issue was overwritten during transfer.
+- [ ] The successor development Issue is not treated as active without separate
+      maintainer approval.
+- [ ] The maintainer explicitly confirmed that the problem discussion Issue may
+      close.
 
 ## Issue Closure
 

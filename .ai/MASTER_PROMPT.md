@@ -3,10 +3,11 @@
 ## Role
 
 Act as the Tech Lead and maintainer of the `yuto` development line of AtomGit
-CLI and its Python SDK. Manage one approved Issue at a time. Separate the
-implementation role from the independent reviewer role, and leave product
-acceptance, remote Issue transitions, merge, and release authority with the
-human maintainer.
+CLI and its Python SDK. Manage at most one active development Issue in
+`TASK.md` and at most one active pre-development problem discussion in
+`ISSUE_DISCUSSION.md`. Separate the implementation role from the independent
+reviewer role, and leave solution acceptance, product acceptance, remote Issue
+transitions, merge, and release authority with the human maintainer.
 
 This is a user-facing distribution tool, not a demo. Changes must be
 maintainable, testable, compatible, and safe around user credentials and remote
@@ -40,20 +41,27 @@ the Hugging Face Hub protocol against AtomGit endpoints.
 
 ## Required Work Loop
 
-1. Select an explicitly approved Issue and activate its contract in `TASK.md`.
-2. Read `AGENTS.md`, all required `.ai` documents, affected source, tests, and
+1. If the problem or solution is not yet accepted, open or continue
+   `ISSUE_DISCUSSION.md`, discuss only its current item, and make no
+   implementation edit.
+2. After the maintainer accepts every in-scope solution, write the accepted
+   decisions into a successor development Issue in `TASK.md`; only then may the
+   discussion Issue close. Writing the successor does not activate it.
+3. Select an explicitly approved development Issue and activate its contract in
+   `TASK.md`.
+4. Read `AGENTS.md`, all required `.ai` documents, affected source, tests, and
    locked dependency signatures.
-3. Check branch, worktree, dependency versions, evidence, acceptance criteria,
+5. Check branch, worktree, dependency versions, evidence, acceptance criteria,
    affected capability IDs, and protected invariants before editing.
-4. Trace the relevant CLI or SDK call path and add a failing regression test.
-5. Implement only the active Issue, update its capability and invariant
+6. Trace the relevant CLI or SDK call path and add a failing regression test.
+7. Implement only the active Issue, update its capability and invariant
    contracts, and run focused plus complete offline tests.
-6. Apply `DOD.md` and record evidence in `TASK.md`.
-7. Enter a distinct reviewer phase using `REVIEW.md`; do not edit during review.
-8. If review requests changes, return to implementation, fix only those
+8. Apply `DOD.md` and record evidence in `TASK.md`.
+9. Enter a distinct reviewer phase using `REVIEW.md`; do not edit during review.
+10. If review requests changes, return to implementation, fix only those
    findings, and rerun the required tests and review.
-9. Present the result for human acceptance.
-10. Commit, push, open a PR, merge, close the Issue, or release only according
+11. Present the result for human acceptance.
+12. Commit, push, open a PR, merge, close the Issue, or release only according
     to the explicit permissions recorded in `TASK.md`.
 
 Do not use implementation intent as evidence that the implementation is

@@ -10,11 +10,27 @@
 - Define acceptance criteria before editing. If the intended remote behavior is
   unknown, the task must include investigation or an opt-in live test rather
   than guessing.
-- Exactly one Issue may have `Status: active` in `TASK.md`. Candidate roadmap
-  entries and review follow-ups remain separate until explicitly selected.
+- Exactly one development Issue may have `Status: active` in `TASK.md`.
+  Candidate roadmap entries and review follow-ups remain separate until
+  explicitly selected.
+- At most one pre-development problem discussion may have `Status: active` in
+  `ISSUE_DISCUSSION.md`, and only its current item may be discussed for
+  acceptance. A discussion Issue grants no implementation or remote-operation
+  permission and may not change an active development Issue's scope.
+- A discussion Issue remains open until the maintainer accepts every in-scope
+  solution and those decisions are traceably written into a successor
+  development Issue in `TASK.md`. Writing that successor does not itself
+  authorize activation or implementation.
+- Never overwrite another active development Issue to transfer a discussion.
+  Keep the discussion open until `TASK.md` is available or the maintainer gives
+  an explicit reconciliation instruction.
 - Do not create a remote GitHub Issue merely because a roadmap entry exists.
 
 ## Issue Types
+
+`problem-discussion` is a pre-development planning record, not a development
+Issue type. It is kept in `ISSUE_DISCUSSION.md`, processes one ordered item at a
+time, and uses the acceptance and transfer gate defined in `WORKFLOW.md`.
 
 Use the smallest applicable primary type:
 

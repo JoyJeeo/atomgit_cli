@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D14 delivered; awaiting next authorization)
+Status: inactive (D17 accepted and recorded; awaiting activation)
 
 ## Successor Development Issue
 
@@ -12,8 +12,8 @@ Status: inactive (D14 delivered; awaiting next authorization)
 - Source: `DISC-UPLOAD-RELIABILITY-20260904`，当前收录已确认的 `D01 / UPLOAD-01`、
   `D03 / UPLOAD-03`、`D04 / UPLOAD-04`、`D05 / LFS-01`、`D06 / LFS-02`、
   `D07 / LFS-03`、`D08 / LFS-04`、`D09 / MON-01`、`D10 / MON-02`、
-  `D11 / MON-03`、`D12 / MON-04`、`D13 / MON-05` 和 `D14 / MON-06`；D02 已由
-  D01 解决并移除。
+  `D11 / MON-03`、`D12 / MON-04`、`D13 / MON-05`、`D14 / MON-06`、
+  `D15 / MON-07`、`D16 / TYPE-01` 和 `D17 / TEST-01`；D02 已由 D01 解决并移除。
 - Current phase: D01、D03、D04、D05、D06 和 D07 均已完成验收、提交、本地 no-ff
   合并和限定交付；D08 也已完成实现、验收、最终复验、任务提交、本地 no-ff 合并和
   `github/yuto` 限定推送。D09、D10 已完成阶段 1–5 的红灯、实现、专项、文档、
@@ -27,12 +27,25 @@ Status: inactive (D14 delivered; awaiting next authorization)
   回归、文档、开发底线、完整离线门禁和独立审查已完成；维护者接受复验结果后，任务
   提交 `06e64ca` 已通过 no-ff 合并提交 `54f9931` 合入 `yuto`，并已仅推送、核验
   `github/yuto`，任务分支未推送。D12 已完成限定交付。
-  D13 已完成红灯、最小实现、回归、文档、开发底线、完整离线门禁和独立审查；
-  维护者接受结果后，任务提交 `7f13071` 已通过 no-ff 合并提交 `6d44577` 合入
-  `yuto`，任务分支未推送。D13 已完成限定交付。
-  D14 已完成相对时间红灯、最小实现、回归、文档、开发底线、完整离线门禁和独立
-  审查；维护者接受结果后，任务提交 `f7fdcb9` 已通过 no-ff 合并提交 `1af6d27`
-  合入 `yuto`，任务分支未推送。D14 已完成限定交付。
+  D13 的“首次选定后固定会话、每次刷新后按真实终态退出”方案已获
+  维护者接受并完成限定交付；任务提交 `7f13071` 已通过 no-ff 合并提交
+  `6d44577` 合入 `yuto`，交付记录提交为 `9460fdc`；已仅推送并核验
+  `github/yuto@9460fdc`，任务分支未推送。
+  D14 的“列表统一显示时区无关的四档相对更新时间”方案已获维护者接受并完成
+  限定交付。上传观测专项为 **36/36**，开发底线为 **15/15**，最终完整离线基线为
+  **93/93**，静态/安全检查和独立审查均通过；任务提交 `f7fdcb9` 已通过 no-ff 合并
+  提交 `1af6d27` 合入 `yuto`，交付记录提交为 `1a1b89e`；已仅推送并核验
+  `github/yuto@1a1b89e`，任务分支未推送。
+  D15 的“保持每秒读取固定会话、仅在最终渲染画面变化时清屏和输出”方案已获
+  维护者接受并写入本 Issue；D15 当前未激活，尚未创建分支、修改源码/测试/用户
+  文档或运行实施验证。
+  D16 的“保留 dataset 到 model 兼容传输路由，仅在原始业务类型为 dataset 时精确
+  过滤 HF 1.1.7 指定误报警”方案已获维护者接受并写入本 Issue；D16 当前未激活，
+  尚未创建分支、修改源码/测试/用户文档或运行实施验证。
+  D17 的“新增纯离线真实 spawn 进程端到端测试，贯通上传 CLI、UploadSession、
+  resumable worker、观测队列、JSON 快照和独立 monitor”方案已获维护者接受并写入
+  本 Issue；D17 当前未激活，尚未创建分支、修改测试/开发底线/用户文档或运行实施
+  验证，原则上不修改生产代码。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -134,18 +147,49 @@ Status: inactive (D14 delivered; awaiting next authorization)
   维护者随后明确要求“自己验收一下 没有问题就推送”；据此在最终复验通过后接受 D12，
   授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 并记录交付结果。
   任务分支不推送，真实 AtomGit、PR、标签、发布和 D13–D18 实施仍未授权。
-  维护者于 `2026-09-13` 接受 D13 的固定会话与终态自动退出方案，随后明确要求“开始
-  开发”，授权本地任务分支、范围内源码、既有测试、用户文档、开发底线和离线验证。
-  维护者最终明确要求“你自己验证一下 没有问题就提交推送”；完整复验通过后，据此
-  接受 D13 并授权提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 和记录交付
-  结果。任务分支不推送，真实 AtomGit、PR、标签、发布及 D14–D18 实施仍未授权。
-  维护者随后明确要求“继续开发”，据此单独激活 D14 的本地实现和离线验证；最终又
-  要求“自己验收一下 没有问题就提交推送”。完整复验与独立审查通过后，据此接受
-  D14，并授权提交任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 和记录交付
-  结果。任务分支不推送，真实 AtomGit、PR、标签、发布及 D15–D18 实施仍未授权。
+  维护者随后接受 D13 的固定会话与终态自动退出方案，并明确要求“将方案
+  落入开发issue中”。本次只授权更新 `.ai/TASK.md` 和
+  `.ai/ISSUE_DISCUSSION.md`，将 D13 登记为未激活的后继开发范围；不授权
+  创建分支、修改源码/测试/用户文档、运行实施验证、提交、合并、推送、真实 AtomGit
+  操作或实施 D14–D18。
+  维护者随后接受 D14 的四档相对时间与异常降级方案，并明确要求“将完整实现方案
+  落入开发issue中”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，
+  将 D14 登记为排在 D13 之后的未激活开发范围；不授权激活 D13/D14、创建分支、
+  修改源码/测试/用户文档、运行实施验证、提交、合并、推送、真实 AtomGit 操作或
+  实施 D15–D18。
+  维护者随后于 `2026-09-13` 明确要求“开始开发”，据此单独授权激活 D13、创建本地
+  任务分支、修改 D13 范围内的源码、既有测试、用户文档和开发底线台账，并执行离线
+  验证；不授权提交、合并、推送、PR、发布、真实 AtomGit 操作或实施 D14–D18。
+  维护者随后明确要求“你自己验证一下 没有问题就提交推送”；据此接受 D13 在最终
+  复验无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
+  `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
+  D14–D18 实施仍未授权。
+  维护者随后于 `2026-09-13` 明确要求“继续开发”，据此单独授权激活 D14、创建基于
+  最新 `yuto` 的本地任务分支、修改 D14 范围内源码、既有测试、用户文档和开发底线
+  台账，并执行离线验证；不授权提交、合并、推送、PR、发布、真实 AtomGit 操作或
+  实施 D15–D18。
+  维护者随后明确要求“自己验收一下 没有问题就提交推送”；据此在最终复验通过后
+  接受 D14，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录
+  交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D15–D18 仍未授权。
+  维护者随后接受 D15 的变化驱动重绘方案，并明确要求“好的 将完整方案落入开发
+  issue中”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，将 D15
+  登记为未激活的后继开发范围；不授权创建分支、修改源码/测试/用户文档、运行实施
+  验证、提交、合并、推送、真实 AtomGit 操作或实施 D16–D18。
+  维护者随后接受 D16 的 dataset 警告精确过滤方案，并明确要求“将方案落入开发
+  issue”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，将 D16
+  登记为未激活的后继开发范围；不授权激活 D15/D16、创建分支、修改源码/测试/用户
+  文档、运行实施验证、提交、合并、推送、真实 AtomGit 操作或实施 D17–D18。
+  维护者随后接受 D17 的真实跨进程端到端测试方案，并明确要求“将完整开发方案落入
+  开发issue中”。本次只授权更新 `.ai/TASK.md` 和 `.ai/ISSUE_DISCUSSION.md`，将
+  D17 登记为未激活的后继开发范围；不授权激活 D15/D16/D17、创建分支、修改源码/
+  测试/用户文档、运行实施验证、提交、合并、推送、真实 AtomGit 操作或实施 D18。
+  维护者随后于 `2026-09-13` 明确要求“好的 .ai也提交 并推送”，授权将当前七份
+  `.ai` 文档变更作为独立文档交付纳入 `yuto` 并仅推送 `github/yuto`；不授权
+  实施 D15–D18、推送任务分支或执行其他远程操作。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
-  原有五份开发规范变更保持未提交。远程上传、PR、标签、发布仍未授权。
+  D01 交付时未纳入原有五份开发规范变更；这些文档后续已单独获得提交与
+  `github/yuto` 推送授权。远程上传、PR、标签、发布仍未授权。
 - D03 delivery mode: 复验通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
   `github/yuto` 并核验远端一致；任务分支保持本地，不执行其他远程操作。
 - D04 delivery mode: 本地验收通过后提交任务分支、本地 no-ff 合入 `yuto`、仅推送
@@ -169,16 +213,26 @@ Status: inactive (D14 delivered; awaiting next authorization)
 - D13 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
   `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D14–D18。
 - D14 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
-  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D15–D18。
-- Next exact action: 等待维护者下一项明确授权；不自行实施 D15–D18，也不执行真实
-  AtomGit、PR、标签或发布操作。
+  `github/yuto`；D14 已按该模式交付。任务分支未推送，未执行真实 AtomGit、PR、标签
+  或发布。
+- D15 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
+  未授权。实施完成后仍需维护者单独验收并授权适用交付。
+- D16 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
+  未授权。实施完成后仍需维护者单独验收并授权适用交付。
+- D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
+  未授权。实施完成后仍需维护者单独验收并授权适用交付。
+- Next exact action: 等待维护者单独授权一次只激活 D15、D16 或 D17，或授权开始 D18
+  讨论；不自动实施 D15–D18，也不执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
-当前 `yuto` 为 D14 no-ff 合并提交 `1af6d27`；任务提交 `f7fdcb9` 位于本地分支
-`codex/d14-monitor-relative-time`，任务分支未推送。隔离合并树完整离线基线
-93/93 通过。D14 未执行真实 AtomGit、PR、标签或发布。历史矛盾的完整整理仍属于
-D18，本次没有将 D18 标记为已解决。
+当前工作树已切回 `yuto`。D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
+`1af6d27` 合入，D14 交付记录提交为 `1a1b89e`；远端不存在 D14 任务分支。
+D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修改与本地交接记录
+已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
+两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
+D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15、D16 和 D17
+已接受但均未激活；历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
 
@@ -2202,49 +2256,1002 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
   `codex/d12-upload-session-heartbeat`。交付记录写回后的完整离线基线为
   **93 passed in 111.76s**；交付记录提交同样只进入 `yuto`，不推送任务分支。
 
-### D13 Delivery Verification
+### D13 Objective And Evidence
 
-- Objective: `atomgit monitor upload status [SESSION_ID]` 首次选定后固定同一会话；每次
-  成功读取并渲染后检查 `finished`、`success`、`succeeded`、`failed`、`完成`、`失败`
-  终态，保留最终画面两秒后正常退出。暂时不可读不切换目标或猜测终态。
-- Scope: 仅修改 monitor command owner、既有观测回归、`UPLOAD-OBSERVABILITY`
-  开发底线登记和最小监控文档；CLI schema、快照 v1、排序、上传与 SDK 均不变。
-- Invariant: 新增 `UPO-008`；登记为 28 个能力、135 条不变量、93 个离线脚本。
-- Evidence: 旧实现红灯 **27/30**；最终观测专项 **31/31**、开发底线 **15/15**。
-  任务分支完整基线 **93 passed in 114.54s**；隔离 editable 合并树完整基线
-  **93 passed in 103.95s**。compileall、pip check、Python 3.9 AST、格式、结构、打包、
-  凭证、二进制、生成物和 diff 检查通过。
-- Review: 首轮 1 个 P2（首帧终态等待未统一捕获 `Ctrl+C`）已修复并补回归；复审无
-  P0/P1/P2/P3 发现，结论 `APPROVED`。维护者人工验收为 `accepted`。
-- Delivery: 任务提交 `7f13071`；no-ff 合并提交 `6d44577`。只允许推送
-  `github/yuto`，任务分支不推送。
-- Residual risk: 快照永久丢失或上传在发布真实终态前被强制杀死时，monitor 仍需用户
-  `Ctrl+C`；未运行真实 AtomGit、独立 Windows/Linux 主机或独立 Python 3.9 解释器。
+修复 `atomgit monitor upload status [SESSION_ID]` 在上传会话已完成或失败后仍可能
+无限刷新的问题：详细监控首次选定会话后固定该 `session_id`，每次成功读取并
+渲染最新快照后检查真实终态，显示最终画面约两秒后正常退出。
 
-### D14 Delivery Verification
+当前 `src/atomgit/interfaces/cli/commands/monitor.py` 只在首次读取后检查
+`finished`/`failed` 等终态；进入循环后，新快照即使已进入终态也不会退出。
+同时，未显式指定 `SESSION_ID` 时，循环每秒重新调用 `select_session(None)`；并行
+上传时，原会话结束后可被另一个活动会话替代，监控会悄然切换目标并错过原
+会话终态。历史 R9 合同已要求详细命令持续监控一个选定会话，显示终态约两秒
+后退出；当前实现与该合同不一致。
 
-- Objective: `atomgit monitor upload status --list` 将有效会话更新时间显示为向下取整的
-  秒、分钟、小时或天前；缺失、布尔、不可解析、非有限、负数和未来值逐行显示 `--`。
-- Scope: 仅修改列表渲染、既有上传观测回归、`UPLOAD-OBSERVABILITY` 开发底线和
-  最小监控文档；快照 v1、磁盘值、排序、默认选择、heartbeat、详细 monitor、上传与
-  SDK 均不变。
-- Invariant: 新增 `UPO-009`；登记为 28 个能力、136 条不变量、93 个离线脚本。
-- Evidence: 旧实现红灯 **31/36**；最终观测专项 **36/36**、开发底线 **15/15**。
-  任务分支完整基线最终 **93 passed in 114.51s**；隔离合并树临时切换 editable 后
-  完整基线 **93 passed in 111.14s**。首次直接运行隔离树因 editable 仍指向原工作树
-  导致两个路径/导入合同失败，修正测试环境后全部通过，未修改产品代码掩盖失败。
-- Static and review: compileall、pip check、Python 3.9 AST、Black、Ruff、任务拥有文件
-  isort、打包、凭证、二进制、生成物和 diff 检查通过；独立审查无 P0/P1/P2/P3
-  发现，结论 `APPROVED`。维护者人工验收为 `accepted`。
-- Delivery: 任务提交 `f7fdcb9`；no-ff 合并提交 `1af6d27`。只允许推送
-  `github/yuto`，任务分支不推送；本交付记录同样只进入 `yuto`。
-- Residual risk: 相对时间随每次执行变化，不是稳定机读或审计时间；未运行真实
-  AtomGit、独立 Windows/Linux 主机或独立 Python 3.9 解释器。
+证据来自当前 monitor 命令、`select_session()`、`tests/test_upload_observability.py`、
+`docs/features/upload-monitor.md` 和历史 R9 合同的只读核对。D13 已在
+`codex/d13-monitor-terminal-exit@9be0dc8` 激活；实施前上传观测专项为 **25/25**。
+新增生命周期断言在旧实现上为 **27/30**，准确复现默认目标切换和循环内终态不退出；
+随后已完成最小实现及离线验证，未执行真实 AtomGit 操作。
+
+### D13 Accepted Monitor Lifecycle Contract
+
+- 无论是默认选择还是显式 `SESSION_ID`，详细监控在首次选定后必须固定同一
+  会话。其他会话的活跃、结束或更新不得使当前窗口自动切换目标；只有重新执行
+  命令时才重新选择默认会话。
+- 首帧和后续每个成功读取的快照使用同一终态集：`finished`、`success`、
+  `succeeded`、`failed`、`完成`和`失败`。先渲染真实终态帧，保留约两秒后以
+  退出码 `0` 结束；该退出码表示监控正常完成观察，不表示被监控的上传成功。
+- 一次缺失、畸形或读取失败的快照不能被猜测为成功或失败，也不能触发目标切换；
+  monitor 保留当前画面并继续等待同一会话的后续可读快照。不使用 heartbeat 时间、
+  快照缺失时长或其他超时猜测上传终态。
+- `Ctrl+C` 只结束监控命令，不通知、取消或改变上传进程；`--list` 仍是一次性
+  会话摘要输出。
+- 保持现有 CLI 签名、Click schema、快照 v1、会话状态写入、排序规则、脱敏、权限、
+  缓存清理和上传逻辑；不新增公开参数、快照字段、协议版本、常驻进程、守护线程或
+  第三方依赖。
+
+### D13 Implementation Scope
+
+1. 在 `src/atomgit/interfaces/cli/commands/monitor.py` 保留一份模块内终态常量。首次
+   选择成功后记住快照的 `session_id`，循环始终按该 ID 重读；首帧和循环内都在
+   渲染后复用同一终态判断，终态时保留约两秒后返回。将首帧、刷新和终帧等待
+   置于同一 `KeyboardInterrupt` 边界，不新增状态机类、helper 层或配置。
+2. 扩展 `tests/test_upload_observability.py` 的命令级离线回归：使用严格的快照序列和受控
+   `sleep()` 防止真实等待或无限循环，覆盖默认/指定会话转终态、默认目标固定、
+   中间一次不可读、首帧已终态、终帧先显示后延时、`Ctrl+C`、`--list` 和无会话。
+   旧实现必须因为不退出或目标切换而红灯，不能只因测试自身异常失败。
+3. 为 `UPLOAD-OBSERVABILITY` 在 `tests/development_floor_contract.py` 新增 `UPO-008`，并同步
+   `.ai/DEVELOPMENT_FLOOR.md`、`docs/development_floor.md`、`.ai/TESTING.md` 中的登记数量，
+   以及 `docs/features/upload-monitor.md` 的已实现行为。不新增测试脚本，因此不扩大
+   `tests/cli_baseline_contract.py` 的脚本清单，也不修改 CLI schema 或 dispatch 注册。
+4. 在 `.ai/TASK.md` 记录激活、红灯、实现、精确测试结果、独立审查和剩余风险；
+   在 `.ai/ISSUE_DISCUSSION.md` 保留 D13 的接受、映射和权限记录。
+
+### D13 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`CLI-DISPATCH`、`CLI-SURFACE`、`PORTABILITY` 和
+`FLOOR-REGISTRY`。
+
+### D13 Protected Existing Invariants
+
+- `UPO-001`–`UPO-007`：快照继续只读、有界、原子、脱敏；D09 Flow、D10 跨进程观测/
+  结果分离、D11 批次/文件进度和 D12 heartbeat 时间语义不退化。
+- `CLI-001`、`CLI-002` 和 `CLI-007`：公开命令、参数、默认值、帮助、入口、所有权和历史
+  patch seam 不变。
+- `DISPATCH-001` 和 `DISPATCH-002`：叶命令仍到达现有 command owner，`--list`、无会话、
+  终态和 `Ctrl+C` 的退出语义可执行。
+- `PORT-001`：仅使用 Python 3.9 支持的标准库和既有 Click 行为，不引入平台专属语法或
+  终端假设。
+- `FLOOR-001`–`FLOOR-003`：新行为必须有稳定登记和可执行证据，不删除、跳过、弱化或
+  改写既有测试与强制基线。
+- 公开 CLI/native SDK/legacy SDK 签名、返回、异常、快照 v1、会话排序/默认
+  首选、上传结果、凭证、缓存、model/dataset、revision、timeout 和 Flow 恢复行为不变。
+- 实施前基线为 28 个能力、134 条不变量和 93 个离线测试脚本；实施时必须以 Git 和
+  可执行登记册的实际数字为准。
+
+### D13 New Or Changed Invariants
+
+- `UPO-008`：详细上传监控固定首次选定的会话；读取到真实终态后显示最终快照并
+  正常退出；暂时不可读的快照不得触发终态推断或目标切换，`Ctrl+C` 不影响上传。
+- 实施完成后预计保持 28 个能力和 93 个测试脚本，不变量从 134 增至 135；方案
+  登记不代表该不变量已实现。
+
+### D13 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 默认会话 `active -> finished` | 固定首次选定的 ID，显示终态帧、保留约两秒并以 0 退出 |
+| 显式会话 `active -> failed` | 显示失败终帧后正常退出，不把 monitor 退出码当作上传结果 |
+| 另一个活动会话更新 | 当前 monitor 不切换目标，原会话转终态后退出 |
+| 固定会话中间一次不可读 | 不误退出、不切换；后续恢复读取并在真实终态退出 |
+| 首帧已终态 | 保持终帧约两秒并正常退出 |
+| `Ctrl+C`、`--list`、无会话 | 只结束 monitor、一次性列表和明确提示行为不退化 |
+| 快照、Flow、批次、脱敏和缓存合同 | D09–D12 及既有上传观测能力不退化 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_observability.py
+python tests/test_development_floor.py
+python tests/test_cli_feature_baseline.py
+python tests/test_cli_command_ownership.py
+python tests/test_windows_compatibility.py
+python tests/test_packaging_metadata.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+最后一次代码、测试或文档修正后必须重新运行完整离线基线和静态门禁，并按
+`.ai/REVIEW.md` 执行独立审查。检查修改 Python 文件的 Python 3.9 语法、锁定依赖、
+打包/结构/开发底线、凭证模式、二进制差异和未跟踪生成物。真实 AtomGit、Windows/Linux
+主机和独立 Python 3.9 解释器不是本地命令状态机的必需证据；未运行时必须如实报告。
+
+### D13 Implementation Phases And Acceptance
+
+1. 维护者单独激活后，从当时最新 `yuto` 创建本地
+   `codex/d13-monitor-terminal-exit` 任务分支；冻结 CLI schema、快照 v1、D09–D12 合同、
+   当前登记数量和五份既有未提交 `.ai` 规范修改。先运行当前观测专项建立基线。
+2. 在既有观测脚本增加受控红灯。验证：旧实现只因缺少循环终态判断或重新选择了
+   其他会话而失败，既有断言仍通过。
+3. 在 monitor command owner 内固定会话 ID 并收敛终态判断，不修改 `select_session()`、
+   快照基础设施或上传路径。验证：默认/指定会话、终帧、暂时不可读和 `Ctrl+C`
+   专项通过。
+4. 登记 `UPO-008` 并同步最小权威文档。验证：预计登记为 28/135/93，没有新测试
+   脚本、CLI schema、生产模块或依赖，文档不再将自动退出标为未实现。
+5. 运行全部专项、完整离线基线、静态/安全/构件门禁和独立审查。验证：实现、测试、
+   文档和登记一致，原有五份用户修改未被改写或误暂存，无未解决 P0/P1/P2/P3 发现，
+   再进入人工验收。
+
+验收必须同时满足：默认和指定监控在真实终态出现后自动退出；最终状态与最后事件
+显示约两秒；并行会话不导致目标切换；暂时不可读不造成误判；首帧已结束会话、
+`Ctrl+C`、`--list`、无会话、排序和 CLI schema 不退化；快照 v1、D09–D12、脱敏、权限、
+缓存和上传结果不变；`UPO-008`、用户文档和执行测试一致；完整基线、静态门禁和
+独立审查全部通过。
+
+### D13 Non-Goals And Residual Risks
+
+- 不处理 D14 的相对/本地时间显示、D15 的终端刷新、D16 的 dataset/model 警告、
+  D17 的真实跨进程端到端链路或 D18 的历史记录整理。
+- 不新增 heartbeat 超时、停滞看门狗、进程存活推断、快照保留策略、新 CLI 参数、
+  状态字段、协议版本、TUI 或依赖。
+- 快照永久丢失或上传进程在写入终态前被强制杀死时，monitor 没有可信结果，仍会
+  等待用户 `Ctrl+C`。使用超时自动猜测会带来更危险的误退出，本 Issue 明确不解决该模式。
+- 当前未运行真实 AtomGit、Windows/Linux 主机或独立 Python 3.9 解释器；实施交付时必须
+  按实际验证情况报告，不得以离线 mock 声称真实跨进程或远端证据。
+
+### D13 Compatibility And Rollback
+
+- 公开命令、参数、Click schema、快照 v1、状态值、两秒终帧、monitor 退出码和上传
+  进程均保持兼容；无数据迁移或快照清理。
+- 当前未文档化的“默认 monitor 自动切换到其他活动会话”行为将被移除；这是恢复
+  历史 R9 已接受的“持续监控一个选定会话”合同。需要查看其他会话时，用户执行
+  `--list` 并重新启动详细监控。
+- 如实现回归，必须整体回退 D13 实现提交及对应测试、`UPO-008` 和文档，不能仅
+  回退源码或只删除证据。回退后将恢复上传结束后需人工 `Ctrl+C` 的已知缺陷。
+
+### D13 Activation Status
+
+- [x] 维护者接受 D13 完整方案并授权登记到本地开发 Issue。
+- [x] 维护者单独授权激活 D13 实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和独立审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D13 Implementation And Verification Evidence
+
+- 红灯：实施前 `python tests/test_upload_observability.py` 为 **25/25**；加入默认和指定
+  会话终态、目标固定、暂时不可读、首帧终态与 `Ctrl+C` 回归后，旧实现为 **27/30**，
+  失败仅对应目标切换和循环内不退出。
+- 实现：`monitor.py` 复用一份终态集合，首次渲染活动会话后固定其 `session_id`；每次
+  成功重读并渲染后检查同一终态集合，真实终态保留两秒后退出。不可读快照继续等待
+  固定会话，不改 `select_session()`、快照、上传路径或公开 CLI。
+- 回归与文档：观测专项 **31/31**，开发底线 **15/15**，CLI feature baseline
+  **75/75**，command ownership **13/13**，Windows 兼容 **13/13**，打包元数据
+  **13/13**，架构 parity **23/23**，结构守卫 **18/18**；登记 `UPO-008`，当前为
+  28 个能力、135 条不变量和 93 个测试脚本。
+- 完整离线门禁：`python tests/run_cli_baseline.py` 首次为 **93 passed in 110.42s**，
+  首轮审查修正后为 **93 passed in 122.70s**；审查记录写回后最终为
+  **93 passed in 127.71s**。`compileall`、`pip check`、Python 3.9 AST、Black、任务拥有
+  文件的 isort、Ruff、凭证模式、二进制差异、未跟踪生成物和 `git diff --check` 均通过；
+  锁定依赖为 `huggingface-hub==1.1.7`、`datasets==4.4.1`。
+- 独立审查：首轮发现 1 个 P2——首帧终态的两秒等待未纳入 `KeyboardInterrupt`
+  边界；已统一首帧渲染、终态等待与刷新循环的中断边界，并增加对应 `Ctrl+C` 回归。
+  复审无 P0/P1/P2/P3 发现，结论为 `APPROVED`。
+- 交付复验：维护者授权后，观测专项为 **31/31**，开发底线为 **15/15**，完整离线
+  基线为 **93 passed in 114.54s**；最终静态、依赖、Python 3.9、格式、安全、差异和
+  生成物检查通过。
+- 合并与推送：隔离 editable 合并树完整基线为 **93 passed in 103.95s**；任务
+  提交 `7f13071` 通过 no-ff 合并提交 `6d44577` 合入 `yuto`，交付记录提交
+  `9460fdc` 已仅推送至 `github/yuto`。`git ls-remote` 核验远端为
+  `9460fdceef4dfda490d11d4bcf18c6738a07e159`，远端不存在 D13 任务分支。
+- 原有五份未提交 `.ai` 规范修改的差异哈希保持不变；未运行真实 AtomGit、独立
+  Windows/Linux 主机或独立 Python 3.9 解释器，这些不是 D13 本地命令状态机的必需
+  证据。快照永久丢失或上传未发布终态时仍需用户 `Ctrl+C`。
+
+### D14 Objective And Evidence
+
+修复 `atomgit monitor upload status --list` 直接显示 Unix 浮点时间戳的问题：将人类
+界面中的会话 `updated_at` 转换为时区无关的相对时间，使用户可以直接判断快照最近
+一次成功发布的大致新旧，同时保持磁盘值、排序和 D12 heartbeat 语义不变。
+
+当前 `src/atomgit/infrastructure/upload_observe.py` 的 `render_list()` 直接将
+`session.get("updated_at", "-")` 拼入输出，因此用户看到类似
+`1788439910.663428` 的值。`monitor.py` 的 `--list` 路径只是
+`render_list(load_sessions())`，没有其他显示转换。D12 已将会话 `updated_at` 定义为
+最近一次成功发布可读快照的 wall-clock 时间；它用于排序和观测发布存活判断，不代表
+上传业务仍在推进，也不是审计时间。
+
+证据来自当前列表渲染、monitor 命令、`tests/test_upload_observability.py`、
+`docs/features/upload-monitor.md` 和 D12 合同的只读核对。本次只登记 D14 方案，未运行
+D14 红灯、修改源码/测试/用户文档或执行真实 AtomGit 操作；D12 的 93/93 交付基线
+不能替代 D14 实施后的复验。
+
+### D14 Accepted Relative-Time Contract
+
+- `render_list()` 每次渲染只读取一次 `time.time()`，所有会话行共享同一个 `now`，
+  避免列表在单位边界发生逐行跳变。
+- 对有效且不晚于 `now` 的 Unix 秒数，按已经过去的完整单位向下取整：小于 60 秒显示
+  `N秒前`；小于 60 分钟显示 `N分钟前`；小于 24 小时显示 `N小时前`；其余显示
+  `N天前`。例如 0 秒、59.9 秒、60 秒、125 秒、3600 秒和 86400 秒分别显示
+  `0秒前`、`59秒前`、`1分钟前`、`2分钟前`、`1小时前` 和 `1天前`。
+- 字段缺失、`None`、布尔值、不可解析值、`NaN`、正负 Infinity、负时间戳或未来时间
+  统一显示 `--`；一个异常会话不得阻止其他会话行渲染。
+- “最近更新”只表示最近一次成功发布快照的大致时间，不表示业务进度、进程一定存活、
+  上传成功或失败，也不提供审计级绝对时间。
+- 快照 v1 中的 `updated_at` 继续保存字符串 Unix 秒值；`load_sessions()` 排序、
+  `select_session()` 默认选择、D12 heartbeat、D13 详细监控生命周期、上传结果、CLI
+  schema、SDK 和缓存行为均保持不变。
+
+### D14 Implementation Scope
+
+1. 在 `src/atomgit/infrastructure/upload_observe.py` 的渲染 helper 附近增加一个小型
+   私有相对时间格式函数，接收原始 `updated_at` 和本次渲染共用的 `now`。先排除
+   `bool`，再以 `float()` 解析；捕获 `TypeError`、`ValueError`、`OverflowError`，使用
+   标准库有限值检查拒绝 `NaN`/Infinity，并在确认时间差非负后向下取整和分档。不开
+   新模块、类、配置或第三方依赖。
+2. 修改 `render_list()`，在循环前取得一次 `time.time()`，只将“最近更新”列改为调用
+   私有格式函数；表头、会话 ID、状态、批次、输入顺序和换行格式保持不变。不修改
+   `publish_snapshot()`、`load_sessions()`、`select_session()` 或任何写入路径。
+3. 扩展 `tests/test_upload_observability.py` 的既有脚本，使用固定时钟覆盖单位边界、
+   小数向下取整、一次取时、多行共用基准、异常输入降级、原始浮点值不再显示以及
+   `--list` 一次性成功退出。不新增测试脚本或测试框架。
+4. 为 `UPLOAD-OBSERVABILITY` 在 `tests/development_floor_contract.py` 登记 `UPO-009`，
+   并同步 `.ai/DEVELOPMENT_FLOOR.md`、`docs/development_floor.md`、`.ai/TESTING.md` 的
+   实际登记数量，以及 `docs/features/upload-monitor.md` 的用户行为。若 D14 被明确
+   调整到 D13 前实施，必须先依据真实登记册重排新不变量编号，不能制造重复 ID。
+5. 在 `.ai/TASK.md` 记录激活、红灯、实现、精确验证结果、审查和剩余风险；在
+   `.ai/ISSUE_DISCUSSION.md` 保留 D14 的接受、映射、顺序和权限边界。
+
+### D14 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`CLI-SURFACE`、`CLI-DISPATCH`、`PORTABILITY` 和
+`FLOOR-REGISTRY`。
+
+### D14 Protected Existing Invariants
+
+- `UPO-001`–`UPO-007`，以及按当前顺序先完成 D13 后存在的 `UPO-008`：快照仍只读、
+  有界、原子、脱敏；D09 Flow、D10 跨进程观测/结果分离、D11 批次/文件进度、D12
+  heartbeat 和 D13 固定会话/终态退出行为不退化。
+- `CLI-001`、`CLI-002` 和 `CLI-007`：公开命令、参数、默认值、帮助、入口、所有权和
+  历史 patch seam 不变，仅修正面向人的“最近更新”列。
+- `DISPATCH-001` 和 `DISPATCH-002`：`--list` 仍到达既有 command owner，只读、一次性
+  输出并以成功退出码结束；详细 monitor 不受影响。
+- `PORT-001`：只使用 Python 3.9 支持的标准库与既有 Click 行为，不依赖 locale、时区
+  数据库、平台命令或第三方日期库。
+- `FLOOR-001`–`FLOOR-003`：新行为必须有稳定登记和可执行证据，不删除、跳过、弱化或
+  改写既有测试与强制基线。
+- 公开 CLI/native SDK/legacy SDK 签名、返回、异常、快照 v1、会话排序和默认选择、
+  上传结果、凭证、缓存、model/dataset、revision、timeout 与 Flow 恢复行为不变。
+- 当前交付基线为 28 个能力、134 条不变量和 93 个离线测试脚本；D13 预计增加
+  `UPO-008`。D14 实施时必须以 Git 与可执行登记册的实际数量为准，不能照抄预测值。
+
+### D14 New Or Changed Invariants
+
+- `UPO-009`：上传会话列表使用一次渲染共享的当前时间，将有效 `updated_at` 显示为
+  向下取整的秒/分钟/小时/天相对时间；无效或未来值显示 `--` 且不影响其他行。
+- 按 D13 后实施的当前顺序，完成后预计保持 28 个能力和 93 个测试脚本，不变量从
+  D13 预计的 135 增至 136；方案登记不代表该不变量已经实现。
+
+### D14 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 0、59、60、3599、3600、86399、86400 秒 | 分别显示正确的秒、分钟、小时和天边界 |
+| 59.9 秒等小数 | 按完整单位向下取整，不四舍五入 |
+| 多个会话处于单位边界 | `time.time()` 每次列表渲染只调用一次，全部行共享相同 `now` |
+| 缺失、`None`、布尔、非数字、非有限、负值和未来值 | 当前行显示 `--`，其余正常行继续渲染 |
+| 有效 Unix 浮点值 | 原始值不再出现在面向人的列表输出中 |
+| `--list` 命令 | 仍只读、一次性、退出码为 0，表头和其他列不变 |
+| 快照、排序、选择、heartbeat、详细 monitor | 快照 v1、D12、D13 和既有观测合同不退化 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_observability.py
+python tests/test_development_floor.py
+python tests/test_cli_feature_baseline.py
+python tests/test_cli_command_ownership.py
+python tests/test_windows_compatibility.py
+python tests/test_packaging_metadata.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+最后一次代码、测试或文档修正后必须重新运行完整离线基线和静态门禁，并按
+`.ai/REVIEW.md` 执行适用的独立审查。检查修改 Python 文件的 Python 3.9 语法、锁定
+依赖、打包/结构/开发底线、凭证模式、二进制差异和未跟踪生成物。D14 不改变依赖调用，
+不需要真实 AtomGit 写入；未运行 Windows/Linux 主机或独立 Python 3.9 解释器时如实
+记录为残余验证限制。
+
+### D14 Implementation Phases And Acceptance
+
+1. 在 D13 完成限定交付后，或维护者明确调整顺序后，单独授权激活 D14；从当时最新
+   `yuto` 创建本地 `codex/d14-monitor-relative-time` 任务分支，冻结 CLI 输出边界、
+   快照 v1、D09–D13 合同、真实登记数量和五份既有未提交 `.ai` 规范修改。先运行当前
+   上传观测专项建立基线。
+2. 在既有观测脚本增加受控红灯。验证：旧实现只因仍输出 Unix 浮点值、缺少边界转换或
+   异常降级而失败，既有断言仍通过。
+3. 在基础设施渲染边界增加私有格式函数并让列表共享一次 `now`。验证：全部时间边界、
+   一次取时、异常行隔离和命令输出专项通过，不修改加载、排序、选择或写入路径。
+4. 登记 `UPO-009` 并同步最小权威文档。验证：按当前顺序预计登记为 28/136/93，没有
+   新测试脚本、生产模块、CLI schema、快照字段或第三方依赖；实际数字与登记册一致。
+5. 运行全部专项、完整离线基线、静态/安全/构件门禁和适用审查。验证：实现、测试、
+   文档和登记一致，原有五份用户修改未被改写或误暂存，无未解决阻塞发现，再进入
+   人工验收。
+
+验收必须同时满足：有效时间戳不再原样显示；所有边界和异常输入符合合同；每次渲染
+只取得一次当前时间；`--list` 仍一次性成功退出且其他列不变；快照 v1、排序、默认
+选择、D12 heartbeat、D13 终态退出、详细 monitor、SDK 和上传结果不退化；`UPO-009`、
+用户文档和执行测试一致；完整基线与静态门禁全部通过。
+
+### D14 Non-Goals And Residual Risks
+
+- 不增加绝对时间、UTC 偏移、时区或 locale 选项，不提供审计时间或稳定机读列表协议。
+- 不增加陈旧快照警告、停滞看门狗、进程存活推断、详细 monitor 更新时间、TUI、快照
+  保留/迁移策略或第三方依赖。
+- 不处理 D15 终端刷新、D16 dataset/model 警告、D17 真实跨进程端到端链路或 D18
+  历史记录整理，也不提前实施 D13。
+- 相对时间随每次命令执行而变化，不能作为稳定机器比较值；当前 `--list` 未承诺机读
+  协议。错误依赖原始浮点列的脚本应直接读取快照 JSON。
+- 格式函数只负责渲染阶段收到的字段值；D14 不扩展 `load_sessions()` 的快照 schema
+  校验或更改畸形磁盘记录的排序策略，以避免把数据治理问题混入显示修复。
+
+### D14 Compatibility And Rollback
+
+- 命令名、参数、Click schema、退出码、快照 v1、磁盘 `updated_at`、状态值、排序、
+  默认选择、heartbeat、详细 monitor 和上传进程保持兼容；无数据迁移或快照清理。
+- “最近更新”从原始 Unix 浮点值变为相对中文文本是有意的 CLI 输出变化。若脚本依赖
+  未文档化的人类列表文本，应迁移为读取快照 JSON；本 Issue 不新增 JSON 输出模式。
+- 如实现回归，必须整体回退 D14 实现提交及对应测试、`UPO-009` 和文档，不能只回退
+  源码或删除证据。回退后磁盘数据无需处理，但列表会恢复原始 Unix 浮点显示。
+
+### D14 Implementation Verification
+
+- Implementation: `render_list()` 每次只读取一次 wall clock，并通过一个私有标准库
+  helper 将有效时间戳按完整秒/分钟/小时/天向下取整；异常和未来值逐行降级为 `--`。
+  快照写入、加载、排序、默认选择和详细 monitor 未修改。
+- Regression: 实施前观测专项 **31/31**；新增断言在旧实现上 **31/36**，5 个新增场景
+  全部按预期失败且既有断言保持通过；最小实现后为 **36/36**。
+- Focused gates: 开发底线 **15/15**、CLI 特性 **75/75**、命令所有权 **13/13**、
+  Windows 兼容 **13/13**、打包元数据 **13/13**，登记册为 28 个能力、136 条不变量、
+  93 个离线脚本。
+- Complete gate: `python tests/run_cli_baseline.py` 在 `atomgit_cli` 环境离线通过，
+  首轮 **93 passed in 114.12s**；独立审查证据写回后最终复验
+  **93 passed in 114.51s**。隔离合并树在临时切换 editable 安装后为
+  **93 passed in 111.14s**；交付记录写回后的最终基线为
+  **93 passed in 116.77s**。
+- Static and safety: compileall、pip check、修改 Python 文件的 Python 3.9 AST、Black、
+  Ruff、运行时与观测测试文件的 isort、`git diff --check`、凭证模式、二进制差异和
+  未跟踪生成物检查通过。`tests/development_floor_contract.py` 保留登记在打包合同中的
+  既有 import-order 债务，未扩大；原有五份 `.ai` 规范修改 SHA-256 保持不变。
+- Not run: 未执行真实 AtomGit 操作、独立 Windows/Linux 主机或独立 Python 3.9
+  解释器；D14 是本地纯渲染修复，这些不作为验收必需证据。
+- Independent review: 审查 D14 合同、完整任务差异、测试和文档后，无开放
+  P0/P1/P2/P3 发现，结论 `APPROVED`。
+- Acceptance and delivery: 维护者人工验收为 `accepted`。任务提交 `f7fdcb9` 通过
+  no-ff 合并提交 `1af6d27` 合入 `yuto`，交付记录提交 `1a1b89e` 已仅推送至
+  `github/yuto`；远端核验为 `1a1b89e5051c915fc8d98988052591837359184d`，不存在
+  `codex/d14-monitor-relative-time` 远端分支。
+
+### D14 Activation Status
+
+- [x] 维护者接受 D14 完整方案并授权登记到本地开发 Issue。
+- [x] D13 已完成限定交付，或维护者已明确调整实施顺序。
+- [x] 维护者单独授权激活 D14 实施。
+- [x] 本地任务分支已创建。
+- [x] 红灯、实现、文档和开发底线已完成。
+- [x] 专项、完整离线门禁和适用审查通过。
+- [x] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D15 Objective And Evidence
+
+修复 `atomgit monitor upload status [SESSION_ID]` 在可见画面没有变化时仍每秒全屏清除并
+重复输出的问题，使持续监控保持约一秒的状态读取响应，同时避免空 Flow 或长期静态阶段
+产生大量无意义空白和重复日志。
+
+当前 `src/atomgit/interfaces/cli/commands/monitor.py` 的 `status()` 首次输出所选会话后，
+在循环中每秒调用 `select_session(selected_session_id)`；只要快照可读，就无条件执行
+`click.clear()` 和 `click.echo(render_session(current))`。当前 Click 8.4.2 的
+`clear()` 是无参数调用，在 TTY 中发送全屏清除和光标归位序列。未显示字段或 heartbeat
+即使变化也不影响 `render_session()`，但现有命令仍会清屏；Flow 和事件为空时，同一短帧
+会被重复绘制，和维护者提供的大段空白输出一致。
+
+现有 `tests/test_upload_observability.py` 已覆盖默认与显式会话固定、暂时不可读、初始及
+后续终态、最终帧等待和 `Ctrl+C`，但序列 helper 将 `click.clear()` 替换为空函数，没有
+证明清屏或重复输出次数。D14 最近交付证据为上传观测专项 **36/36**、开发底线
+**15/15**、完整离线基线 **93/93**；这些是当前基线证据，不替代 D15 修改后的红灯、
+专项、完整门禁和审查。
+
+### D15 Accepted Change-Driven Redraw Contract
+
+- 详细监控首次取得会话后调用一次 `render_session(session)`，输出该初始帧并保存为
+  `last_frame`；初始终态仍保留约两秒后退出。
+- 活动会话继续约每秒调用一次 `select_session(selected_session_id)`。轮询频率、固定
+  会话和终态发现时延不因减少终端输出而改变。
+- 每个后续可读快照先通过既有 `render_session(current)` 生成 `current_frame`。只有
+  `current_frame != last_frame` 时才调用现有 `click.clear()`、输出新帧并更新缓存；
+  相同帧不清屏、不输出。
+- 比较最终渲染字符串而不是深度比较快照字段。未显示的 heartbeat 或内部状态变化不会
+  重绘；批次、文件数、Flow、速度、事件或状态等任何可见变化自然产生新帧并重绘。
+- 快照暂时不可读时保持当前画面和 `last_frame`，继续等待同一会话；恢复为相同帧时不
+  重绘，恢复为新帧时只重绘一次。
+- 每次可读快照都独立检查真实终态，终态判断不能放在帧变化分支内。成功或失败最终帧
+  必须显示一次，保留约两秒后以正常状态退出；不能从相同帧、读取失败、超时或其他会话
+  推断终态。
+- 非 TTY 环境继续由 Click 对 `clear()` 自行降级；由于相同帧已在 command owner 中
+  被抑制，捕获或重定向输出只追加发生可见变化的帧。
+- `Ctrl+C` 仍只结束监控，不向上传进程发送停止信号。`--list`、快照 v1、会话排序与
+  默认选择、上传结果和公开 CLI/SDK 合同保持不变。
+
+### D15 Implementation Scope
+
+1. 只修改 `src/atomgit/interfaces/cli/commands/monitor.py` 的详细持续监控分支：复用
+   既有 `render_session()`，在 `status()` 内保存和比较最终帧，并确保终态检查独立于
+   重绘条件。不新增 helper、类、生产模块、原始 ANSI、配置或第三方依赖。
+2. 扩展既有 `tests/test_upload_observability.py` 序列 helper，记录 `click.clear()` 调用
+   和捕获输出；增加相同活动帧、真实可见变化、暂时不可读后恢复、初始/后续成功和失败
+   终态、`Ctrl+C`、默认/显式会话及非 TTY 输出回归。不新增测试脚本或测试框架。
+3. 在 `tests/development_floor_contract.py` 的 `UPLOAD-OBSERVABILITY` 能力登记
+   `UPO-010`，同步 `.ai/DEVELOPMENT_FLOOR.md`、`.ai/TESTING.md`、
+   `docs/development_floor.md` 和 `docs/features/upload-monitor.md`。用户文档把“每秒
+   重绘”改为“每秒轮询，最终画面变化时重绘”，不能声称所有终端历史绝对零空白。
+4. 在本文件记录激活、基线、红灯、实现、精确测试结果、审查、风险和适用交付；在
+   `.ai/ISSUE_DISCUSSION.md` 保留接受、顺序、映射和权限边界。
+
+### D15 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`CLI-SURFACE`、`CLI-DISPATCH`、`PORTABILITY` 和
+`FLOOR-REGISTRY`。
+
+### D15 Protected Existing Invariants
+
+- `UPO-001`–`UPO-009`：快照保持只读、有界、原子和脱敏；D09 Flow、D10 跨进程通道、
+  D11 批次/文件进度、D12 heartbeat、D13 固定会话/真实终态退出和 D14 相对时间不退化。
+- `CLI-001`、`CLI-002` 和 `CLI-007`：公开命令、参数、默认值、帮助、入口、所有权和
+  历史 patch seam 不变；仅减少详细监控中重复的相同终端帧。
+- `DISPATCH-001` 和 `DISPATCH-002`：默认、显式 `SESSION_ID` 和 `--list` 继续到达既有
+  command owner；`--list` 仍只读、一次性并以成功退出码结束。
+- `PORT-001`：只使用 Python 3.9 支持的字符串比较和既有 Click 行为，不增加平台命令、
+  终端宽度计算、原始 ANSI、locale 或第三方 TUI 依赖。
+- `FLOOR-001`–`FLOOR-003`：新行为必须有稳定登记和可执行证据，不删除、跳过、弱化或
+  改写既有测试与强制基线。
+- 轮询约一秒、首次选定后固定会话、快照暂时不可读时继续等待、真实终态最终帧约两秒、
+  `Ctrl+C` 只退出监控、公开 CLI/native SDK/legacy SDK、上传结果、凭证、缓存、
+  model/dataset、revision、timeout 与 Flow 恢复行为保持兼容。
+- 当前可执行登记为 28 个能力、136 条不变量和 93 个离线 pytest case；D15 实施时必须
+  以 Git 和登记册的实际数量为准，不能照抄过期预测。
+
+### D15 New Or Changed Invariants
+
+- `UPO-010`：详细上传监控保持固定会话与约一秒轮询，但仅在最终渲染画面变化时清屏和
+  输出；相同或暂时不可读快照不产生重复终端内容，真实成功/失败终态仍显示并按最终帧
+  等待合同退出。
+- 按当前登记预计完成后保持 28 个能力和 93 个离线 pytest case，不变量从 136 增至
+  137；方案登记不代表该不变量已经实现。
+
+### D15 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 初始活动帧后连续多个完全相同快照 | 初始帧只出现一次，后续 `clear` 和输出均为零 |
+| 批次、文件数、Flow、速度、事件或状态变化 | 每个不同的最终帧恰好清屏并输出一次 |
+| 只有未显示 heartbeat 或内部字段变化 | 最终帧相同，不清屏、不输出 |
+| 暂时返回 `None` 后恢复相同帧 | 保持现有画面和固定会话，不清屏、不重复输出 |
+| 暂时不可读后恢复新帧 | 只为恢复后的新帧重绘一次 |
+| 后续成功或失败终态 | 最终帧显示一次，等待约两秒并正常退出 |
+| 初始快照已经是终态 | 只输出初始帧，不进入刷新循环，等待约两秒退出 |
+| `Ctrl+C` | 正常退出，不产生额外清屏，不影响上传进程 |
+| 默认选择、显式会话和 `--list` | 固定会话、一次性列表、相对时间和退出码不变 |
+| CliRunner/非 TTY 捕获 | 只追加可见变化帧，不重复记录静态画面 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_observability.py
+python tests/test_development_floor.py
+python tests/test_cli_feature_baseline.py
+python tests/test_cli_command_ownership.py
+python tests/test_windows_compatibility.py
+python tests/test_packaging_metadata.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+红灯阶段必须证明旧实现只因 D15 新断言失败，现有 36 项观测断言保持通过；不能删除或
+放宽旧断言。最后一次代码、测试或文档修正后重新运行完整离线基线和静态门禁，并按
+`.ai/REVIEW.md` 执行独立审查。检查修改 Python 文件的 Python 3.9 语法、Black、Ruff、
+适用的 isort、登记数量、凭证模式、二进制差异和未跟踪生成物。D15 不改变 HF 或
+datasets 依赖调用，不需要真实 AtomGit 写入；未运行独立 Windows/Linux 主机或独立
+Python 3.9 解释器时如实记录。
+
+### D15 Implementation Phases And Acceptance
+
+1. 维护者单独授权激活 D15 后，核对最新 `yuto` 和当前 worktree，确认没有新的
+   未提交用户修改。以当时最新 `yuto` 创建本地
+   `codex/d15-monitor-change-driven-refresh` 分支；历史保护性 stash 只作备份，不重新应用。
+   运行当前上传观测专项建立基线。
+2. 在既有观测脚本增加受控红灯：序列 helper 记录清屏和输出，静态活动帧断言旧实现会
+   重复重绘。验证新增断言失败而既有固定会话、终态和中断断言保持通过。
+3. 在 `status()` 中缓存初始渲染字符串，后续只在最终帧不同时调用现有 clear/echo；
+   终态判断保持在变化分支之外。验证相同帧、真实变化、暂时不可读、终态和中断专项
+   全部通过。
+4. 登记 `UPO-010` 并同步最小权威文档。验证登记预计为 28/137/93，未新增测试脚本、
+   生产模块、CLI schema、快照字段、参数、配置或依赖，实际数字与登记册一致。
+5. 运行全部专项、完整离线基线、静态/安全/构件门禁和独立审查。验证实现、测试、文档
+   和登记一致，没有新的无关改动混入任务，无未解决发现，再进入人工验收。
+
+验收必须同时满足：静态帧不再产生任何后续 clear/echo；每个不同可见帧恰好重绘一次；
+暂时不可读不擦除画面或切换会话；初始及后续成功/失败终态均显示并正常退出；轮询周期、
+`Ctrl+C`、`--list`、D09–D14、快照 v1、SDK 和上传结果不退化；`UPO-010`、用户文档与
+执行测试一致；完整基线和静态门禁通过；独立审查无未解决发现。
+
+### D15 Non-Goals And Residual Risks
+
+- 不实现终端备用屏幕、光标保存/上移、逐行擦除、宽字符或终端宽度计算、完整 TUI、
+  刷新周期配置、`--watch`、一次性详细快照或新的日志协议。
+- 不修改 `render_session()`、`render_list()`、快照读写、会话排序/选择、Flow/事件、
+  heartbeat、上传进程、公开 SDK、CLI schema、依赖或缓存。
+- 不处理 D16 dataset/model 警告、D17 真实跨进程端到端链路或 D18 历史记录整理。
+- 真正发生可见变化时仍调用现有 `click.clear()`，因此本方案消除无意义的重复清屏，
+  不承诺所有终端滚动历史绝对零空白。若后续真实证据表明该残余仍不可接受，应单独讨论
+  终端能力和跨平台合同，不能在 D15 中顺带引入 TUI。
+- 未来若渲染器加入每次调用都变化的显示时钟，字符串会每次不同并恢复频繁重绘；此类
+  新字段必须同时重新评估 D15 合同。当前详细视图没有该字段。
+
+### D15 Compatibility And Rollback
+
+- 命令名、参数、Click schema、约一秒读取周期、退出码、可见帧文本、终态等待、快照
+  v1、会话排序和选择、heartbeat、上传及 SDK 行为保持兼容。
+- 有意行为变化仅是相同详细帧不再重复清屏和输出；非 TTY 日志因此减少重复内容。没有
+  磁盘数据、配置或缓存迁移。
+- 如实现回归，整体回退 D15 的 command 修改、观测测试、`UPO-010` 和对应文档，恢复
+  每次可读轮询都清屏的旧行为。不能只回退源码、删除测试或降低登记数量。
+
+### D15 Activation Status
+
+- [x] 维护者接受 D15 完整方案并授权登记到本地开发 Issue。
+- [ ] 维护者单独授权激活 D15 实施。
+- [ ] 基于最新 `yuto` 的本地任务分支已创建，用户修改已受保护并核验。
+- [ ] 实施前基线和受控红灯已完成。
+- [ ] 最小实现、文档和 `UPO-010` 已完成。
+- [ ] 专项、完整离线门禁和独立审查通过。
+- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D16 Objective And Evidence
+
+修复用户明确选择 `--repo-type dataset` 后，上传 `.parquet` 或 `.arrow` 文件仍收到
+Hugging Face“正在向 model 仓库提交数据文件，请设置 repo_type=dataset”警告的问题，
+使 CLI 和 SDK 只隐藏由 AtomGit 兼容路由产生的确定误报警，同时保留真正 model 上传
+和其他异常场景的有效警告。
+
+当前上传合同有意区分业务类型和传输类型：用户选择的 `dataset` 语义继续显示并用于
+AtomGit 能力判断，但 `src/atomgit/adapters/huggingface.py`、
+`src/atomgit/adapters/sdk_uploads.py` 和 `src/atomgit/adapters/upload/service.py`
+都会把 dataset 映射为共享的 HF `model` 传输路由。现有
+`tests/test_upload_repo_type.py`、`tests/test_dataset_resumable_route.py` 和
+`tests/test_upload_resumable.py` 明确锁定该映射；`.ai/PRODUCT.md`、README、FAQ 和
+测试证据记录了 AtomGit 原生 HF dataset 路由曾返回 401，而共享 model 路由已有实际
+上传和 SHA-256 回读证据。因此不能把底层 `repo_type` 改回 `dataset`。
+
+锁定的 `huggingface-hub==1.1.7` 在 `HfApi.create_commit()` 中把传输 `repo_type`
+规范化后逐个检查新增路径：当类型不是 dataset 且路径以 `.arrow` 或 `.parquet` 结尾
+时，直接通过标准库 `warnings.warn()` 发出 `UserWarning`。判断发生在网络提交前，
+只依据传输类型和扩展名，不知道 AtomGit 保留的原始业务类型；resumable 又在隔离上传
+子进程中调用该提交边界，所以警告经子进程标准错误输出显示在同一终端并可能按批次重复。
+
+### D16 Accepted Business-Type-Aware Warning Contract
+
+- `dataset` 业务类型与 `model` 兼容传输类型必须同时保留。过滤资格只由映射前的原始
+  业务类型决定；所有 HF 上传参数继续使用既有映射后的传输类型。
+- 只有原始业务类型明确为 `dataset` 时才启用过滤；显式 `model` 和未指定类型而按
+  model 处理的上传不得启用过滤。
+- 只忽略 HF 1.1.7 从 `huggingface_hub.hf_api` 发出的指定 `UserWarning`：消息必须
+  从已知固定前缀开始，路径槽以 `.arrow` 或 `.parquet` 结束，随后完整匹配
+  `model repository` 及建议设置 `repo_type='dataset'` 的固定后缀，并且首尾锚定。
+- dataset 上传中的其他 `UserWarning`、相同文字的其他来源、权限/网络/LFS/提交异常
+  以及 model 上传的同类提醒必须继续暴露。HF 将来更改模块、类别或文案时，过滤应
+  安全失效并重新显示警告，不能吞掉未知依赖行为。
+- 单文件、单文件兼容回退、普通目录每个批次、resumable 目录、CLI、原生 SDK 和
+  legacy SDK 使用同一合同；不能只修复维护者最初观察到的一条入口。
+- resumable 父进程必须把“原始业务类型是否为 dataset”的专用布尔值显式传入上传
+  子进程，子进程在实际 `upload_large_folder()` 边界应用过滤。该值不能写入 HF
+  `upload_kwargs`、远端请求、持久投影、结果 envelope 或观测协议。
+- warning 作用域在成功、异常和子进程退出后必须恢复；一次 dataset 上传不得影响
+  后续 model 上传。上传返回、异常、退出码、提交、LFS、批次、恢复和观测结果不变。
+- CLI 已显示用户选择的仓库类型，本 Issue 不增加替代提示、debug 输出、配置开关或
+  新公共 API；有意可见变化只有确定的 dataset 误报警消失。
+
+### D16 Implementation Scope
+
+1. 在 `src/atomgit/adapters/upload/errors.py` 增加一个私有标准库上下文管理器和一个
+   私有、首尾锚定的 HF 1.1.7 消息规则。启用时使用 `warnings.catch_warnings()` 与
+   `warnings.filterwarnings()` 同时限定 `UserWarning`、
+   `^huggingface_hub\.hf_api$` 和完整消息；未启用时直接执行。`catch_warnings()` 的
+   退出负责在所有路径恢复过滤状态，不新增生产模块或依赖。
+2. 在 `src/atomgit/adapters/huggingface.py` 的原生单文件入口、
+   `src/atomgit/adapters/sdk_uploads.py` 的 legacy 普通目录入口，以及
+   `src/atomgit/adapters/upload/service.py` 的历史单文件、兼容回退和普通目录批次入口，
+   使用映射前 `repo_type == 'dataset'` 包围最小实际 HF 上传调用。不得改动
+   `_atomgit_repo_type()`、请求参数或通用 LFS helper 的公开/内部合同。
+3. 在 `src/atomgit/adapters/upload/service.py` 向
+   `_execute_resumable_upload_process()` 传递专用 dataset 兼容布尔值；在
+   `src/atomgit/adapters/upload/resumable.py` 继续把它作为可序列化参数传给
+   `_run_resumable_upload()`，并只在子进程实际调用 `client.upload_large_folder()` 时
+   应用同一上下文。为既有内部测试替身保留明确默认值，不依赖 fork 继承。
+4. 优先扩展既有 `tests/test_upload_repo_type.py`、
+   `tests/test_dataset_resumable_route.py`、`tests/test_upload_resumable.py`、
+   `tests/test_resumable_recovery.py`、`tests/test_sdk_upload_parameters.py` 和
+   `tests/test_hf_api_contract.py`，覆盖过滤正反例、全部调用入口、fork/spawn 参数、
+   状态恢复和锁定依赖条件；不为单条规则新增测试框架或宽泛 fake。
+5. 在 `tests/development_floor_contract.py` 的 `DEPENDENCY-CONTRACT` 登记新的依赖警告
+   不变量，当前候选为 `DEP-004`；激活时必须先核对最新登记册并同步
+   `.ai/DEVELOPMENT_FLOOR.md`、`docs/development_floor.md` 和受影响的 README、
+   `docs/upload_command_analysis.md`、`docs/architecture.md`。不重复扩展无关文档。
+6. 在本文件记录激活、基线、红灯、实现、精确验证、审查、风险和适用交付；在
+   `.ai/ISSUE_DISCUSSION.md` 保留 D16 接受、顺序、映射和权限边界。
+
+### D16 Affected Capability IDs
+
+`UPLOAD-FILE`、`UPLOAD-FOLDER`、`UPLOAD-RESUMABLE`、`SDK-UPLOAD`、
+`DEPENDENCY-CONTRACT`、`RUNTIME`、`PORTABILITY` 和 `FLOOR-REGISTRY`。
+
+### D16 Protected Existing Invariants
+
+- `UPFILE-001`–`UPFILE-003`、`UPFOLDER-001`–`UPFOLDER-002` 和
+  `RESUMEUP-001`–`RESUMEUP-006`：单文件、普通目录及 resumable 的路径、类型、批次、
+  投影、恢复、超时、错误和终态保持不变。
+- `SDKUP-001`–`SDKUP-002`：原生/legacy SDK 参数、返回、异常、临时投影、超时和
+  progress 状态继续按锁定依赖合同工作。
+- `DEP-001`–`DEP-003`：`huggingface-hub==1.1.7` 和 `datasets==4.4.1` 的真实版本、
+  签名和代表性生产调用继续由严格测试约束；不能用宽松 fake 掩盖依赖变化。
+- `RUNTIME-001`–`RUNTIME-004`：HF endpoint、缓存、默认请求超时、进度状态、导入顺序
+  和 completion 轻量边界不变；warning 状态必须像既有进程级状态一样在所有退出路径
+  恢复。
+- `PORT-001` 和 `PORT-009`：只使用 Python 3.9 支持的标准库；fork、spawn 和可用的
+  forkserver 继续通过显式进程参数得到等价行为，不依赖继承的 callback 或 warning 状态。
+- `FLOOR-001`–`FLOOR-003`：新行为必须有稳定登记和可执行证据，不删除、跳过、弱化或
+  改写既有测试与强制基线。
+- dataset 到 model 的既有兼容传输、CLI 显示、repo ID、revision、path、ignore、worker、
+  batch、message、token、LFS pointer、观测 envelope、上传返回和退出码均保持兼容。
+- 当前可执行登记为 28 个能力、136 条不变量和 93 个离线 pytest case；D15 与 D16
+  实施顺序尚未确定，激活时必须读取真实登记数量，不得照抄方案预测。
+
+### D16 New Or Changed Invariants
+
+- 候选 `DEP-004`：AtomGit dataset 业务类型使用共享 model 兼容传输路由时，只过滤
+  HF 1.1.7 指定的数据文件/model 仓库误报警；真正 model 上传、其他来源或其他消息的
+  警告继续显示，过滤状态在成功、失败和隔离 worker 退出后恢复。
+- D16 单独实施时预计保持 28 个能力和 93 个离线 pytest case，只增加一条不变量；若
+  D15 先实施，数量应在 D15 实际登记基础上继续单调增加。方案登记不代表不变量已实现。
+
+### D16 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| dataset 单文件 `.parquet` / `.arrow` | 指定 HF 误报警消失，传给 HF 的类型仍为 model |
+| dataset 单文件兼容回退与普通目录多批次 | 每个实际 HF 调用均使用相同过滤合同，参数和结果不变 |
+| dataset resumable 目录 | 父进程显式传递业务语义，子进程警告消失，批次/LFS/恢复不变 |
+| 显式或默认 model 上传数据文件 | 同一 HF 警告继续显示，上传仍按原合同进行 |
+| dataset 中的其他 `UserWarning` | 继续显示，不被宽泛过滤 |
+| 相同消息来自其他模块或消息任一固定片段变化 | 继续显示，证明来源和完整文案均受约束 |
+| 成功或过滤上下文内异常后再执行 model 场景 | warning 状态已恢复，model 警告正常出现 |
+| fork、spawn 和环境可用的 forkserver | 专用布尔值可序列化并在 worker 内产生等价结果 |
+| CLI、原生 SDK、legacy SDK | 参数、返回、异常和退出码保持一致 |
+| 锁定 HF 真实实现 | 版本、模块、类别和消息特征变化时测试失败或警告安全暴露 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_repo_type.py
+python tests/test_dataset_resumable_route.py
+python tests/test_upload_resumable.py
+python tests/test_resumable_recovery.py
+python tests/test_sdk_upload_parameters.py
+python tests/test_sdk_upload_timeout.py
+python tests/test_hf_api_contract.py
+python tests/test_development_floor.py
+python tests/test_windows_compatibility.py
+python tests/test_packaging_metadata.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+红灯阶段必须证明旧实现只因 D16 新断言仍捕获误报警而失败，现有 repo type、SDK、
+resumable 和依赖断言保持通过。最后一次代码、测试或文档修正后重新运行完整离线基线、
+Python 3.9 语法、Black、Ruff、适用 isort、锁定依赖、开发底线、打包/结构、凭证、
+二进制、生成物和差异门禁，并按 `.ai/REVIEW.md` 独立审查。不得执行真实 AtomGit 写入；
+未运行独立 Windows/Linux 主机或独立 Python 3.9 解释器时必须如实报告。
+
+### D16 Implementation Phases And Acceptance
+
+1. 维护者单独授权激活 D16 后，核对 D15 是否已实施、最新 `yuto` 和当前
+   worktree；一次只激活一个 Issue。从当时最新 `yuto` 创建本地
+   `codex/d16-dataset-warning-filter` 分支，历史保护性 stash 只作备份且不重新应用，
+   运行相关专项建立基线。
+2. 在既有测试中增加指定消息、model 反例、其他警告、异常恢复和各入口受控红灯。
+   验证旧实现仅因 dataset 误报警仍出现而失败，dataset 到 model 映射及既有断言不变。
+3. 增加私有上下文并接入单文件、普通目录和 SDK 边界。验证只有原始 dataset 场景过滤，
+   HF 参数、LFS、返回和异常保持不变。
+4. 显式传递 resumable dataset 兼容布尔值并在子进程应用过滤。验证 fork/spawn 等价，
+   警告不再从子进程输出，结果队列和 D09/D10 观测队列不变。
+5. 登记候选 `DEP-004` 并同步最小权威文档。验证实际能力/不变量/测试数量一致，没有新增
+   参数、配置、依赖、生产模块、磁盘状态或迁移。
+6. 运行专项、完整离线基线、静态/安全/构件门禁和独立审查。验证实现、测试、文档、
+   登记和用户修改一致，无未解决发现后才进入人工验收。
+
+验收必须同时满足：dataset 的指定 `.parquet/.arrow` 误报警在所有上传入口消失；显式
+和默认 model 的同类提醒、dataset 的其他警告继续显示；HF 仍收到 model 兼容传输类型；
+过滤在成功、异常和 worker 退出后恢复；单文件、普通目录、resumable、CLI、原生 SDK、
+legacy SDK、LFS、批次、恢复、观测、返回和退出码不退化；开发底线、完整离线基线和
+静态门禁通过；独立审查无未解决发现。
+
+### D16 Non-Goals And Residual Risks
+
+- 不改回原生 HF dataset 路由，不修改 `_atomgit_repo_type()`、AtomGit 服务端、仓库创建/
+  下载类型解析、LFS、超时、批次、恢复、观测或 monitor 行为。
+- 不屏蔽全部 HF warning，不增加环境变量、CLI 开关、日志系统、全局锁、HfApi 子类、
+  monkey patch、依赖代理或新第三方依赖。
+- Python 3.9/3.10 的 warnings filter 是进程级状态。dataset 上下文有效期间，如果另一
+  线程恰好执行匹配同一模块、类别和完整消息的 model 上传，理论上可能短暂受到影响。
+  本方案用最小实际 HF 调用范围和四重精确匹配控制风险；当前无真实并发缺陷证据，不为
+  此引入可能阻塞上传的全局锁。若以后出现可复现证据，应另立 Issue 设计依赖级隔离。
+- HF 升级后若模块、类别或文案变化，过滤会安全失效并重新显示警告；这是预期的失败
+  开放行为，依赖契约测试应促使维护者重新确认规则，而不是扩大正则。
+- 不处理 D15 终端刷新、D17 真实跨进程端到端覆盖或 D18 历史记录整理。
+
+### D16 Compatibility And Rollback
+
+- CLI 命令、参数、显示的业务类型、SDK 签名、HF 请求、返回、异常、退出码、投影、缓存、
+  LFS、批次、恢复和观测保持兼容；有意变化仅是原始 dataset 场景不再显示指定误报警。
+- 没有数据、配置、缓存、快照、投影或远端仓库迁移。model 上传和其他警告的可见行为
+  不变。
+- 如实现回归，整体回退 D16 的上下文、各入口接线、resumable 布尔参数、测试、候选
+  `DEP-004` 和对应文档；回退后只恢复旧误报警，不影响已上传数据。不能把 HF 传输类型
+  改回 dataset，也不能只删除测试、放宽正则反例或降低登记数量。
+
+### D16 Activation Status
+
+- [x] 维护者接受 D16 完整方案并授权登记到本地开发 Issue。
+- [ ] 维护者明确 D15/D16 实施顺序并单独授权激活 D16。
+- [ ] 基于最新 `yuto` 的本地任务分支已创建，用户修改已受保护并核验。
+- [ ] 实施前基线和受控红灯已完成。
+- [ ] 最小实现、文档和开发底线登记已完成。
+- [ ] 专项、完整离线门禁和独立审查通过。
+- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+
+### D17 Objective And Evidence
+
+为上传监控补充一条纯离线、真实 OS 进程的端到端合同测试，证明上传 CLI 创建的
+`UploadSession` 能接收 resumable worker 经显式队列发送的 Flow 和父进程批次进度，
+原子发布活动与终态 JSON 快照，并由独立 monitor CLI 从磁盘读取、显示终态和正常退出。
+
+当前 `tests/test_upload_observability.py` 会替换 `select_session()`、`time.sleep()` 或
+同进程内的 `upload_directory()`，Flow/队列/Session 多为直接构造；
+`tests/test_resumable_recovery.py` 已覆盖真实 `fork`、`spawn` 和可用时的 `forkserver`，
+但父进程 observer 只是内存列表，没有继续进入 JSON 快照和独立 monitor；
+`tests/test_upload_batching.py` 与 `tests/test_upload_resumable.py` 又主要使用
+`InlineProcess`。因此现有 93/93 离线基线只能证明各局部合同，不能阻止真实组合后出现
+空 Flow、批次停留 `0/N`、monitor 读不到终态或不能退出等接线回归。这是测试证据缺口，
+当前没有证据表明生产代码已经存在上述缺陷。
+
+### D17 Accepted Cross-Process Test Contract
+
+- 新增一个独立脚本 `tests/test_upload_monitor_cross_process.py`，使用标准库
+  `multiprocessing.get_context("spawn")` 创建真实上传 CLI、独立 monitor CLI 和
+  resumable worker 三个 OS 进程角色。所有 spawn target 定义在模块顶层，并保留
+  `if __name__ == "__main__"` 入口，兼容 Python 3.9 和 Windows 导入语义。
+- 所有进程显式使用同一个临时 `HF_HOME`。认证和真实 AtomGit/HF 远端上传只在上传
+  CLI 测试进程内替换；真实 CLI 入口、`UploadSession` 生命周期、
+  `_execute_resumable_upload_process()`、`_UploadObservationSender`、
+  `_drain_upload_observations()`、父进程 observer、`SnapshotPublisher`、原子 JSON
+  快照、`load_sessions()`、`select_session()` 和 `render_session()` 均走生产路径。
+- 离线 worker 使用真实 `_SlowFlowCoordinator` 注册一个固定匿名 Flow，经真实有界
+  multiprocessing Queue 发送合法 v1 envelope；上传父进程必须通过真实 drain 与
+  observer dispatch 归并，测试不得直接构造 session、调用 `UploadSession.observe()`
+  或写入合成快照。
+- 上传替身通过真实私有 `progress_callback` 先发布 `batch=1/2`、`files_done=20`、
+  `files_total=21`；monitor 读到包含该进度和 Flow 的活动快照后，worker 才返回成功，
+  随后发布 `batch=2/2`、`21/21`。最终 `finished` 必须由上传 CLI 既有
+  `finish()`/`close()` 生命周期产生，不能由测试直接写入。
+- 进程间只使用共享 Event 和结果队列协调活动快照就绪、monitor 已读取活动帧及终态
+  就绪。不得用固定长时间 `sleep` 猜测调度；所有等待有严格超时，失败时必须终止并
+  回收子进程，不能让基线挂住。
+- monitor 进程使用真实 Click CLI 执行显式 `SESSION_ID` 的
+  `atomgit monitor upload status`。不得替换 session 选择、磁盘读取或渲染器；只在
+  monitor 测试进程内把一秒轮询和两秒终帧等待替换为 Event 协调，以缩短测试并消除
+  调度竞态。
+- 断言只要求活动帧与终态帧至少各出现一次，不绑定 `click.clear()` 或重复输出次数，
+  因而兼容 D15 实施前后的刷新行为。monitor 退出、失败或被回收不得通知、取消或改变
+  上传结果。
+- 快照必须继续脱敏且有界：不得包含假 token、源绝对路径、私有 object ID、`source_id`
+  或 worker 对象身份。上传/monitor 任一进程崩溃、超时、非零退出、结果缺失或结果格式
+  错误都必须产生明确失败。
+
+### D17 Implementation Scope
+
+1. 新建 `tests/test_upload_monitor_cross_process.py`。父测试进程创建隔离目录、21 个最小
+   文件、spawn context、Event 和结果队列；依次启动上传 CLI，确认真实活动快照后取得
+   CLI 自动生成的 session ID，再启动独立 monitor，最后有界等待、校验和回收全部进程。
+2. 上传 CLI target 在自身进程内设置 `HF_HOME`、隔离认证和远端上传边界，并通过真实
+   `CliRunner` 执行 `atomgit upload SOURCE --repo-id owner/demo --resumable`。离线上传
+   替身只负责发送受控进度并调用真实 resumable 执行协调器，不直接访问或写入 session。
+3. 顶层离线 worker 使用真实 observation sender 和 slow-flow coordinator 发送 Flow，
+   等待 monitor 已读取活动帧后通过独立结果队列返回成功；父上传进程继续负责 drain、
+   session 归并、Flow 终态收敛和上传最终状态。
+4. monitor target 使用相同 `HF_HOME` 和真实 CLI 读取显式 session；只替换测试进程内的
+   wait 节奏。结果队列返回完整退出码和输出，供父测试断言活动帧、终态帧与正常退出。
+5. 将新脚本加入 `tests/cli_baseline_contract.py` 的 `upload-observability` 组，并在
+   `tests/development_floor_contract.py` 登记到受影响能力和候选 `UPO-011`。同步
+   `.ai/DEVELOPMENT_FLOOR.md`、`.ai/TESTING.md`、`docs/development_floor.md`、
+   `docs/testing.md` 和 `docs/features/upload-monitor.md` 的最小权威说明、证据和实际计数。
+6. 在本文件记录激活、基线、受控红灯、实现、验证、审查、风险和适用交付；
+   `.ai/ISSUE_DISCUSSION.md` 保留 D17 接受、顺序、映射和权限边界。
+
+原则上不修改任何生产文件。如果新测试在正确测试编排下暴露真实生产缺陷，立即停止
+test-only 实施并记录可复现边界，等待维护者另行确认是否扩大修复范围；不得在 D17 中
+默默修改生产行为。
+
+### D17 Affected Capability IDs
+
+`UPLOAD-OBSERVABILITY`、`CLI-DISPATCH`、`UPLOAD-RESUMABLE`、`PORTABILITY` 和
+`FLOOR-REGISTRY`。
+
+### D17 Protected Existing Invariants
+
+- `UPO-001`–`UPO-009`：monitor、快照、Flow、观测队列、批次进度、heartbeat、固定
+  会话、终态退出和相对时间继续只读、有界、原子、脱敏并且不能改变上传结果。
+- 候选 `UPO-010` 属于 D15 的变化驱动重绘合同；D17 不绑定其是否已经实施，也不通过
+  放宽清屏或输出次数断言干扰 D15。
+- `DISPATCH-001`–`DISPATCH-005`：真实上传和 monitor leaf 仍通过既有 Click 入口、参数
+  与退出语义分派，不新增或修改公共命令。
+- `RESUMEUP-001`–`RESUMEUP-006`：投影、超时、重试、恢复、结果队列、取消和批次状态
+  保持不变；观测通道失败不能伪造上传成功或失败。
+- `PORT-001` 和 `PORT-009`：只使用 Python 3.9 支持的标准库能力；已有启动方式矩阵继续
+  证明 fork/spawn/forkserver 观测合同等价，D17 固定 spawn 只验证完整组合，不重复矩阵。
+- `FLOOR-001`–`FLOOR-003`：新测试必须加入精确脚本清单、至少一个能力映射和强制完整
+  基线；不能删除、跳过或弱化既有证据使新测试通过。
+- CLI/SDK 签名、快照 v1 字段、Flow envelope、session 状态、终态集、两秒终帧、上传
+  返回和退出码均保持兼容。当前可执行登记为 28 个能力、136 条不变量和 93 个离线
+  pytest case；D15/D16/D17 实施顺序未确定，激活时必须读取实际登记数量。
+
+### D17 New Or Changed Invariants
+
+- 候选 `UPO-011`：一个纯离线真实 OS 进程测试必须证明，上传 CLI 创建的 session 能
+  接收 resumable worker 经有界观测队列发送的 Flow，发布含真实批次/文件进度的活动
+  快照和真实 CLI 生命周期产生的终态快照；独立 monitor 从磁盘读取两者并正常退出，
+  且监控失败或退出不能改变上传结果或泄露敏感信息。
+- D17 单独实施时预计保持 28 个能力，新增 1 条不变量和 1 个离线 pytest case，即当前
+  136/93 预计变为 137/94。若 D15 或 D16 先实施，必须在其实际登记基础上继续单调增加；
+  方案登记不代表测试或不变量已经实现。
+
+### D17 Focused Tests And Evidence
+
+| 场景 | 必须证明的结果 |
+|---|---|
+| 上传 CLI 活动阶段 | CLI 自动创建 session，磁盘快照为 `active`、`1/2`、`20/21` 并包含 `Flow-01` |
+| 真实 spawn worker | Flow 通过真实 sender、Queue、drain 和父 observer 归并，测试没有直接注入 session |
+| 独立 monitor 首帧 | 从相同 `HF_HOME` 的真实 JSON 文件读取固定 session 并显示活动帧 |
+| 上传完成 | worker 独立结果不被观测队列替代，上传 CLI 成功并由 `finish()`/`close()` 发布 `finished`、`2/2`、`21/21` |
+| monitor 终态 | 同一 monitor 显示真实终态帧并以成功退出码自行结束 |
+| 上传隔离 | monitor 退出、失败或清理不改变上传成功结果 |
+| 脱敏 | 快照不含 token、源绝对路径、私有 object ID、`source_id` 或 worker 身份 |
+| 故障与回收 | 超时、崩溃、非零退出、结果缺失或格式错误明确失败，所有外层子进程均被回收 |
+| D15 前后兼容 | 至少出现活动帧和终态帧，不绑定重复帧或清屏次数 |
+
+激活后至少运行：
+
+```bash
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate atomgit_cli
+python tests/test_upload_monitor_cross_process.py
+python tests/test_upload_observability.py
+python tests/test_resumable_recovery.py
+python tests/test_upload_batching.py
+python tests/test_lfs_slow_flow_recovery.py
+python tests/development_floor_contract.py
+python tests/run_cli_baseline.py
+python -m compileall -q .
+python -m pip check
+git diff --check
+```
+
+红灯阶段必须证明旧基线缺少完整脚本登记或端到端合同，而不是人为破坏生产代码；新测试
+编排本身必须先经失败路径和回收检查，避免假绿或挂死。最后一次测试或文档修正后重新运行
+完整离线基线、Python 3.9 语法、Black、Ruff、适用 isort、锁定依赖、开发底线、打包/
+结构、凭证、二进制、生成物和差异门禁，并按 `.ai/REVIEW.md` 独立审查。不得执行真实
+AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释器时必须如实报告。
+
+### D17 Implementation Phases And Acceptance
+
+1. 维护者单独授权激活 D17 后，核对 D15/D16 是否已实施、最新 `yuto` 和当前
+   worktree；一次只激活一个 Issue。从当时最新 `yuto` 创建本地
+   `codex/d17-monitor-cross-process-test` 分支，历史保护性 stash 只作备份且不重新应用，
+   运行现有上传观测、恢复和完整基线建立实施前证据。
+2. 新增 spawn-safe 测试骨架、三个进程角色、Event/结果队列和严格回收。验证正常与受控
+   超时路径均不会留下进程，结果缺失能明确失败。
+3. 接入真实上传 CLI、resumable 执行协调器、Flow sender/drain、进度 callback 和活动
+   快照。验证磁盘出现同一 session 的 `active`、`1/2`、`20/21` 与 `Flow-01`。
+4. 接入独立 monitor CLI 和上传终态协调。验证 monitor 输出至少包含活动帧与
+   `finished` 终态帧后正常退出，上传仍以成功结束。
+5. 增加脱敏、固定 session、结果完整性和 D15 前后兼容断言，登记候选 `UPO-011`，同步
+   基线清单及最小文档。验证实际能力、不变量和脚本计数一致。
+6. 运行专项、完整离线基线、静态/安全/构件门禁和独立审查。实现、测试、文档、登记和
+   用户修改一致且无未解决发现后，才进入人工验收。
+
+验收必须同时满足：真实上传 CLI、独立 monitor CLI 和上传 worker 三个 OS 进程角色
+存在；活动与终态快照均由生产路径写入并由 monitor 从磁盘读取；活动帧包含正确 session、
+批次、文件进度和 Flow，终态为同一 session 的 `finished`、`2/2`、`21/21`；monitor 正常
+退出且不改变上传结果；快照无敏感字段；所有进程均被回收；完整离线基线和静态门禁通过；
+独立审查无未解决发现。
+
+### D17 Non-Goals And Residual Risks
+
+- 不访问 AtomGit/HF 网络，不验证真实认证、服务端、传输速度或远端失败；mock 成功不能
+  声称真实远端证据。
+- 不修改上传、Flow、队列、快照、monitor、CLI 或 SDK 生产行为，不增加测试开关、环境
+  变量协议、常驻进程、依赖或抽象层；不处理 D15、D16 或 D18。
+- 不重复所有启动方式的完整端到端矩阵。固定 spawn 用于避免依赖内存继承并覆盖最严格的
+  导入边界，底层 `fork/spawn/forkserver` 等价性仍由 `test_resumable_recovery.py` 负责。
+- 多进程调度可能产生偶发失败；通过 Event、原子文件轮询、明确阶段结果和严格超时控制，
+  不通过扩大 sleep 或无限重试掩盖竞态。
+- 本地通过不能代替独立 Windows/Linux 和真实 Python 3.9 解释器证据；未运行时作为剩余
+  风险报告。
+- 若测试暴露真实生产缺陷，D17 将停在失败证据阶段，等待维护者另行授权生产修复范围。
+
+### D17 Compatibility And Rollback
+
+- CLI/SDK 命令、参数、快照 v1、Flow envelope、上传结果、终态和退出码均不变；没有
+  数据、配置、缓存、投影或远端仓库迁移。
+- 新测试不绑定 D15 的重复重绘次数，D15/D16/D17 可按维护者以后指定顺序分别实施。
+- 如测试本身不稳定或合同登记有误，整体回退新增脚本、基线清单、候选 `UPO-011` 和对应
+  文档，恢复原 93 脚本基线。不能只删除失败断言、延长无限等待或降低登记数量；生产代码
+  原则上没有需要回滚的 D17 变更。
+
+### D17 Activation Status
+
+- [x] 维护者接受 D17 完整方案并授权登记到本地开发 Issue。
+- [ ] 维护者明确 D15/D16/D17 实施顺序并单独授权激活 D17。
+- [ ] 基于最新 `yuto` 的本地任务分支已创建，用户修改已受保护并核验。
+- [ ] 实施前基线和受控红灯已完成。
+- [ ] 真实跨进程测试、文档和开发底线登记已完成。
+- [ ] 专项、完整离线门禁和独立审查通过。
+- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
 
 ### Current Handoff Snapshot
 
-- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前任务分支
-  `codex/d12-upload-session-heartbeat` 基于 `yuto@611a468` 创建；D11 任务提交
+- Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支为 `yuto`；D14 已完成限定
+  交付。阶段 1 上传观测专项
+  **31/31** 通过；阶段 2 红灯为 **31/36**，新增 5 项按预期失败且既有断言保持
+  通过。阶段 3 最小实现后的上传观测专项 **36/36** 通过；阶段 4 的开发底线、CLI、
+  所有权、Windows、打包专项全部通过，登记为 28/136/93；完整基线为
+  **93 passed in 114.12s**，静态与安全检查通过。独立审查无 P0/P1/P2/P3 发现，
+  结论 `APPROVED`；审查证据写回后的最终完整基线为 **93 passed in 114.51s**。
+  隔离合并树为 **93 passed in 111.14s**，交付记录写回后为
+  **93 passed in 116.77s**。任务提交 `f7fdcb9`、no-ff 合并提交 `1af6d27` 和交付
+  记录提交 `1a1b89e` 均已完成；D14 交付时 `yuto` 与 `github/yuto` 一致指向
+  `1a1b89e`，远端
+  不存在 D14 任务分支。D15、D16、D17 完整方案均已接受并登记但未激活；当前等待
+  一次只激活其中一个 Issue，或开始 D18 讨论。
+  D12 本地任务分支 `codex/d12-upload-session-heartbeat` 保留且未推送；D11 任务提交
   `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入并限定推送至 `github/yuto`，任务
   分支保留在本地且未推送。D09/D10 任务提交
   `f1b4c78` 已通过 no-ff 合并提交 `85167bd` 完成本地合入，
@@ -2259,11 +3266,12 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
   atomgit 远端，远端没有 D04 任务分支。
 - D05 本地任务分支 `codex/d05-pointer-verification-retry` 保留且未推送；远端不存在该
   任务分支，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
-- 原有 `.ai/DEVELOPMENT_RULES.md`、`.ai/DOD.md`、`.ai/MASTER_PROMPT.md`、
-  `.ai/README.md`、`.ai/WORKFLOW.md` 五份未提交修改仍原样保留；续接必须使用当前
-  worktree，不能将其误归入后续 Issue；本次只叠加获授权的 D12 `.ai/TASK.md` 和
-  `.ai/ISSUE_DISCUSSION.md` 方案记录。D06–D11 任务分支保留在本地且未推送，没有
-  修改 `main`、其他远端分支或真实 AtomGit 仓库。
+- 五份 `.ai` 规范/流程修改与 `.ai/TASK.md`、`.ai/ISSUE_DISCUSSION.md` 中获授权的
+  D13–D17 交接记录已作为独立 `.ai` 文档交付统一纳入 `yuto`，不再要求使用
+  D14 worktree 续接。保护性 stash 仅作历史备份保留。D06–D14 任务分支保留在本地
+  且未推送，没有修改 `main`、其他远端分支或真实 AtomGit 仓库。
+- 本次 `.ai` 文档交付前的完整离线基线为 **93 passed in 107.38s**；`compileall`、
+  `pip check`、`git diff --check` 和凭证模式扫描均通过，未修改源码、测试或运行行为。
 - D11 红灯：`python tests/test_upload_batching.py` 退出 1；既有 15 个场景通过，仅新增
   的 21 文件两批 callback 生命周期失败，确认旧实现从不调用 `progress_callback`。
 - D11 实现：上传服务在 resumable 实际计划、外层批次开始、成功和失败后发送三个
@@ -2384,9 +3392,11 @@ SDK、安全和可移植性不退化；完整基线、静态门禁、开发底�
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- D11 当前状态：实现提交 `6a9d6f7` 已通过 no-ff 合并提交 `0e0f7bd` 合入 `yuto`，
-  并仅推送和核验 `github/yuto`；任务分支保留在本地且未推送。D12 已单独激活本地
-  实施与离线验证；真实 AtomGit、D13–D18 实施及 D12 提交/合并/推送仍未授权。
+- D15 当前状态：变化驱动重绘完整方案已接受并写入本 Issue，但尚未激活、创建分支、
+  修改源码/测试/用户文档或运行实施验证。
+- D16 当前状态：业务类型感知的 HF 误报警过滤完整方案已接受并写入本 Issue，但尚未
+  激活、创建分支、修改源码/测试/用户文档或运行实施验证。D14 已完成限定交付，远端
+  为 `1a1b89e`，任务分支未推送；不执行真实 AtomGit 操作或实施 D15–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。

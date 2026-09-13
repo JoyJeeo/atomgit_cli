@@ -15,13 +15,78 @@ The same AI session may perform multiple roles only through explicit phase
 changes. Reviewer reasoning must start from the diff and evidence, not memory of
 implementation intent.
 
+## Problem Discussion Gate
+
+Use `ISSUE_DISCUSSION.md` when evidence exists but the expected behavior,
+solution, tradeoff, or development scope still needs maintainer agreement. This
+is a pre-development Issue and never authorizes source, test, dependency,
+runtime, Git, or remote changes.
+
+The discussion record must contain:
+
+- a stable ID, title, status, current item, and next action;
+- the ordered issue inventory and the evidence behind every item;
+- for each current or decided item, constraints, options, tradeoffs,
+  recommendation, open questions, maintainer decision, and successor mapping;
+- a decision log and explicit permissions boundary;
+- the successor development Issue ID and closure checklist.
+
+Only one item is current. Move to the next item only after the maintainer
+explicitly accepts the solution or explicitly reorders or removes the item.
+Silence, AI recommendation, test evidence, or a summary is not acceptance. An
+item may be removed only by an explicit maintainer decision recorded with its
+rationale.
+
+After every in-scope item is accepted, copy the accepted behavior, scope,
+acceptance criteria, test requirements, permissions, and traceability into a
+successor development Issue in `TASK.md`. Do not overwrite an unrelated active
+development Issue. The discussion remains open until that transfer is complete.
+By default use one successor development Issue; split it only when the
+maintainer explicitly accepts the split.
+
+A discussion Issue may be marked `completed` only when all of these are true:
+
+1. every in-scope item is `accepted`, or is explicitly `removed` with rationale;
+2. every accepted decision maps to a written successor development Issue;
+3. the successor contains the complete implementation contract required below;
+4. the maintainer explicitly confirms the discussion Issue may close.
+
+Creating the successor development Issue does not activate it. Implementation
+starts only after the maintainer separately approves activation in `TASK.md`.
+
 ## Lifecycle
 
 ```text
-Evidence / user request / approved GitHub Issue
+Evidence / user request / approved Issue
                     |
                     v
-             Activate TASK.md
+         Does the solution need discussion?
+          | no                 | yes
+          |                    v
+          |       Open or continue ISSUE_DISCUSSION.md
+          |                    |
+          |                    v
+          |         Discuss one ordered item
+          |                    |
+          |       +------------+-------------+
+          |       |                          |
+          |  NOT ACCEPTED                 ACCEPTED
+          |       |                          |
+          |       v                          v
+          |  Revise or keep open       More items? -- yes --> next item
+          |                                  |
+          |                                  no
+          |                                  |
+          |                                  v
+          |         Write accepted decisions into TASK.md
+          |                                  |
+          |                                  v
+          |            Maintainer confirms discussion closure
+          |                                  |
+          +------------------+---------------+
+                             |
+                             v
+             Explicitly approve and activate TASK.md
                     |
                     v
        Create task branch from yuto if needed
@@ -60,16 +125,20 @@ Evidence / user request / approved GitHub Issue
 ## Conversation Continuity
 
 Conversation transcripts are task-local context, not repository memory. The
-repository handoff is `TASK.md`, verified against Git and the affected code.
+development handoff is `TASK.md`; an active pre-development discussion is
+handed off in `ISSUE_DISCUSSION.md`. Both are verified against Git and the
+affected code.
 
 ### Recover In A New Conversation
 
 Before editing, the new conversation must:
 
-1. Read `AGENTS.md`, `.ai/README.md`, and `.ai/TASK.md`.
+1. Read `AGENTS.md`, `.ai/README.md`, `.ai/TASK.md`, and any active
+   `.ai/ISSUE_DISCUSSION.md`.
 2. Resolve the repository root, branch, HEAD, worktree list, status, recent
    commits, and relevant staged and unstaged diff.
-3. Compare that evidence with the `TASK.md` handoff snapshot.
+3. Compare that evidence with the `TASK.md` handoff snapshot and any active
+   discussion record.
 4. Read the task-specific `.ai` references selected by `.ai/README.md`, then
    inspect the affected source, tests, and human documentation.
 5. Report the recovered objective, current phase, repository state, next exact
@@ -88,7 +157,11 @@ investigation, after a reproducing failure, after implementation, after a test
 or review phase, before intentionally switching conversations, and when work
 becomes blocked. Do not rewrite it after every command.
 
-The snapshot records only durable facts:
+For a problem discussion, update `ISSUE_DISCUSSION.md` when evidence or options
+materially change, after every maintainer decision, when the current item
+changes, and when successor transfer or closure occurs.
+
+Each handoff records only durable facts, as applicable:
 
 - updated time, Issue status, and current phase;
 - base branch, task branch, base commit, and current HEAD;
@@ -99,22 +172,22 @@ The snapshot records only durable facts:
 - whether uncommitted work requires resuming the same worktree.
 
 Do not paste long command output, credentials, signed URLs, token-bearing error
-text, or a transcript summary into the handoff. Put stable product or
+text, or a transcript summary into either handoff. Put stable product or
 architecture decisions in their authoritative document and retain only the
-task-specific consequence and rationale in `TASK.md`.
+task-specific consequence and rationale in the applicable handoff.
 
 ### Worktree Boundary
 
 A new conversation using the same worktree can inspect its uncommitted changes.
 An isolated worktree reliably starts only from committed Git state and cannot
 inherit another worktree's staged or unstaged files, including an uncommitted
-`TASK.md` update.
+`TASK.md` or `ISSUE_DISCUSSION.md` update.
 
 When an active task is dirty, resume it in the same worktree. Move it to an
 isolated worktree only from a clean state or an explicitly authorized checkpoint
 commit. Do not create a commit merely to make conversation switching convenient;
 the normal commit authorization and delivery rules still apply. Record the
-required worktree in the handoff whenever uncommitted work exists.
+required worktree in the applicable handoff whenever uncommitted work exists.
 
 ## Issue Contract
 

@@ -18,13 +18,16 @@ It complements the source code and tests; it does not replace reading them.
 - `DOD.md`: change-type-specific definition of done.
 - `REVIEW.md`: independent review procedure and severity model.
 - `ROADMAP.md`: prioritized direction; roadmap entries are not active tasks.
+- `ISSUE_DISCUSSION.md`: the single persistent pre-development problem
+  discussion, ordered decisions, and successor-development-Issue handoff.
 - `TASK.md`: the single persistent task handoff for autonomous work.
 
 ## Conversation Startup
 
-After reading this routing file, every new conversation reads `TASK.md` before
-the task-specific references, reconciles it with the current Git worktree, and
-then loads only the references needed for the requested task:
+After reading this routing file, every new conversation reads `TASK.md` and any
+`ISSUE_DISCUSSION.md` whose status is `active` before the task-specific
+references. It reconciles those records with the current Git worktree and then
+loads only the references needed for the requested task:
 
 | Task or phase | Required references |
 |---|---|
@@ -35,6 +38,7 @@ then loads only the references needed for the requested task:
 | Tests or verification | `TESTING.md` |
 | Any implementation or delivery decision | `DEVELOPMENT_FLOOR.md` |
 | Issue activation, handoff, delivery, or closure | `WORKFLOW.md` |
+| Problem analysis or solution discussion | `ISSUE_DISCUSSION.md`, `WORKFLOW.md` |
 | Independent review | `REVIEW.md` |
 | Planning or selecting future work | `ROADMAP.md` |
 
@@ -49,8 +53,9 @@ Use this order when instructions conflict:
 1. Explicit user request
 2. `AGENTS.md`
 3. `.ai/TASK.md`
-4. Other `.ai` documents
-5. Existing source and local conventions
+4. Accepted decisions in `.ai/ISSUE_DISCUSSION.md`
+5. Other `.ai` documents
+6. Existing source and local conventions
 
 Source code and tests remain the authority for current behavior. If a design
 document is stale, report the discrepancy and update it as part of an
