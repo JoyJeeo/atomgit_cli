@@ -66,8 +66,8 @@ Status: inactive (D17 delivered; D18 discussion pending)
   并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录交付结果；
   任务分支不推送，真实 AtomGit、PR、标签、发布和 D18 实施仍未授权。
   D17 最终交付复验通过；任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入
-  `yuto`，合并树跨进程专项为 **9/9**、完整离线基线为 **94/94**。当前正在记录并
-  执行仅推送 `github/yuto` 的限定交付，任务分支不推送。
+  `yuto`，合并树跨进程专项为 **9/9**、完整离线基线为 **94/94**。交付记录提交
+  `ebe08b9` 已仅推送并核验 `github/yuto`，任务分支未推送；D17 已完成限定交付。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -268,15 +268,15 @@ Status: inactive (D17 delivered; D18 discussion pending)
   D17–D18。D16 已按该模式完成限定交付；交付记录已仅推送并核验
   `github/yuto`，任务分支未推送。
 - D17 delivery mode: 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；
-  合并树复验通过。当前只待记录并推送 `github/yuto`；任务分支不推送，不执行真实
+  交付记录提交 `ebe08b9` 已仅推送并核验 `github/yuto`。任务分支未推送，未执行真实
   AtomGit、PR、标签、发布或 D18。
-- Next exact action: 提交 D17 交付记录，仅推送 `github/yuto` 并核验远端一致；随后记录
-  推送结果。等待维护者继续 D18 讨论，不自动实施 D18。
+- Next exact action: 等待维护者继续 D18 讨论；不自动实施 D18，不执行真实 AtomGit
+  操作。
 
 ### Repository Reconciliation
 
-当前工作树位于 `yuto@c157555`，D17 任务提交 `9e51470` 已通过 no-ff 合并提交
-`c157555` 合入，工作树干净；D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
+当前工作树位于 `yuto`。D17 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555`
+合入，交付记录提交 `ebe08b9` 已仅推送并核验 `github/yuto`；D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
 `46baa97` 合入；交付记录已仅推送并核验 `github/yuto`。D16 任务分支保留在本地
 且未推送。
 D15 任务提交
@@ -3372,6 +3372,7 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
   推送 `github/yuto` 及记录交付；任务分支不推送。
 - [x] 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；合并树专项
   **9/9**、完整离线基线 **94/94** 通过。
+- [x] 交付记录提交 `ebe08b9` 已仅推送并核验 `github/yuto`；任务分支未推送。
 
 ### Current Handoff Snapshot
 
@@ -3416,7 +3417,10 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
 - 本地交付：任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；合并树
   新专项 **9/9**，`python tests/run_cli_baseline.py` 为 **94 passed in 125.94s**，
   compileall、pip check 和差异检查通过。任务分支保留在本地且不推送。
-- 下一步：提交交付记录并仅推送 `github/yuto`，核验后记录远端结果；不实施 D18。
+- 限定推送：交付记录提交 `ebe08b9` 已仅推送并核验
+  `github/yuto@ebe08b9dd369e7fe359739351af5cfeaadfb5e10`；远端不存在 D17 任务分支，
+  未执行真实 AtomGit、PR、标签或发布。
+- 下一步：等待维护者继续 D18 讨论；不自动实施 D18。
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支为 `yuto`；D14 已完成限定
   交付。阶段 1 上传观测专项
