@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D17 implementation authorized)
+Status: inactive (D17 delivered; D18 discussion pending)
 
 ## Successor Development Issue
 
@@ -65,6 +65,9 @@ Status: active (D17 implementation authorized)
   维护者现已要求“自己验收一下 没问题就提交并推送”，据此在最终复验无误后接受 D17，
   并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录交付结果；
   任务分支不推送，真实 AtomGit、PR、标签、发布和 D18 实施仍未授权。
+  D17 最终交付复验通过；任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入
+  `yuto`，合并树跨进程专项为 **9/9**、完整离线基线为 **94/94**。当前正在记录并
+  执行仅推送 `github/yuto` 的限定交付，任务分支不推送。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -264,15 +267,16 @@ Status: active (D17 implementation authorized)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D17–D18。D16 已按该模式完成限定交付；交付记录已仅推送并核验
   `github/yuto`，任务分支未推送。
-- D17 delivery mode: 最终复验无误后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
-  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D18。
-- Next exact action: 最终交付复验已通过；按授权提交 D17 任务分支、no-ff 合入 `yuto`，
-  复验合并树并仅推送 `github/yuto`，随后核验远端一致并记录交付结果。
+- D17 delivery mode: 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；
+  合并树复验通过。当前只待记录并推送 `github/yuto`；任务分支不推送，不执行真实
+  AtomGit、PR、标签、发布或 D18。
+- Next exact action: 提交 D17 交付记录，仅推送 `github/yuto` 并核验远端一致；随后记录
+  推送结果。等待维护者继续 D18 讨论，不自动实施 D18。
 
 ### Repository Reconciliation
 
-当前工作树位于 `codex/d17-monitor-cross-process-test@79bf352`，从最新
-`yuto@79bf352` 创建；D17 只有任务范围内未提交修改。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
+当前工作树位于 `yuto@c157555`，D17 任务提交 `9e51470` 已通过 no-ff 合并提交
+`c157555` 合入，工作树干净；D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
 `46baa97` 合入；交付记录已仅推送并核验 `github/yuto`。D16 任务分支保留在本地
 且未推送。
 D15 任务提交
@@ -3366,6 +3370,8 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
   复审无 P0–P3 发现，结论 `APPROVED`。
 - [x] 维护者接受最终复验无误后的结果，并授权提交任务分支、no-ff 合入 `yuto`、仅
   推送 `github/yuto` 及记录交付；任务分支不推送。
+- [x] 任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；合并树专项
+  **9/9**、完整离线基线 **94/94** 通过。
 
 ### Current Handoff Snapshot
 
@@ -3407,7 +3413,10 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
   **9/9**，开发底线 **15/15**，`python tests/run_cli_baseline.py` 为
   **94 passed in 120.77s**；compileall、pip check、Python 3.9 语法、Black、isort、
   Ruff 和差异检查均通过。
-- 下一步：执行已授权的任务提交、本地 no-ff 合并、合并树复验和限定推送，不实施 D18。
+- 本地交付：任务提交 `9e51470` 已通过 no-ff 合并提交 `c157555` 合入 `yuto`；合并树
+  新专项 **9/9**，`python tests/run_cli_baseline.py` 为 **94 passed in 125.94s**，
+  compileall、pip check 和差异检查通过。任务分支保留在本地且不推送。
+- 下一步：提交交付记录并仅推送 `github/yuto`，核验后记录远端结果；不实施 D18。
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支为 `yuto`；D14 已完成限定
   交付。阶段 1 上传观测专项
