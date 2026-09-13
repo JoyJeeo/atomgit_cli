@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 138
+BASELINE_INVARIANT_COUNT = 139
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -195,6 +195,7 @@ CAPABILITY_REGISTRY = {
             "test_sdk_domain_ownership.py",
             "test_structure_guard.py",
             "test_upload_domain_ownership.py",
+            "test_upload_monitor_cross_process.py",
         ),
         ("docs/development_floor.md", ".ai/DEVELOPMENT_FLOOR.md"),
     ),
@@ -300,6 +301,7 @@ CAPABILITY_REGISTRY = {
             "test_cli_baseline_guard.py",
             "test_update.py",
             "test_uninstaller.py",
+            "test_upload_monitor_cross_process.py",
         ),
         ("docs/cli_feature_baseline.md",),
     ),
@@ -559,6 +561,7 @@ CAPABILITY_REGISTRY = {
             "test_resumable_recovery.py",
             "test_resumable_stats.py",
             "test_upload_batching.py",
+            "test_upload_monitor_cross_process.py",
             "test_upload_observability.py",
             "test_upload_path_in_repo.py",
             "test_upload_progress.py",
@@ -1294,6 +1297,7 @@ CAPABILITY_REGISTRY = {
             "test_packaging_metadata.py",
             "test_resumable_recovery.py",
             "test_src_layout_migration.py",
+            "test_upload_monitor_cross_process.py",
             "test_uninstaller.py",
             "test_update.py",
             "test_wheel_smoke.py",
@@ -1462,11 +1466,17 @@ CAPABILITY_REGISTRY = {
                 "Detailed upload monitoring polls its pinned session every second but clears and prints only changed rendered frames, while unreadable snapshots preserve the display and real terminal states still render and exit after the final-frame delay.",
                 "test_upload_observability.py",
             ),
+            _invariant(
+                "UPO-011",
+                "One offline spawn-process contract carries parent batch progress and a real worker Flow through the upload CLI into atomic active and terminal snapshots, which an independent monitor reads before exiting without changing upload success or exposing private state.",
+                "test_upload_monitor_cross_process.py",
+            ),
         ),
         (
             "test_lfs_slow_flow_recovery.py",
             "test_resumable_recovery.py",
             "test_upload_batching.py",
+            "test_upload_monitor_cross_process.py",
             "test_upload_observability.py",
         ),
         ("docs/features/upload-monitor.md", ".ai/TASK.md"),
@@ -1500,10 +1510,10 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "138 条可观察行为不变量",
-        "93 个隔离 pytest case",
+        "139 条可观察行为不变量",
+        "94 个隔离 pytest case",
     ),
-    "docs/testing.md": ("93 个 pytest case", "development_floor.md"),
+    "docs/testing.md": ("94 个 pytest case", "development_floor.md"),
     "docs/development.md": ("开发底线", "python tests/run_cli_baseline.py"),
 }
 

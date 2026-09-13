@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: inactive (D16 delivered; D17 awaiting activation)
+Status: active (D17 implementation authorized)
 
 ## Successor Development Issue
 
@@ -59,8 +59,12 @@ Status: inactive (D16 delivered; D17 awaiting activation)
   `yuto`，合并树完整离线基线为 **93/93**。D16 已完成限定交付。
   D17 的“新增纯离线真实 spawn 进程端到端测试，贯通上传 CLI、UploadSession、
   resumable worker、观测队列、JSON 快照和独立 monitor”方案已获维护者接受并写入
-  本 Issue；D17 当前未激活，尚未创建分支、修改测试/开发底线/用户文档或运行实施
-  验证，原则上不修改生产代码。
+  本 Issue。维护者现已明确要求“开始开发”，据此单独激活 D17；实施只覆盖纯离线真实
+  spawn 进程测试、开发底线和最小文档，原则上不修改生产代码，也不授权提交、合并、
+  推送或真实 AtomGit 操作。
+  维护者现已要求“自己验收一下 没问题就提交并推送”，据此在最终复验无误后接受 D17，
+  并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto` 及记录交付结果；
+  任务分支不推送，真实 AtomGit、PR、标签、发布和 D18 实施仍未授权。
 - User authorization: 维护者于 `2026-09-07` 明确要求“将你的修复方案加到开发issue中”；
   本次允许更新本地开发 Issue 和对应讨论交接，取代此前对 D01 写入的禁止。
   维护者随后明确要求“按照开发issue开始开发”，授权 D01 源码、测试、文档与必要
@@ -217,6 +221,13 @@ Status: inactive (D16 delivered; D17 awaiting activation)
   复验无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
   `github/yuto` 及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和
   D17–D18 实施仍未授权。
+  维护者随后于 `2026-09-13` 明确要求“开始开发”，据此单独激活 D17，授权创建基于
+  最新 `yuto` 的本地任务分支、修改 D17 范围内测试、开发底线和最小文档，并执行纯
+  离线验证；不授权修改生产行为、提交、合并、推送、PR、发布、真实 AtomGit 操作或
+  实施 D18。
+  维护者随后明确要求“自己验收一下 没问题就提交并推送”；据此接受 D17 在最终复验
+  无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`
+  及记录交付结果。任务分支不推送，真实 AtomGit、PR、标签、发布和 D18 仍未授权。
 - Delivery mode: 维护者明确要求“自己验证一下，没有问题就提交推送”。复验通过后，
   授权 D01 提交、本地合入 yuto、仅推送 github/yuto 和必要交付记录；不推任务分支。
   D01 交付时未纳入原有五份开发规范变更；这些文档后续已单独获得提交与
@@ -253,14 +264,15 @@ Status: inactive (D16 delivered; D17 awaiting activation)
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
   D17–D18。D16 已按该模式完成限定交付；交付记录已仅推送并核验
   `github/yuto`，任务分支未推送。
-- D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
-  未授权。实施完成后仍需维护者单独验收并授权适用交付。
-- Next exact action: 等待维护者单独授权激活 D17 或继续 D18 讨论；不自动实施
-  D17–D18，不执行真实 AtomGit 操作。
+- D17 delivery mode: 最终复验无误后提交本地任务分支、no-ff 合入 `yuto`，并且只推送
+  `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或 D18。
+- Next exact action: 最终交付复验已通过；按授权提交 D17 任务分支、no-ff 合入 `yuto`，
+  复验合并树并仅推送 `github/yuto`，随后核验远端一致并记录交付结果。
 
 ### Repository Reconciliation
 
-当前工作树位于 `yuto`。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
+当前工作树位于 `codex/d17-monitor-cross-process-test@79bf352`，从最新
+`yuto@79bf352` 创建；D17 只有任务范围内未提交修改。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
 `46baa97` 合入；交付记录已仅推送并核验 `github/yuto`。D16 任务分支保留在本地
 且未推送。
 D15 任务提交
@@ -272,7 +284,7 @@ D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
 D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15、D16 已完成限定
-交付，D17 仍已接受但未激活。历史矛盾的完整整理
+交付，D17 已激活、实现并获条件交付授权。历史矛盾的完整整理
 仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
@@ -3247,8 +3259,8 @@ test-only 实施并记录可复现边界，等待维护者另行确认是否扩�
 - `FLOOR-001`–`FLOOR-003`：新测试必须加入精确脚本清单、至少一个能力映射和强制完整
   基线；不能删除、跳过或弱化既有证据使新测试通过。
 - CLI/SDK 签名、快照 v1 字段、Flow envelope、session 状态、终态集、两秒终帧、上传
-  返回和退出码均保持兼容。当前可执行登记为 28 个能力、136 条不变量和 93 个离线
-  pytest case；D15/D16/D17 实施顺序未确定，激活时必须读取实际登记数量。
+  返回和退出码均保持兼容。D17 激活时可执行登记为 28 个能力、138 条不变量和 93 个
+  离线 pytest case；D17 在该实际基线上单调增加。
 
 ### D17 New Or Changed Invariants
 
@@ -3256,9 +3268,8 @@ test-only 实施并记录可复现边界，等待维护者另行确认是否扩�
   接收 resumable worker 经有界观测队列发送的 Flow，发布含真实批次/文件进度的活动
   快照和真实 CLI 生命周期产生的终态快照；独立 monitor 从磁盘读取两者并正常退出，
   且监控失败或退出不能改变上传结果或泄露敏感信息。
-- D17 单独实施时预计保持 28 个能力，新增 1 条不变量和 1 个离线 pytest case，即当前
-  136/93 预计变为 137/94。若 D15 或 D16 先实施，必须在其实际登记基础上继续单调增加；
-  方案登记不代表测试或不变量已经实现。
+- D17 保持 28 个能力，新增 `UPO-011` 和 1 个离线 pytest case；实际登记已由
+  138/93 单调增加为 139/94。
 
 ### D17 Focused Tests And Evidence
 
@@ -3346,14 +3357,57 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
 ### D17 Activation Status
 
 - [x] 维护者接受 D17 完整方案并授权登记到本地开发 Issue。
-- [ ] 维护者明确 D15/D16/D17 实施顺序并单独授权激活 D17。
-- [ ] 基于最新 `yuto` 的本地任务分支已创建，用户修改已受保护并核验。
-- [ ] 实施前基线和受控红灯已完成。
-- [ ] 真实跨进程测试、文档和开发底线登记已完成。
-- [ ] 专项、完整离线门禁和独立审查通过。
-- [ ] 维护者完成人工验收并授权适用的 Git/远程交付。
+- [x] D15、D16 已交付，维护者明确要求“开始开发”并单独授权激活 D17。
+- [x] 已基于 `yuto@79bf352` 创建本地分支
+  `codex/d17-monitor-cross-process-test`；创建前工作树干净且与 `github/yuto` 一致。
+- [x] 实施前 93/93 基线和“94 个脚本未登记”的受控红灯已完成。
+- [x] 真实跨进程测试、最小文档和 28/139/94 开发底线登记已完成；生产代码零修改。
+- [x] 两轮审查发现的 P2 均已修复；修复后专项与 94/94 完整离线门禁通过，最终独立
+  复审无 P0–P3 发现，结论 `APPROVED`。
+- [x] 维护者接受最终复验无误后的结果，并授权提交任务分支、no-ff 合入 `yuto`、仅
+  推送 `github/yuto` 及记录交付；任务分支不推送。
 
 ### Current Handoff Snapshot
+
+- D17 当前阶段：阶段 2–6 实现与最终门禁已完成，准备进入不编辑代码的独立审查。
+- Git：工作树位于 `codex/d17-monitor-cross-process-test@79bf352`，基点为
+  `yuto@79bf352`；D17 测试、开发底线、最小文档和交接记录均为未提交修改，后续必须
+  继续使用本工作树。
+- 环境与计数：Python 3.10.20、`huggingface-hub==1.1.7`、`datasets==4.4.1`；实际台账为
+  28 个能力、138 条不变量和 93 个离线 pytest case，D17 完成后目标为 28/139/94。
+- 实施前离线证据：`python tests/test_upload_observability.py` 为 **40/40**；
+  `python tests/test_resumable_recovery.py` 为 **84/84**；
+  `python tests/test_upload_batching.py` 全部通过；`python tests/run_cli_baseline.py` 为
+  **93 passed in 111.37s**。
+- 受控红灯：新脚本骨架可执行后，`python tests/test_cli_baseline_guard.py` 为 **13/14**，
+  明确报告发现 94 个脚本但登记为 93，且新脚本未注册；未修改生产代码。
+- 实现与专项：`python tests/test_upload_monitor_cross_process.py` 为 **8/8**；
+  `python tests/test_upload_observability.py` 为 **40/40**；
+  `python tests/test_resumable_recovery.py` 为 **84/84**；上传批次与慢 Flow 分别全部通过；
+  `python tests/test_development_floor.py` 为 **15/15**；基线守卫为 **14/14**；新文件
+  Black、isort、Ruff 通过。
+- 稳定性与最终门禁：新跨进程脚本额外连续运行 3 次均为 **8/8**；
+  `python tests/run_cli_baseline.py` 为 **94 passed in 112.49s**；compileall、pip check、
+  Python 3.9 语法、Black、isort、Ruff 和 `git diff --check` 均通过。未运行真实 AtomGit、
+  独立 Windows/Linux 主机或独立 Python 3.9 解释器。
+- 独立审查首轮：发现 1 个 P2——测试只证明正常 monitor 退出不改变上传，未覆盖合同
+  要求的真实 monitor 失败隔离。已返回实现阶段，让一个独立 monitor 从磁盘读取活动帧
+  后受控失败，再由正常 monitor 完成终态；同一上传保持活跃并最终成功。修复后新脚本
+  为 **9/9**，Black、isort、Ruff 和差异检查通过。
+- 首轮修复后的复审发现 1 个 P2：新脚本误映射到 `CLI-SURFACE`，未按 D17 合同映射
+  `CLI-DISPATCH`。已只移动该能力映射，目标映射恢复为 `FLOOR-REGISTRY`、
+  `CLI-DISPATCH`、`UPLOAD-RESUMABLE`、`PORTABILITY` 和 `UPLOAD-OBSERVABILITY`。
+- 第二轮修复后证据：开发底线 **15/15**、基线守卫 **14/14**、能力映射精确检查、
+  compileall、pip check、Black、isort、Ruff 和差异检查均通过；最后完整离线基线为
+  **94 passed in 130.60s**。
+- 最终独立复审：无 P0–P3 发现，结论 `APPROVED`。确认生产代码零修改、五个受影响
+  能力映射精确、离线证据未冒充真实远端证据；未运行独立 Windows/Linux 主机、独立
+  Python 3.9 解释器和真实 AtomGit 网络，均作为既定剩余风险保留。
+- 维护者授权后的最终交付复验：`python tests/test_upload_monitor_cross_process.py` 为
+  **9/9**，开发底线 **15/15**，`python tests/run_cli_baseline.py` 为
+  **94 passed in 120.77s**；compileall、pip check、Python 3.9 语法、Black、isort、
+  Ruff 和差异检查均通过。
+- 下一步：执行已授权的任务提交、本地 no-ff 合并、合并树复验和限定推送，不实施 D18。
 
 - Worktree: `/Users/yutaozhang/yuto/codes/atomgit_cli`，当前分支为 `yuto`；D14 已完成限定
   交付。阶段 1 上传观测专项
