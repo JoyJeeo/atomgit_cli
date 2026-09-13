@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D15 change-driven monitor redraw; delivery authorized)
+Status: inactive (D15 delivered; D16 and D17 awaiting activation)
 
 ## Successor Development Issue
 
@@ -44,6 +44,9 @@ Status: active (D15 change-driven monitor redraw; delivery authorized)
   维护者现已要求“自己验收一下 没有问题就提交并推送”，据此接受 D15 在最终复验
   无误后的结果，并授权提交本地任务分支、no-ff 合入 `yuto`、仅推送
   `github/yuto` 及记录交付结果；任务分支不推送。
+  D15 任务提交 `500182f` 已通过 no-ff 合并提交 `87ddb52` 合入 `yuto`；合并树完整
+  离线基线为 **93/93**。交付记录已仅推送并核验 `github/yuto`，任务分支未推送，
+  D15 已完成限定交付。
   D16 的“保留 dataset 到 model 兼容传输路由，仅在原始业务类型为 dataset 时精确
   过滤 HF 1.1.7 指定误报警”方案已获维护者接受并写入本 Issue；D16 当前未激活，
   尚未创建分支、修改源码/测试/用户文档或运行实施验证。
@@ -229,25 +232,27 @@ Status: active (D15 change-driven monitor redraw; delivery authorized)
   `github/yuto`；D14 已按该模式交付。任务分支未推送，未执行真实 AtomGit、PR、标签
   或发布。
 - D15 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
-  推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签或发布。
+  推送 `github/yuto`；D15 已按该模式交付。任务分支未推送，未执行真实 AtomGit、
+  PR、标签或发布。
 - D16 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
   未授权。实施完成后仍需维护者单独验收并授权适用交付。
 - D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
   未授权。实施完成后仍需维护者单独验收并授权适用交付。
-- Next exact action: 提交 `codex/d15-monitor-change-driven-refresh`，本地 no-ff 合入
-  `yuto`、只推送 `github/yuto` 并核验远端一致。不推送任务分支，不实施 D16–D18，
-  也不执行真实 AtomGit 操作。
+- Next exact action: 等待维护者单独授权激活 D16 或 D17，或授权开始 D18 讨论；不自动
+  实施 D16–D18，也不执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
-当前工作树已从最新 `yuto@0a8ace6` 创建并切换到
-`codex/d15-monitor-change-driven-refresh`。D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
+当前工作树已切回 `yuto`。D15 任务提交 `500182f` 已通过 no-ff 合并提交 `87ddb52`
+合入，交付记录已仅推送并核验 `github/yuto`；D15 任务分支保留在本地且未推送。
+D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
 `1af6d27` 合入，D14 交付记录提交为 `1a1b89e`；远端不存在 D14 任务分支。
 D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修改与本地交接记录
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
-D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15 已单独激活，D16 和
-D17 仍已接受但未激活；历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为已解决。
+D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15 已完成限定交付，
+D16 和 D17 仍已接受但未激活；历史矛盾的完整整理仍属于 D18，本次没有将 D18 标记为
+已解决。
 
 ### D01 Objective And Evidence
 
@@ -2874,7 +2879,10 @@ Python 3.9 解释器时如实记录。
   **93 passed in 110.06s**。compileall、pip check、Black、Ruff、两个行为变更文件的
   isort、Python 3.9 AST、凭证模式、二进制差异、未跟踪生成物和 `git diff --check`
   通过。
-- 当前阶段：维护者已接受结果并授权限定交付，最终复验通过，准备提交任务分支。
+- 限定交付：任务提交 `500182f` 已通过 no-ff 合并提交 `87ddb52` 合入 `yuto`；合并后
+  `python tests/run_cli_baseline.py` 为 **93 passed in 104.17s**。交付记录已仅推送并
+  核验 `github/yuto`，任务分支保留在本地且未推送。
+- 当前阶段：D15 已完成限定交付，Issue 恢复 inactive；D16、D17 保持未激活。
 
 ### D15 Activation Status
 
@@ -3446,14 +3454,13 @@ AtomGit 写入；未运行独立 Windows/Linux 主机或独立 Python 3.9 解释
   后续交付必须精确隔离，不能误纳入无关修改。
 - D05 交付：实现提交 `b6d65eb`，no-ff 合并提交 `ef17f41`；仅推送
   `github/yuto` 后以 `git ls-remote` 核验远端为 `ef17f41`，任务分支未推送。
-- D15 当前状态：已在 `codex/d15-monitor-change-driven-refresh` 激活；受控红灯、最小
-  实现、40/40 观测回归、文档、`UPO-010`、完整离线门禁和独立审查已完成，当前等待
-  限定交付。授权后最终完整基线为 93/93；下一步提交任务分支、no-ff 合入 `yuto`
-  并仅推送 `github/yuto`。任务分支不推送，真实 AtomGit 操作未授权。
+- D15 当前状态：已完成限定交付。任务提交 `500182f` 已通过 no-ff 合并提交 `87ddb52`
+  合入 `yuto`，合并树完整离线基线 93/93；交付记录已仅推送并核验 `github/yuto`，
+  任务分支保留在本地且未推送。未执行真实 AtomGit 操作。
 - D16 当前状态：业务类型感知的 HF 误报警过滤完整方案已接受并写入本 Issue，但尚未
   激活、创建分支、修改源码/测试/用户文档或运行实施验证。D14 已完成限定交付，远端
-  交付记录提交为 `1a1b89e`，任务分支未推送；当前 `github/yuto` 为 `0a8ace6`，不执行
-  真实 AtomGit 操作或实施 D16–D18。
+  交付记录提交为 `1a1b89e`，任务分支未推送；D16 仍未激活，不执行真实 AtomGit 操作
+  或实施 D16–D18。
 - D04 验证：专项 14/14；三次完整离线基线均 93/93，最终验收为
   93 passed in 100.75s；compileall、pip check、Python 3.9 语法、锁定依赖和差异检查通过。
 - D05 验证与交付证据以上述 D05 专项、完整门禁、审查和交付记录为准。

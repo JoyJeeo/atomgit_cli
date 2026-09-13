@@ -8,9 +8,9 @@
 - 最近更新: `2026-09-13`
 - 当前议题: `D18 TASK.md 中 R9 状态自相矛盾`
 - 下一步: D17 完整方案已接受并写入未激活的后继开发 Issue；等待维护者授权开始
-  D18 讨论，不实施 D15–D18
+  D18 讨论，不实施 D16–D18
 - 后继开发 Issue: `LOCAL-UPLOAD-RELIABILITY-20260907`；D01、D03、D04、D05、D06 和
-  D07 已交付，D08、D09、D10、D11、D12、D13 和 D14 也已完成限定交付；D15、D16、
+  D07 已交付，D08、D09、D10、D11、D12、D13、D14 和 D15 也已完成限定交付；D16、
   D17 已接受并登记但尚未激活
 
 ## 目标与权限边界
@@ -1177,10 +1177,11 @@ D16–D18 仍未授权。
 | 2026-09-13 | 接受 D17 的纯离线真实 spawn 进程端到端测试方案：贯通上传 CLI、UploadSession、resumable worker、观测队列、原子 JSON 快照和独立 monitor，验证活动态、真实终态、自动退出、脱敏和进程回收；完整方案写入未激活的开发 Issue，并顺序进入 D18 | 维护者明确要求“将完整开发方案落入开发issue中” |
 | 2026-09-13 | 单独激活 D15，创建基于 `yuto@0a8ace6` 的本地任务分支并授权范围内源码、既有测试、最小用户文档、开发底线和离线验证；D16–D18、提交、合并、推送及真实 AtomGit 操作不授权 | 维护者明确要求“开始继续开发” |
 | 2026-09-13 | D15 最终复验无误后接受结果，授权提交本地任务分支、no-ff 合入 `yuto`、仅推送 `github/yuto`；任务分支不推送 | 维护者明确要求“自己验收一下 没有问题就提交并推送” |
+| 2026-09-13 | D15 任务提交 `500182f` 通过 no-ff 合并提交 `87ddb52` 合入；合并树 93/93 通过，交付记录已仅推送并核验 `github/yuto`，任务分支未推送 | 授权范围内交付核验 |
 
 ## 后继开发 Issue 交接
 
-- 状态: `active; D01–D14 delivered except removed D02; D15 activated; D16/D17 accepted and unactivated`
+- 状态: `inactive; D01–D15 delivered except removed D02; D16/D17 accepted and unactivated`
 - 目标文件: `.ai/TASK.md`
 - 开发 Issue ID: `LOCAL-UPLOAD-RELIABILITY-20260907`
 - 已映射问题: `D01 / UPLOAD-01`、`D03 / UPLOAD-03`、`D04 / UPLOAD-04`、
