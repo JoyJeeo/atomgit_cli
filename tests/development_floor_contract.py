@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 136
+BASELINE_INVARIANT_COUNT = 137
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -1437,6 +1437,11 @@ CAPABILITY_REGISTRY = {
                 "Upload session lists share one current time per render, show valid update times as floored seconds, minutes, hours, or days ago, and isolate invalid or future values as unavailable.",
                 "test_upload_observability.py",
             ),
+            _invariant(
+                "UPO-010",
+                "Detailed upload monitoring polls its pinned session every second but clears and prints only changed rendered frames, while unreadable snapshots preserve the display and real terminal states still render and exit after the final-frame delay.",
+                "test_upload_observability.py",
+            ),
         ),
         (
             "test_lfs_slow_flow_recovery.py",
@@ -1475,7 +1480,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "136 条可观察行为不变量",
+        "137 条可观察行为不变量",
         "93 个隔离 pytest case",
     ),
     "docs/testing.md": ("93 个 pytest case", "development_floor.md"),
