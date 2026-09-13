@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active (D16 accepted; authorized delivery in progress)
+Status: inactive (D16 delivered; D17 awaiting activation)
 
 ## Successor Development Issue
 
@@ -55,7 +55,8 @@ Status: active (D16 accepted; authorized delivery in progress)
   warning 规则也尚未正确绑定标准库 API。现已完成恢复修复、精确规则、
   全入口接线、resumable 显式进程参数、受控红灯、回归、`DEP-004`、最小文档、
   结构登记、完整离线门禁、静态/安全检查和独立审查。维护者已接受结果并授权交付，
-  最终交付复验通过，当前进入任务提交与本地合并。
+  最终交付复验通过；任务提交 `8f4e876` 已通过 no-ff 合并提交 `46baa97` 合入
+  `yuto`，合并树完整离线基线为 **93/93**。D16 已完成限定交付。
   D17 的“新增纯离线真实 spawn 进程端到端测试，贯通上传 CLI、UploadSession、
   resumable worker、观测队列、JSON 快照和独立 monitor”方案已获维护者接受并写入
   本 Issue；D17 当前未激活，尚未创建分支、修改测试/开发底线/用户文档或运行实施
@@ -250,18 +251,19 @@ Status: active (D16 accepted; authorized delivery in progress)
   PR、标签或发布。
 - D16 delivery mode: 最终复验通过后提交本地任务分支、no-ff 合入 `yuto`，并且只
   推送 `github/yuto`；不推送任务分支，不执行真实 AtomGit、PR、标签、发布或
-  D17–D18。
+  D17–D18。D16 已按该模式完成本地提交、合并和合并树复验，待本交付记录提交后
+  仅推送 `github/yuto`。
 - D17 delivery mode: 当前只登记方案；实施、提交、合并、推送和真实 AtomGit 操作均
   未授权。实施完成后仍需维护者单独验收并授权适用交付。
-- Next exact action: 执行 D16 最终交付复验；全部通过后提交任务分支、本地 no-ff
-  合入 `yuto`、复验合并树、记录交付并仅推送 `github/yuto`。不推送任务分支，
-  不实施 D17–D18，不执行真实 AtomGit 操作。
+- Next exact action: 提交本交付记录并仅推送 `github/yuto`，随后核验远端一致；
+  之后等待维护者单独授权激活 D17 或继续 D18 讨论。不推送任务分支，不实施
+  D17–D18，不执行真实 AtomGit 操作。
 
 ### Repository Reconciliation
 
-当前工作树位于 `codex/d16-dataset-warning-filter@560b7ac`，基线为已交付的
-`yuto@560b7ac`。恢复时工作树含 6 份未提交 D16 源码/测试修改，必须继续使用
-当前 worktree，不重新应用历史 stash，不为交接创建未授权提交。D15 任务提交
+当前工作树位于 `yuto@46baa97`。D16 任务提交 `8f4e876` 已通过 no-ff 合并提交
+`46baa97` 合入；本交付记录尚未提交和推送。D16 任务分支保留在本地且未推送。
+D15 任务提交
 `500182f` 已通过 no-ff 合并提交 `87ddb52`
 合入，交付记录已仅推送并核验 `github/yuto`；D15 任务分支保留在本地且未推送。
 D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
@@ -269,8 +271,8 @@ D14 任务提交 `f7fdcb9` 已通过 no-ff 合并提交
 D12–D14 任务分支均保留在本地且未推送。原五份 `.ai` 规范修改与本地交接记录
 已获维护者单独文档交付授权，不再作为必须留在 D14 分支的未提交用户修改。
 两个保护性 stash 仅作历史备份保留，不应在后续任务中重新应用。Git 还包含 R9、
-D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15 已完成限定交付，
-D16 已按当前维护者请求单独激活；D17 仍已接受但未激活。历史矛盾的完整整理
+D01、D03–D13 的历史或已交付提交；旧记录不恢复为活跃任务。D15、D16 已完成限定
+交付，D17 仍已接受但未激活。历史矛盾的完整整理
 仍属于 D18，本次没有将 D18 标记为已解决。
 
 ### D01 Objective And Evidence
@@ -3149,6 +3151,9 @@ legacy SDK、LFS、批次、恢复、观测、返回和退出码不退化；开�
   包在整个 `run_canonical_lfs_upload()` 外层，超出“只包围实际 HF 上传”的既定范围。
   实现已把上下文收窄到上传回调内，并增加 LFS 校验阶段同文警告仍可见的断言。
   复审无 P0–P3 发现，结论 `APPROVED`。`APPROVED` 不授权提交、合并或推送。
+- 限定交付：任务提交 `8f4e876` 已通过 no-ff 合并提交 `46baa97` 合入 `yuto`；合并后
+  `python tests/run_cli_baseline.py` 为 **93 passed in 111.41s**。任务分支保留在本地
+  且不推送；未执行真实 AtomGit、PR、标签或发布。
 
 ### D17 Objective And Evidence
 
