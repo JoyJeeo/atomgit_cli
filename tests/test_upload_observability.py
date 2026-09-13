@@ -15,6 +15,7 @@ import atomgit
 from atomgit.adapters.lfs import service as lfs_service
 from atomgit.adapters.upload import resumable as upload_resumable
 from atomgit.infrastructure import upload_observe
+from atomgit.interfaces.cli.commands import monitor as monitor_command
 
 
 class FakePublisher:
@@ -66,6 +67,121 @@ def main():
     check("monitor status help", result.exit_code == 0 and "--list" in result.output)
     rejected = runner.invoke(atomgit.cli, ["monitor", "upload", "status", "--watch"])
     check("--watch rejected", rejected.exit_code == 2)
+
+    def run_monitor_sequence(initial, updates, session_id=None, interrupt_at=None):
+        calls = []
+        sleeps = []
+        pending = list(updates)
+        original_select_session = monitor_command.select_session
+        original_sleep = monitor_command.time.sleep
+        original_clear = monitor_command.click.clear
+
+        def fake_select_session(requested_id=None):
+            calls.append(requested_id)
+            if len(calls) == 1:
+                return dict(initial)
+            if requested_id != initial["session_id"]:
+                return {
+                    "session_id": "other",
+                    "status": "active",
+                    "batch": "1/2",
+                }
+            value = pending.pop(0) if pending else updates[-1]
+            return None if value is None else dict(value)
+
+        def fake_sleep(seconds):
+            sleeps.append(seconds)
+            if len(sleeps) > 4 or len(sleeps) == interrupt_at:
+                raise KeyboardInterrupt
+
+        monitor_command.select_session = fake_select_session
+        monitor_command.time.sleep = fake_sleep
+        monitor_command.click.clear = lambda: None
+        args = ["monitor", "upload", "status"]
+        if session_id is not None:
+            args.append(session_id)
+        try:
+            result = runner.invoke(atomgit.cli, args)
+        finally:
+            monitor_command.select_session = original_select_session
+            monitor_command.time.sleep = original_sleep
+            monitor_command.click.clear = original_clear
+        return result, calls, sleeps
+
+    active = {"session_id": "chosen", "status": "active", "batch": "1/2"}
+    finished = {"session_id": "chosen", "status": "finished", "batch": "2/2"}
+    failed = {"session_id": "chosen", "status": "failed", "batch": "1/2"}
+    default_result, default_calls, default_sleeps = run_monitor_sequence(
+        active, [finished]
+    )
+    check(
+        "default monitor pins the first session and exits after its final frame",
+        default_result.exit_code == 0
+        and default_calls == [None, "chosen"]
+        and default_sleeps == [1, 2]
+        and "会话 chosen | finished" in default_result.output
+        and "会话 other" not in default_result.output,
+    )
+    explicit_result, explicit_calls, explicit_sleeps = run_monitor_sequence(
+        active, [failed], "chosen"
+    )
+    check(
+        "explicit monitor exits after a failed final frame",
+        explicit_result.exit_code == 0
+        and explicit_calls == ["chosen", "chosen"]
+        and explicit_sleeps == [1, 2]
+        and "会话 chosen | failed" in explicit_result.output,
+    )
+    restored_result, restored_calls, restored_sleeps = run_monitor_sequence(
+        active, [None, finished], "chosen"
+    )
+    check(
+        "temporarily unreadable pinned session waits for a real terminal state",
+        restored_result.exit_code == 0
+        and restored_calls == ["chosen", "chosen", "chosen"]
+        and restored_sleeps == [1, 1, 2]
+        and "会话 chosen | finished" in restored_result.output,
+    )
+    terminal_result, terminal_calls, terminal_sleeps = run_monitor_sequence(
+        finished, [finished], "chosen"
+    )
+    check(
+        "initial terminal snapshot keeps the final frame before exiting",
+        terminal_result.exit_code == 0
+        and terminal_calls == ["chosen"]
+        and terminal_sleeps == [2]
+        and "会话 chosen | finished" in terminal_result.output,
+    )
+    terminal_interrupt, terminal_interrupt_calls, terminal_interrupt_sleeps = (
+        run_monitor_sequence(finished, [finished], "chosen", interrupt_at=1)
+    )
+    check(
+        "Ctrl+C during the initial final-frame delay exits the monitor cleanly",
+        terminal_interrupt.exit_code == 0
+        and terminal_interrupt_calls == ["chosen"]
+        and terminal_interrupt_sleeps == [2],
+    )
+
+    original_select_session = monitor_command.select_session
+    original_sleep = monitor_command.time.sleep
+    try:
+        interrupt_calls = []
+        monitor_command.select_session = lambda requested_id=None: (
+            interrupt_calls.append(requested_id) or active
+        )
+        monitor_command.time.sleep = lambda _seconds: (_ for _ in ()).throw(
+            KeyboardInterrupt
+        )
+        interrupted = runner.invoke(
+            atomgit.cli, ["monitor", "upload", "status", "chosen"]
+        )
+    finally:
+        monitor_command.select_session = original_select_session
+        monitor_command.time.sleep = original_sleep
+    check(
+        "Ctrl+C exits only the pinned monitor",
+        interrupted.exit_code == 0 and interrupt_calls == ["chosen"],
+    )
 
     api_mod = sys.modules["atomgit.api"]
     cfg_mod = sys.modules["atomgit.config"]
