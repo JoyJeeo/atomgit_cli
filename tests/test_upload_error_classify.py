@@ -77,6 +77,71 @@ def case(name, exc, exp_type_kw, repo_id="user/repo"):
 
 
 def main():
+    from atomgit.adapters.upload.errors import (
+        ResumableWorkerError,
+        _resumable_failure_envelope,
+    )
+
+    diagnostic_error = _httpx.HTTPStatusError(
+        "Authorization: Bearer fake-diagnostic-secret",
+        request=_httpx.Request(
+            "POST", "https://signed.invalid/?token=fake-diagnostic-secret"
+        ),
+        response=_resp(422),
+    )
+    envelope = _resumable_failure_envelope(diagnostic_error, stage="commit")
+    diagnostic = envelope["diagnostic"]
+    worker = ResumableWorkerError(
+        envelope["category"], diagnostic={**diagnostic, "exit_code": 1}
+    )
+    kind, hint = classify(worker)
+    check(
+        "unknown HTTP failure retains safe stage, type, status and exit code",
+        diagnostic
+        == {
+            "stage": "commit",
+            "reason": "reported",
+            "error_type": "HTTPStatusError",
+            "status_code": 422,
+        }
+        and "提交与确认" in hint
+        and "HTTP 422" in hint
+        and "退出码：1" in hint
+        and "fake-diagnostic-secret" not in repr(envelope) + hint
+        and "signed.invalid" not in hint,
+    )
+    malformed = ResumableWorkerError(
+        [],
+        diagnostic={
+            "stage": ["secret"],
+            "error_type": "secret",
+            "status_code": True,
+            "exit_code": "secret",
+            "reason": {"secret": 1},
+            "token": "secret",
+        },
+    )
+    check(
+        "malformed diagnostic fields cannot leak or crash classification",
+        malformed.category == "unknown" and malformed.diagnostic == {},
+    )
+    write_error = _httpx.WriteTimeout("offline write timeout")
+    write_envelope = _resumable_failure_envelope(write_error, stage="preupload")
+    for label, error in (
+        ("direct", write_error),
+        (
+            "worker",
+            ResumableWorkerError(
+                write_envelope["category"], diagnostic=write_envelope["diagnostic"]
+            ),
+        ),
+    ):
+        kind, hint = classify(error)
+        check(
+            f"{label} write timeout does not suggest an ineffective timeout change",
+            kind == "请求超时" and "60 秒" in hint and "--timeout 不改变" in hint,
+        )
+
     # --- 认证失败 ---
     case("U1 401 文本 → 认证失败",
          Exception("401 Client Error. Unauthorized. Invalid username or password."),
@@ -163,7 +228,6 @@ def main():
     case("U14 'timeout' 文本 → 请求超时",
          Exception("Operation timed out."),
          "请求超时")
-
     # --- 网络连接失败 ---
     case("U15 ConnectionError → 网络连接失败",
          ConnectionError("Failed to establish a connection"),
@@ -188,6 +252,7 @@ def main():
         ("timeout", "请求超时"),
         ("connection", "网络连接失败"),
         ("upload_mode", "上传模式不安全"),
+        ("lfs_attributes", "LFS 配置"),
         ("client_resource", "客户端资源不足"),
     ]
     for category, expected in structured_cases:

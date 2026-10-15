@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 139
+BASELINE_INVARIANT_COUNT = 143
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -554,6 +554,25 @@ CAPABILITY_REGISTRY = {
                 "test_resumable_commit_policy.py",
                 "test_upload_batching.py",
             ),
+            _invariant(
+                "RESUMEUP-007",
+                "Child failures distinguish reported failure, absent or malformed results and abnormal exit using bounded stage, allowlisted exception type, HTTP status and exit code, without claiming a remote commit did not occur.",
+                "test_resumable_recovery.py",
+                "test_upload_error_classify.py",
+            ),
+            _invariant(
+                "RESUMEUP-008",
+                "Resumable workers coordinate per-file LFS bars and log lines in interactive terminals, append throttled file snapshots when redirected, keep transmission completion distinct from commit confirmation, disable tqdm monitors, restore streams/handlers/HF state on success and failure, and honor CLI/SDK progress disabling across fork and spawn.",
+                "test_resumable_recovery.py",
+                "test_upload_resumable.py",
+            ),
+            _invariant(
+                "RESUMEUP-009",
+                "Upload output and error guidance distinguish default connection, read and pool waiting from the locked 60-second write wait without changing unlimited upload lifetime or suggesting --timeout changes for WriteTimeout.",
+                "test_upload_resumable.py",
+                "test_resumable_recovery.py",
+                "test_upload_error_classify.py",
+            ),
         ),
         (
             "test_dataset_resumable_route.py",
@@ -562,6 +581,7 @@ CAPABILITY_REGISTRY = {
             "test_resumable_stats.py",
             "test_upload_batching.py",
             "test_upload_monitor_cross_process.py",
+            "test_upload_error_classify.py",
             "test_upload_observability.py",
             "test_upload_path_in_repo.py",
             "test_upload_progress.py",
@@ -1387,6 +1407,13 @@ CAPABILITY_REGISTRY = {
                 "test_upload_error_classify.py",
                 "test_upload_error_handling.py",
             ),
+            _invariant(
+                "REDACT-004",
+                "File, directory, SDK and child upload scopes redact dependency log records before handlers and contain background exception text, retaining only bounded diagnostic fields and restoring hooks after nested or overlapping scopes.",
+                "test_cli_error_redaction.py",
+                "test_upload_error_classify.py",
+                "test_resumable_recovery.py",
+            ),
         ),
         (
             "test_cli_error_redaction.py",
@@ -1510,7 +1537,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "139 条可观察行为不变量",
+        "143 条可观察行为不变量",
         "94 个隔离 pytest case",
     ),
     "docs/testing.md": ("94 个 pytest case", "development_floor.md"),

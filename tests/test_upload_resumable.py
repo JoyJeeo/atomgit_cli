@@ -491,6 +491,36 @@ def main():
                 check("T9 worker count forwarded", ulf_captured[0]["num_workers"] == 2)
             from atomgit.interfaces.sdk import AtomGitClient
 
+            for progress in (True, False):
+                ulf_captured.clear()
+                args = ["upload", str(source), "--repo-id", "user/repo"]
+                if not progress:
+                    args.append("--no-progress-bar")
+                result = runner.invoke(cli, args)
+                check(
+                    f"CLI resumable reports follow progress={progress}",
+                    result.exit_code == 0
+                    and len(ulf_captured) == 1
+                    and ulf_captured[0]["print_report"] is progress
+                    and ulf_captured[0]["print_report_every"] == 60
+                    and "[批次 1/1] 开始:" in result.output
+                    and "[批次 1/1] 成功:" in result.output
+                    and "上传批次汇总:" in result.output,
+                )
+                ulf_captured.clear()
+                sdk_result = AtomGitClient(token="fake-token").upload_folder(
+                    source,
+                    "user/repo",
+                    resumable=True,
+                    progress=progress,
+                )
+                check(
+                    f"native SDK resumable reports follow progress={progress}",
+                    sdk_result.ok
+                    and len(ulf_captured) == 1
+                    and ulf_captured[0]["print_report"] is progress,
+                )
+
             for timeout in (None, 0.05):
                 ulf_captured.clear()
                 validation_captured.clear()
@@ -516,7 +546,9 @@ def main():
                 check(
                     "CLI reports unlimited total and request waiting",
                     "上传总时限: 不限" in result.output
-                    and "默认网络请求等待超时:" in result.output,
+                    and "默认网络请求等待超时:" in result.output
+                    and "LFS 写入等待为 60秒" in result.output
+                    and "连接、读取及连接池等待" in result.output,
                 )
                 expected_timeout = 300.0 if timeout is None else timeout
                 check(

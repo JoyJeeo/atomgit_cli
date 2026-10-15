@@ -15,7 +15,7 @@ from ..infrastructure.validation import (
     validate_upload_path_no_symlinks,
 )
 from .lfs.pointer import CanonicalLfsCommitUnconfirmedError, run_canonical_lfs_upload
-from .upload.errors import _suppress_hf_model_repo_warning
+from .upload.errors import _scoped_upload_output, _suppress_hf_model_repo_warning
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -50,6 +50,7 @@ def _sdk_error(error, operation: str, repo_id: str = None):
     return classify(error, operation, repo_id)
 
 
+@_scoped_upload_output()
 def upload_folder(
     folder_path: Union[str, Path],
     repo_id: str,

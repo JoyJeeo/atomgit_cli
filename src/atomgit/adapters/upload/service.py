@@ -22,6 +22,7 @@ from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT, DEFAULT_UPLOAD_BATCH_
 from .errors import (
     ResumableWorkerError,
     _classify_upload_error,
+    _scoped_upload_output,
     _suppress_hf_model_repo_warning,
 )
 from .ordinary import (
@@ -115,6 +116,8 @@ def propagate_upload_errors():
 
 
 class UploadServiceMixin:
+
+    @_scoped_upload_output()
     def upload_folder(
         self,
         file_path: Path,
@@ -281,6 +284,7 @@ class UploadServiceMixin:
             print(f"💡 建议: {hint}")
             return False
 
+    @_scoped_upload_output()
     def upload_directory(
         self,
         dir_path: Path,
@@ -450,6 +454,7 @@ class UploadServiceMixin:
                                 folder_path=str(upload_root),
                                 repo_type=eff_repo_type,
                                 num_workers=num_workers or 5,
+                                print_report=progress_bar,
                             )
                             if revision is not None:
                                 lf_kwargs["revision"] = revision

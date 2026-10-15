@@ -10,6 +10,7 @@ import re
 import socket
 import stat
 import tempfile
+import threading
 import time
 import urllib.error
 from contextlib import contextmanager
@@ -25,6 +26,9 @@ from huggingface_hub import HfApi
 from huggingface_hub import close_session as close_hf_session
 from huggingface_hub import constants as hf_constants
 from huggingface_hub._local_folder import get_local_upload_paths, read_upload_metadata
+from huggingface_hub.utils.tqdm import progress_bar_states
+from huggingface_hub.utils.tqdm import tqdm as hf_tqdm
+from tqdm import tqdm as std_tqdm
 
 from ..download.integrity import _atomgit_file_checksum
 from ..download.transport import _atomgit_hf_endpoint
@@ -40,14 +44,17 @@ from ..lfs.pointer import (
 from ..lfs.service import _dispatch_upload_observation, set_upload_observer
 from .contracts import _RESUMABLE_DEFAULT_REQUEST_TIMEOUT
 from .errors import (
+    _UPLOAD_STAGES,
     ResumableCommitConflictError,
     ResumableCommitError,
     ResumableRecoveryStateError,
     ResumableTargetRevisionError,
     ResumableWorkerError,
     _resumable_failure_envelope,
+    _scoped_upload_output,
     _suppress_hf_model_repo_warning,
 )
+from .progress import _UploadProgress
 
 # Program-step 9 LFS policy slots are wired by atomgit.api.
 _atomgit_v5_get_json = None
@@ -103,6 +110,27 @@ class _UploadObservationSender:
     def __init__(self, observation_queue):
         self._queue = observation_queue
         self._sequence = 0
+        self.last_stage = "setup"
+        self._thread_stage = threading.local()
+
+    @property
+    def failure_stage(self):
+        return getattr(self._thread_stage, "value", self.last_stage)
+
+    def stage(self, value):
+        if not isinstance(value, str) or value not in _UPLOAD_STAGES:
+            return
+        self.last_stage = value
+        self._thread_stage.value = value
+        if self._queue is not None:
+            try:
+                self._queue.put_nowait(
+                    json.dumps(
+                        {"version": 1, "type": "upload_stage", "stage": value}
+                    ).encode("utf-8")
+                )
+            except Exception:
+                pass
 
     def send(self, message) -> None:
         if (
@@ -146,6 +174,15 @@ def _decode_upload_observation(value) -> Optional[dict]:
         envelope = json.loads(value.decode("utf-8"))
     except (UnicodeError, ValueError, TypeError):
         return None
+    if isinstance(envelope, dict) and set(envelope) == {"version", "type", "stage"}:
+        if (
+            envelope["version"] == 1
+            and envelope["type"] == "upload_stage"
+            and isinstance(envelope["stage"], str)
+            and envelope["stage"] in _UPLOAD_STAGES
+        ):
+            return envelope
+        return None
     if (
         not isinstance(envelope, dict)
         or set(envelope) != _UPLOAD_OBSERVATION_FIELDS
@@ -163,14 +200,17 @@ def _decode_upload_observation(value) -> Optional[dict]:
     return envelope
 
 
-def _drain_upload_observations(observation_queue, source_id) -> None:
+def _drain_upload_observations(observation_queue, source_id) -> Optional[str]:
+    stage = None
     while True:
         try:
             value = observation_queue.get_nowait()
         except (queue.Empty, AttributeError, EOFError, OSError, ValueError):
-            return
+            return stage
         envelope = _decode_upload_observation(value)
-        if envelope is not None:
+        if envelope is not None and envelope.get("type") == "upload_stage":
+            stage = envelope["stage"]
+        elif envelope is not None:
             _dispatch_upload_observation(source_id, envelope=envelope)
 
 
@@ -1119,6 +1159,48 @@ def _print_resumable_commit_event(event, batch_context) -> None:
         )
 
 
+@contextmanager
+def _scoped_resumable_progress():
+    """Append HF reports without dynamic bars or tqdm background monitors."""
+    classes = (std_tqdm, hf_tqdm)
+    missing = object()
+    intervals = {cls: cls.__dict__.get("monitor_interval", missing) for cls in classes}
+    original_report = hf_large_folder._print_overwrite
+    original_progress = dict(progress_bar_states)
+
+    def append_report(report):
+        print(report, flush=True)
+
+    try:
+        hf_large_folder._print_overwrite = append_report
+        # The locked HF helper refuses disable_progress_bars() when its env
+        # setting is false. Log mode must never let that re-enable cursor moves.
+        progress_bar_states.clear()
+        progress_bar_states["_global"] = False
+        for cls in classes:
+            cls.monitor_interval = 0
+        # In a fork child an inherited monitor has no live thread. In a
+        # reused process, stop an existing monitor before creating more bars.
+        monitors = {cls.monitor for cls in classes if cls.monitor is not None}
+        for monitor in monitors:
+            if monitor.is_alive():
+                monitor.exit()
+        for cls in classes:
+            cls.monitor = None
+        yield
+    finally:
+        hf_large_folder._print_overwrite = original_report
+        progress_bar_states.clear()
+        progress_bar_states.update(original_progress)
+        for cls, interval in intervals.items():
+            if interval is missing:
+                if "monitor_interval" in cls.__dict__:
+                    del cls.monitor_interval
+            else:
+                cls.monitor_interval = interval
+
+
+@_scoped_upload_output()
 def _run_resumable_upload(
     token,
     kwargs,
@@ -1146,23 +1228,33 @@ def _run_resumable_upload(
         else None
     )
     observation_sender = _UploadObservationSender(observation_queue)
+    progress = _UploadProgress(enabled=kwargs.get("print_report", True))
     slow_flow_coordinator = _SlowFlowCoordinator(
         event_callback=lambda event: _print_resumable_slow_flow_event(
             event, batch_context
         ),
         observation_callback=observation_sender.send,
+        progress_callback=progress.observe,
     )
     result_sent = False
 
     def send_failure(error):
         nonlocal result_sent
         if not result_sent:
-            result_queue.put((False, _resumable_failure_envelope(error)))
+            result_queue.put(
+                (
+                    False,
+                    _resumable_failure_envelope(
+                        error, stage=observation_sender.failure_stage
+                    ),
+                )
+            )
             result_sent = True
 
     def fatal_exit(error):
         if multiprocessing.current_process().name == "MainProcess":
             return
+        progress.close()
         send_failure(error)
         if hasattr(result_queue, "close"):
             result_queue.close()
@@ -1171,6 +1263,7 @@ def _run_resumable_upload(
         os._exit(1)
 
     def get_upload_mode_with_policy(*args, **kwargs):
+        observation_sender.stage("upload_mode")
         result = original_get_upload_mode(*args, **kwargs)
         items = kwargs.get("items")
         if items is None and args:
@@ -1188,6 +1281,7 @@ def _run_resumable_upload(
         hf_constants.DEFAULT_REQUEST_TIMEOUT = request_timeout
         close_hf_session()
         client = HfApi(endpoint=_atomgit_hf_endpoint(), token=token)
+        observation_sender.stage("recovery")
         recovery = _recover_pending_commit(
             folder_path=Path(kwargs["folder_path"]),
             token=token,
@@ -1205,11 +1299,17 @@ def _run_resumable_upload(
                 },
                 batch_context,
             )
-        _refresh_unsafe_resumable_upload_modes(Path(kwargs["folder_path"]))
+        observation_sender.stage("prepare")
+        cached_patterns = (
+            _resumable_projection_lfs_patterns(Path(kwargs["folder_path"]))
+            if auto_configure_lfs
+            else ()
+        )
+        _refresh_unsafe_resumable_upload_modes(
+            Path(kwargs["folder_path"]),
+            (*configured_lfs_patterns, *cached_patterns),
+        )
         if lfs_attributes_policy is not None:
-            cached_patterns = _resumable_projection_lfs_patterns(
-                Path(kwargs["folder_path"])
-            )
             if cached_patterns:
                 try:
                     lfs_attributes_policy.validate_patterns(cached_patterns)
@@ -1233,7 +1333,13 @@ def _run_resumable_upload(
             ),
             lfs_attributes_policy=lfs_attributes_policy,
         )
-        hf_large_folder._preupload_lfs = preupload_controller.preupload_lfs
+
+        def preupload_with_stage(*args, **kwargs):
+            observation_sender.stage("preupload")
+            return preupload_controller.preupload_lfs(*args, **kwargs)
+
+        hf_large_folder._preupload_lfs = preupload_with_stage
+
         create_commit = getattr(client, "create_commit", None)
         if callable(create_commit):
             controller = _ResumableCommitController(
@@ -1261,8 +1367,17 @@ def _run_resumable_upload(
                 folder_path=Path(kwargs["folder_path"]),
                 request_timeout=request_timeout,
             )
-            client.create_commit = controller.create_commit
-        with _scoped_resumable_lfs_recovery(slow_flow_coordinator):
+
+            def commit_with_stage(*args, **kwargs):
+                observation_sender.stage("commit")
+                return controller.create_commit(*args, **kwargs)
+
+            client.create_commit = commit_with_stage
+        with (
+            _scoped_resumable_progress(),
+            progress,
+            _scoped_resumable_lfs_recovery(slow_flow_coordinator),
+        ):
             with _suppress_hf_model_repo_warning(suppress_dataset_warning):
                 client.upload_large_folder(**kwargs)
         result_queue.put((True, {"recovered": recovery["confirmed"]}))
@@ -1332,20 +1447,41 @@ def _execute_resumable_upload_process(
     )
     process.daemon = True
     terminal = "failed"
+    last_stage = "unknown"
     try:
         process.start()
         while process.is_alive():
             process.join(0.1)
-            _drain_upload_observations(observation_queue, source_id)
+            last_stage = (
+                _drain_upload_observations(observation_queue, source_id) or last_stage
+            )
         process.join()
-        _drain_upload_observations(observation_queue, source_id)
+        last_stage = (
+            _drain_upload_observations(observation_queue, source_id) or last_stage
+        )
+
+        def process_failure(reason):
+            return ResumableWorkerError(
+                "worker_process",
+                diagnostic={
+                    "reason": reason,
+                    "stage": last_stage,
+                    "exit_code": process.exitcode,
+                },
+            )
+
         try:
-            ok, error = result_queue.get(timeout=1)
-        except Exception as exc:
-            raise RuntimeError(
-                "resumable upload worker exited without a result"
-            ) from exc
+            result = result_queue.get(timeout=1)
+        except Exception:
+            raise process_failure("no_result") from None
+        if not isinstance(result, tuple) or len(result) != 2:
+            raise process_failure("invalid_result")
+        ok, error = result
         if ok is False:
+            if not isinstance(error, dict) or not isinstance(
+                error.get("category"), str
+            ):
+                raise process_failure("invalid_result")
             category = error.get("category") if isinstance(error, dict) else None
             patterns = error.get("lfs_patterns", ()) if isinstance(error, dict) else ()
             commit_revision = (
@@ -1363,6 +1499,15 @@ def _execute_resumable_upload_process(
                 confirmation_failure=confirmation_failure,
                 confirmed=confirmed,
                 remaining=remaining,
+                diagnostic={
+                    **(
+                        error.get("diagnostic", {})
+                        if isinstance(error, dict)
+                        and isinstance(error.get("diagnostic"), dict)
+                        else {}
+                    ),
+                    "exit_code": process.exitcode,
+                },
             )
         if (
             ok is not True
@@ -1371,9 +1516,10 @@ def _execute_resumable_upload_process(
             or not isinstance(error["recovered"], int)
             or isinstance(error["recovered"], bool)
             or not 0 <= error["recovered"] <= _PENDING_COMMIT_MAX_OPERATIONS
-            or getattr(process, "exitcode", 0) != 0
         ):
-            raise RuntimeError("resumable upload worker returned an invalid result")
+            raise process_failure("invalid_result")
+        if getattr(process, "exitcode", 0) != 0:
+            raise process_failure("abnormal_exit")
         terminal = "completed"
         return error
     except KeyboardInterrupt:
@@ -1386,6 +1532,8 @@ def _execute_resumable_upload_process(
             if process.is_alive():
                 process.kill()
                 process.join()
+        if upload_kwargs.get("print_report", True):
+            _UploadProgress.clear_terminal()
         _drain_upload_observations(observation_queue, source_id)
         _dispatch_upload_observation(source_id, terminal=terminal)
         if hasattr(result_queue, "close"):

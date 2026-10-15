@@ -1243,9 +1243,23 @@ def main():
             process.join(5)
             child_result = result_queue.get(timeout=1)
             check("persistent child failure terminates promptly", not process.is_alive())
-            check("persistent child failure returns bounded structured error",
-                  child_result == (False, {"category": "rate_limit"}),
-                  repr(child_result))
+            check(
+                "persistent child failure returns bounded structured error",
+                child_result
+                == (
+                    False,
+                    {
+                        "category": "rate_limit",
+                        "diagnostic": {
+                            "stage": "commit",
+                            "reason": "reported",
+                            "error_type": "HfHubHTTPError",
+                            "status_code": 429,
+                        },
+                    },
+                ),
+                repr(child_result),
+            )
         finally:
             if process is not None and process.is_alive():
                 process.terminate()

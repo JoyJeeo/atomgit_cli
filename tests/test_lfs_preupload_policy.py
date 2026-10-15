@@ -354,7 +354,19 @@ def main():
         )
         check(
             "inline terminal failure returns bounded category",
-            inline_queue.get_nowait() == (False, {"category": "lfs_quota"}),
+            inline_queue.get_nowait()
+            == (
+                False,
+                {
+                    "category": "lfs_quota",
+                    "diagnostic": {
+                        "stage": "preupload",
+                        "reason": "reported",
+                        "error_type": "HfHubHTTPError",
+                        "status_code": 413,
+                    },
+                },
+            ),
         )
         check(
             "inline failure restores dependency preupload global",
@@ -380,7 +392,19 @@ def main():
             check("terminal LFS child exits promptly", not process.is_alive())
             check(
                 "terminal LFS child returns bounded category",
-                child_result == (False, {"category": "lfs_quota"}),
+                child_result
+                == (
+                    False,
+                    {
+                        "category": "lfs_quota",
+                        "diagnostic": {
+                            "stage": "preupload",
+                            "reason": "reported",
+                            "error_type": "HfHubHTTPError",
+                            "status_code": 413,
+                        },
+                    },
+                ),
                 repr(child_result),
             )
         else:

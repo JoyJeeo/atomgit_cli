@@ -82,12 +82,12 @@ LEGACY_TOOL_DEBT = {
     "black": {
         "files": 76,
         "changes": 409,
-        "digest": "dcda6019f22120d25090bdf9fba00db46b706b5c07375d141ad9061f66a94db9",
+        "digest": "a894274b8fd0fa7aaf9420a41c6fc68229ce78dcdfb0f110327479f8d5695685",
     },
     "isort": {
         "files": 80,
         "changes": 87,
-        "digest": "a577c9894bc80ac7f202bb50d4e26d2a24b5b729536d846e9adb374636ffc0c1",
+        "digest": "d0ffb971b554821358ae9a6ee4368e916da0e6d59a035220eb61557a2603e848",
     },
     "ruff": {
         "files": 15,
@@ -121,6 +121,7 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/adapters/upload/contracts.py",
     "src/atomgit/adapters/upload/errors.py",
     "src/atomgit/adapters/upload/ordinary.py",
+    "src/atomgit/adapters/upload/progress.py",
     "src/atomgit/adapters/upload/projection.py",
     "src/atomgit/adapters/upload/resumable.py",
     "src/atomgit/adapters/upload/service.py",

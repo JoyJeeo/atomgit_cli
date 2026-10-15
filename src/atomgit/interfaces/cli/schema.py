@@ -237,13 +237,14 @@ def build_cli(context):
         "timeout_sec",
         default=None,
         type=float,
-        help="默认网络请求等待超时（秒），省略时为 300 秒；上传总时长不限",
+        help="默认网络请求等待超时（秒），省略时为 300 秒；用于连接、读取及连接池等待。"
+        "LFS 写入等待为 60 秒，上传总时长不限",
     )
     @click.option(
         "--no-progress-bar",
         is_flag=True,
         default=False,
-        help="禁用上传进度条（适用于日志/CI等非交互场景）",
+        help="禁用上传进度显示（断点续传关闭逐文件进度和周期报告；批次和错误日志保留）",
     )
     @click.option(
         "--path-in-repo",

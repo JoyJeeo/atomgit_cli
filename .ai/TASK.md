@@ -1,5 +1,86 @@
 # Current Issue Contract
 
+Status: active
+
+- ID: `LOCAL-UPLOAD-DIAGNOSTICS-20261015`
+- Title: 上传失败诊断与日志脱敏
+- Authorization: 用户于 2026-10-15 授权本地修复，随后明确要求“提交并推送一下”，并确认一并提交启动前的 LFS 缓存模式修复。允许本地提交、合入 yuto 并仅推送 github/yuto；不授权真实数据集上传、发布或其他远程写入。
+- Base: `yuto@29b59eb2089da92399d3a7c3dd9e83f8d80bf665`.
+- Branch/worktree: `codex/upload-diagnostics-redaction`，继续当前工作区。
+- Existing changes: README.md、docs/faq.md、adapters/lfs/service.py、adapters/upload/resumable.py、test_lfs_domain_ownership.py 的 54 additions/9 deletions 是启动前已有的 LFS 模式刷新改动，必须保留；原始补丁备份在 /tmp/atomgit-upload-diagnostics-preexisting.patch。维护者本轮已明确授权一并交付。
+- Objective: 封闭 HF 底层上传日志的凭证泄露路径；修复 tqdm 监控兼容；在父子进程间传递安全的阶段/错误类型/HTTP 状态/退出码并正确区分进程异常；澄清请求等待与 60 秒写入等待；通过离线复现定位预上传后的失败路径。
+- Non-goals: 不升级锁定依赖、不改变 CLI/SDK 参数与默认重试/并发/超时、不删除缓存、不添加未知错误自动重试、不修改真实数据集。不能据无结果退出诊断推断服务端失败或远端未提交。
+- Affected Capability IDs: `UPLOAD-RESUMABLE`, `ERROR-REDACTION`, `UPLOAD-OBSERVABILITY`。
+- Protected invariants: 原断点格式、LFS 原始字节/标准指针、有限重试、未知提交先对账、独立观测不影响结果、凭证不进入输出或快照、HF 1.1.7 与 datasets 4.4.1 兼容、所有临时状态恢复。
+- New invariants: `REDACT-004`、`RESUMEUP-007`、`RESUMEUP-008`、`RESUMEUP-009`，登记册从 139 增至 143 条，脚本库存仍为 94。
+- Phases: 1) 基线与安全日志红灯/实现/验证；2) 子进程结果与阶段诊断红灯/实现/验证；3) tqdm 和超时提示/断点验证；4) 文档、能力与结构登记、完整基线、独立审查。
+- Verification: 扩展现有 offline tests，使用假凭证/假 HTTP 和真实隔离子进程；`python tests/run_cli_baseline.py`、`python -m compileall -q .`、`python -m pip check`、`git diff --check`。不读真实凭证、不进行真实上传。
+- Current phase: 同一 Issue 的“逐文件进度与日志协调”阶段已完成本地实现、完整离线验收与独立审查，等待维护者验收。此前取消文件条的展示方案已被本阶段替代；未提交/合并/推送或执行真实上传。
+- Diagnostic evidence: 发现 LFS preupload fatal_callback 在异常真正 raise 前退出，旧路径丢失底层 cause；现先绑定 cause 再回调，使固定类别继续保留安全 HTTP 状态和白名单类型。没有把这一诊断缺陷认定为线上最终退出根因。
+- Review: `APPROVED`。从最终差异和实际门禁重新检查：脱敏在 handler 前生效，字段采用白名单，真实进程异常不误报成功；恢复/重试/超时合同与签名保持；未发现本次改动的开放 P0/P1/P2/P3。审查发现并修复的 WriteTimeout 误导提示、fork 锁继承与 lfs_attributes 映射缺口均有红灯/绿灯回归。启动前已有补丁单独识别并保留。
+- Remaining uncertainty: 线上最终退出原始异常未保留，不能保证在离线环境复现同一个根因；诊断改善与已证实故障修复分别报告。
+
+- Final evidence (2026-10-15): `python tests/run_cli_baseline.py` **94/94 passed, 116.75s**；错误分类 **63/63**；提交策略 **70/70**；LFS 预上传 **89/89**；LFS 自动配置 **41/41**；输入验证 **16/16**；结构 **18/18**；独立 HOME/空工具缓存下打包 **13/13**；日志专项 **27/27**。真实 HF 调度器离线覆盖预上传后 422 失败、元数据保留及不重传续提成功。最终完整门禁含所有新增断言。
+- Static/dependency evidence: compileall、pip check、修改文件 Ruff、diff check 通过；既有工具债务数维持 Black 76 files/409 hunks、isort 80/87、Ruff 15/44，仅按精确差异更新指纹。启动前全部新增行仍存在，原有 test_lfs_domain_ownership 补丁逐字节未变。
+- Residual limits: 未运行任何真实上传/下载/远程写入，不能断言原线上退出根因已消除。阶段观测可能丢失；未知类型降为 UnclassifiedError；上传作用域内并发 HF/httpx/httpcore 日志也会用固定提示替换。原完整 traceback、URL、headers/body 不作为诊断输出。
+- Next action: 维护者验收本地修改；如授权交付，先明确启动前五处补丁的交付归属，再按规则提交与推送。出现新线上失败时只依据脱敏的阶段/HTTP/异常类型/退出码继续定位，不根据本地确认 0 推断远端未写入。
+
+
+## 追加阶段：上传日志不覆盖（2026-10-15）
+
+- Authorization: 本轮“开始开发”授权实施已汇报方案，沿用同一 Issue/分支，保留全部已有未提交修改。仅本地开发和离线验证。
+- Affected Capability IDs: `UPLOAD-RESUMABLE`, `UPLOAD-FOLDER`, `ERROR-REDACTION`。
+- Protected Existing Invariants: 上传结果、断点格式、重试、超时、并发、鉴权脱敏、普通上传进度与独立 monitor 行为保持不变。
+- New Or Changed Invariants: 授权迁移 `RESUMEUP-008`：由保留动态条改为子进程禁用动态条并追加周期报告；`--no-progress-bar` / SDK `progress=False` 关闭周期报告但保留生命周期事件；所有临时 HF/tqdm 状态在正常与异常退出后恢复。保留后台 monitor 停用保护。
+- Implementation: 仅在 resumable 子进程作用域替换 HF 1.1.7 `_print_overwrite` 为追加输出，复用 HF 统计与默认 60 秒间隔；父进程把展示选择作为 `print_report` 参数显式传入，兼容 fork/spawn。不新增依赖或命令参数。
+- Phases: 1) 回写、动态条与开关回归红灯；2) 最小源码实现与专项绿灯；3) 文档/能力契约、完整离线门禁、独立审查。
+- Verification: 现有 `test_resumable_recovery.py`、`test_upload_resumable.py` 增加终端/重定向、并发事件、fork/spawn、失败恢复及 CLI/SDK 透传证据；普通进度、批次、脱敏回归；完整 baseline、compileall、pip check、diff check。
+- Acceptance: 多轮报告及批次/重试信息全部保留，无 CR/清行/上移序列及动态条残留；关闭进度后生命周期仍可见，预上传不冒充提交成功。
+- Compatibility/risk: 不再显示 resumable 逐文件实时速度条；周期日志增加留存体积。锁定 HF 私有展示函数由离线回归约束，普通上传不变。不迁移用户数据；回滚仅撤销本阶段 diff。
+- Pre-change snapshot: `/var/folders/5_/ygt91gx93dv9h9g7v7_9l9hh0000gn/T/atomgit-append-logs-1pbtuy7q`，用于区分和保留启动前改动。
+- Current phase: 本地实现及验收完成，等待维护者验收。红灯：回写覆盖 8 项、CLI/SDK 关闭报告 2 项均失败；绿灯：恢复/输出 132/132、resumable 路由 65/65、普通进度 28/28、结构 18/18。
+- Final verification: `python tests/run_cli_baseline.py` **94/94 passed, 120.38s**，包含最终源码、文案、文档和契约。compileall、pip check、diff check、修改生产源码与干净测试 Ruff、Python 3.9 语法检查均通过；HF 1.1.7 调用签名已实际绑定，datasets 保持 4.4.1。
+- Tooling debt: 既有 Black 76 files/409 hunks、isort 80/87、Ruff 15/44 及全部指纹逐字未变；test_upload_resumable.py 原有 12 处 Ruff 告警未新增，本轮新增测试段无告警。干净文件策略通过。
+- Independent review: 分离的 reviewer 阶段对照本轮启动快照、最终差异、锁定签名、完整门禁和契约复核，未发现开放 P0/P1/P2/P3；结论 `APPROVED`。子进程状态恢复、普通上传兼容、CLI/SDK 参数透传、脱敏边界和已有改动保留均符合范围；不是远程验收证据。
+- Residual limits: 未运行真实上传、真实终端渲染或远程写入；使用真实 fork/spawn 进程和 HF/tqdm 渲染器，终端/重定向以可控输出流模拟。HF 私有展示接口仍受锁定版本约束。现有启动前补丁保留，相关重叠文件仅进行本阶段差异修改，未产生未跟踪文件。
+- Next action: 维护者验收；没有提交、合并、推送或远程操作授权。
+
+
+## 追加阶段：逐文件进度与日志协调（2026-10-15，当前）
+
+- Authorization: 用户确认终端逐文件动态进度、重定向逐文件追加日志的展示方案，并明确“好的 开始开发”；替代上一阶段取消逐文件显示的选择。仍仅授权本地开发与离线验证。
+- Affected Capability IDs: `UPLOAD-RESUMABLE`, `UPLOAD-LFS-RECOVERY`, `UPLOAD-OBSERVABILITY`, `ERROR-REDACTION`。
+- Protected Existing Invariants: 保留已有修改、脱敏、重试/断点/超时/并发、上传确认语义、普通上传与独立 monitor。现有跨进程观测协议与匿名快照不增加文件全名。
+- New Or Changed Invariants: `RESUMEUP-008` 迁移为：交互终端集中协调动态文件进度与历史日志；重定向时追加逐文件状态，无光标移动；关闭进度保留事件；成功/失败后恢复临时输出状态。100% 不是提交成功，失败不打印传输完成。
+- Design: 复用 LFS 协调器约 5 秒采样、分片累计字节与实际传输终态。子进程内一个输出管理器使用现有 tqdm 负责动态区，stdout/stderr 与依赖 console handler 的整行日志通过同一锁清除/重绘动态区。非交互每文件约 10 秒记录一次，开始/终态立即记录；HF 批次报告仍每 60 秒追加。父进程批次结果在子进程退出后输出。文件名仅作为子进程内显示标签，去除控制字符。
+- Phases: 1) 逐文件与日志协调回归红灯；2) 最小实现与专项绿灯；3) 文档/契约、完整基线、独立审查。
+- Verification: 真实 fork/spawn、并发文件、stdout/stderr/既有 logging handler、终端模拟及 PTY、重定向、关闭进度、失败与重试/分片、状态恢复；完整 offline baseline、compileall、pip check、diff check。
+- Acceptance: 进度可见百分比/字节/速度/预计剩余，已完成条退出动态区并留下记录；关键日志历史保留；非终端无光标序列；传输完成等待提交确认；观测/展示失败不改变上传结果。
+- Snapshot: `/var/folders/5_/ygt91gx93dv9h9g7v7_9l9hh0000gn/T/atomgit-file-progress-ft8hr0jm`。
+- Current phase: 本地实现、完整离线验收与独立审查完成，等待维护者验收。红灯 8 个 fork/spawn 输出场景均复现缺失逐文件进度；专项输出/恢复 176/176、LFS 慢流 33/33、CLI/SDK 路由 65/65、结构 18/18。随后增加零速度显示断言，单独通过并纳入最终基线。
+- Final verification: `python tests/run_cli_baseline.py` **94/94 passed, 131.63s**；源码布局 **11/11**，打包 **13/13**。真实 PTY 光标渲染复核证明关闭文件条后历史日志仍保留；父进程正常/异常/取消清理、fork/spawn、多线程 stdout/stderr/既有 handler、十秒限频和失败不冒充成功均有证据。首次完整基线暴露源码精确清单遗漏，后续格式门禁暴露新行需格式化，均修复后完整重跑通过，未削弱任何门禁。
+- Static evidence: compileall、pip check、diff check、修改实现与干净测试 Ruff、Python 3.9 语法与锁定依赖/tqdm 签名检查通过。新模块纳入源码布局、结构依赖、产物和干净文件清单；Black 76 files/409 hunks、isort 80/87、Ruff 15/44 未增长，仅刷新因上下文行变化的精确指纹。
+- Independent review: 分离 reviewer 阶段复核本轮快照差异、完整工作区改动、依赖接口、最终基线与用户展示要求，结论 `APPROVED`，无开放 P0/P1/P2/P3。文件条使用子进程内独立 tqdm 实例集合和锁；日志先整行缓冲再清除/重绘；已有脱敏工厂与原观察协议保留；传输终态不等于提交成功；所有输出/handler 临时替换恢复。
+- Residual limits: 未运行真实上传或远程写入，Windows 真机未测。逐文件显示针对真实 LFS 数据传输；普通小文件随批次提交统计，服务端复用对象不伪造字节传输。采样依赖 payload 继续读取，网络等待期间可能暂不刷新；ETA 是估计值。原始工作区修改均保留，新源文件 `src/atomgit/adapters/upload/progress.py` 尚未提交。
+- Next action: 维护者验收；无提交/合并/推送/真实上传授权。
+
+
+## 交付阶段（2026-10-15，覆盖上述历史权限与待验收状态）
+
+- Human acceptance: accepted；用户明确要求提交并推送，并确认现有 LFS 缓存模式修复一并提交。
+- Scope: 当前工作区的上传失败诊断、脱敏、日志与逐文件进度协调，以及既有 LFS 缓存模式修复、对应测试和文档。无其他文件纳入交付。
+- Delivery: 本地任务分支提交 -> 本地 no-ff 合入 yuto -> 仅推送 github/yuto -> 核对远端 SHA；不推送任务分支。
+- Preflight: 当前任务分支与本地 yuto 的基点均为 29b59eb；fetch 后 github/yuto 与本地 yuto 一致。交付复验 `python tests/run_cli_baseline.py`：**94 passed in 127.83s (0:02:07)**；日志保存在 `/tmp/atomgit-upload-delivery-baseline.log`。
+- Checks: 本轮 compileall、pip check、git diff --check 通过；既有独立审查 APPROVED，无开放问题。
+- Limits: 未执行真实上传，Windows 真机未测；不创建远程 Issue、PR、标签或发布。
+- Current phase / next action: 交付复验通过，准备提交、合并、推送并记录真实结果。
+
+---
+
+# Previous delivered Issue (historical, inactive)
+
+# Historical Issue Contract
+
 Status: inactive (D18 delivered)
 
 ## Successor Development Issue
