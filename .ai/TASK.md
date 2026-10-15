@@ -1,12 +1,12 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive (delivered)
 
 - ID: `LOCAL-UPLOAD-DIAGNOSTICS-20261015`
 - Title: 上传失败诊断与日志脱敏
 - Authorization: 用户于 2026-10-15 授权本地修复，随后明确要求“提交并推送一下”，并确认一并提交启动前的 LFS 缓存模式修复。允许本地提交、合入 yuto 并仅推送 github/yuto；不授权真实数据集上传、发布或其他远程写入。
 - Base: `yuto@29b59eb2089da92399d3a7c3dd9e83f8d80bf665`.
-- Branch/worktree: `codex/upload-diagnostics-redaction`，继续当前工作区。
+- Branch/worktree: 任务分支 `codex/upload-diagnostics-redaction` 已本地合入 `yuto`；当前工作区为 `yuto`。
 - Existing changes: README.md、docs/faq.md、adapters/lfs/service.py、adapters/upload/resumable.py、test_lfs_domain_ownership.py 的 54 additions/9 deletions 是启动前已有的 LFS 模式刷新改动，必须保留；原始补丁备份在 /tmp/atomgit-upload-diagnostics-preexisting.patch。维护者本轮已明确授权一并交付。
 - Objective: 封闭 HF 底层上传日志的凭证泄露路径；修复 tqdm 监控兼容；在父子进程间传递安全的阶段/错误类型/HTTP 状态/退出码并正确区分进程异常；澄清请求等待与 60 秒写入等待；通过离线复现定位预上传后的失败路径。
 - Non-goals: 不升级锁定依赖、不改变 CLI/SDK 参数与默认重试/并发/超时、不删除缓存、不添加未知错误自动重试、不修改真实数据集。不能据无结果退出诊断推断服务端失败或远端未提交。
@@ -15,7 +15,7 @@ Status: active
 - New invariants: `REDACT-004`、`RESUMEUP-007`、`RESUMEUP-008`、`RESUMEUP-009`，登记册从 139 增至 143 条，脚本库存仍为 94。
 - Phases: 1) 基线与安全日志红灯/实现/验证；2) 子进程结果与阶段诊断红灯/实现/验证；3) tqdm 和超时提示/断点验证；4) 文档、能力与结构登记、完整基线、独立审查。
 - Verification: 扩展现有 offline tests，使用假凭证/假 HTTP 和真实隔离子进程；`python tests/run_cli_baseline.py`、`python -m compileall -q .`、`python -m pip check`、`git diff --check`。不读真实凭证、不进行真实上传。
-- Current phase: 同一 Issue 的“逐文件进度与日志协调”阶段已完成本地实现、完整离线验收与独立审查，等待维护者验收。此前取消文件条的展示方案已被本阶段替代；未提交/合并/推送或执行真实上传。
+- Current phase: 已完成实现、离线验收、独立审查、维护者验收与限定交付；逐文件进度方案替代此前取消文件条的方案。代码已提交、本地合入 yuto 并推送 github/yuto，未执行真实上传。
 - Diagnostic evidence: 发现 LFS preupload fatal_callback 在异常真正 raise 前退出，旧路径丢失底层 cause；现先绑定 cause 再回调，使固定类别继续保留安全 HTTP 状态和白名单类型。没有把这一诊断缺陷认定为线上最终退出根因。
 - Review: `APPROVED`。从最终差异和实际门禁重新检查：脱敏在 handler 前生效，字段采用白名单，真实进程异常不误报成功；恢复/重试/超时合同与签名保持；未发现本次改动的开放 P0/P1/P2/P3。审查发现并修复的 WriteTimeout 误导提示、fork 锁继承与 lfs_attributes 映射缺口均有红灯/绿灯回归。启动前已有补丁单独识别并保留。
 - Remaining uncertainty: 线上最终退出原始异常未保留，不能保证在离线环境复现同一个根因；诊断改善与已证实故障修复分别报告。
@@ -23,7 +23,7 @@ Status: active
 - Final evidence (2026-10-15): `python tests/run_cli_baseline.py` **94/94 passed, 116.75s**；错误分类 **63/63**；提交策略 **70/70**；LFS 预上传 **89/89**；LFS 自动配置 **41/41**；输入验证 **16/16**；结构 **18/18**；独立 HOME/空工具缓存下打包 **13/13**；日志专项 **27/27**。真实 HF 调度器离线覆盖预上传后 422 失败、元数据保留及不重传续提成功。最终完整门禁含所有新增断言。
 - Static/dependency evidence: compileall、pip check、修改文件 Ruff、diff check 通过；既有工具债务数维持 Black 76 files/409 hunks、isort 80/87、Ruff 15/44，仅按精确差异更新指纹。启动前全部新增行仍存在，原有 test_lfs_domain_ownership 补丁逐字节未变。
 - Residual limits: 未运行任何真实上传/下载/远程写入，不能断言原线上退出根因已消除。阶段观测可能丢失；未知类型降为 UnclassifiedError；上传作用域内并发 HF/httpx/httpcore 日志也会用固定提示替换。原完整 traceback、URL、headers/body 不作为诊断输出。
-- Next action: 维护者验收本地修改；如授权交付，先明确启动前五处补丁的交付归属，再按规则提交与推送。出现新线上失败时只依据脱敏的阶段/HTTP/异常类型/退出码继续定位，不根据本地确认 0 推断远端未写入。
+- Next action: 本 Issue 已交付，等待用户新指令；不自动启动后续工作。出现新线上失败时只依据脱敏的阶段/HTTP/异常类型/退出码继续定位，不根据本地确认 0 推断远端未写入。
 
 
 ## 追加阶段：上传日志不覆盖（2026-10-15）
@@ -73,7 +73,8 @@ Status: active
 - Preflight: 当前任务分支与本地 yuto 的基点均为 29b59eb；fetch 后 github/yuto 与本地 yuto 一致。交付复验 `python tests/run_cli_baseline.py`：**94 passed in 127.83s (0:02:07)**；日志保存在 `/tmp/atomgit-upload-delivery-baseline.log`。
 - Checks: 本轮 compileall、pip check、git diff --check 通过；既有独立审查 APPROVED，无开放问题。
 - Limits: 未执行真实上传，Windows 真机未测；不创建远程 Issue、PR、标签或发布。
-- Current phase / next action: 交付复验通过，准备提交、合并、推送并记录真实结果。
+- Delivery evidence: 实现提交 `8526bbc`；本地 no-ff 合并提交 `5ef15b34793db3b004d660cbc032890ac58a7320`。已成功推送 github/yuto，`git ls-remote --heads github refs/heads/yuto` 确认远端为该合并提交。任务分支未推送。
+- Current phase / next action: 功能交付完成；本次文档提交记录已验证的交付结果，随后仅同步 github/yuto 并核对远端。Issue 已 inactive，等待用户新指令。
 
 ---
 
