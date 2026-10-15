@@ -210,7 +210,15 @@ def main():
             result_queue.get_nowait()
             == (
                 False,
-                {"category": "lfs_attributes", "lfs_patterns": ["*.bag"]},
+                {
+                    "category": "lfs_attributes",
+                    "lfs_patterns": ["*.bag"],
+                    "diagnostic": {
+                        "stage": "upload_mode",
+                        "reason": "reported",
+                        "error_type": "ResumableLfsAttributesError",
+                    },
+                },
             )
             and ProactivePolicyApi.events == [],
             repr(ProactivePolicyApi.events),
@@ -235,7 +243,15 @@ def main():
             result_queue.get_nowait()
             == (
                 False,
-                {"category": "lfs_attributes", "lfs_patterns": ["*.bag"]},
+                {
+                    "category": "lfs_attributes",
+                    "lfs_patterns": ["*.bag"],
+                    "diagnostic": {
+                        "stage": "preupload",
+                        "reason": "reported",
+                        "error_type": "ResumableLfsAttributesError",
+                    },
+                },
             )
             and ProactivePolicyApi.events == [],
             repr(ProactivePolicyApi.events),
@@ -321,6 +337,11 @@ def main():
                     {
                         "category": "lfs_attributes",
                         "lfs_patterns": ["*.bag"],
+                        "diagnostic": {
+                            "stage": "prepare",
+                            "reason": "reported",
+                            "error_type": "ResumableLfsAttributesError",
+                        },
                     },
                 )
                 and ProactivePolicyApi.events == [],

@@ -1,7 +1,11 @@
 """Credential-safe upload and resumable failure policy."""
 
 import errno
+import logging
+import os
 import socket
+import sys
+import threading
 import warnings
 from contextlib import contextmanager
 from typing import Optional
@@ -24,6 +28,163 @@ _HF_DATASET_REPO_WARNING_MESSAGE_PATTERN = (
     r"If you are trying to upload a dataset, please set `repo_type='dataset'` "
     r"or `--repo-type=dataset` in a CLI\.$"
 )
+_UPLOAD_OUTPUT_LOCK = threading.RLock()
+_UPLOAD_OUTPUT_USERS = 0
+_UPLOAD_LOG_FACTORY = None
+_UPLOAD_THREAD_HOOK = None
+
+
+def _reset_upload_output_lock():
+    global _UPLOAD_OUTPUT_LOCK
+    _UPLOAD_OUTPUT_LOCK = threading.RLock()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_upload_output_lock)
+
+
+_SAFE_UPLOAD_ERROR_TYPES = frozenset(
+    {
+        "RuntimeError",
+        "ValueError",
+        "TypeError",
+        "AttributeError",
+        "KeyError",
+        "OSError",
+        "PermissionError",
+        "FileNotFoundError",
+        "MemoryError",
+        "TimeoutError",
+        "ConnectionError",
+        "ReadTimeout",
+        "WriteTimeout",
+        "ConnectTimeout",
+        "PoolTimeout",
+        "ReadError",
+        "WriteError",
+        "ConnectError",
+        "RemoteProtocolError",
+        "HTTPStatusError",
+        "HfHubHTTPError",
+        "BadRequestError",
+        "ResumableCommitError",
+        "ResumableWorkerError",
+        "KeyboardInterrupt",
+        "ResumableLfsPreuploadError",
+        "ResumableUploadModeError",
+        "ResumableLfsAttributesError",
+        "ResumableRecoveryStateError",
+        "ResumableCommitConflictError",
+        "CanonicalLfsPointerError",
+        "CanonicalLfsCommitUnconfirmedError",
+    }
+)
+_UPLOAD_STAGES = {
+    "unknown": "未知",
+    "setup": "初始化",
+    "recovery": "断点对账",
+    "prepare": "准备文件",
+    "upload_mode": "判定上传模式",
+    "preupload": "LFS 预上传",
+    "commit": "提交与确认",
+    "complete": "完成",
+}
+_LFS_WRITE_TIMEOUT_HINT = (
+    "LFS 写入等待超时（60 秒）；--timeout 不改变该等待上限。"
+    "请检查网络或降低并发后重试，不要删除已有断点。"
+)
+
+
+def _validated_upload_diagnostic(value):
+    if not isinstance(value, dict):
+        return {}
+    result = {}
+    stage = value.get("stage")
+    if isinstance(stage, str) and stage in _UPLOAD_STAGES:
+        result["stage"] = stage
+    reason = value.get("reason")
+    if isinstance(reason, str) and reason in {
+        "reported",
+        "no_result",
+        "invalid_result",
+        "abnormal_exit",
+    }:
+        result["reason"] = reason
+    error_type = value.get("error_type")
+    if isinstance(error_type, str) and error_type in _SAFE_UPLOAD_ERROR_TYPES | {
+        "UnclassifiedError"
+    }:
+        result["error_type"] = error_type
+    for key, minimum, maximum in (("status_code", 100, 599), ("exit_code", -255, 255)):
+        item = value.get(key)
+        if (
+            isinstance(item, int)
+            and not isinstance(item, bool)
+            and minimum <= item <= maximum
+        ):
+            result[key] = item
+    return result
+
+
+def _safe_upload_error_type(error_type) -> str:
+    name = getattr(error_type, "__name__", None)
+    return (
+        name
+        if isinstance(name, str) and name in _SAFE_UPLOAD_ERROR_TYPES
+        else "UnclassifiedError"
+    )
+
+
+@contextmanager
+def _scoped_upload_output():
+    """Redact dependency records before handlers and contain thread tracebacks.
+
+    A record factory covers lazy child loggers and their custom handlers too.
+    Reference counting keeps overlapping uploads protected until the last exits.
+    Raw dependency text is deliberately never parsed or forwarded.
+    """
+    global _UPLOAD_OUTPUT_USERS, _UPLOAD_LOG_FACTORY, _UPLOAD_THREAD_HOOK
+    with _UPLOAD_OUTPUT_LOCK:
+        if _UPLOAD_OUTPUT_USERS == 0:
+            _UPLOAD_LOG_FACTORY = logging.getLogRecordFactory()
+            _UPLOAD_THREAD_HOOK = threading.excepthook
+            original_factory = _UPLOAD_LOG_FACTORY
+
+            def safe_record(*args, **kwargs):
+                record = original_factory(*args, **kwargs)
+                if record.name.split(".", 1)[0] in {
+                    "huggingface_hub",
+                    "httpx",
+                    "httpcore",
+                }:
+                    record.name = "huggingface_hub.upload"
+                    record.msg = "上传依赖日志已脱敏；错误类别见上传重试或终态诊断"
+                    record.args = ()
+                    record.exc_info = record.exc_text = record.stack_info = None
+                return record
+
+            def safe_thread_error(args):
+                if args.exc_type is not SystemExit:
+                    print(
+                        "上传期间后台线程异常（"
+                        + _safe_upload_error_type(args.exc_type)
+                        + "）；上传结果以最终确认为准",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+
+            logging.setLogRecordFactory(safe_record)
+            threading.excepthook = safe_thread_error
+        _UPLOAD_OUTPUT_USERS += 1
+    try:
+        yield
+    finally:
+        with _UPLOAD_OUTPUT_LOCK:
+            _UPLOAD_OUTPUT_USERS -= 1
+            if _UPLOAD_OUTPUT_USERS == 0:
+                logging.setLogRecordFactory(_UPLOAD_LOG_FACTORY)
+                threading.excepthook = _UPLOAD_THREAD_HOOK
+                _UPLOAD_LOG_FACTORY = _UPLOAD_THREAD_HOOK = None
 
 
 @contextmanager
@@ -67,6 +228,7 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "remote_commit_conflict": "remote revision changed during resumable recovery",
     "remote_recovery_state": "resumable remote recovery state is unsafe",
     "client_resource": "resumable worker client resources are insufficient",
+    "worker_process": "resumable worker did not finish with a valid result",
     "unknown": "resumable worker failed",
 }
 
@@ -114,8 +276,12 @@ class ResumableWorkerError(RuntimeError):
         confirmation_failure=None,
         confirmed=None,
         remaining=None,
+        diagnostic=None,
     ):
-        if category not in _RESUMABLE_WORKER_ERROR_MESSAGES:
+        if (
+            not isinstance(category, str)
+            or category not in _RESUMABLE_WORKER_ERROR_MESSAGES
+        ):
             category = "unknown"
         state = None
         if category == "remote_commit_unconfirmed":
@@ -132,6 +298,7 @@ class ResumableWorkerError(RuntimeError):
                 except Exception:
                     category = "unknown"
         self.category = category
+        self.diagnostic = _validated_upload_diagnostic(diagnostic)
         self.lfs_patterns = (
             _validated_lfs_patterns(lfs_patterns)
             if category in ("upload_mode", "lfs_attributes")
@@ -273,10 +440,23 @@ def _resumable_worker_error_category(error: BaseException) -> str:
     return "unknown"
 
 
-def _resumable_failure_envelope(error: BaseException) -> dict:
+def _resumable_failure_envelope(error: BaseException, *, stage=None) -> dict:
     """Build the only error payload allowed across the process boundary."""
     category = _resumable_worker_error_category(error)
     envelope = {"category": category}
+    if stage is not None:
+        chain = list(_resumable_error_chain(error))
+        diagnostic = {
+            "stage": stage,
+            "reason": "reported",
+            "error_type": _safe_upload_error_type(type(chain[-1])),
+        }
+        for cause in chain:
+            status = _resumable_error_status(cause)
+            if status is not None:
+                diagnostic["status_code"] = status
+                break
+        envelope["diagnostic"] = _validated_upload_diagnostic(diagnostic)
     if category == "remote_commit_unconfirmed":
         for cause in _resumable_error_chain(error):
             if isinstance(cause, CanonicalLfsCommitUnconfirmedError):
@@ -388,6 +568,10 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "AtomGit 服务生成的 Git LFS pointer 不符合规范或无法按原始 "
                 "Git blob 确认；本次上传未确认成功，请保留断点并联系平台支持。",
             ),
+            "lfs_attributes": (
+                "Git LFS 配置未确认",
+                "无法确认仓库的 Git LFS 属性配置；请检查 .gitattributes，保留已有断点。",
+            ),
             "remote_commit_unconfirmed": (
                 "远端提交已创建但未确认",
                 "远端提交状态：已创建；本地确认状态：失败。"
@@ -411,8 +595,33 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
                 "未知错误",
                 "上传子进程失败且未能安全识别原因；断点状态已保留，请稍后重试。",
             ),
+            "worker_process": (
+                "上传进程异常",
+                "上传子进程未正常完成；远端提交状态尚未确认。保留断点，重新执行时先核对远端状态。",
+            ),
         }
         error_type, hint = structured_errors[e.category]
+        diagnostic = e.diagnostic
+        if e.category == "timeout" and diagnostic.get("error_type") == "WriteTimeout":
+            hint = _LFS_WRITE_TIMEOUT_HINT
+        if diagnostic:
+            details = []
+            if "stage" in diagnostic:
+                details.append("最后已知阶段：" + _UPLOAD_STAGES[diagnostic["stage"]])
+            reasons = {
+                "no_result": "未返回结果",
+                "invalid_result": "结果格式异常",
+                "abnormal_exit": "非正常退出",
+            }
+            if diagnostic.get("reason") in reasons:
+                details.append(reasons[diagnostic["reason"]])
+            if "error_type" in diagnostic:
+                details.append("异常类型：" + diagnostic["error_type"])
+            if "status_code" in diagnostic:
+                details.append(f"HTTP {diagnostic['status_code']}")
+            if "exit_code" in diagnostic:
+                details.append(f"退出码：{diagnostic['exit_code']}")
+            hint += " 诊断：" + "；".join(details) + "。"
         if e.category == "remote_commit_unconfirmed":
             hint += _lfs_confirmation_failure_hint(e)
         if e.category in ("remote_commit_conflict", "remote_recovery_state"):
@@ -559,6 +768,9 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             "当前登录凭证无权上传到目标仓库。请检查仓库权限或目标命名空间。",
         )
 
+    if isinstance(e, httpx.WriteTimeout):
+        return "请求超时", _LFS_WRITE_TIMEOUT_HINT
+
     # 超时
     if (
         "timeout" in msg.lower()
@@ -576,4 +788,7 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
         return "网络连接失败", "无法连接到服务器。请检查网络或代理设置后重试。"
 
     # 其他
-    return "未知错误", "服务返回了未识别的错误；请稍后重试，仍失败时联系平台支持。"
+    return (
+        "未知错误",
+        "上传失败且未能安全识别原因；请检查本地环境、网络和仓库状态，保留已有断点。",
+    )

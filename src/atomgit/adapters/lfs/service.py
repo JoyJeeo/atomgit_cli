@@ -170,11 +170,13 @@ class _SlowFlowCoordinator:
         reconnect_jitter=None,
         event_callback=None,
         observation_callback=None,
+        progress_callback=None,
     ):
         self._monotonic = monotonic
         self._reconnect_jitter = reconnect_jitter or (lambda: random.uniform(2.0, 8.0))
         self._event_callback = event_callback
         self._observation_callback = observation_callback
+        self._progress_callback = progress_callback
         self._states = {}
         self._next_flow_key = 1
         self._probe_key = None
@@ -193,7 +195,15 @@ class _SlowFlowCoordinator:
         except Exception:
             pass
 
+    def _display(self, message: dict) -> None:
+        if self._progress_callback is not None:
+            try:
+                self._progress_callback(message)
+            except Exception:
+                pass
+
     def _publish(self, message: dict) -> None:
+        self._display(message)
         if self._observation_callback is None:
             return
         try:
@@ -271,6 +281,11 @@ class _SlowFlowCoordinator:
                 )
                 state.last_decision = "none"
             message = self._state_message(state)
+        # Full names stay inside the child display; the observation protocol
+        # and persisted monitor snapshots retain their existing abbreviation.
+        self._display(
+            {"type": "file_name", "flow_key": state.flow_key, "name": file_abbrev}
+        )
         self._publish(message)
 
     def complete(self, object_key, *, reset_windows: bool = False) -> None:
@@ -1035,11 +1050,19 @@ def _validate_resumable_upload_mode_items(items) -> None:
         )
 
 
-def _refresh_unsafe_resumable_upload_modes(folder_path: Path) -> int:
-    """Refresh only unsafe uncommitted policy fields in locked HF metadata."""
+def _refresh_unsafe_resumable_upload_modes(
+    folder_path: Path, configured_patterns=()
+) -> int:
+    """Refresh uncommitted metadata invalidated by confirmed LFS rules.
+
+    Older projections can cache a file as ``regular`` before a repository-wide
+    LFS extension rule is added.  Clear that stale mode as well as the
+    existing oversized-regular case so the next HF pass recomputes the mode.
+    """
     folder_path = Path(folder_path)
     if not (folder_path / ".cache" / "huggingface" / "upload").is_dir():
         return 0
+    configured = set(_validated_lfs_patterns(configured_patterns))
     refreshed = 0
     for file_path in folder_path.rglob("*"):
         if not file_path.is_file():
@@ -1051,14 +1074,18 @@ def _refresh_unsafe_resumable_upload_modes(folder_path: Path) -> int:
         if not paths.metadata_path.is_file():
             continue
         metadata = read_upload_metadata(folder_path, relative_path)
+        path_pattern = _lfs_pattern_from_repo_path(relative_path)
+        stale_configured_mode = path_pattern is not None and path_pattern in configured
+        oversized_regular = metadata.size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
         if (
             not metadata.is_committed
             and metadata.upload_mode == "regular"
-            and metadata.size > _RESUMABLE_REGULAR_FILE_MAX_BYTES
+            and (oversized_regular or stale_configured_mode)
         ):
             metadata.upload_mode = None
             metadata.should_ignore = None
             metadata.remote_oid = None
+            metadata.is_uploaded = False
             metadata.save(paths)
             refreshed += 1
     return refreshed
@@ -1457,8 +1484,12 @@ class _ResumableLfsPreuploadController:
         except Exception:
             pass
 
-    def _fail(self, category: str, *, attempts: int = 1):
+    def _fail(self, category: str, *, attempts: int = 1, cause=None):
         error = ResumableLfsPreuploadError(category)
+        # fatal_callback may exit before this exception is raised. Retain the
+        # cause first so the child can report its safe HTTP status and type.
+        if cause is not None:
+            error.__cause__ = cause
         if attempts >= self._max_attempts and self._event_callback is not None:
             self._emit(
                 {
@@ -1498,7 +1529,7 @@ class _ResumableLfsPreuploadController:
             except Exception as error:
                 category, retryable = _lfs_preupload_error_category(error)
                 if not retryable or attempt >= self._max_attempts:
-                    self._fail(category, attempts=attempt)
+                    self._fail(category, attempts=attempt, cause=error)
                 delay = self._retry_delay(error, attempt)
                 self._emit(
                     {

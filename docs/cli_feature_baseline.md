@@ -58,7 +58,7 @@ atomgit upload PATH --repo-id REPO [OPTIONS]
 - 上传单个文件或整个目录；
 - `--message/-m` 提交消息；
 - `--timeout/-t` 上传超时；
-- `--no-progress-bar` 关闭进度条；
+- `--no-progress-bar` 关闭进度显示，resumable 模式关闭逐文件进度及追加式周期报告，保留批次和错误日志；
 - `--path-in-repo/-p` 指定仓库内目录；
 - `--repo-type/-r model|dataset` 指定业务类型；
 - `--revision` 上传到已存在的 revision；

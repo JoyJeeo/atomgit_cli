@@ -138,6 +138,9 @@ def upload(
             else context._RESUMABLE_DEFAULT_REQUEST_TIMEOUT
         )
         context.print_info(f"默认网络请求等待超时: {request_timeout:g}秒")
+        context.print_info(
+            "此值用于连接、读取及连接池等待；LFS 写入等待为 60秒，均不限制上传总时长"
+        )
         if pipr:
             context.print_info(f"仓库内路径: {pipr}/")
         if repo_type:
@@ -161,7 +164,9 @@ def upload(
                     "提示：未指定 --repo-type，断点续传模式下默认按 model 处理"
                 )
         if not show_progress:
-            context.print_info("进度条已禁用")
+            context.print_info(
+                "逐文件进度和周期报告已禁用" if resumable else "进度条已禁用"
+            )
 
         observe_session = None
         if resumable:

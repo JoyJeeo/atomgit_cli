@@ -51,6 +51,7 @@ def main():
             ok = (
                 help_result.exit_code == 0
                 and "默认网络请求等待超时" in help_result.output
+                and "LFS 写入等待为 60 秒" in " ".join(help_result.output.split())
                 and "部分请求阶段有独立等待上限" not in help_result.output
             )
             print(f"[{'PASS' if ok else 'FAIL'}] timeout help has one request contract")

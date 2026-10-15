@@ -67,6 +67,7 @@ PACKAGE_MODULES = {
     "adapters/upload/contracts.py",
     "adapters/upload/errors.py",
     "adapters/upload/ordinary.py",
+    "adapters/upload/progress.py",
     "adapters/upload/projection.py",
     "adapters/upload/resumable.py",
     "adapters/upload/service.py",

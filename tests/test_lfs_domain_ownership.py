@@ -5,7 +5,10 @@ import ast
 import importlib
 import inspect
 import sys
+import tempfile
 from pathlib import Path
+
+from huggingface_hub._local_folder import get_local_upload_paths, read_upload_metadata
 
 TESTS_DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY_ROOT = TESTS_DIRECTORY.parent
@@ -122,6 +125,29 @@ def main():
         == "(*, token: str, repo_id: str, repo_type: str, revision: str, patterns, request_timeout: float) -> dict"
         and str(inspect.signature(lfs_service._scoped_resumable_lfs_recovery))
         == "(coordinator: atomgit.adapters.lfs.service._SlowFlowCoordinator)",
+    )
+
+    with tempfile.TemporaryDirectory(prefix="atomgit-lfs-mode-") as directory:
+        projection = Path(directory)
+        cached_video = projection / "cached.mp4"
+        cached_video.write_bytes(b"cached regular video")
+        cached_paths = get_local_upload_paths(projection, "cached.mp4")
+        cached_metadata = read_upload_metadata(projection, "cached.mp4")
+        cached_metadata.sha256 = "56" * 32
+        cached_metadata.upload_mode = "regular"
+        cached_metadata.is_uploaded = True
+        cached_metadata.remote_oid = "stale-regular-oid"
+        cached_metadata.save(cached_paths)
+        refreshed = api_module._refresh_unsafe_resumable_upload_modes(
+            projection, ("*.mp4",)
+        )
+        refreshed_video = read_upload_metadata(projection, "cached.mp4")
+    check(
+        "confirmed LFS extension refreshes stale regular metadata",
+        refreshed == 1
+        and refreshed_video.upload_mode is None
+        and not refreshed_video.is_uploaded
+        and refreshed_video.remote_oid is None,
     )
 
     initial_mismatches = []

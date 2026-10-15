@@ -130,6 +130,7 @@ def main():
             "src/atomgit/adapters/upload/contracts.py",
             "src/atomgit/adapters/upload/errors.py",
             "src/atomgit/adapters/upload/ordinary.py",
+            "src/atomgit/adapters/upload/progress.py",
             "src/atomgit/adapters/upload/projection.py",
             "src/atomgit/adapters/upload/resumable.py",
             "src/atomgit/adapters/upload/service.py",
