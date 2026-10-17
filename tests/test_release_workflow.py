@@ -22,7 +22,59 @@ def check(name, condition, detail=""):
     print(f"[{'PASS' if condition else 'FAIL'}] {name}" + (f" -> {detail}" if detail else ""))
 
 
+def ci_gate_checks():
+    import yaml
+
+    ci_path = ROOT / ".github" / "workflows" / "ci.yml"
+    if not ci_path.exists():
+        check("push/PR/release share an offline CI gate", False)
+        return
+    ci = yaml.load(ci_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    release_workflow = yaml.load(
+        (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    check(
+        "CI covers push, pull requests and reusable release verification",
+        {"push", "pull_request", "workflow_call"} <= set(ci["on"]),
+    )
+    job = ci["jobs"]["offline"]
+    steps = job["steps"]
+    runs = "\n".join(step.get("run", "") for step in steps)
+    check(
+        "CI runs the complete baseline in atomgit_cli",
+        "python tests/run_cli_baseline.py" in runs
+        and "python -m compileall -q ." in runs
+        and any(
+            step.get("with", {}).get("activate-environment") == "atomgit_cli"
+            for step in steps
+        ),
+    )
+    matrix = job["strategy"]["matrix"]["include"]
+    check(
+        "CI includes Linux, macOS, Windows and Python range endpoints",
+        {row["os"] for row in matrix}
+        >= {"ubuntu-latest", "macos-latest", "windows-latest"}
+        and {row["python"] for row in matrix} >= {"3.9", "3.13"},
+    )
+    verify = release_workflow["jobs"].get("verify", {})
+    check(
+        "release verifies the exact source SHA before preparation",
+        verify.get("uses") == "./.github/workflows/ci.yml"
+        and verify.get("with", {}).get("source_sha") == "${{ inputs.source_sha }}"
+        and release_workflow["jobs"]["prepare"].get("needs") == "verify",
+    )
+    check(
+        "failed tests cannot be ignored by publishing",
+        not any(step.get("continue-on-error") == "true" for step in steps)
+        and "always()" not in str(release_workflow["jobs"]["prepare"])
+        and release_workflow["jobs"]["publish"]["needs"] == "prepare",
+    )
+
+
 def main():
+    ci_gate_checks()
+
     notes = ROOT / "RELEASE_NOTES.md"
     check("versioned release notes exist", notes.exists())
     if notes.exists():

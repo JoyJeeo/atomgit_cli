@@ -67,8 +67,8 @@ def main():
                 check(
                     "HF failure remains actionable",
                     isinstance(error, atomgit_hub.AtomGitError)
-                    and error.__cause__ is not None
-                    and "offline failure" in str(error.__cause__),
+                    and error.__cause__ is None
+                    and error.__suppress_context__,
                 )
             else:
                 check("HF failure remains actionable", False, "no exception")

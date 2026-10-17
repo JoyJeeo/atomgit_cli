@@ -2,7 +2,10 @@
 
 import os
 import re
+import time
 import urllib.error
+from contextlib import contextmanager
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -107,17 +110,100 @@ def is_retryable_download_error(error: Exception) -> bool:
 
 
 def run_download_with_retry(operation):
-    """Retry once after a retryable connection or integrity failure."""
+    """Retry once for transport/integrity failure or a bounded HTTP 429 wait."""
     try:
         return operation()
     except Exception as error:
-        if not is_retryable_download_error(error):
+        status = _structured_http_status(error)
+        if status == 429:
+            response = getattr(error, "response", None)
+            headers = getattr(response, "headers", None)
+            if headers is None:
+                headers = getattr(error, "headers", None) or {}
+            value = headers.get("Retry-After", "")
+            delay = 1
+            try:
+                if value.isascii() and value.isdigit():
+                    delay = int(value)
+                else:
+                    timestamp = parsedate_to_datetime(value)
+                    if timestamp.tzinfo is not None:
+                        delay = max(0, timestamp.timestamp() - time.time())
+            except (AttributeError, TypeError, ValueError, OverflowError):
+                pass
+            if delay > 30:
+                raise
+            time.sleep(delay)
+        elif status is not None or not is_retryable_download_error(error):
             raise
     return operation()
 
 
+_DOWNLOAD_STAGES = frozenset({"listing", "metadata", "content", "checksum"})
+_DOWNLOAD_ERROR_TYPES = frozenset(
+    {
+        "HTTPError",
+        "HTTPStatusError",
+        "HfHubHTTPError",
+        "BadRequestError",
+        "EntryNotFoundError",
+        "RepositoryNotFoundError",
+        "RevisionNotFoundError",
+        "ConnectError",
+        "ConnectionError",
+        "ReadError",
+        "ReadTimeout",
+        "ConnectTimeout",
+        "TimeoutError",
+        "RemoteProtocolError",
+        "OSError",
+        "DownloadChecksumMismatchError",
+        "DownloadChecksumMetadataError",
+        "RemoteDownloadFileNotFoundError",
+    }
+)
+
+
+@contextmanager
+def _download_stage(stage):
+    """Retain the innermost failed stage without retaining any remote text."""
+    try:
+        yield
+    except Exception as error:
+        previous = getattr(error, "_atomgit_download_stage", None)
+        if not isinstance(previous, str) or previous not in _DOWNLOAD_STAGES:
+            error._atomgit_download_stage = stage
+        raise
+
+
+def _download_diagnostic(error):
+    stage = getattr(error, "_atomgit_download_stage", None)
+    if not isinstance(stage, str) or stage not in _DOWNLOAD_STAGES:
+        return {}
+    name = type(error).__name__
+    result = {
+        "stage": stage,
+        "error_type": name if name in _DOWNLOAD_ERROR_TYPES else "UnclassifiedError",
+    }
+    status = _structured_http_status(error)
+    if status is not None and 100 <= status <= 599:
+        result["status_code"] = status
+    return result
+
+
 def sanitized_download_error(error: Exception) -> str:
     """Return an actionable category without exposing remote or signed URLs."""
+    message = _sanitized_download_error(error)
+    diagnostic = _download_diagnostic(error)
+    if diagnostic:
+        details = ", ".join(f"{key}={value}" for key, value in diagnostic.items())
+        return f"{message} [{details}]"
+    return message
+
+
+def _sanitized_download_error(error: Exception) -> str:
+    if _structured_http_status(error) == 429:
+        return "服务请求限流（HTTP 429），本次下载未完成；请稍后重试"
     if "仓库类型不明确" in str(error):
         return "仓库类型不明确，请使用 --repo-type model 或 dataset"
     if "download manifest is already in use" in str(error):
@@ -138,7 +224,8 @@ def sanitized_download_error(error: Exception) -> str:
         return "仓库、文件或 revision 不存在"
     if "timeout" in message or "timed out" in message:
         return "下载请求超时，请检查网络后重试"
-    return f"下载失败（{type(error).__name__}）"
+    name = _download_diagnostic(error).get("error_type", type(error).__name__)
+    return f"下载失败（{name}）"
 
 
 def _repo_id_parts(repo_id: str) -> List[str]:

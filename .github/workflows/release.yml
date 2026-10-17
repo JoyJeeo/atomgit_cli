@@ -20,7 +20,12 @@ permissions:
   contents: read
 
 jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    with:
+      source_sha: ${{ inputs.source_sha }}
   prepare:
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - name: Validate release input

@@ -5,17 +5,21 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Union
 
-from huggingface_hub import constants as hf_constants
-from huggingface_hub import upload_folder as hf_upload_folder
+from huggingface_hub import HfApi
 
 from ..core.errors import AtomGitAuthenticationError, AtomGitUnsupportedError
 from ..infrastructure.config import config
+from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
 from ..infrastructure.validation import (
+    normalize_path_in_repo,
     normalize_repo_id,
     validate_upload_path_no_symlinks,
 )
 from .lfs.pointer import CanonicalLfsCommitUnconfirmedError, run_canonical_lfs_upload
 from .upload.errors import _scoped_upload_output, _suppress_hf_model_repo_warning
+from .upload.ordinary import _scoped_upload_settings, _upload_folder_with_workers
+
+hf_upload_folder = HfApi(endpoint=ATOMGIT_HF_ENDPOINT).upload_folder
 
 
 def _normalize_repo_id(repo_id: str) -> str:
@@ -40,7 +44,7 @@ def _project_ignore_patterns(ignore_patterns, path_in_repo: str):
     """Keep source-relative ignores aligned with a staged remote prefix."""
     if not ignore_patterns or path_in_repo in ("./", ".", ""):
         return ignore_patterns
-    prefix = path_in_repo.strip("./")
+    prefix = normalize_path_in_repo(path_in_repo)
     return [f"{prefix}/{pattern}" for pattern in ignore_patterns]
 
 
@@ -50,7 +54,6 @@ def _sdk_error(error, operation: str, repo_id: str = None):
     return classify(error, operation, repo_id)
 
 
-@_scoped_upload_output()
 def upload_folder(
     folder_path: Union[str, Path],
     repo_id: str,
@@ -62,6 +65,37 @@ def upload_folder(
     path_in_repo: str = "./",
     ignore_patterns: Optional[List[str]] = None,
     upload_timeout: float = 300.0,
+) -> str:
+    """Upload a folder using the historical SDK signature."""
+    return _upload_folder(
+        folder_path,
+        repo_id,
+        token,
+        repo_type,
+        revision,
+        commit_message,
+        commit_description,
+        path_in_repo,
+        ignore_patterns,
+        upload_timeout,
+    )
+
+
+@_scoped_upload_output()
+def _upload_folder(
+    folder_path: Union[str, Path],
+    repo_id: str,
+    token: Optional[str] = None,
+    repo_type: Optional[str] = None,
+    revision: Optional[str] = None,
+    commit_message: Optional[str] = None,
+    commit_description: Optional[str] = None,
+    path_in_repo: str = "./",
+    ignore_patterns: Optional[List[str]] = None,
+    upload_timeout: float = 300.0,
+    *,
+    progress=None,
+    num_workers=5,
 ) -> str:
     """Upload a folder to an AtomGit repository."""
     normalized_repo_id = _normalize_repo_id(repo_id)
@@ -86,21 +120,19 @@ def upload_folder(
                 "上传需要认证 token；请先使用 'atomgit login' 登录或提供 token"
             )
 
+    path_in_repo = normalize_path_in_repo(path_in_repo) or "./"
     temporary_directory = None
-    original_timeout = None
     try:
         if path_in_repo in ("./", ".", ""):
             upload_path = str(folder_path)
         else:
             temporary_directory = tempfile.TemporaryDirectory()
             temp_path = Path(temporary_directory.name)
-            target_path = temp_path / path_in_repo.strip("./")
+            target_path = temp_path / path_in_repo
+            target_path.resolve().relative_to(temp_path.resolve())
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(folder_path, target_path, dirs_exist_ok=True)
             upload_path = str(temp_path)
-
-        original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
-        hf_constants.DEFAULT_REQUEST_TIMEOUT = upload_timeout
 
         try:
             upload_kwargs = dict(
@@ -122,20 +154,21 @@ def upload_folder(
 
             def upload():
                 with _suppress_hf_model_repo_warning(repo_type == "dataset"):
-                    return hf_upload_folder(**upload_kwargs)
+                    if num_workers == 5:
+                        return hf_upload_folder(**upload_kwargs)
+                    return _upload_folder_with_workers(upload_kwargs, num_workers)
 
-            return run_canonical_lfs_upload(
-                upload,
-                token=token,
-                repo_id=normalized_repo_id,
-                timeout=upload_timeout,
-            )
+            with _scoped_upload_settings(upload_timeout, progress):
+                return run_canonical_lfs_upload(
+                    upload,
+                    token=token,
+                    repo_id=normalized_repo_id,
+                    timeout=upload_timeout,
+                )
         except CanonicalLfsCommitUnconfirmedError:
             raise
         except Exception as error:
-            raise _sdk_error(error, "上传目录", repo_id) from error
+            raise _sdk_error(error, "上传目录", repo_id) from None
     finally:
-        if original_timeout is not None:
-            hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         if temporary_directory is not None:
             temporary_directory.cleanup()

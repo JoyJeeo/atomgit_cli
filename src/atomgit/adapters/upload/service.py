@@ -7,8 +7,6 @@ from typing import Optional
 
 from huggingface_hub import close_session as close_hf_session
 from huggingface_hub import constants as hf_constants
-from huggingface_hub import upload_file as hf_upload_file
-from huggingface_hub import upload_folder
 
 from ...infrastructure.config import config
 from ...infrastructure.filesystem import format_file_size
@@ -28,8 +26,11 @@ from .errors import (
 from .ordinary import (
     _capture_progress_bar_state,
     _restore_progress_bar_state,
+    _serialized_upload,
     _set_progress_bar,
     _upload_folder_with_workers,
+    hf_upload_file,
+    upload_folder,
 )
 from .projection import (
     _collect_resumable_upload_files,
@@ -117,6 +118,7 @@ def propagate_upload_errors():
 
 class UploadServiceMixin:
 
+    @_serialized_upload()
     @_scoped_upload_output()
     def upload_folder(
         self,
@@ -284,6 +286,7 @@ class UploadServiceMixin:
             print(f"💡 建议: {hint}")
             return False
 
+    @_serialized_upload()
     @_scoped_upload_output()
     def upload_directory(
         self,

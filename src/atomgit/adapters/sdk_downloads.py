@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 from huggingface_hub import hf_hub_download
 from huggingface_hub import snapshot_download as hf_snapshot_download
 
+from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
 from ..infrastructure.utils import run_download_with_retry
 from .sdk_common import _get_token, _normalize_repo_id
 from .sdk_errors import _sdk_error
@@ -36,8 +37,9 @@ def snapshot_download(
     normalized_repo_id = _normalize_repo_id(repo_id)
     if token is None:
         token = _get_token()
+    token = token or False
 
-    kwargs = {"repo_id": normalized_repo_id}
+    kwargs = {"repo_id": normalized_repo_id, "endpoint": ATOMGIT_HF_ENDPOINT}
     if revision is not None:
         kwargs["revision"] = revision
     if cache_dir is not None:
@@ -84,7 +86,7 @@ def snapshot_download(
             )
         )
     except Exception as error:
-        raise _sdk_error(error, "下载仓库", repo_id) from error
+        raise _sdk_error(error, "下载仓库", repo_id) from None
 
 
 def hub_download_url(
@@ -114,8 +116,13 @@ def download_file(
     normalized_repo_id = _normalize_repo_id(repo_id)
     if token is None:
         token = _get_token()
+    token = token or False
 
-    kwargs = {"repo_id": normalized_repo_id, "filename": filename}
+    kwargs = {
+        "repo_id": normalized_repo_id,
+        "filename": filename,
+        "endpoint": ATOMGIT_HF_ENDPOINT,
+    }
     if local_dir is not None:
         kwargs["local_dir"] = str(local_dir)
     if revision is not None:
@@ -132,4 +139,4 @@ def download_file(
             )
         )
     except Exception as error:
-        raise _sdk_error(error, "下载文件", repo_id) from error
+        raise _sdk_error(error, "下载文件", repo_id) from None

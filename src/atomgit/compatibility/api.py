@@ -60,7 +60,6 @@ from huggingface_hub import (  # noqa: E402,F401
     get_hf_file_metadata,
     hf_hub_download,
     snapshot_download,
-    upload_folder,
 )
 from huggingface_hub._local_folder import (  # noqa: E402
     get_local_upload_paths,
@@ -246,11 +245,6 @@ _atomgit_resolve_url = _download_transport._atomgit_resolve_url
 _is_not_found_error = _repository_service._is_not_found_error
 # isort: on
 
-try:
-    # 单文件上传专用：直接以 path_or_fileobj 上传，避免本地拷贝
-    from huggingface_hub import upload_file as hf_upload_file
-except ImportError:  # 老版本兜底
-    hf_upload_file = None
 
 try:
     # huggingface_hub >= 0.14 提供的进度条程序化开关
@@ -295,6 +289,9 @@ except ImportError:
     from adapters.upload import resumable as _upload_resumable
     from adapters.upload import service as _upload_service
     from adapters.upload.service import UploadServiceMixin
+
+hf_upload_file = _upload_ordinary.hf_upload_file
+upload_folder = _upload_ordinary.upload_folder
 
 _UPLOAD_OWNER_EXPORTS = {
     "_set_progress_bar": _upload_ordinary,

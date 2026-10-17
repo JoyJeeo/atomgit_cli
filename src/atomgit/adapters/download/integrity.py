@@ -7,6 +7,7 @@ from urllib.parse import urljoin, urlsplit
 
 from huggingface_hub import get_hf_file_metadata
 
+from ...infrastructure.validation import _download_stage, run_download_with_retry
 from . import transport as _transport
 from .transport import (
     _atomgit_hf_endpoint,
@@ -68,17 +69,20 @@ def _checksum_from_metadata_values(etag, size) -> tuple:
     return algorithm, digest, size
 
 
+@_download_stage("metadata")
 def _atomgit_file_download_metadata(
     repo_id: str, repo_type: str, filename: str, token: str, revision: str = "main"
 ) -> tuple:
     """Return a strong checksum and current credential-safe download URL."""
     resolve_url = _atomgit_resolve_url(repo_id, repo_type, filename, revision)
     try:
-        metadata = get_hf_file_metadata(
-            resolve_url,
-            token=token if token else False,
-            timeout=60,
-            endpoint=_atomgit_hf_endpoint(),
+        metadata = run_download_with_retry(
+            lambda: get_hf_file_metadata(
+                resolve_url,
+                token=token if token else False,
+                timeout=60,
+                endpoint=_atomgit_hf_endpoint(),
+            )
         )
     except Exception as error:
         if filename.isascii() or not _is_not_found_error(error):
@@ -92,6 +96,7 @@ def _atomgit_file_download_metadata(
     return checksum, location
 
 
+@_download_stage("checksum")
 def _verify_download_checksum(path: Path, checksum: tuple) -> bool:
     """Stream-hash one local file using a strong AtomGit checksum contract."""
     algorithm, expected_digest, expected_size = checksum

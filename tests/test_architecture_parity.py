@@ -125,7 +125,52 @@ class DefaultDownloadAdapterFake:
         return True
 
 
+def client_token_checks():
+    with tempfile.TemporaryDirectory() as directory:
+        source = Path(directory)
+        file = source / "data.bin"
+        file.write_bytes(b"fixture")
+        for selected in ("fake-client", False):
+            for override in (None, "fake-method", False):
+                transfer = TransferFake()
+                client = AtomGitClient(
+                    token=selected, config=ConfigFake("fake-saved"), transfer=transfer
+                )
+                expected = selected if override is None else override
+                for method, args in (
+                    (client.upload_file, (file, "fake/repo")),
+                    (client.upload_folder, (source, "fake/repo")),
+                    (client.download_file, ("fake/repo", "data.bin")),
+                    (client.download_snapshot, ("fake/repo",)),
+                ):
+                    before = len(transfer.calls)
+                    try:
+                        method(*args, token=override)
+                    except Exception as error:
+                        from atomgit.core.errors import AtomGitAuthenticationError
+
+                        check(
+                            "anonymous writes fail before adapter",
+                            expected is False
+                            and method.__name__.startswith("upload")
+                            and isinstance(error, AtomGitAuthenticationError)
+                            and len(transfer.calls) == before,
+                        )
+                    else:
+                        check(
+                            "method/client/saved token order reaches transfer",
+                            transfer.calls[-1][1]["token"]
+                            == (None if expected is False else expected)
+                            and not (
+                                expected is False
+                                and method.__name__.startswith("upload")
+                            ),
+                        )
+
+
 def main():
+    client_token_checks()
+
     check("parity registry is fail-closed", not validate_parity_registry())
     check(
         "runtime route registry resolves every parity surface",

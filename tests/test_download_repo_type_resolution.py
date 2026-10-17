@@ -22,7 +22,7 @@ class FakeHfApi:
     responses = {}
     calls = []
 
-    def __init__(self, token=None):
+    def __init__(self, token=None, endpoint=None):
         self.token = token
 
     def list_repo_files(self, repo_id, repo_type=None):

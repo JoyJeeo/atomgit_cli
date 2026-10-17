@@ -10,7 +10,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import quote, urljoin, urlsplit
 
-from ...infrastructure.validation import run_download_with_retry
+from ...infrastructure.validation import _download_stage, run_download_with_retry
 
 _verify_download_checksum = None
 
@@ -368,6 +368,7 @@ def _atomgit_download_raw(
             temporary_path.unlink(missing_ok=True)
 
 
+@_download_stage("content")
 def _download_atomgit_file(
     repo_id: str,
     repo_type: str,

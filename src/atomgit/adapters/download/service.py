@@ -6,7 +6,14 @@ from pathlib import Path
 
 from huggingface_hub import HfApi
 
-from ...infrastructure.validation import is_auth_error, normalize_repo_id
+from ...infrastructure.runtime import ATOMGIT_HF_ENDPOINT
+from ...infrastructure.validation import (
+    _download_stage,
+    _structured_http_status,
+    is_auth_error,
+    normalize_repo_id,
+    run_download_with_retry,
+)
 from .integrity import _atomgit_file_checksum, _verify_download_checksum
 from .manifest import (
     _download_manifest_lock,
@@ -50,20 +57,30 @@ def _atomgit_list_repo_files(
     # HF Hub treats None as "use the ambient Hugging Face token". AtomGit
     # anonymous requests must opt out explicitly so an unrelated credential is
     # never attached after HF_ENDPOINT is redirected to hub.atomgit.com.
-    api = HfApi(token=token if token else False)
+    api = HfApi(endpoint=ATOMGIT_HF_ENDPOINT, token=token if token else False)
     list_kwargs = _revision_kwargs(revision)
+
+    def list_files(candidate):
+        with _download_stage("listing"):
+            return run_download_with_retry(
+                lambda: list(
+                    api.list_repo_files(repo_id, repo_type=candidate, **list_kwargs)
+                )
+            )
+
     if repo_type is not None:
         candidate = None if repo_type == "model" else "dataset"
-        files = api.list_repo_files(repo_id, repo_type=candidate, **list_kwargs)
-        return repo_type, list(files)
+        return repo_type, list_files(candidate)
 
     successes = {}
     errors = []
     candidates = [("model", None), ("dataset", "dataset")]
     for effective_type, candidate in candidates:
         try:
-            files = api.list_repo_files(repo_id, repo_type=candidate, **list_kwargs)
+            files = list_files(candidate)
         except Exception as error:
+            if _structured_http_status(error) == 429:
+                raise
             errors.append(error)
             continue
         successes[effective_type] = list(files)
@@ -316,7 +333,8 @@ class AtomGitDownloadAdapter:
                 normalized_repo_id, token, repo_type, revision
             )
         if filename not in files:
-            raise RemoteDownloadFileNotFoundError(f"404 文件不存在: {filename}")
+            with _download_stage("listing"):
+                raise RemoteDownloadFileNotFoundError(f"404 文件不存在: {filename}")
 
         dest = _safe_download_destination(local_path, filename)
         if dest.exists() and not force:

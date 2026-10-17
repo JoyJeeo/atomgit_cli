@@ -153,11 +153,11 @@ def main():
                     upload_timeout=17,
                 )
             except atomgit_hub.AtomGitError as error:
-                sdk_failure = error.__cause__ is not None
+                sdk_failure = error.__cause__ is None and error.__suppress_context__
             else:
                 sdk_failure = False
             check(
-                "SDK propagated failure restores timeout and preserves its cause",
+                "SDK propagated failure restores timeout and suppresses its raw cause",
                 sdk_failure
                 and sdk_observed[-1] == 17
                 and hf_constants.DEFAULT_REQUEST_TIMEOUT == 31

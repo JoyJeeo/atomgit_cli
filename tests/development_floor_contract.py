@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 143
+BASELINE_INVARIANT_COUNT = 154
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -746,6 +746,16 @@ CAPABILITY_REGISTRY = {
         ),
         (
             _invariant(
+                "DLFILE-003",
+                "CLI and native SDK download failures expose safe listing, metadata, content or checksum stages and bounded HTTP status without remote secrets.",
+                "test_download_recovery.py",
+            ),
+            _invariant(
+                "DLFILE-004",
+                "HTTP 429 read operations retry at most once, respect valid Retry-After up to thirty seconds and do not retry deterministic HTTP failures.",
+                "test_download_recovery.py",
+            ),
+            _invariant(
                 "DLFILE-001",
                 "Single-file download uses the exact requested repository type, filename, and destination policy.",
                 "test_cli_download_file.py",
@@ -760,6 +770,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_download_recovery.py",
             "test_cli_download_file.py",
             "test_download_contract.py",
             "test_download_resume_cli.py",
@@ -858,6 +869,11 @@ CAPABILITY_REGISTRY = {
         ),
         (
             _invariant(
+                "SDKDL-003",
+                "Legacy file, snapshot and dataset downloads explicitly disable ambient HF credentials when AtomGit credentials are absent.",
+                "test_anonymous_token_isolation.py",
+            ),
+            _invariant(
                 "SDKDL-001",
                 "SDK download functions normalize IDs, isolate AtomGit authentication, and pass only locked-library parameters.",
                 "test_hf_api_contract.py",
@@ -871,6 +887,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_anonymous_token_isolation.py",
             "test_hf_api_contract.py",
             "test_load_dataset.py",
             "test_repo_id_contract.py",
@@ -887,9 +904,24 @@ CAPABILITY_REGISTRY = {
         ("atomgit_hub.upload_folder",),
         (
             _invariant(
+                "SDKUP-003",
+                "Unsafe repository prefixes are rejected before local copying or remote calls and legal dot-prefixed directories are preserved.",
+                "test_sdk_upload_parameters.py",
+            ),
+            _invariant(
                 "SDKUP-001",
                 "Public upload parameters are forwarded or explicitly rejected according to the locked dependency contract.",
                 "test_sdk_upload_parameters.py",
+            ),
+            _invariant(
+                "SDKUP-004",
+                "Native upload progress, workers and request timeout reach the final HF boundary; unsupported ordinary-mode options are rejected before writes.",
+                "test_sdk_upload_parameters.py",
+            ),
+            _invariant(
+                "SDKUP-005",
+                "Every native transfer honors method credentials over constructor credentials over saved credentials, including explicit anonymous writes failing closed.",
+                "test_architecture_parity.py",
             ),
             _invariant(
                 "SDKUP-002",
@@ -899,6 +931,7 @@ CAPABILITY_REGISTRY = {
             ),
         ),
         (
+            "test_architecture_parity.py",
             "test_sdk_upload_lifetime.py",
             "test_sdk_upload_parameters.py",
             "test_sdk_upload_timeout.py",
@@ -972,9 +1005,24 @@ CAPABILITY_REGISTRY = {
         ("runtime.configure_hf_environment", "upload runtime contexts"),
         (
             _invariant(
+                "RUNTIME-005",
+                "Pinned AtomGit upload clients and explicit download endpoints remain correct when Hugging Face is imported first.",
+                "test_runtime_policy.py",
+            ),
+            _invariant(
                 "RUNTIME-001",
                 "AtomGit endpoint, XET disablement, and cache policy are configured idempotently before HF imports.",
                 "test_runtime_policy.py",
+            ),
+            _invariant(
+                "RUNTIME-007",
+                "Spawn-isolated AtomGit upload scopes leave a simultaneous caller HF session, timeout and progress intact on successful and failed worker exits.",
+                "test_sdk_upload_timeout.py",
+            ),
+            _invariant(
+                "RUNTIME-006",
+                "Concurrent ordinary uploads serialize global state, apply timeout to actual fresh HTTP sessions, and restore the caller timeout and progress after all exits.",
+                "test_sdk_upload_timeout.py",
             ),
             _invariant(
                 "RUNTIME-002",
@@ -1217,6 +1265,11 @@ CAPABILITY_REGISTRY = {
                 "test_wheel_smoke.py",
             ),
             _invariant(
+                "PKG-024",
+                "Push and pull-request verification run the full offline matrix and release preparation depends on verification of its exact requested source SHA.",
+                "test_release_workflow.py",
+            ),
+            _invariant(
                 "PKG-023",
                 "Source, editable, wheel, and sdist surfaces include exactly the CLI package facade and executable adapter, exclude the stale flat CLI module, and preserve console plus Python module entry paths.",
                 "test_cli_facade_conversion.py",
@@ -1408,6 +1461,11 @@ CAPABILITY_REGISTRY = {
                 "test_upload_error_handling.py",
             ),
             _invariant(
+                "REDACT-005",
+                "Native single-file dependency logs and complete legacy SDK tracebacks exclude sensitive nested causes while preserving public exception categories.",
+                "test_sdk_exceptions.py",
+            ),
+            _invariant(
                 "REDACT-004",
                 "File, directory, SDK and child upload scopes redact dependency log records before handlers and contain background exception text, retaining only bounded diagnostic fields and restoring hooks after nested or overlapping scopes.",
                 "test_cli_error_redaction.py",
@@ -1537,7 +1595,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "143 条可观察行为不变量",
+        "154 条可观察行为不变量",
         "94 个隔离 pytest case",
     ),
     "docs/testing.md": ("94 个 pytest case", "development_floor.md"),

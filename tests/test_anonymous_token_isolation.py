@@ -18,7 +18,44 @@ def check(name, condition, detail=""):
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
+def legacy_download_checks():
+    from unittest.mock import patch
+
+    from atomgit.adapters import sdk_datasets, sdk_downloads
+
+    seen = []
+
+    def capture(**kwargs):
+        seen.append(kwargs)
+        return "fake-local-snapshot"
+
+    with (
+        patch.dict(os.environ, {"HF_TOKEN": "hf_fake_unrelated_credential"}),
+        patch.object(sdk_downloads, "_get_token", return_value=None),
+        patch.object(sdk_downloads, "hf_snapshot_download", capture),
+        patch.object(sdk_downloads, "hf_hub_download", capture),
+    ):
+        sdk_downloads.snapshot_download("fake/repo")
+        sdk_downloads.download_file("fake/repo", "fixture.txt")
+    with (
+        patch.object(sdk_datasets, "_get_token", return_value=None),
+        patch.object(sdk_datasets, "hf_snapshot_download", capture),
+        patch.object(sdk_datasets, "ds_load_dataset", return_value=None),
+    ):
+        sdk_datasets.load_dataset("fake/repo")
+    check(
+        "legacy anonymous download explicitly disables ambient credentials",
+        len(seen) == 3 and all(call.get("token") is False for call in seen),
+    )
+    check(
+        "legacy download uses explicit AtomGit endpoint",
+        all(call.get("endpoint") == "https://hub.atomgit.com" for call in seen),
+    )
+
+
 def main():
+    legacy_download_checks()
+
     original_hf_token = os.environ.get("HF_TOKEN")
     try:
         os.environ["HF_TOKEN"] = "hf_fake_unrelated_credential"
@@ -42,7 +79,7 @@ def main():
     constructor_tokens = []
 
     class RecordingHfApi:
-        def __init__(self, token=None):
+        def __init__(self, token=None, endpoint=None):
             constructor_tokens.append(token)
 
         def list_repo_files(self, repo_id, repo_type=None):

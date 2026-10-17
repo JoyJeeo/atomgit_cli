@@ -16,6 +16,7 @@ from ..core.errors import (
     AtomGitUnsupportedError,
 )
 from ..infrastructure.utils import auth_error_kind, is_retryable_download_error
+from ..infrastructure.validation import _download_diagnostic
 
 
 def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGitError:
@@ -37,6 +38,10 @@ def _sdk_error(error: Exception, operation: str, repo_id: str = None) -> AtomGit
     ):
         error.args = (f"{name} details redacted",)
     target = f"：{repo_id}" if repo_id else ""
+    if _download_diagnostic(error).get("status_code") == 429:
+        return AtomGitNetworkError(
+            f"{operation}遇到服务限流（HTTP 429）{target}；请稍后重试"
+        )
     if isinstance(error, CanonicalLfsPointerError):
         return AtomGitError(
             f"{operation}的 Git LFS pointer 验证失败{target}；"
@@ -81,6 +86,9 @@ def _sdk_error_metadata(error: Exception) -> dict:
         if not isinstance(current, BaseException) or id(current) in seen:
             break
         seen.add(id(current))
+        diagnostic = _download_diagnostic(current)
+        if diagnostic:
+            return {"download_diagnostic": diagnostic}
         if isinstance(
             current,
             (CanonicalLfsCommitUnconfirmedError, ResumableWorkerError),
