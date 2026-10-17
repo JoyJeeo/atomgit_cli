@@ -250,7 +250,7 @@ def main():
         )
         switch_script = r'''
 autoload -Uz compinit
-compinit -d "$HOME/.zcompdump"
+compinit -i -d "$HOME/.zcompdump"
 export CONDA_PREFIX="$1"
 source "$2"
 [[ "${functions[_atomgit_completion]}" == *ENV_A* ]] || exit 11
