@@ -3,7 +3,6 @@
 
 import ast
 import importlib
-import inspect
 import sys
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from structure_contract import (  # noqa: E402
     LEGACY_FACADE_DEBT,
     PRODUCTION_MODULE_OWNERS,
     discover_source_texts,
+    public_signature,
     validate_structure,
 )
 
@@ -147,9 +147,9 @@ def main():
     )
     check(
         "historical upload method signatures are unchanged",
-        str(inspect.signature(api_module.HuggingFaceAPI.upload_folder))
+        public_signature(api_module.HuggingFaceAPI.upload_folder)
         == "(self, file_path: pathlib.Path, repo_id: str, remote_path: str = None, message: str = None, upload_timeout: Optional[float] = None, progress_bar: bool = True, path_in_repo: str = None, repo_type: str = None, revision: str = None, ignore_patterns=None, num_workers: int = 5) -> bool"
-        and str(inspect.signature(api_module.HuggingFaceAPI.upload_directory))
+        and public_signature(api_module.HuggingFaceAPI.upload_directory)
         == "(self, dir_path: pathlib.Path, repo_id: str, message: str = None, progress_callback=None, upload_timeout: Optional[float] = None, progress_bar: bool = True, path_in_repo: str = None, repo_type: str = None, revision: str = None, ignore_patterns=None, resumable: bool = False, num_workers: int = 5, auto_configure_lfs: bool = False, batch_size: int = 20) -> bool",
     )
     check(

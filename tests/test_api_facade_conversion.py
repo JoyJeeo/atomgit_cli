@@ -3,10 +3,11 @@
 
 import ast
 import importlib
-import inspect
 import sys
 from pathlib import Path
 from unittest.mock import patch
+
+from structure_contract import public_signature
 
 TESTS_DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY_ROOT = TESTS_DIRECTORY.parent
@@ -124,7 +125,7 @@ def main():
     )
 
     signatures = {
-        name: str(inspect.signature(getattr(api_module.HuggingFaceAPI, name)))
+        name: public_signature(getattr(api_module.HuggingFaceAPI, name))
         for name in EXPECTED_METHOD_SIGNATURES
     }
     check(

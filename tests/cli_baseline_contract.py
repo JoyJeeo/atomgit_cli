@@ -654,12 +654,17 @@ def _discover_parameter(parameter):
         declarations = tuple(parameter.opts) + tuple(parameter.secondary_opts)
         is_flag = parameter.is_flag
         multiple = parameter.multiple
+    context = click.Context(click.Command("schema"))
+    default = parameter.get_default(context, call=False)
+    flag_value = None
+    if is_flag:
+        flag_value = getattr(parameter, "flag_activation_value", parameter.flag_value)
     return {
         "kind": "argument" if isinstance(parameter, click.Argument) else "option",
         "name": parameter.name,
         "declarations": declarations,
         "required": parameter.required,
-        "default": _normalize_default(parameter.default),
+        "default": _normalize_default(default),
         "type": _normalize_type(parameter.type),
         "nargs": parameter.nargs,
         "is_flag": is_flag,
@@ -667,7 +672,7 @@ def _discover_parameter(parameter):
         "metavar": parameter.metavar,
         "show_default": bool(getattr(parameter, "show_default", False)),
         "hidden": getattr(parameter, "hidden", False),
-        "flag_value": getattr(parameter, "flag_value", None),
+        "flag_value": flag_value,
     }
 
 

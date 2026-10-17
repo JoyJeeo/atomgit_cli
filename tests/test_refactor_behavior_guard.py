@@ -2,6 +2,7 @@
 """Lock representative deterministic CLI observations and dispatch calls."""
 
 import sys
+import inspect
 from click.testing import CliRunner
 
 import atomgit  # noqa: F401
@@ -19,7 +20,12 @@ def check(name, condition, detail=""):
 
 
 def main():
-    runner = CliRunner()
+    options = (
+        {"mix_stderr": False}
+        if "mix_stderr" in inspect.signature(CliRunner).parameters
+        else {}
+    )
+    runner = CliRunner(**options)
     original_update = cli_module.run_update
     original_plan = cli_module.build_uninstall_plan
     original_uninstall = cli_module.run_uninstall

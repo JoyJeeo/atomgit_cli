@@ -53,8 +53,13 @@ def diagnostic_and_rate_limit_checks():
         def get_credentials(self):
             return None
 
+    class HTTPError(urllib.error.HTTPError):
+        # Python 3.9 delegates unknown attributes through an absent file.
+        def __getattr__(self, name):
+            raise KeyError("file")
+
     def failure(status=429, retry_after="2"):
-        return urllib.error.HTTPError(
+        return HTTPError(
             "https://fixture.invalid/?token=FAKE_SECRET",
             status,
             "remote FAKE_SECRET",

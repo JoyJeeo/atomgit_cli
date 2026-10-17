@@ -2,7 +2,6 @@
 """Lock source public imports, symbols, identities, and SDK signatures."""
 
 import importlib
-import inspect
 import sys
 from pathlib import Path
 
@@ -13,6 +12,7 @@ if str(TESTS_DIRECTORY) not in sys.path:
     sys.path.insert(0, str(TESTS_DIRECTORY))
 
 from structure_contract import (  # noqa: E402
+    public_signature,
     PACKAGE_ALL,
     PUBLIC_IMPORTS,
     PUBLIC_SIGNATURES,
@@ -118,7 +118,7 @@ def main():
     signature_errors = []
     for name, expected in PUBLIC_SIGNATURES.items():
         for label, module in (("package", package_sdk), ("top-level", standalone_sdk)):
-            actual = str(inspect.signature(getattr(module, name)))
+            actual = public_signature(getattr(module, name))
             if actual != expected:
                 signature_errors.append(f"{label} {name}: {actual}")
     check("public SDK signatures are exact at both historical paths", not signature_errors, repr(signature_errors))

@@ -1,6 +1,7 @@
 """Declarative ownership and dependency contract for structural refactors."""
 
 import ast
+import inspect
 from collections import defaultdict
 from pathlib import Path
 
@@ -927,3 +928,10 @@ def validate_structure(source_texts, module_owners=None, legacy_debt=None):
             )
     errors.extend(validate_artifact_contract(owners))
     return errors
+
+
+def public_signature(function):
+    """Keep the public Path alias stable across Python 3.13 implementation moves."""
+    return str(inspect.signature(function)).replace(
+        "pathlib._local.Path", "pathlib.Path"
+    )
