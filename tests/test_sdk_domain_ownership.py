@@ -3,7 +3,6 @@
 
 import ast
 import importlib
-import inspect
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -19,6 +18,7 @@ from structure_contract import (  # noqa: E402
     LEGACY_FACADE_DEBT,
     PRODUCTION_MODULE_OWNERS,
     discover_source_texts,
+    public_signature,
     validate_structure,
 )
 
@@ -183,7 +183,7 @@ def main():
     check(
         "historical public SDK signatures remain unchanged",
         all(
-            str(inspect.signature(getattr(package_facade, name))) == signature
+            public_signature(getattr(package_facade, name)) == signature
             for name, signature in PUBLIC_SIGNATURES.items()
         ),
     )

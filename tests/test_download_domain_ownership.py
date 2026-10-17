@@ -3,7 +3,6 @@
 
 import ast
 import importlib
-import inspect
 import sys
 from pathlib import Path
 
@@ -18,6 +17,7 @@ from structure_contract import (  # noqa: E402
     LEGACY_FACADE_DEBT,
     PRODUCTION_MODULE_OWNERS,
     discover_source_texts,
+    public_signature,
     validate_structure,
 )
 
@@ -121,9 +121,9 @@ def main():
     )
     check(
         "historical download method signatures are unchanged",
-        str(inspect.signature(api_module.HuggingFaceAPI.download_repo))
+        public_signature(api_module.HuggingFaceAPI.download_repo)
         == "(self, repo_id: str, local_path: pathlib.Path = None, force_download: bool = False, repo_type: str = None, verify_checksum: bool = False, resume_download: bool = False, prune: bool = False) -> bool"
-        and str(inspect.signature(api_module.HuggingFaceAPI.download_file))
+        and public_signature(api_module.HuggingFaceAPI.download_file)
         == "(self, repo_id: str, filename: str, local_path: pathlib.Path = None, force_download: bool = False, repo_type: str = None, verify_checksum: bool = False, resume_download: bool = False) -> bool",
     )
     check(

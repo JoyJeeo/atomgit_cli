@@ -35,6 +35,8 @@ _REPO_SEGMENT_CHARS = frozenset(
 
 def _structured_http_status(error: Exception) -> Optional[int]:
     """Read a dependency HTTP status without interpreting arbitrary numbers."""
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code
     response = getattr(error, "response", None)
     for candidate in (
         getattr(response, "status_code", None),
@@ -43,8 +45,6 @@ def _structured_http_status(error: Exception) -> Optional[int]:
     ):
         if isinstance(candidate, int) and not isinstance(candidate, bool):
             return candidate
-    if isinstance(error, urllib.error.HTTPError):
-        return error.code
     return None
 
 
@@ -116,7 +116,11 @@ def run_download_with_retry(operation):
     except Exception as error:
         status = _structured_http_status(error)
         if status == 429:
-            response = getattr(error, "response", None)
+            response = (
+                error
+                if isinstance(error, urllib.error.HTTPError)
+                else getattr(error, "response", None)
+            )
             headers = getattr(response, "headers", None)
             if headers is None:
                 headers = getattr(error, "headers", None) or {}
@@ -170,14 +174,14 @@ def _download_stage(stage):
     try:
         yield
     except Exception as error:
-        previous = getattr(error, "_atomgit_download_stage", None)
+        previous = vars(error).get("_atomgit_download_stage")
         if not isinstance(previous, str) or previous not in _DOWNLOAD_STAGES:
             error._atomgit_download_stage = stage
         raise
 
 
 def _download_diagnostic(error):
-    stage = getattr(error, "_atomgit_download_stage", None)
+    stage = vars(error).get("_atomgit_download_stage")
     if not isinstance(stage, str) or stage not in _DOWNLOAD_STAGES:
         return {}
     name = type(error).__name__

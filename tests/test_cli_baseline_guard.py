@@ -118,9 +118,20 @@ def main():
         repr(changed_option_errors),
     )
 
-    discovered_tests = {
-        path.name for path in TESTS_DIRECTORY.glob("test_*.py")
-    }
+    flag = next(
+        parameter
+        for parameter in baseline.cli_mod.cli.commands["upload"].params
+        if parameter.name == "resumable"
+    )
+    for field, value in (("default", True), ("flag_value", False)):
+        with patch.object(flag, field, value):
+            changed = baseline.discover_public_schema(baseline.cli_mod.cli)
+        check(
+            "effective boolean defaults and activation values remain guarded",
+            bool(baseline.validate_public_schema(changed)),
+        )
+
+    discovered_tests = {path.name for path in TESTS_DIRECTORY.glob("test_*.py")}
     registry_errors = baseline.validate_test_registry(discovered_tests)
     check(
         "every current offline script is registered exactly once",
