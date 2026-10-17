@@ -502,6 +502,8 @@ def append_output_probe(result_queue, folder_path, terminal, fail):
                 )
                 lfs._upload_single_part(operation, "https://offline.invalid/upload")
 
+            failed_transfers = threading.Barrier(2)
+
             def send(method, url, *, data, **kwargs):
                 clock = iter(range(0, 1000, 5))
                 data._monotonic = lambda: next(clock)
@@ -511,6 +513,8 @@ def append_output_probe(result_queue, folder_path, terminal, fail):
                     print("stderr event", file=sys.stderr, flush=True)
                     logger.warning("token=fake-secret")
                 if fail:
+                    # Both file reports must exist before one failure cancels peers.
+                    failed_transfers.wait(timeout=5)
                     raise RuntimeError("offline failure")
                 return SimpleNamespace()
 
