@@ -308,7 +308,9 @@ def main():
                 exposed_error = ""
             except Exception as error:
                 exposed_error = str(error)
-                exposed_traceback = "".join(traceback.format_exception(error))
+                exposed_traceback = "".join(
+                    traceback.format_exception(type(error), error, error.__traceback__)
+                )
             check("T7 exhausted retry is bounded", len(always_fail_calls) == 2)
             check("T8 signed URL is redacted",
                   "signed-secret" not in exposed_error
