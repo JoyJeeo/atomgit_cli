@@ -2,6 +2,17 @@
 
 Status: active
 
+## Latest acceptance and delivery (2026-10-17)
+
+- Scope: 用户授权提交、合入并仅推送 yuto 以继续 CI 验收；随后明确将 Windows 历史问题转为另行评审，保留失败证据。以下为最新状态，下方阶段记录按时间保留。
+- Delivered code: 任务提交 6dd6df6、f1965a6、f9e546f、e6afdf8 分别本地合入 yuto，最终代码提交 `7049ef2df31c60b40d1b957a0b98fca0cdb7748b`，已推送并核验 github/yuto。未推送任务分支，无发布或标签。
+- Final local baseline: **94/94 passed, 126.60s**，`/tmp/atomgit-progress-sync-baseline.log`；相关专项、compileall、pip check、diff check、凭证模式检查通过。Black 76/409、isort 80/86、Ruff 15/44；未放宽既有断言。
+- Final remote evidence: [Offline verification run 39014775987](https://github.com/JoyJeeo/atomgit_cli/actions/runs/39014775987)，source SHA 与上述代码提交一致。Linux/Python 3.9 **94/94, 208.24s**、Linux/Python 3.13 **94/94, 193.31s**、macOS/Python 3.11 **94/94, 256.54s**，各 job 的编译、依赖与 diff 检查均通过。Windows/Python 3.11 **37 passed / 57 failed, 194.44s**；因此 workflow 总结仍为 failure，不能声称完整跨平台 CI 通过。
+- Windows disposition: 按用户明确选择“另行评审 Windows 问题，保留 CI 失败证据”，保留 Windows job 与原断言。后续评审需区分中文编码、HOME/USERPROFILE 隔离、POSIX 权限断言、Shell 测试、证书路径及文件占用；不将 57 个失败脚本等同于 57 个独立产品缺陷。最新日志 `/tmp/atomgit-ci4-windows.log`，长期证据为上方 run。
+- 64 MiB acceptance: 仍未通过。单次 LFS batch 协商返回 HTTP 413、白名单类别 lfs_batch_rejected；协议正文 442 字节，文件内容 0 字节。未匹配明确配额错误码，V5 元数据无配额字段，不能推断是单文件大小还是存储配额限制。需平台侧确认/解除限制后，沿用已授权 64 MiB、256 MiB、10 分钟预算及独立路径复验；不自动缩样本、改 LFS 规则或删除样本。
+- Review / status: 本轮可执行验收与授权交付已完成；整体完整验收仍 **REQUEST CHANGES**，保留 64 MiB 阻断及明确延期的 Windows 范围。该 Issue 仍 active，下一步仅为平台限制核查或用户明确启动的 Windows 评审，不自动扩大修复范围。
+- Final record: 本次交接提交仅修改 TASK.md，源码、测试、依赖和工作流与已验收 `7049ef2` 完全相同；随文档推送自动触发的后续 CI 不替代上方已完成运行的证据。
+
 ## Follow-up implementation (2026-10-17)
 
 - Authorization: 用户接受五项后续方案并要求开始修复，沿用当前唯一 Issue 和现有工作区，保留上轮全部改动。大文件预算已明确：64 MiB 文件、总传输预算 256 MiB、最长 10 分钟；仅指定 dataset 的独立 e2e 路径，保留样本。用户随后明确授权提交、合入并仅推送 yuto，继续 CI 验收；不授权发布。
@@ -9,7 +20,7 @@ Status: active
 - Affected Capability IDs: 在原范围上追加 DOWNLOAD-FILE、DOWNLOAD-SNAPSHOT、DOWNLOAD-INTEGRITY、DOWNLOAD-SECURITY；保留现有完整性重试、公开签名和原子下载行为。
 - Phases: 1) 下载诊断与限流红灯/实现/专项；2) 独立进程隔离回归、文档及登记；3) 完整离线门禁；4) 指定仓库预算内验证、审查与交接。远端 CI 依赖源码交付，先完成可验收结果再说明交付需求。
 - New invariants: DLFILE-003/004 与 RUNTIME-007，登记共 154 条不变量、94 脚本；依赖远程 ValueError 子类转为原生 SDK 安全失败结果，调用前本地参数异常不变。
-- Current phase: 本地实现和离线验收完成；真实 64 MiB 验收受服务端 HTTP 413 阻断，远端 CI 尚需交付后的运行证据。下方基础阶段记录保留为历史，本追加节描述当前状态。
+- Current phase: 本地实现、交付与 Linux/macOS 远端验收完成；真实 64 MiB 验收受 HTTP 413 阻断，Windows 按用户决定另行评审。下方基础阶段记录保留为历史，本追加节描述当前状态。
 - Focused evidence: 下载诊断/限流 32/32、真实 spawn 隔离/超时 22/22、SDK 脱敏 37/37、下载类型解析 7/7、下载兼容合同 45/45、依赖签名 18/18。原生下载远程 BadRequestError 用真实 HF 构造签名测试；同时修正前阶段上传回归中漏传 response 导致实际测试 TypeError 的遗漏。
 - Final offline gate: 首轮 92/94，修复本地仓库类型歧义被误加诊断及格式指纹；第二轮完整 `python tests/run_cli_baseline.py` **94/94 passed, 119.84s**，`/tmp/atomgit-followup-baseline-2.log`。compileall、pip check、diff check、修改生产文件 Ruff、Python 3.9 语法和高置信凭证模式扫描通过。Black 76 files/409 hunks、isort 80/87、Ruff 15/44 未增长，未用放宽契约隐藏变更。
 - Live evidence: 2026-10-17 在指定 dataset 的 `e2e/20261017-lfs-recovery-4f021643c9/` 进行 64 MiB 单文件测试；计划在 LFS 预上传完成且断点落盘后主动中断子进程，再恢复提交并回读。服务端在到达该中断点前返回 HTTP 413，CLI exit=1；9.62 秒，记录到 HTTP 请求/响应正文共 5887 字节，远低于 256 MiB 预算，未重复提交。不能把 413 单独归因为文件大小或 LFS 配额，原始响应未作为日志保存。测试脚本 `/tmp/atomgit-followup-live.py`，安全报告 `/tmp/atomgit-followup-live-result.json`。该测试没有证明大文件上传、恢复或长期传输成功。
