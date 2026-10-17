@@ -206,6 +206,19 @@ DOMAIN_DEPENDENCIES = {
 LEGACY_FORBIDDEN_EDGES = set()
 
 CURRENT_INTERNAL_EDGES = {
+    ("adapters.download.integrity", "infrastructure.validation"),
+    ("adapters.download.resume", "infrastructure.validation"),
+    ("adapters.sdk_errors", "infrastructure.validation"),
+    ("adapters.huggingface", "adapters.sdk_errors"),
+    ("adapters.download.service", "infrastructure.runtime"),
+    ("adapters.huggingface", "adapters.upload.ordinary"),
+    ("adapters.huggingface", "infrastructure.runtime"),
+    ("adapters.huggingface", "infrastructure.validation"),
+    ("adapters.sdk_datasets", "infrastructure.runtime"),
+    ("adapters.sdk_downloads", "infrastructure.runtime"),
+    ("adapters.sdk_uploads", "adapters.upload.ordinary"),
+    ("adapters.sdk_uploads", "infrastructure.runtime"),
+    ("adapters.upload.ordinary", "infrastructure.runtime"),
     ("adapters.atomgit_v5", "infrastructure.config"),
     ("adapters.atomgit_v5", "infrastructure.validation"),
     ("adapters.config", "infrastructure.config"),
@@ -408,7 +421,7 @@ LEGACY_FACADE_DEBT = {
     "api": {"max_lines": 6, "max_functions": 0, "max_classes": 0},
     "atomgit_hub": {"max_lines": 170, "max_functions": 2, "max_classes": 0},
     "cli": {"max_lines": 27, "max_functions": 0, "max_classes": 0},
-    "compatibility.api": {"max_lines": 811, "max_functions": 0, "max_classes": 1},
+    "compatibility.api": {"max_lines": 808, "max_functions": 0, "max_classes": 1},
     "compatibility.cli": {"max_lines": 143, "max_functions": 3, "max_classes": 1},
     "compatibility.completion": {"max_lines": 92, "max_functions": 0, "max_classes": 0},
     "compatibility.config": {"max_lines": 10, "max_functions": 0, "max_classes": 0},

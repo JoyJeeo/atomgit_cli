@@ -1,5 +1,53 @@
 # Current Issue Contract
 
+Status: active
+
+## Follow-up implementation (2026-10-17)
+
+- Authorization: 用户接受五项后续方案并要求开始修复，沿用当前唯一 Issue 和现有工作区，保留上轮全部改动。大文件预算已明确：64 MiB 文件、总传输预算 256 MiB、最长 10 分钟；仅指定 dataset 的独立 e2e 路径，保留样本。用户随后明确授权提交、合入并仅推送 yuto，继续 CI 验收；不授权发布。
+- Objective: 补齐下载阶段/状态/安全错误类别诊断；只读 429 有限等待；减少验证目录扫描；补充进程隔离证据及文档；执行预算内 LFS/中断恢复验证。首次下载失败原因未知，不添加猜测性的 404 重试。
+- Affected Capability IDs: 在原范围上追加 DOWNLOAD-FILE、DOWNLOAD-SNAPSHOT、DOWNLOAD-INTEGRITY、DOWNLOAD-SECURITY；保留现有完整性重试、公开签名和原子下载行为。
+- Phases: 1) 下载诊断与限流红灯/实现/专项；2) 独立进程隔离回归、文档及登记；3) 完整离线门禁；4) 指定仓库预算内验证、审查与交接。远端 CI 依赖源码交付，先完成可验收结果再说明交付需求。
+- New invariants: DLFILE-003/004 与 RUNTIME-007，登记共 154 条不变量、94 脚本；依赖远程 ValueError 子类转为原生 SDK 安全失败结果，调用前本地参数异常不变。
+- Current phase: 本地实现和离线验收完成；真实 64 MiB 验收受服务端 HTTP 413 阻断，远端 CI 尚需交付后的运行证据。下方基础阶段记录保留为历史，本追加节描述当前状态。
+- Focused evidence: 下载诊断/限流 32/32、真实 spawn 隔离/超时 22/22、SDK 脱敏 37/37、下载类型解析 7/7、下载兼容合同 45/45、依赖签名 18/18。原生下载远程 BadRequestError 用真实 HF 构造签名测试；同时修正前阶段上传回归中漏传 response 导致实际测试 TypeError 的遗漏。
+- Final offline gate: 首轮 92/94，修复本地仓库类型歧义被误加诊断及格式指纹；第二轮完整 `python tests/run_cli_baseline.py` **94/94 passed, 119.84s**，`/tmp/atomgit-followup-baseline-2.log`。compileall、pip check、diff check、修改生产文件 Ruff、Python 3.9 语法和高置信凭证模式扫描通过。Black 76 files/409 hunks、isort 80/87、Ruff 15/44 未增长，未用放宽契约隐藏变更。
+- Live evidence: 2026-10-17 在指定 dataset 的 `e2e/20261017-lfs-recovery-4f021643c9/` 进行 64 MiB 单文件测试；计划在 LFS 预上传完成且断点落盘后主动中断子进程，再恢复提交并回读。服务端在到达该中断点前返回 HTTP 413，CLI exit=1；9.62 秒，记录到 HTTP 请求/响应正文共 5887 字节，远低于 256 MiB 预算，未重复提交。不能把 413 单独归因为文件大小或 LFS 配额，原始响应未作为日志保存。测试脚本 `/tmp/atomgit-followup-live.py`，安全报告 `/tmp/atomgit-followup-live-result.json`。该测试没有证明大文件上传、恢复或长期传输成功。
+- Read-only follow-up: 原生 SDK 回读上轮 native-file 样本成功且 SHA-256 匹配；五个旧样本路径均存在，新大文件前缀下无文件，远端文件名数量仍为 14。未保存本次初始目录集合的指纹，因此不将数量相同表述为前缀外完整集合逐项一致。报告 `/tmp/atomgit-followup-readonly-result.json`。未删除样本或改变仓库规则/可见性。
+- Review: 独立 reviewer 阶段已核对最终源码差异、完整基线、依赖签名、诊断白名单、有限重试、本地异常兼容、进程隔离与原子替换。未发现未修复的代码缺陷；整体验收结论 **REQUEST CHANGES**，原因是所约定的真实 64 MiB 与跨平台远端 CI 证据仍缺失。不能沿用下方基础阶段 APPROVED 作为追加阶段全部验收通过。
+- Delivery preflight: github/yuto 与本地 yuto 均为 a684101；提交前完整基线 **94/94 passed, 118.11s**（`/tmp/atomgit-delivery-baseline.log`），compileall、pip check、diff check、凭证模式扫描通过。复核 CI 的四个平台/版本组合及发布依赖同一源码 SHA；未发现新增代码缺陷，保留 64 MiB 受阻的验收结论。
+- 413 diagnostic follow-up: 单次 LFS batch 协商使用原 64 MiB 对象摘要，返回 HTTP 413，白名单分类 `lfs_batch_rejected`、不可重试；未匹配服务端明确配额错误码。只传输 442 字节协议正文，文件内容 0 字节，0.32 秒；未跟随上传动作或提交文件。只读 V5 元数据未提供可用配额字段。无法进一步区分配额与其他平台限制，停止自动重试。报告 `/tmp/atomgit-lfs-413-diagnostic.json`。
+- Next action / permissions: 需先确认服务端 HTTP 413 对应限制后再安排大文件复测；不自动缩小样本或修改 LFS 规则。用户已明确授权在 64 MiB 验收缺口单独核查的条件下提交、合入并仅推送 github/yuto，以运行 CI；此授权不等于大文件验收通过。远端 CI 与 413 原因继续核查，交付后记录结果。保持同一分支和工作区继续；本 Issue 仍 active。
+
+
+- ID: `LOCAL-SDK-BOUNDARIES-20261017`
+- Title: SDK 传输安全边界与自动验收
+- Authorization: 用户接受已汇报的八项修复建议及预期效果，并要求“没有的话开始修复”。允许本地源码、回归、文档、CI 工作流修改和离线验证；受控传输仅限指定 dataset `weixin_52273949/atomgit-cli-dataset-20260804-003221` 的独立 `e2e/<run-id>/` 路径。无仓库删除、可见性、仓库级 LFS 规则修改、发布授权。提交交付另按维护者验收与仓库规则执行。
+- Base / worktree: `yuto@a68410152d18b1831995b7564fd0f362df65b5a0`；当前工作区，分支 `codex/sdk-transfer-boundaries`；启动时工作区干净。
+- Objective: 修复导入顺序导致错误 endpoint、SDK 投影路径穿越、客户端 token 丢失、日志/异常链脱敏遗漏、匿名回退 HF_TOKEN、上传参数静默忽略、并发超时污染；将完整基线接入 push/PR 与指定源码发布门禁。
+- Affected Capability IDs: `RUNTIME`, `SDK-UPLOAD`, `SDK-DOWNLOAD`, `UPLOAD-FILE`, `UPLOAD-FOLDER`, `DOWNLOAD-SECURITY`, `ERROR-REDACTION`, `PACKAGING`, `ARCHITECTURE`, `FLOOR-REGISTRY`。
+- Protected Existing Invariants: HF 1.1.7 / datasets 4.4.1 锁定；CLI/SDK 现有公开签名、旧导入和可注入测试边界；断点/有限重试/提交确认；全局状态恢复；真实凭证不进入输出或文件；已有能力与测试不减少。
+- New Or Changed Invariants: 新增 `RUNTIME-005/006`、`SDKUP-003/004/005`、`SDKDL-003`、`REDACT-005`、`PKG-024`，共 151 条不变量、94 脚本。所有相关传输显式 endpoint；拒绝越界路径；方法 token > 客户端 token > 保存 token，False 保留匿名；依赖日志和完整异常链安全；匿名显式 False；普通上传参数落实或拒绝；并发请求等待及会话恢复；发布依赖同一 source SHA 的离线基线。旧 SDK 对外异常从保留原始 cause 迁移为安全分类且隐藏原始异常链，此兼容变化已在接受方案中说明。
+- Phases: 1) endpoint/路径/token/匿名/异常链红灯、修复、专项绿灯；2) 上传选项与实际 HTTP 超时/并发红灯、实现、专项绿灯；3) CI 与发布门禁、文档/能力契约；4) 完整离线基线与独立 reviewer 阶段；5) 有专用凭证时执行指定仓库传输与 SHA-256 回读，否则报告凭证缺口。
+- Verification: 扩展现有测试脚本，使用假凭证、隔离临时目录、严格依赖调用、实际 HTTP 会话对象/假传输和受控线程同步；`python tests/run_cli_baseline.py`、compileall、pip check、diff check、结构/产物与工具债务检查；不削弱基线。
+- Acceptance: 八项逐条有可执行证据；本地完整基线通过；受控远程行必须有独立回读 SHA-256，不将离线模拟当作远程证据。
+- Initial evidence: 上轮只读审计已离线复现七类缺陷；基点完整基线 94/94；本轮已核对 HF 签名，默认 HTTP factory 在创建会话时读取 timeout，write 固定 60s。
+- Current phase: 实现、完整离线验收和独立审查完成，受控远程五条传输回读通过，附以下服务端限制，等待维护者验收。专项：runtime 11/11、凭证/架构 47/47、匿名 8/8、异常 37/37、实际 HTTP 会话与并发 14/14、参数边界 22/22、依赖签名 18/18。两个测试替身未拦截新入口，曾以假凭证向 fake/repo、user/repo 发出预上传请求并被 HTTP 400 拒绝，未成功上传；已修正替身并给完整离线基线增加外部 socket 阻断和测试凭证环境隔离。
+- Review checkpoint: 补充原生单文件远程 BadRequestError（ValueError 子类）的安全转换，红灯/绿灯 37/37。首轮完整基线 90/94，修复旧测试拦截入口、登记和格式；第二轮 92/94，仅最新调用边与格式指纹未同步。全量离线子进程现阻断外部 socket 并去除测试凭证环境变量，保留本机 HTTP fixture。
+- Offline evidence (2026-10-17): 最终 `python tests/run_cli_baseline.py` **94/94 passed, 127.96s**，日志 `/tmp/atomgit-boundary-baseline-3.log`；包含结构、打包安装、开发底线和工具债务检查。compileall、pip check、diff check、修改文件 Python 3.9 语法与高置信凭证模式扫描通过。真实 HF 1.1.7 / datasets 4.4.1 版本和上传调用签名已复核。
+- Tooling debt: Black 76 files/409 hunks、isort 80/87、Ruff 15/44 未增加，仅同步精确差异指纹；兼容 facade 从 811 降至 808 行，登记同步收紧。
+- Independent review: 分离的 reviewer 阶段重新检查完整 diff、实际依赖签名、回归证据、凭证/路径边界、全局状态恢复、旧公开签名、CI 发布依赖与开发底线。未发现开放 P0/P1/P2/P3，结论 `APPROVED`；仅说明本地代码审查通过，不代表远端 CI 已运行。审查曾发现的原生 BadRequestError 脱敏遗漏已修复并纳入最终基线。
+- Controlled live evidence: 指定 dataset 下的 `e2e/20261017-sdk-boundaries-5e15c25189/`；CLI 普通目录、原生 SDK 普通目录、旧 SDK 目录、原生 SDK 单文件、CLI 默认断点上传共五条均返回成功，逐条独立下载并与源文件 SHA-256 匹配。完整安全结果保存在 `/tmp/atomgit-boundary-live-result.json`；远程五个小型 check.txt 样本保留，未执行删除。此样本未覆盖大文件 LFS 或中断恢复。
+- Live limitations: 原生单文件首次下载失败；直接 resolve 两种兼容路由均返回 HTTP 200 且 SHA-256 匹配，随后适配器和原生 SDK 只读重试均成功，未重复上传；首次下载失败原因未确认。最终仓库树核对遇 HTTP 429，立即停止远程请求，未完成 prefix 外最终目录集合核对；结果 JSON 因此保持整体 failed，不将五条传输成功表述为完整远程流程无失败。无证据表明发生错误路径写入。
+- Residual limits: 跨平台 CI 矩阵尚未在远端执行；同进程普通上传排队执行但单次文件并发保留。共享 HF 会话仍不提供与外部任意 HF 操作的完全隔离；本次约束并发 AtomGit 上传作用域。未经处理的 SDK 底层异常链不再展示，调用方按公开异常类别处理。
+- Delivery status / next action: 未提交/合并/推送；受控传输仅在指定测试仓库独立前缀下执行，未修改凭证。仅一个 Issue 活跃，等待维护者验收。后续须在同一工作区继续，未创建 checkpoint commit；不得因本记录自动重试远端限流请求或扩大测试范围。
+
+---
+
+# Previous delivered contract (historical)
+
+# Current Issue Contract
+
 Status: inactive (delivered)
 
 - ID: `LOCAL-UPLOAD-DIAGNOSTICS-20261015`

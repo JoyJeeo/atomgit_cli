@@ -800,7 +800,7 @@ except AtomGitNetworkError as error:
 
 SDK 还导出 `AtomGitRepositoryExistsError`、`AtomGitRevisionNotFoundError`、
 `AtomGitTimeoutError`、`AtomGitUnsupportedError` 和基类 `AtomGitError`。转换后的
-异常保留脱敏的原始 cause，便于日志和程序化处理。
+SDK 对外异常保留稳定分类，完整 traceback 不展示未经处理的底层异常链；请按公开异常类型处理失败。
 
 ### 7. 完整示例
 
@@ -1025,3 +1025,12 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 - 邮箱：JoyJeeo@163.com
 - 项目地址：https://github.com/JoyJeeo/atomgit_cli
 - 问题报告：https://github.com/JoyJeeo/atomgit_cli/issues
+
+
+### SDK 传输边界与离线验收
+
+- 原生 `AtomGitClient` 上传下载使用“方法 token → 客户端 token → 保存凭证”的优先级；`False` 明确请求匿名，匿名上传被拒绝。旧版 SDK 无 AtomGit 凭证时不会回退读取 `HF_TOKEN`。
+- 上传客户端及旧版下载显式指定 AtomGit endpoint，不依赖 Hugging Face 与 AtomGit 的导入顺序。上传子目录拒绝 `..`，保留 `.records` 等合法名称。
+- 原生普通上传支持 `progress`、`num_workers` 和 `timeout`；普通目录上传不支持 `auto_configure_lfs=True` 或自定义 `batch_size`，需要这些选项时使用 `resumable=True`。单文件 SDK 上传不支持 `ignore_patterns`，应由调用方先筛选文件。
+- 为隔离锁定 HF 库的全局超时和进度状态，同进程普通上传调用串行执行；单次上传内部保留文件并发。HTTP 会话按请求超时重新建立，退出后恢复状态；LFS 写入等待仍为 60 秒。
+- push/PR 工作流运行完整离线基线；发布准备依赖指定源码 SHA 的同一测试矩阵。矩阵配置覆盖 Linux、macOS、Windows 及 Python 3.9/3.13 边界；配置存在不代表这些远程运行已经通过。

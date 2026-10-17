@@ -35,7 +35,126 @@ def check(name, condition, detail=""):
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
+def path_boundary_checks():
+    from unittest.mock import patch
+
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        source = root / "source"
+        source.mkdir()
+        (source / "fixture.txt").write_text("fixture", encoding="utf-8")
+        for prefix in ("stage/../../escape", "stage\\..\\escape"):
+            with (
+                patch("shutil.copytree") as copy,
+                patch.object(atomgit_hub, "hf_upload_folder") as upload,
+            ):
+                try:
+                    atomgit_hub.upload_folder(
+                        source, "fake/repo", token="fake-token", path_in_repo=prefix
+                    )
+                except ValueError:
+                    rejected = True
+                else:
+                    rejected = False
+                check(
+                    "traversal rejected before copy or upload",
+                    rejected and not copy.called and not upload.called,
+                )
+        seen = []
+
+        def capture(**kwargs):
+            seen.append(
+                (Path(kwargs["folder_path"]) / ".records" / "fixture.txt").is_file()
+            )
+            return "commit"
+
+        with patch.object(atomgit_hub, "hf_upload_folder", capture):
+            atomgit_hub.upload_folder(
+                source, "fake/repo", token="fake-token", path_in_repo=".records/"
+            )
+        check("legal dot-prefixed destination is preserved", seen == [True])
+
+
+def native_option_checks():
+    from unittest.mock import patch
+
+    from huggingface_hub import HfApi, close_session, get_session
+    from huggingface_hub.utils import are_progress_bars_disabled
+
+    from atomgit.interfaces.sdk import AtomGitClient
+
+    class Config:
+        def get_credentials(self):
+            return None
+
+    calls = []
+
+    def commit(client, repo_id, operations, **kwargs):
+        calls.append(
+            (
+                kwargs.get("num_threads"),
+                are_progress_bars_disabled(),
+                get_session().timeout.read,
+            )
+        )
+        return "commit"
+
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        file = root / "data.txt"
+        file.write_text("fixture", encoding="utf-8")
+        client = AtomGitClient(config=Config())
+        with (
+            patch.object(HfApi, "create_commit", commit),
+            patch(
+                "socket.socket.connect", side_effect=AssertionError("offline network")
+            ),
+        ):
+            client.upload_folder(
+                root,
+                "fake/repo",
+                token="fake-token",
+                progress=False,
+                num_workers=2,
+                timeout=41,
+            )
+            check(
+                "native ordinary folder options reach real HF commit boundary",
+                calls[-1] == (2, True, 41),
+            )
+            client.upload_file(
+                file,
+                "fake/repo",
+                token="fake-token",
+                progress=False,
+                num_workers=3,
+                timeout=42,
+            )
+            check(
+                "native file options reach real HF commit boundary",
+                calls[-1] == (3, True, 42),
+            )
+            before = len(calls)
+            try:
+                client.upload_folder(
+                    root, "fake/repo", token="fake-token", auto_configure_lfs=True
+                )
+            except ValueError:
+                rejected = True
+            else:
+                rejected = False
+            check(
+                "ordinary SDK rejects unsupported automatic LFS before upload",
+                rejected and len(calls) == before,
+            )
+    close_session()
+
+
 def main():
+    native_option_checks()
+
+    path_boundary_checks()
+
     original_upload = atomgit_hub.hf_upload_folder
     calls = []
 

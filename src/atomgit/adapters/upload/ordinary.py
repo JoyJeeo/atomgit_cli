@@ -1,11 +1,21 @@
 """Ordinary upload dependency and process-global progress policy."""
 
-from huggingface_hub import HfApi, upload_folder
+import os
+import threading
+from contextlib import contextmanager
+
+from huggingface_hub import HfApi, close_session
+from huggingface_hub import constants as hf_constants
 from huggingface_hub.utils import (
     are_progress_bars_disabled,
     disable_progress_bars,
     enable_progress_bars,
 )
+
+from ...infrastructure.runtime import ATOMGIT_HF_ENDPOINT
+
+upload_folder = HfApi(endpoint=ATOMGIT_HF_ENDPOINT).upload_folder
+hf_upload_file = HfApi(endpoint=ATOMGIT_HF_ENDPOINT).upload_file
 
 try:
     from huggingface_hub.utils.tqdm import progress_bar_states
@@ -53,7 +63,7 @@ def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
         return upload_folder(**upload_kwargs)
     kwargs = dict(upload_kwargs)
     token = kwargs.pop("token", None)
-    client = HfApi(token=token)
+    client = HfApi(endpoint=ATOMGIT_HF_ENDPOINT, token=token)
     original_create_commit = client.create_commit
 
     def create_commit_with_workers(*args, **call_kwargs):
@@ -62,3 +72,41 @@ def _upload_folder_with_workers(upload_kwargs: dict, num_workers: int = 5):
 
     client.create_commit = create_commit_with_workers
     return client.upload_folder(**kwargs)
+
+
+_UPLOAD_STATE_LOCK = threading.RLock()
+
+
+def _reset_upload_state_lock():
+    global _UPLOAD_STATE_LOCK
+    _UPLOAD_STATE_LOCK = threading.RLock()
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_upload_state_lock)
+
+
+@contextmanager
+def _serialized_upload():
+    # ponytail: serialize ordinary calls while HF owns global timeout/progress;
+    # use per-request clients if the locked library gains isolated settings.
+    with _UPLOAD_STATE_LOCK:
+        yield
+
+
+@contextmanager
+def _scoped_upload_settings(timeout, progress=None):
+    """Apply timeout to a fresh HTTP session and restore settings on every exit."""
+    with _serialized_upload():
+        original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
+        original_progress = _capture_progress_bar_state()
+        try:
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = timeout
+            close_session()
+            if progress is not None:
+                _set_progress_bar(progress)
+            yield
+        finally:
+            hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
+            close_session()
+            _restore_progress_bar_state(original_progress)

@@ -25,7 +25,100 @@ def capture(callable_obj):
     return None
 
 
+def nested_error_checks():
+    import logging
+    import traceback
+    from io import StringIO
+    from unittest.mock import patch
+
+    from atomgit.interfaces.sdk import AtomGitClient
+
+    class Config:
+        def get_credentials(self):
+            return None
+
+    with tempfile.TemporaryDirectory() as directory:
+        source = Path(directory)
+        (source / "file.txt").write_text("fixture", encoding="utf-8")
+
+        def nested(**kwargs):
+            try:
+                raise ValueError(
+                    "https://fixture.invalid/?signature=FAKE_SECRET_MARKER"
+                )
+            except ValueError as cause:
+                raise RuntimeError("request failed") from cause
+
+        with patch.object(atomgit_hub, "hf_upload_folder", nested):
+            error = capture(
+                lambda: atomgit_hub.upload_folder(
+                    source, "fake/repo", token="fake-token"
+                )
+            )
+        rendered = "".join(
+            traceback.format_exception(type(error), error, error.__traceback__)
+        )
+        check(
+            "complete SDK traceback excludes nested credential",
+            "FAKE_SECRET_MARKER" not in rendered,
+        )
+        import httpx
+        from huggingface_hub.errors import BadRequestError
+
+        def rejected(**kwargs):
+            raise BadRequestError(
+                "https://fixture.invalid/?signature=FAKE_REMOTE_ERROR",
+                response=httpx.Response(
+                    400, request=httpx.Request("GET", "https://fixture.invalid")
+                ),
+            )
+
+        with patch("huggingface_hub.HfApi.upload_file", staticmethod(rejected)):
+            failure = capture(
+                lambda: AtomGitClient(config=Config()).upload_file(
+                    source / "file.txt", "fake/repo", token="fake-token"
+                )
+            )
+        rendered = "".join(
+            traceback.format_exception(type(failure), failure, failure.__traceback__)
+        )
+        check(
+            "native dependency ValueError cannot bypass redaction",
+            isinstance(failure, atomgit_hub.AtomGitError)
+            and "FAKE_REMOTE_ERROR" not in rendered,
+        )
+        output = StringIO()
+        logger = logging.getLogger("huggingface_hub.boundary_fixture")
+        handler = logging.StreamHandler(output)
+        logger.addHandler(handler)
+
+        def noisy(**kwargs):
+            logger.warning("https://fixture.invalid/?signature=FAKE_SECRET_MARKER")
+            return "commit"
+
+        try:
+            with (
+                patch("huggingface_hub.upload_file", noisy),
+                patch("huggingface_hub.HfApi.upload_file", staticmethod(noisy)),
+                patch(
+                    "socket.socket.connect",
+                    side_effect=AssertionError("offline test attempted network"),
+                ),
+            ):
+                AtomGitClient(config=Config()).upload_file(
+                    source / "file.txt", "fake/repo", token="fake-token"
+                )
+            check(
+                "native single-file dependency logs are redacted",
+                "FAKE_SECRET_MARKER" not in output.getvalue(),
+            )
+        finally:
+            logger.removeHandler(handler)
+
+
 def main():
+    nested_error_checks()
+
     exception_types = (
         atomgit_hub.AtomGitAuthenticationError,
         atomgit_hub.AtomGitRepositoryNotFoundError,
@@ -74,7 +167,10 @@ def main():
             atomgit_hub.hf_snapshot_download = lambda **kwargs: (_ for _ in ()).throw(source)
             error = capture(lambda: atomgit_hub.snapshot_download("user/repo", token=False))
             check(f"{name} maps to stable type", type(error) is expected_type)
-            check(f"{name} preserves cause", error.__cause__ is source)
+            check(
+                f"{name} suppresses raw cause",
+                error.__cause__ is None and error.__suppress_context__,
+            )
             check(f"{name} message is sanitized", "signed.invalid" not in str(error) and "secret" not in str(error))
             check(
                 f"{name} sensitive cause is sanitized",
@@ -100,7 +196,10 @@ def main():
                 "upload not-found uses stable type",
                 isinstance(error, atomgit_hub.AtomGitRepositoryNotFoundError),
             )
-            check("upload preserves cause", error.__cause__ is upload_source)
+            check(
+                "upload suppresses raw cause",
+                error.__cause__ is None and error.__suppress_context__,
+            )
             check("upload message is sanitized", "signed.invalid" not in str(error))
     finally:
         atomgit_hub.hf_upload_folder = original_upload
@@ -118,7 +217,10 @@ def main():
             "create conflict uses stable type",
             isinstance(error, atomgit_hub.AtomGitRepositoryExistsError),
         )
-        check("create conflict preserves cause", error.__cause__ is create_source)
+        check(
+            "create conflict suppresses raw cause",
+            error.__cause__ is None and error.__suppress_context__,
+        )
         result = atomgit_hub.create_repository(
             "user/repo", token="fake-token", private=True, exist_ok=True
         )

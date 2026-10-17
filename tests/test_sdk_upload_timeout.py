@@ -19,7 +19,159 @@ def check(name, condition, detail=""):
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
+def concurrent_session_checks():
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from unittest.mock import patch
+
+    from huggingface_hub import close_session, get_session
+
+    from atomgit.adapters import sdk_uploads
+
+    initial = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    entered, second_entered, release = (
+        threading.Event(),
+        threading.Event(),
+        threading.Event(),
+    )
+    observations = []
+
+    def upload(**kwargs):
+        label = kwargs["commit_message"]
+        if label == "first":
+            entered.set()
+            assert release.wait(5)
+        else:
+            second_entered.set()
+        observations.append((label, get_session().timeout.read))
+        return "commit"
+
+    def first(source):
+        return sdk_uploads.upload_folder(
+            source,
+            "fake/repo",
+            token="fake-token",
+            upload_timeout=10,
+            commit_message="first",
+        )
+
+    try:
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = 19
+        close_session()
+        get_session()  # Deliberately create a cached client before either upload.
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(sdk_uploads, "hf_upload_folder", upload),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            source = Path(directory)
+            (source / "data.bin").write_bytes(b"fixture")
+            a = executor.submit(first, source)
+            assert entered.wait(5)
+            b = executor.submit(
+                sdk_uploads.upload_folder,
+                source,
+                "fake/repo",
+                token="fake-token",
+                upload_timeout=20,
+                commit_message="second",
+            )
+            try:
+                check(
+                    "ordinary uploads do not overlap global timeout scopes",
+                    not second_entered.wait(0.2),
+                )
+            finally:
+                release.set()
+            a.result(8)
+            b.result(8)
+        check(
+            "actual cached HTTP sessions use each requested timeout",
+            sorted(observations) == [("first", 10), ("second", 20)],
+        )
+        check(
+            "concurrent upload restores original HTTP timeout",
+            hf_constants.DEFAULT_REQUEST_TIMEOUT == 19
+            and get_session().timeout.read == 19,
+        )
+    finally:
+        release.set()
+        close_session()
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = initial
+
+
+def isolated_worker(connection, fail):
+    from huggingface_hub import get_session
+    from huggingface_hub.utils import are_progress_bars_disabled
+
+    from atomgit.adapters.upload.ordinary import _scoped_upload_settings
+
+    original = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    try:
+        with _scoped_upload_settings(7, False):
+            connection.send((get_session().timeout.read, are_progress_bars_disabled()))
+            connection.recv()
+            if fail:
+                raise RuntimeError("offline failure")
+    except RuntimeError:
+        pass
+    connection.send(hf_constants.DEFAULT_REQUEST_TIMEOUT == original)
+    connection.close()
+
+
+def process_isolation_checks():
+    import multiprocessing
+
+    from huggingface_hub import close_session, get_session
+    from huggingface_hub.utils import are_progress_bars_disabled
+
+    original = hf_constants.DEFAULT_REQUEST_TIMEOUT
+    try:
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = 23
+        close_session()
+        parent_session = get_session()
+        parent_progress = are_progress_bars_disabled()
+        for fail in (False, True):
+            context = multiprocessing.get_context("spawn")
+            parent, child = context.Pipe()
+            process = context.Process(target=isolated_worker, args=(child, fail))
+            process.start()
+            child.close()
+            try:
+                assert parent.poll(10), "worker did not enter upload scope"
+                check(
+                    "independent process applies its own upload settings",
+                    parent.recv() == (7, True),
+                )
+                check(
+                    "concurrent caller HF session and progress stay unchanged",
+                    get_session() is parent_session
+                    and not parent_session.is_closed
+                    and get_session().timeout.read == 23
+                    and are_progress_bars_disabled() == parent_progress,
+                )
+                parent.send("continue")
+                assert parent.poll(10), "worker did not restore settings"
+                check(
+                    "isolated worker restores settings on success and failure",
+                    parent.recv() is True,
+                )
+                process.join(10)
+                check("isolated worker exits cleanly", process.exitcode == 0)
+            finally:
+                if process.is_alive():
+                    process.terminate()
+                    process.join(5)
+                parent.close()
+    finally:
+        close_session()
+        hf_constants.DEFAULT_REQUEST_TIMEOUT = original
+
+
 def main():
+    process_isolation_checks()
+    concurrent_session_checks()
+
     original_upload = atomgit_hub.hf_upload_folder
     original_canonical_upload = atomgit_hub.run_canonical_lfs_upload
     suite_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
@@ -139,8 +291,8 @@ def main():
                 check(
                     "failure remains actionable",
                     isinstance(error, atomgit_hub.AtomGitError)
-                    and error.__cause__ is not None
-                    and "offline upload failure" in str(error.__cause__),
+                    and error.__cause__ is None
+                    and error.__suppress_context__,
                 )
             else:
                 check("failure remains actionable", False, "no exception")

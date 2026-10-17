@@ -60,12 +60,19 @@ class AtomGitClient:
         """Return structured remote failures while preserving local errors."""
         try:
             return callback()
-        except (ValueError, FileNotFoundError, NotADirectoryError, TypeError):
-            raise
-        except AtomGitError:
-            raise
         except Exception as error:
             metadata = _sdk_error_metadata(error)
+            if "download_diagnostic" not in metadata and isinstance(
+                error,
+                (
+                    ValueError,
+                    FileNotFoundError,
+                    NotADirectoryError,
+                    TypeError,
+                    AtomGitError,
+                ),
+            ):
+                raise
             return OperationResult(
                 operation,
                 False,
@@ -167,7 +174,7 @@ class AtomGitClient:
             repo_id=repo_id,
             repo_type=repo_type,
             revision=normalize_revision(revision),
-            token=token,
+            token=self._explicit_token if token is None else token,
             path_in_repo=path_in_repo,
             ignore_patterns=tuple(ignore_patterns or ()),
             message=message,
@@ -200,7 +207,7 @@ class AtomGitClient:
             repo_id=repo_id,
             repo_type=repo_type,
             revision=normalize_revision(revision),
-            token=token,
+            token=self._explicit_token if token is None else token,
             path_in_repo=path_in_repo,
             ignore_patterns=tuple(ignore_patterns or ()),
             message=message,
@@ -232,7 +239,7 @@ class AtomGitClient:
             repo_id=repo_id,
             repo_type=repo_type,
             revision=normalize_revision(revision),
-            token=token,
+            token=self._explicit_token if token is None else token,
             local_dir=local_dir,
             force=force,
             checksum=checksum,
@@ -263,7 +270,7 @@ class AtomGitClient:
             filename=filename,
             repo_type=repo_type,
             revision=normalize_revision(revision),
-            token=token,
+            token=self._explicit_token if token is None else token,
             local_dir=local_dir,
             force=force,
             checksum=checksum,

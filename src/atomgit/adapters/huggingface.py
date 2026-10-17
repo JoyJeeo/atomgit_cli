@@ -7,7 +7,13 @@ seam requires it.
 
 from pathlib import Path
 
-from .upload.errors import _suppress_hf_model_repo_warning
+from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
+from ..infrastructure.validation import (
+    normalize_path_in_repo,
+    validate_upload_path_no_symlinks,
+)
+from .upload.errors import _scoped_upload_output, _suppress_hf_model_repo_warning
+from .upload.ordinary import _scoped_upload_settings
 
 
 class _LegacySdkProxy:
@@ -21,9 +27,9 @@ class _LegacySdkProxy:
 
     @staticmethod
     def upload_folder(*args, **kwargs):
-        from .sdk_uploads import upload_folder
+        from .sdk_uploads import _upload_folder
 
-        return upload_folder(*args, **kwargs)
+        return _upload_folder(*args, **kwargs)
 
 
 class HuggingFaceAdapter:
@@ -52,6 +58,7 @@ class HuggingFaceAdapter:
             repo_id, private=private, repo_type=repo_type, exist_ok=exist_ok
         )
 
+    @_scoped_upload_output()
     def upload_file(
         self,
         *,
@@ -67,10 +74,18 @@ class HuggingFaceAdapter:
         message=None,
         num_workers=5,
     ):
-        from huggingface_hub import upload_file
+        from huggingface_hub import HfApi
 
-        from .lfs.pointer import run_canonical_lfs_upload
+        from .lfs.pointer import (
+            CanonicalLfsCommitUnconfirmedError,
+            run_canonical_lfs_upload,
+        )
+        from .sdk_errors import _sdk_error
 
+        validate_upload_path_no_symlinks(Path(source))
+        path_in_repo = normalize_path_in_repo(path_in_repo) or "./"
+        if ignore_patterns:
+            raise ValueError("单文件 SDK 上传不支持 ignore_patterns")
         remote_path = (
             f"{path_in_repo.rstrip('/')}/{Path(source).name}"
             if path_in_repo not in ("", ".", "./")
@@ -88,16 +103,31 @@ class HuggingFaceAdapter:
         if revision:
             kwargs["revision"] = revision
 
+        client = HfApi(endpoint=ATOMGIT_HF_ENDPOINT, token=token)
+        original_commit = client.create_commit
+
+        def commit_with_workers(*args, **call_kwargs):
+            call_kwargs["num_threads"] = num_workers
+            return original_commit(*args, **call_kwargs)
+
+        client.create_commit = commit_with_workers
+
         def upload():
             with _suppress_hf_model_repo_warning(repo_type == "dataset"):
-                return upload_file(**kwargs)
+                return client.upload_file(**kwargs)
 
-        return run_canonical_lfs_upload(
-            upload,
-            token=token,
-            repo_id=repo_id,
-            timeout=timeout,
-        )
+        try:
+            with _scoped_upload_settings(timeout, progress):
+                return run_canonical_lfs_upload(
+                    upload,
+                    token=token,
+                    repo_id=repo_id,
+                    timeout=timeout,
+                )
+        except CanonicalLfsCommitUnconfirmedError:
+            raise
+        except Exception as error:
+            raise _sdk_error(error, "上传文件", repo_id) from None
 
     def upload_folder(
         self,
@@ -136,6 +166,12 @@ class HuggingFaceAdapter:
                     batch_size=batch_size,
                     auto_configure_lfs=auto_configure_lfs,
                 )
+        if auto_configure_lfs:
+            raise ValueError("auto_configure_lfs 仅支持 resumable=True")
+        if batch_size != 20:
+            raise ValueError(
+                "普通 SDK 上传不支持自定义 batch_size，请使用 resumable=True"
+            )
         return self.sdk.upload_folder(
             Path(source),
             repo_id,
@@ -146,6 +182,8 @@ class HuggingFaceAdapter:
             ignore_patterns=ignore_patterns,
             commit_message=message,
             upload_timeout=timeout,
+            progress=progress,
+            num_workers=num_workers,
         )
 
     def download_snapshot(

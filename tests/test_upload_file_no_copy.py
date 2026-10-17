@@ -193,7 +193,7 @@ def main():
                   f"timeout={canonical_timeouts[-1]}")
 
             # --- T8: 原生 SDK 单文件入口使用同一请求超时合同 ---
-            original_hf_upload_file = huggingface_hub.upload_file
+            original_hf_upload_file = huggingface_hub.HfApi.upload_file
             original_pointer_upload = pointer_mod.run_canonical_lfs_upload
             native_timeouts = []
 
@@ -201,7 +201,7 @@ def main():
                 native_timeouts.append(timeout)
                 return upload()
 
-            huggingface_hub.upload_file = fake_upload_file
+            huggingface_hub.HfApi.upload_file = staticmethod(fake_upload_file)
             pointer_mod.run_canonical_lfs_upload = capture_native_upload
             try:
                 native_result = AtomGitClient(token="fake-token").upload_file(
@@ -211,7 +211,7 @@ def main():
                     timeout=300,
                 )
             finally:
-                huggingface_hub.upload_file = original_hf_upload_file
+                huggingface_hub.HfApi.upload_file = original_hf_upload_file
                 pointer_mod.run_canonical_lfs_upload = original_pointer_upload
             check("T8 原生 SDK 单文件上传成功", native_result.ok)
             check("T8 原生 SDK LFS 确认保留请求超时",
@@ -222,7 +222,7 @@ def main():
                 warn_hf_dataset_repo()
                 return fake_upload_file(**kwargs)
 
-            huggingface_hub.upload_file = warning_upload_file
+            huggingface_hub.HfApi.upload_file = staticmethod(warning_upload_file)
             pointer_mod.run_canonical_lfs_upload = capture_native_upload
             try:
                 with warnings.catch_warnings(record=True) as dataset_warnings:
@@ -244,7 +244,7 @@ def main():
                         repo_type="model",
                     )
             finally:
-                huggingface_hub.upload_file = original_hf_upload_file
+                huggingface_hub.HfApi.upload_file = original_hf_upload_file
                 pointer_mod.run_canonical_lfs_upload = original_pointer_upload
             check(
                 "T9 原生 SDK dataset 误报警已过滤",

@@ -24,7 +24,36 @@ def check(name, condition, detail=""):
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
 
 
+def import_order_checks():
+    for first in ("", "import huggingface_hub.hf_api; "):
+        environment = os.environ.copy()
+        environment.pop("HF_ENDPOINT", None)
+        probe = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                first + "import atomgit; "
+                "from atomgit.adapters import sdk_uploads; "
+                "from atomgit.compatibility import api; "
+                "print(sdk_uploads.hf_upload_folder.__self__.endpoint); "
+                "print(api.hf_upload_file.__self__.endpoint); "
+                "print(api.upload_folder.__self__.endpoint)",
+            ],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        check(
+            "both import orders pin every upload client to AtomGit",
+            probe.returncode == 0
+            and probe.stdout.splitlines() == [ATOMGIT_HF_ENDPOINT] * 3,
+        )
+
+
 def main():
+    import_order_checks()
+
     clean_environment = os.environ.copy()
     clean_environment.pop("HF_ENDPOINT", None)
     clean_environment.pop("HF_HUB_DISABLE_XET", None)

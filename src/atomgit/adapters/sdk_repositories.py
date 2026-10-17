@@ -70,4 +70,4 @@ def create_repository(
         converted = _sdk_error(error, "创建仓库", repo_id)
         if isinstance(converted, AtomGitRepositoryExistsError) and exist_ok:
             return f"https://atomgit.com/{repo_id}"
-        raise converted from error
+        raise converted from None

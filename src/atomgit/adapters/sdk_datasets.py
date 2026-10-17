@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from huggingface_hub import snapshot_download as hf_snapshot_download
 
+from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
 from ..infrastructure.utils import run_download_with_retry
 from .sdk_common import _get_token, _normalize_repo_id
 from .sdk_errors import _sdk_error
@@ -56,11 +57,13 @@ def load_dataset(
     normalized_path = _normalize_repo_id(path)
     if token is None:
         token = _get_token()
+    token = token or False
     if cache_dir is None:
         cache_dir = HF_DATASETS_CACHE
 
     snapshot_kwargs = {
         "repo_id": normalized_path,
+        "endpoint": ATOMGIT_HF_ENDPOINT,
         "repo_type": "dataset",
         "token": token,
         "revision": revision,
@@ -88,7 +91,7 @@ def load_dataset(
             )
         )
     except Exception as error:
-        raise _sdk_error(error, "下载数据集", path) from error
+        raise _sdk_error(error, "下载数据集", path) from None
 
     load_kwargs = {
         "path": str(local_dataset_path),
@@ -114,4 +117,4 @@ def load_dataset(
             raise ImportError(
                 "数据集功能需要安装datasets库。请运行: pip install datasets"
             )
-        raise _sdk_error(error, "加载数据集", path) from error
+        raise _sdk_error(error, "加载数据集", path) from None

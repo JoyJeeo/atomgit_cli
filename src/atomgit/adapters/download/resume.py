@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 from huggingface_hub.file_download import http_get as hf_http_get
 
+from ...infrastructure.validation import _download_stage
 from .integrity import (
     DownloadChecksumMismatchError,
     _atomgit_file_download_metadata,
@@ -214,6 +215,7 @@ def _atomgit_resume_raw(
     raise urllib.error.HTTPError(current_url, 302, "Too many redirects", {}, None)
 
 
+@_download_stage("content")
 def _download_atomgit_file_resumable(
     repo_id: str,
     repo_type: str,
