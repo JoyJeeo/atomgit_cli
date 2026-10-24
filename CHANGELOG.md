@@ -1,6 +1,6 @@
 # Changelog
 
-This project uses Git tags for immutable source history. The `yuto` line uses a
+This project uses Git tags for immutable source history. The `main` line (formerly `yuto`) uses a
 distinct package version and tag so users can distinguish it from upstream
 PyPI releases.
 

@@ -1,6 +1,6 @@
 # AtomGit CLI Architecture
 
-This document describes the implemented architecture on `yuto`. It is a
+This document describes the implemented architecture on `main`. It is a
 runtime and ownership reference, not a roadmap. Observable CLI and legacy SDK
 contracts remain compatibility surfaces; the native SDK parity surface is
 implemented through the shared usecases below.

@@ -2,8 +2,8 @@
 
 ## 开发时应该使用哪个分支？
 
-使用 `yuto`。`main` 只用于镜像 AtomGit 上游，详见
-[yuto_branch.md](yuto_branch.md)。
+使用 `main`，它是唯一开发和发布主线，跟踪 `github/main`；唯一代码远程为 GitHub。详见
+[main_branch.md](main_branch.md)。
 
 ## 为什么所有命令都要求激活 conda 环境？
 
@@ -208,7 +208,7 @@ mock 只能证明本地参数构造符合测试预期。如果 fake 接受任意
 
 ## `atomgit update` 会修改源码 checkout 吗？
 
-不会。editable/source 安装会被拒绝，并提示 `git checkout yuto`、
+不会。editable/source 安装会被拒绝，并提示 `git checkout main`、
 `git pull --ff-only`、锁定依赖和 `pip install -e .` 的路径。只有 wheel 安装支持
 `atomgit update`。
 

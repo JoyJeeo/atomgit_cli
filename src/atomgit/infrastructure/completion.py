@@ -26,7 +26,7 @@ _UNSET = object()
 _ACTIVATION_WARNING = """[AtomGit] 检测到 atomgit 已通过 pip 卸载，但当前环境仍有补全配置。
 
 请执行官方清理命令：
-  curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/uninstall.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/main/uninstall.sh | sh
 
 当前 shell 中已加载的补全需要重新启动 Zsh：
   exec zsh

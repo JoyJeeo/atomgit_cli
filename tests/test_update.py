@@ -42,7 +42,7 @@ def main():
         source_result = runner.invoke(cli_mod.cli, ["update"])
         check(
             "source update is refused without mutation",
-            source_result.exit_code != 0 and "git checkout yuto" in source_result.output,
+            source_result.exit_code != 0 and "git checkout main" in source_result.output,
         )
         invalid_result = runner.invoke(cli_mod.cli, ["update", "--version", "v1.2.3"])
         check("update rejects legacy v versions", invalid_result.exit_code == 2)

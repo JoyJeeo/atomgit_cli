@@ -21,7 +21,7 @@ def update(context, target_version, force_reinstall):
     if status == "source":
         context.click.echo(
             "检测到 Git/可编辑源码安装；atomgit update 不会修改源码。请执行 "
-            "git checkout yuto、git pull --ff-only，在隔离 conda 环境中安装锁定依赖，"
+            "git checkout main、git pull --ff-only，在隔离 conda 环境中安装锁定依赖，"
             "然后重新执行 python -m pip install -e .。",
             err=True,
         )

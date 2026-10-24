@@ -50,7 +50,7 @@ while [ "$#" -gt 0 ]; do
             exit 0
             ;;
         --coder|--developer|--source)
-            echo "error: source development uses git checkout yuto and pip install -e .; install.sh is for ordinary users" >&2
+            echo "error: source development uses git checkout main and pip install -e .; install.sh is for ordinary users" >&2
             exit 2
             ;;
         *)

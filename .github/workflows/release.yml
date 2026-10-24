@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       source_sha:
-        description: "Exact yuto commit to release"
+        description: "Exact main commit to release"
         required: true
         type: string
 
@@ -33,13 +33,13 @@ jobs:
         run: |
           [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           [[ "${{ inputs.source_sha }}" =~ ^[0-9a-f]{40}$ ]]
-      - name: Check out exact yuto source
+      - name: Check out exact main source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Confirm source is on yuto
-        run: git branch -r --contains "${{ inputs.source_sha }}" | grep -E 'origin/yuto$'
+      - name: Confirm source is on main
+        run: git branch -r --contains "${{ inputs.source_sha }}" | grep -E 'origin/main$'
       - name: Build and checksum release assets
         run: |
           python -m pip install --disable-pip-version-check build

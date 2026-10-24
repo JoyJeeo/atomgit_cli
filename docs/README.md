@@ -15,9 +15,9 @@
 - [testing.md](testing.md)：离线、契约、打包和远程测试规范。
 - [development_floor.md](development_floor.md)：所有现有和未来能力必须共同遵守的
   能力登记、行为不变量、证据和阻断门禁。
-- [release.md](release.md)：当前打包方式和 `yuto` 独立分发目标。
+- [release.md](release.md)：当前打包方式和 `main` 独立分发目标。
 - [faq.md](faq.md)：常见开发和使用问题。
-- [yuto_branch.md](yuto_branch.md)：`main` 与 `yuto` 的权威分支关系。
+- [main_branch.md](main_branch.md)：GitHub 单一远程、`main` 主线与旧 checkout 迁移。
 
 ## 文档事实规则
 
@@ -33,6 +33,6 @@
 
 ## 发布状态
 
-- `yuto` 版本源来自 `src/atomgit/infrastructure/version.py`，稳定 Release 使用无 `v` 的 `X.Y.Z` tag。
+- `main` 版本源来自 `src/atomgit/infrastructure/version.py`，稳定 Release 使用无 `v` 的 `X.Y.Z` tag。
 - GitHub Release 提供 wheel、源码包和 `SHA256SUMS`；AtomGit CLI 不发布到 PyPI。
 - 项目由 JoyJeeo 以 Apache License 2.0 授权。

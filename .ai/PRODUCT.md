@@ -6,7 +6,7 @@
 - CLI command: `atomgit`
 - Native Python interface: `atomgit.interfaces.sdk.AtomGitClient`
 - Legacy HF-style imports: `atomgit` and compatibility module `atomgit_hub`
-- Development mainline: `yuto`
+- Development mainline: `main`
 - Current package version: `1.1.1`
 
 ## Users
@@ -98,7 +98,7 @@ seams for compatibility. This narrower surface exposes:
   shared across operations; live create/upload returned 401 without false
   success when the test account lacked the mapped physical namespaces.
 - The previously known legacy SDK upload lifetime, parameter-forwarding, and
-  timeout state defects are covered by offline regressions on the yuto
+  timeout state defects are covered by offline regressions on the main
   development line.
 - A controlled upload to `weixin_52273949/test_datasets` proved that replacing
   AtomGit's noncanonical `lfsFile` materialization with the exact canonical
@@ -157,5 +157,5 @@ This project is not:
 - Make advertised upload modes work with the locked HF Hub version.
 - Remove behavior drift between the CLI API and public Python SDK.
 - Replace permissive mocks with realistic contract tests.
-- Provide a distinguishable and verifiable installation path for `yuto`.
+- Provide a distinguishable and verifiable installation path for `main`.
 - Improve credential-file and global-state safety without breaking users.

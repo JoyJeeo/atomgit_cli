@@ -2,24 +2,11 @@
 
 ## 开发基线
 
-本仓库采用特殊的双主线关系：
+唯一代码远程是 GitHub：`git@github.com:JoyJeeo/atomgit_cli.git`，本地远程名为 `github`。
+`main` 是开发和发布主线，跟踪 `github/main`。较大任务从 `main` 创建本地任务分支，
+验收并获授权后合回 `main`，只推送 `main`。不再维护 AtomGit 镜像或双主线同步。
 
-```text
-AtomGit 上游 atomgit/main
-            |
-            v
-        本地 main
-            |
-            v
-        本地 yuto ----> github/yuto
-```
-
-- `main` 是 AtomGit 上游同步分支，不用于日常功能开发。
-- `yuto` 是 GitHub 侧实际开发主线。
-- 上游变化先进入 `main`，再选择性同步到 `yuto`。
-- 功能开发和缺陷修复以 `yuto` 为基线。
-
-详细约定见 [yuto_branch.md](yuto_branch.md)。
+详细约定与旧 checkout 迁移方法见 [main_branch.md](main_branch.md)。
 
 ## 环境要求
 
@@ -61,7 +48,7 @@ python -c "import atomgit, atomgit_hub"
 
 一个任务对应一个可以独立验收的 Issue 或问题：
 
-1. 从 `yuto` 确认工作树状态。
+1. 从 `main` 确认工作树状态。
 2. 明确目标、证据、范围、非目标和验收标准。
 3. 对较大任务创建独立任务分支。
 4. 沿真实调用链阅读源码和测试。
@@ -102,7 +89,7 @@ python tests/run_cli_baseline.py
 - `bug`、`compatibility`、`testing`；
 - `cli`、`sdk`；
 - `security`、`distribution`、`documentation`；
-- `upstream-sync`、`release`。
+- `release`。
 
 Issue 必须包含用户影响、复现证据、当前/预期行为、调用链、范围、兼容要求、
 验收标准、测试和逐项权限。路线图编号只是候选编号，未经授权不会自动创建远程

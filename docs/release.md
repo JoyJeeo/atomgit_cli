@@ -44,8 +44,8 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
 
 发布身份和版本规则：
 
-1. `yuto` 是唯一发布分支；版本源在 `src/atomgit/infrastructure/version.py`，使用稳定 `X.Y.Z`。
-2. 从明确的 `yuto` SHA 创建本地 `release/X.Y.Z` 准备分支，合并回 `yuto` 后才发布。
+1. `main` 是唯一发布分支；版本源在 `src/atomgit/infrastructure/version.py`，使用稳定 `X.Y.Z`。
+2. 从明确的 `main` SHA 创建本地 `release/X.Y.Z` 准备分支，合并回 `main` 后才发布。
 3. 维护者手动启动 `.github/workflows/release.yml`，输入版本和精确 SHA；workflow
    使用受保护的 `release-approval` 环境。
 4. Actions 使用仓库局部的 `github-actions[bot]` 身份创建不可移动的
@@ -61,7 +61,7 @@ GitHub Release 是 AtomGit CLI 唯一官方发布渠道，项目不发布到 PyP
 普通用户安装器选择最高的已完成纯数字 Release，显式 `--version X.Y.Z` 选择指定
 版本。历史 `v...` tag 和 Release 不删除，但永远不参与新的默认选择。
 
-源码开发者应使用 `git checkout yuto`、隔离 conda 环境、锁定依赖和
+源码开发者应使用 `git checkout main`、隔离 conda 环境、锁定依赖和
 `python -m pip install -e .`。源码更新使用 `git pull --ff-only` 后重新安装依赖和
 editable 包；`atomgit update` 会检测并拒绝修改这种安装。
 

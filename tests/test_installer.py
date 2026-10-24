@@ -112,7 +112,7 @@ def main():
             valid.stderr,
         )
         source = run(environment, "--source")
-        check("source installer mode is rejected", source.returncode == 2 and "git checkout yuto" in source.stderr)
+        check("source installer mode is rejected", source.returncode == 2 and "git checkout main" in source.stderr)
         help_result = run({}, "--help")
         check("help works without a target environment", help_result.returncode == 0 and "--python" in help_result.stdout)
 

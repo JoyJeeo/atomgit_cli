@@ -44,7 +44,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
 ### 从源码安装
 
 ```bash
-git clone https://github.com/JoyJeeo/atomgit_cli.git
+git clone -o github https://github.com/JoyJeeo/atomgit_cli.git
 cd atomgit_cli
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate atomgit_cli
@@ -58,7 +58,7 @@ python -m pip install -e .
 之前校验 Release、wheel 元数据和摘要：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/main/install.sh -o install.sh
 sh install.sh
 sh install.sh --version 1.1.1
 sh install.sh --python /absolute/path/to/python --force-reinstall
@@ -82,7 +82,7 @@ atomgit update --force-reinstall
 ```
 
 `atomgit update` 只使用执行该命令的 `sys.executable`。源码或 editable 安装会被
-拒绝，并提示使用 Git 更新 `yuto`，不会修改源码 checkout。
+拒绝，并提示使用 Git 更新 `main`，不会修改源码 checkout。
 
 Windows 用户请下载指定 GitHub Release 的 `atomgit-X.Y.Z-py3-none-any.whl` 和
 `SHA256SUMS`，使用支持的 Python 校验摘要后执行
@@ -91,9 +91,9 @@ Windows 用户请下载指定 GitHub Release 的 `atomgit-X.Y.Z-py3-none-any.whl
 ### 源码开发与更新
 
 ```bash
-git clone https://github.com/JoyJeeo/atomgit_cli.git
+git clone -o github https://github.com/JoyJeeo/atomgit_cli.git
 cd atomgit_cli
-git checkout yuto
+git checkout main
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate atomgit_cli
 python -m pip install -r requirements.txt
@@ -115,7 +115,7 @@ AtomGit CLI 不发布到 PyPI；pip 仍可从用户配置的索引解析第三�
 普通用户使用官方入口完整卸载当前解释器中的包和当前 conda 环境的受控补全：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/yuto/uninstall.sh | sh
+curl -fsSL https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/main/uninstall.sh | sh
 ```
 
 也可直接运行 `atomgit uninstall`；该命令先显示解释器、环境根目录、版本和受控
@@ -950,7 +950,7 @@ atomgit/
 
 ```bash
 # 克隆项目
-git clone https://github.com/JoyJeeo/atomgit_cli.git
+git clone -o github https://github.com/JoyJeeo/atomgit_cli.git
 cd atomgit_cli
 
 # 激活项目约定环境
@@ -1002,7 +1002,7 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 ## 项目文档
 
 文档入口见 [docs/README.md](docs/README.md)，包括当前架构、开发流程、测试规范、
-`yuto` 分支关系和独立发布目标。
+`main` 分支关系和独立发布目标。
 
 ## 许可证
 
