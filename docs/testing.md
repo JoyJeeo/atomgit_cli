@@ -249,7 +249,7 @@ schema 与叶子分派登记；新增 `test_*.py` 时必须加入能力分组。
 
 ## R8 后执行记录（2026-08-25）
 
-本轮在 `yuto` / `fdaf572`、Python 3.10.20、`huggingface_hub==1.1.7`、
+历史验收在 `yuto`（现主线已更名为 `main`）/ `fdaf572`、Python 3.10.20、`huggingface_hub==1.1.7`、
 `datasets==4.4.1` 环境执行。离线基线前后均为 `92 passed`；结构 18/18、源布局
 11/11、打包元数据 13/13、架构 parity 21/21、wheel/sdist/editable artifact
 smoke 49/49，`compileall`、`pip check` 和 `git diff --check` 均通过。

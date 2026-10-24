@@ -1266,7 +1266,7 @@ CAPABILITY_REGISTRY = {
             ),
             _invariant(
                 "PKG-024",
-                "Push and pull-request verification run the full offline matrix and release preparation depends on verification of its exact requested source SHA.",
+                "Main push and pull-request verification run the full offline matrix; release preparation verifies its exact requested source SHA and main ancestry, and installation/cleanup links target main.",
                 "test_release_workflow.py",
             ),
             _invariant(

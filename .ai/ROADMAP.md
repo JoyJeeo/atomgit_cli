@@ -10,12 +10,12 @@ the corresponding remote Issues are explicitly created.
 1. Fix confirmed user-facing defects before refactoring architecture.
 2. Establish strict dependency and regression tests before relying on mocks.
 3. Separate offline correctness from AtomGit remote verification.
-4. Stabilize behavior before building an independent `yuto` distribution.
+4. Stabilize behavior before building an independent `main` distribution.
 5. Treat credentials, global Git configuration, and releases as high risk.
 
 ## Current Development Status
 
-This summary describes `yuto` after local implementation, offline review, and
+This summary describes `main` after local implementation, offline review, and
 the explicitly authorized 2026-08-04 AtomGit acceptance run. It does not grant
 permission by itself for future remote writes, release, or Issue transitions.
 Separate maintainer authorization recorded on 2026-08-06 permits tests only on
@@ -58,7 +58,7 @@ approval; it grants no access to other repositories, deletion, or publication.
   cases; no additional reproducible CLI implementation defect was found in the
   closing consistency audit.
 
-## Milestone A: v1.0.5-yuto Stability
+## Milestone A: Stability (historical name: v1.0.5-yuto)
 
 ### Issue #001 - Fix resumable upload authentication
 
@@ -228,9 +228,9 @@ approval; it grants no access to other repositories, deletion, or publication.
 - Minimum outcome: anonymous public success, anonymous private failure, and
   authenticated private success.
 
-## Milestone D: yuto Distribution
+## Milestone D: main Distribution
 
-### Issue #020 - Define yuto version and provenance policy
+### Issue #020 - Define main version and provenance policy
 
 - Type: `distribution`
 - Priority: `P1`
@@ -289,7 +289,7 @@ approval; it grants no access to other repositories, deletion, or publication.
 
 ## Stability Release Gate
 
-A `yuto` stability release is eligible only when:
+A `main` stability release is eligible only when:
 
 - Issues #001-#014 required for the chosen release scope are accepted;
 - model and dataset remote lifecycles have valid evidence;

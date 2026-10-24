@@ -43,7 +43,6 @@ Use the smallest applicable primary type:
 - `security`: token, configuration, credential helper, or user-state safety;
 - `distribution`: installation, version identity, wheel, or release artifact;
 - `documentation`: user or maintainer documentation only;
-- `upstream-sync`: controlled `atomgit/main -> main -> yuto` integration;
 - `release`: an explicitly authorized version release.
 
 Labels help triage but do not define scope. Scope and acceptance criteria in
@@ -123,7 +122,7 @@ complete baseline.
 
 ## Git Discipline
 
-- Start substantial work from `yuto`, normally on a focused task branch.
+- Start substantial work from `main`, normally on a focused task branch.
 - Keep commits cohesive: one issue or one inseparable behavior change per
   commit. A commit may include its tests and documentation.
 - Do not mix upstream synchronization, dependency upgrades, formatting sweeps,

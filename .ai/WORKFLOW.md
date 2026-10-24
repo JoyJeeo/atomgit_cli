@@ -89,7 +89,7 @@ Evidence / user request / approved Issue
              Explicitly approve and activate TASK.md
                     |
                     v
-       Create task branch from yuto if needed
+       Create task branch from main if needed
                     |
                     v
      Investigate call path and dependency contract
@@ -244,7 +244,7 @@ Priority does not grant permission to perform destructive or remote actions.
 You are implementing the single active Issue in .ai/TASK.md.
 
 Read AGENTS.md, every required file under .ai/, and the affected source and
-tests. Confirm the atomgit_cli conda environment, yuto-based branch, cleanly
+tests. Confirm the atomgit_cli conda environment, main-based branch, cleanly
 understood worktree, locked dependency signatures, evidence, scope, and
 acceptance criteria.
 

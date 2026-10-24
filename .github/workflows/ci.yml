@@ -2,7 +2,7 @@ name: Offline verification
 
 on:
   push:
-    branches: [yuto, main]
+    branches: [main]
   pull_request:
   workflow_call:
     inputs:

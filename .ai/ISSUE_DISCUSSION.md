@@ -1,5 +1,7 @@
 # 问题讨论 Issue：上传可靠性与可观测性
 
+> 历史记录：下文 yuto / github/yuto 为当时分支名称；2026-10-24 起主线统一为 main，当前规则见 docs/main_branch.md。
+
 ## Issue 元数据
 
 - ID: `DISC-UPLOAD-RELIABILITY-20260904`

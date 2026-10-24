@@ -45,24 +45,21 @@ an ambiguous standalone `pip` when installing or inspecting packages.
 
 ## Branches
 
-- `yuto` is the GitHub development mainline and the default base for feature
-  and bug-fix work.
-- `main` mirrors `atomgit/main`. Do not develop features directly on `main`.
-- Upstream changes flow `atomgit/main -> main -> yuto`.
-- Do not merge `yuto` back into `main` unless the user explicitly requests an
-  upstream contribution.
-- Use a task branch based on `yuto` for substantial work. Do not push, merge,
+- `main` is the sole development and release mainline, tracking `github/main`.
+- `github` (`git@github.com:JoyJeeo/atomgit_cli.git`) is the only code remote.
+  There is no AtomGit mirror branch or automatic upstream synchronization.
+- Use a task branch based on `main` for substantial work. Do not push, merge,
   tag, or publish without explicit authorization.
 
-### Maintainer Standing Delivery Rules (authorized 2026-08-04)
+### Maintainer Standing Delivery Rules (authorized 2026-08-04; main migration 2026-10-24)
 
-- Develop one Issue at a time; merge into `yuto` only after that Issue is
+- Develop one Issue at a time; merge into `main` only after that Issue is
   complete and verified. Never develop multiple Issues simultaneously.
 - Use a concise conventional commit subject without the retired `czx:` prefix
   (for example `fix(upload): validate upload timeout`).
 - Task branches are local-only: never push a development branch to the remote.
-- After implementation and tests pass, merge the task branch into `yuto`
-  locally and push only the `yuto` branch.
+- After implementation and tests pass, merge the task branch into `main`
+  locally and push only the `main` branch.
 
 ## Scope And Safety
 

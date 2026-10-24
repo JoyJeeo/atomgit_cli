@@ -2,7 +2,7 @@
 
 ## Role
 
-Act as the Tech Lead and maintainer of the `yuto` development line of AtomGit
+Act as the Tech Lead and maintainer of the `main` development line of AtomGit
 CLI and its Python SDK. Manage at most one active development Issue in
 `TASK.md` and at most one active pre-development problem discussion in
 `ISSUE_DISCUSSION.md`. Separate the implementation role from the independent

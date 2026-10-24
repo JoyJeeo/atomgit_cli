@@ -2,6 +2,32 @@
 
 Status: active
 
+- ID: `LOCAL-GITHUB-MAIN-20261024`
+- Title: GitHub 单一远程与 main 主线迁移
+- Authorization / acceptance: 用户已评审迁移方案并要求“开始执行”；授权本地实现、提交、合并、仅推送 main、切换 GitHub 默认分支及发布环境分支限制、验收后删除远程 yuto 与本地 atomgit remote。远程名保留 github，不发布、不打标签、不修改其他分支。
+- Base / worktree: `yuto@e9e2bc863fe8453045213cbaef9311c6efe09551`；当前工作区 `/Users/yutaozhang/yuto/codes/atomgit_cli`；任务分支 `codex/github-main-migration`。启动时干净；旧 main 是 yuto 祖先，落后 388 提交。
+- Objective: 唯一代码远程为 `git@github.com:JoyJeeo/atomgit_cli.git`；开发、默认、跟踪和发布主线统一 main；当前规则、命令、链接一致。
+- Affected Capability IDs: `PACKAGING`, `CLI-SURFACE`, `FLOOR-REGISTRY`。安装/更新/补全提示及 CI 发布合同在现有脚本内覆盖。
+- Protected Existing Invariants: 保留 Git 历史、标签、已发布产物、其他分支、完整四行 CI 矩阵、发布人工审批、精确 SHA 发布门禁及锁定依赖；AtomGit 应用端点不变；不处理 Windows 历史失败或 HTTP 413。
+- New Or Changed Invariants: `PKG-024` 增补 main push/发布来源和安装清理链接合同；94 脚本、154 不变量不减少。历史记录原分支名称保留并明确标注。
+- Phases: 1) 备份/只读远端核查；2) 回归红灯、引用及规则迁移、专项；3) 完整基线/静态检查/独立 reviewer 阶段；4) 合并重命名、快进推送 main、默认分支/发布限制迁移、远端验收及旧远程清理。
+- Verification / acceptance: 完整离线基线、compileall、pip check、diff check；GitHub main SHA 与本地一致、默认 HEAD/main 跟踪正确、仅 github remote、旧 yuto 已删除；main CI 保持原矩阵并核对 Linux/macOS，Windows 按既有延期决定保留失败证据；raw 安装/清理链接只下载验证、不执行。
+- Backup / rollback: `/Users/yutaozhang/.codex/backups/atomgit-cli-main-20261024-162251/` 保存完整 before-migration.bundle、refs、remotes、branch config 和 GitHub 设置快照。恢复旧分支可从 bundle 取回，不改写已有历史；如需撤回已交付迁移，应先恢复 yuto、默认分支和发布限制，再按备份恢复本地 remote，禁止直接强推 main 回退。
+- Current phase: 本地实现、离线验收和分离 reviewer 阶段完成，准备按授权交付及远端验收。GitHub main/yuto 无保护、rulesets 为空，无开放 PR；release-approval 的自定义分支规则待迁移为 main，人工审批保留。
+- Evidence: 备份 bundle verify 通过；github fetch 后主线 SHA 未变。新增 3 项分支/链接合同在旧实现均红灯，最终专项 58/58；完整 `python tests/run_cli_baseline.py` **94/94 passed, 123.92s**，日志 `/tmp/atomgit-main-baseline.log`。compileall、pip check、diff check、文档相对链接及高置信凭证模式检查通过。锁定依赖仍为 HF 1.1.7 / datasets 4.4.1，无依赖调用变化。Black 76/409、isort 80/86、Ruff 15/44 不增长，仅更新精确 Black 指纹。
+- Independent review: 分离 reviewer 阶段复核全部最终差异、回归红灯/绿灯、完整基线、历史记录边界、发布来源和人工审批保留、快进及恢复方案。未发现开放 P0/P1/P2/P3；本地迁移实现结论 `APPROVED`。远端默认分支、环境规则和 CI 尚待执行验证，不将本地结果当成远端已通过；Windows 已明确延期，不因此削弱发布门禁。
+- Deferred prior task: `LOCAL-SDK-BOUNDARIES-20261017` 转为 inactive/deferred，仍有 Windows 兼容与 64 MiB HTTP 413 未完成验收；以下原记录保留，不能解释为本轮 active 或已通过。
+
+---
+
+# Previous acceptance contract (historical, deferred)
+
+> 下文 yuto / github/yuto 均为迁移前的历史名称；当前主线规则见 docs/main_branch.md。历史 active/next-action 描述仅代表当时阶段，不授权继续执行。
+
+# Current Issue Contract
+
+Status: inactive (deferred)
+
 ## Latest acceptance and delivery (2026-10-17)
 
 - Scope: 用户授权提交、合入并仅推送 yuto 以继续 CI 验收；随后明确将 Windows 历史问题转为另行评审，保留失败证据。以下为最新状态，下方阶段记录按时间保留。

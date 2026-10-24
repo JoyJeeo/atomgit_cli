@@ -38,6 +38,24 @@ def ci_gate_checks():
         "CI covers push, pull requests and reusable release verification",
         {"push", "pull_request", "workflow_call"} <= set(ci["on"]),
     )
+    check("push CI targets main only", ci["on"]["push"]["branches"] == ["main"])
+    prepare_runs = "\n".join(
+        step.get("run", "") for step in release_workflow["jobs"]["prepare"]["steps"]
+    )
+    check(
+        "release source must belong to main",
+        "grep -E 'origin/main$'" in prepare_runs and "origin/yuto" not in prepare_runs,
+    )
+    from atomgit.infrastructure.completion import _ACTIVATION_WARNING
+
+    raw_base = "https://raw.githubusercontent.com/JoyJeeo/atomgit_cli/main/"
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    check(
+        "installation and cleanup links use main",
+        raw_base + "install.sh" in readme
+        and raw_base + "uninstall.sh" in readme
+        and raw_base + "uninstall.sh" in _ACTIVATION_WARNING,
+    )
     job = ci["jobs"]["offline"]
     steps = job["steps"]
     runs = "\n".join(step.get("run", "") for step in steps)
@@ -86,7 +104,7 @@ def main():
         )
 
     check("stable version accepts exact numeric SemVer", release.is_stable_version("1.2.3"))
-    for invalid in ("v1.2.3", "1.2", "1.2.3-rc1", "1.2.3+yuto.1", "1.2.3.dev1", ""):
+    for invalid in ("v1.2.3", "1.2", "1.2.3-rc1", "1.2.3+local.1", "1.2.3.dev1", ""):
         check(f"stable version rejects {invalid or 'empty'}", not release.is_stable_version(invalid))
 
     releases = [
