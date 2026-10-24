@@ -1,6 +1,6 @@
 # Current Issue Contract
 
-Status: active
+Status: inactive (completed)
 
 - ID: `LOCAL-GITHUB-MAIN-20261024`
 - Title: GitHub 单一远程与 main 主线迁移
@@ -13,9 +13,14 @@ Status: active
 - Phases: 1) 备份/只读远端核查；2) 回归红灯、引用及规则迁移、专项；3) 完整基线/静态检查/独立 reviewer 阶段；4) 合并重命名、快进推送 main、默认分支/发布限制迁移、远端验收及旧远程清理。
 - Verification / acceptance: 完整离线基线、compileall、pip check、diff check；GitHub main SHA 与本地一致、默认 HEAD/main 跟踪正确、仅 github remote、旧 yuto 已删除；main CI 保持原矩阵并核对 Linux/macOS，Windows 按既有延期决定保留失败证据；raw 安装/清理链接只下载验证、不执行。
 - Backup / rollback: `/Users/yutaozhang/.codex/backups/atomgit-cli-main-20261024-162251/` 保存完整 before-migration.bundle、refs、remotes、branch config 和 GitHub 设置快照。恢复旧分支可从 bundle 取回，不改写已有历史；如需撤回已交付迁移，应先恢复 yuto、默认分支和发布限制，再按备份恢复本地 remote，禁止直接强推 main 回退。
-- Current phase: 本地实现、离线验收和分离 reviewer 阶段完成，准备按授权交付及远端验收。GitHub main/yuto 无保护、rulesets 为空，无开放 PR；release-approval 的自定义分支规则待迁移为 main，人工审批保留。
+- Current phase: 迁移已完成并验收，当前 main 跟踪 github/main，工作区干净；唯一远程为 github。GitHub 默认 main，release-approval 仅允许 main，人工审批配置逐项保持；原 main/yuto 均无分支保护、rulesets 为空，没有开放 PR 需要改目标。旧远程 yuto 和本地 atomgit remote 已清理。
 - Evidence: 备份 bundle verify 通过；github fetch 后主线 SHA 未变。新增 3 项分支/链接合同在旧实现均红灯，最终专项 58/58；完整 `python tests/run_cli_baseline.py` **94/94 passed, 123.92s**，日志 `/tmp/atomgit-main-baseline.log`。compileall、pip check、diff check、文档相对链接及高置信凭证模式检查通过。锁定依赖仍为 HF 1.1.7 / datasets 4.4.1，无依赖调用变化。Black 76/409、isort 80/86、Ruff 15/44 不增长，仅更新精确 Black 指纹。
 - Independent review: 分离 reviewer 阶段复核全部最终差异、回归红灯/绿灯、完整基线、历史记录边界、发布来源和人工审批保留、快进及恢复方案。未发现开放 P0/P1/P2/P3；本地迁移实现结论 `APPROVED`。远端默认分支、环境规则和 CI 尚待执行验证，不将本地结果当成远端已通过；Windows 已明确延期，不因此削弱发布门禁。
+- Delivery: 任务提交 `cfa3903` 本地 no-ff 合入，迁移代码提交 `4b3ab5dff5e00a6e721913cbf2c5c2d066ba48c6` 已快进推送 github/main；本地 yuto 更名 main，旧本地 main 祖先由 bundle 保存。任务分支未推送，其他功能分支及所有远端标签的 19 条引用与快照一致，无强推、发布或标签变动。
+- Remote evidence: [main CI 40074257545](https://github.com/JoyJeeo/atomgit_cli/actions/runs/40074257545)，SHA 与迁移代码提交一致。Linux 3.9 **94/94, 144.44s**；Linux 3.13 **94/94, 142.26s**；macOS 3.11 **94/94, 294.85s**；Windows 3.11 **37 passed / 57 failed, 322.21s**。workflow 整体为 failure，Windows 继续按用户既定决定另行评审，不宣称跨平台全绿；失败数量与上轮相同，但未逐条比较根因。完整 job 日志与 main-ci.json 保存在上述备份目录。
+- External verification: 新 clone 默认 main、跟踪 github/main、HEAD 与迁移提交一致；远端 symbolic HEAD、本地 github/HEAD 及默认分支 API 一致。raw main/install.sh 与 main/uninstall.sh 均只下载校验，字节与本地一致，未运行安装或清理。GitHub 发布环境规则 ID 57523830 更名 main，审批及其他环境设置与迁移前 JSON 完全一致。
+- Final review: 迁移验收项全部具备证据，历史 Windows/413 不属于本次修复。最终本地与远端 main SHA 一致、无 yuto 分支、仅 github remote，其他远端引用未变；本次结论 `APPROVED`。此交付记录提交仅改 TASK.md，源码/测试/依赖/工作流与上方已运行 CI 的迁移提交相同；其自动触发的 CI 不替代上述证据。
+- Next action: 无本次剩余动作，不自动启动延期任务。旧 checkout 和旧 raw 地址的迁移方法见 docs/main_branch.md；后续新开发以 main 为基线。
 - Deferred prior task: `LOCAL-SDK-BOUNDARIES-20261017` 转为 inactive/deferred，仍有 Windows 兼容与 64 MiB HTTP 413 未完成验收；以下原记录保留，不能解释为本轮 active 或已通过。
 
 ---
