@@ -28,6 +28,8 @@ import huggingface_hub.lfs as hf_lfs
 from huggingface_hub import HfApi
 from huggingface_hub._local_folder import get_local_upload_paths, read_upload_metadata
 
+from ..upload.errors import _format_upload_diagnostic, _resumable_failure_envelope
+
 # Compatibility-injected dependencies formerly resolved from atomgit.api or the
 # upload error/projection owners. They are assigned by atomgit.api at import.
 _atomgit_hf_endpoint = None
@@ -46,6 +48,7 @@ _RESUMABLE_LFS_PREUPLOAD_BACKOFF_BASE = 2.0
 _RESUMABLE_LFS_PREUPLOAD_WAIT_CAP = 60.0
 _RESUMABLE_LFS_ERROR_BODY_MAX_BYTES = 16 * 1024
 _SLOW_FLOW_SAMPLE_SECONDS = 5.0
+_UPLOAD_PROGRESS_SAMPLE_SECONDS = 1.0
 _SLOW_FLOW_WINDOW_SECONDS = 30.0
 _SLOW_FLOW_REQUIRED_WINDOWS = 3
 _SLOW_FLOW_MAX_REPLACEMENTS = 3
@@ -332,6 +335,19 @@ class _SlowFlowCoordinator:
             state.remaining_bytes = min(state.total_bytes, remaining_bytes)
             message = self._state_message(state)
         self._publish(message)
+
+    def display_sample(self, object_key, speed: float, remaining_bytes: int) -> None:
+        """Refresh only the local display, without mutating Flow or recovery state."""
+        if self._progress_callback is None:
+            return
+        with self._lock:
+            state = self._states.get(object_key)
+            if state is None or not state.active:
+                return
+            message = self._state_message(state)
+        message["payload"]["sample_speed"] = speed
+        message["payload"]["remaining_bytes"] = remaining_bytes
+        self._display(message)
 
     def replacement_count(self, object_key) -> int:
         with self._lock:
@@ -657,6 +673,8 @@ class _SlowFlowPayload:
         self._retransmit_bytes = retransmit_bytes
         self._monotonic = monotonic
         self._last_read_end = monotonic()
+        self._last_progress_at = self._last_read_end
+        self._last_progress_bytes = 0
         self._sample_elapsed = 0.0
         self._sample_bytes = 0
         self._window_elapsed = 0.0
@@ -705,6 +723,17 @@ class _SlowFlowPayload:
                 self._window_bytes = 0
                 if decision is not None:
                     raise _SlowFlowReconnect(decision)
+        progress_elapsed = read_start - self._last_progress_at
+        if progress_elapsed >= _UPLOAD_PROGRESS_SAMPLE_SECONDS:
+            self._coordinator.display_sample(
+                self._object_key,
+                (self._delivered_bytes - self._last_progress_bytes) / progress_elapsed,
+                max(
+                    0, self._total_bytes - self._confirmed_bytes - self._delivered_bytes
+                ),
+            )
+            self._last_progress_at = read_start
+            self._last_progress_bytes = self._delivered_bytes
         data = self._fileobj.read(size)
         self._last_read_end = self._monotonic()
         if data:
@@ -1496,6 +1525,9 @@ class _ResumableLfsPreuploadController:
                     "kind": "lfs_preupload_exhausted",
                     "category": category,
                     "attempts": attempts,
+                    "diagnostic": _resumable_failure_envelope(error, stage="preupload")[
+                        "diagnostic"
+                    ],
                 }
             )
         if self._fatal_callback is not None:
@@ -1538,6 +1570,9 @@ class _ResumableLfsPreuploadController:
                         "attempt": attempt + 1,
                         "max_attempts": self._max_attempts,
                         "delay": delay,
+                        "diagnostic": _resumable_failure_envelope(
+                            error, stage="preupload"
+                        )["diagnostic"],
                     }
                 )
                 self._sleep(delay)
@@ -1548,17 +1583,19 @@ def _print_resumable_lfs_preupload_event(event, batch_context) -> None:
     if not batch_context:
         return
     current, total = batch_context
+    details = _format_upload_diagnostic(event.get("diagnostic"))
+    suffix = "；" + details if details else ""
     if event.get("kind") == "lfs_preupload_retry":
         print(
             f"[批次 {current}/{total}] LFS 预上传重试 "
             f"{event['attempt']}/{event['max_attempts']}，"
-            f"等待 {event['delay']:g} 秒（{event['category']}）",
+            f"等待 {event['delay']:g} 秒（{event['category']}）{suffix}",
             flush=True,
         )
     elif event.get("kind") == "lfs_preupload_exhausted":
         print(
             f"[批次 {current}/{total}] LFS 预上传已达到最多 "
-            f"{event['attempts']} 次尝试，正在安全停止",
+            f"{event['attempts']} 次尝试，正在安全停止{suffix}",
             flush=True,
         )
 

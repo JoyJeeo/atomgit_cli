@@ -4,7 +4,6 @@ import hashlib
 import os
 import shutil
 import tempfile
-import time
 import urllib.error
 from contextlib import contextmanager
 from pathlib import Path
@@ -18,6 +17,7 @@ from .integrity import (
     _atomgit_file_download_metadata,
     _verify_download_checksum,
 )
+from .manifest import _download_file_lock
 from .transport import (
     _atomgit_hf_endpoint,
     _atomgit_raw_http_get,
@@ -52,6 +52,25 @@ def _resume_cache_identity(
 def _process_is_running(pid: int) -> bool:
     if pid <= 0:
         return False
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+        kernel32.OpenProcess.restype = wintypes.HANDLE
+        kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+        kernel32.WaitForSingleObject.restype = wintypes.DWORD
+        kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+        kernel32.CloseHandle.restype = wintypes.BOOL
+        handle = kernel32.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+        if not handle:
+            # Access denied or an unknown failure cannot establish absence.
+            return ctypes.get_last_error() != 87  # ERROR_INVALID_PARAMETER
+        try:
+            return kernel32.WaitForSingleObject(handle, 0) != 0  # WAIT_OBJECT_0
+        finally:
+            kernel32.CloseHandle(handle)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -65,48 +84,9 @@ def _process_is_running(pid: int) -> bool:
 
 @contextmanager
 def _resume_download_lock(lock_path: Path):
-    """Serialize writers while recovering locks left by dead processes."""
-    descriptor = None
-    for _ in range(2):
-        try:
-            descriptor = os.open(
-                str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
-            )
-            try:
-                os.write(descriptor, str(os.getpid()).encode("ascii"))
-            except Exception:
-                os.close(descriptor)
-                descriptor = None
-                lock_path.unlink(missing_ok=True)
-                raise
-            break
-        except FileExistsError:
-            try:
-                owner = int(lock_path.read_text(encoding="ascii").strip())
-            except (OSError, ValueError):
-                try:
-                    lock_age = time.time() - lock_path.stat().st_mtime
-                except OSError:
-                    lock_age = 0
-                if lock_age < 60:
-                    raise RuntimeError("download resume is already in progress")
-                owner = -1
-            if _process_is_running(owner):
-                raise RuntimeError("download resume is already in progress")
-            try:
-                lock_path.unlink()
-            except FileNotFoundError:
-                pass
-    if descriptor is None:
-        raise RuntimeError("unable to acquire download resume lock")
-    try:
+    """Serialize cache writers using an OS-released persistent file lock."""
+    with _download_file_lock(lock_path, "download resume is already in progress"):
         yield
-    finally:
-        os.close(descriptor)
-        try:
-            lock_path.unlink()
-        except FileNotFoundError:
-            pass
 
 
 def _copy_resumed_file_to_destination(
@@ -223,11 +203,15 @@ def _download_atomgit_file_resumable(
     destination: Path,
     token: str,
     revision: str = "main",
+    *,
+    metadata=None,
 ) -> None:
     """Persist an interrupted range download and atomically install it."""
-    checksum, _ = _atomgit_file_download_metadata(
-        repo_id, repo_type, filename, token, revision
-    )
+    if metadata is None:
+        metadata = _atomgit_file_download_metadata(
+            repo_id, repo_type, filename, token, revision
+        )
+    checksum, _ = metadata
     _, expected_digest, expected_size = checksum
     cache_root = _resume_cache_root()
     identity = _resume_cache_identity(repo_id, repo_type, filename, revision)

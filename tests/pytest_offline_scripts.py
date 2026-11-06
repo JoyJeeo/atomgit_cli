@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_CASES = sorted(
     path.relative_to(REPOSITORY_ROOT)
@@ -23,6 +22,9 @@ def test_offline_script(script_path, tmp_path):
     environment.update(
         {
             "HOME": str(isolated_home),
+            "USERPROFILE": str(isolated_home),
+            "PYTHONUTF8": "1",
+            "PYTHONIOENCODING": "utf-8",
             "GIT_CONFIG_GLOBAL": str(isolated_home / "gitconfig"),
             "GIT_CONFIG_NOSYSTEM": "1",
         }
@@ -51,7 +53,15 @@ def test_offline_script(script_path, tmp_path):
     environment["PYTHONPATH"] = (
         str(guard) + os.pathsep + environment.get("PYTHONPATH", "")
     )
-    for secret_name in ("ATOMGIT_TEST_TOKEN", "ATOMGIT_TOKEN", "HF_TOKEN"):
+    for secret_name in (
+        "ATOMGIT_TEST_TOKEN",
+        "ATOMGIT_TOKEN",
+        "HF_TOKEN",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "REQUESTS_CA_BUNDLE",
+        "CURL_CA_BUNDLE",
+    ):
         environment.pop(secret_name, None)
 
     result = subprocess.run(
@@ -60,6 +70,7 @@ def test_offline_script(script_path, tmp_path):
         env=environment,
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=180 if script_path.name == "test_wheel_smoke.py" else 60,
     )
 

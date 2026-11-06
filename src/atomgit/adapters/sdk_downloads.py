@@ -9,6 +9,7 @@ from huggingface_hub import snapshot_download as hf_snapshot_download
 
 from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
 from ..infrastructure.utils import run_download_with_retry
+from .download.service import _resolve_default_revision
 from .sdk_common import _get_token, _normalize_repo_id
 from .sdk_errors import _sdk_error
 
@@ -80,6 +81,10 @@ def snapshot_download(
     )
 
     try:
+        if revision in (None, "") and not local_files_only:
+            kwargs["revision"] = _resolve_default_revision(
+                normalized_repo_id, None, token
+            )
         return run_download_with_retry(
             lambda: hf_snapshot_download(
                 **{key: value for key, value in kwargs.items() if value is not None}
@@ -133,6 +138,10 @@ def download_file(
         kwargs["force_download"] = force_download
 
     try:
+        if revision in (None, ""):
+            kwargs["revision"] = _resolve_default_revision(
+                normalized_repo_id, None, token
+            )
         return run_download_with_retry(
             lambda: hf_hub_download(
                 **{key: value for key, value in kwargs.items() if value is not None}

@@ -1,5 +1,7 @@
 """Canonical AtomGit upload adapter and historical API method boundary."""
 
+import time
+from collections import deque
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -36,6 +38,7 @@ from .projection import (
     _collect_resumable_upload_files,
     _prepare_resumable_upload_projection,
     _resumable_committed_file_count,
+    _resumable_projection_path,
     _resumable_upload_progress,
 )
 from .resumable import (
@@ -45,6 +48,16 @@ from .resumable import (
     _print_upload_batch_summary,
     _resumable_projection_lock,
     _validate_resumable_upload_target,
+)
+from .retry import (
+    _TRANSIENT,
+    RetryReport,
+    RetryState,
+    _failure_details,
+    _queue_counts,
+    _warning,
+    retry_category,
+    retry_delay,
 )
 
 # Program-step 9 LFS policy slots are wired by atomgit.api.
@@ -114,6 +127,30 @@ def propagate_upload_errors():
         yield
     finally:
         _UPLOAD_ERROR_PROPAGATION.reset(marker)
+
+
+def _validate_resumable_target_with_retry(*, token, repo_id, revision, request_timeout):
+    """Validate the target, retaining the existing interruptible retry policy."""
+    while True:
+        try:
+            _validate_resumable_upload_target(
+                token=token,
+                repo_id=repo_id,
+                revision=revision,
+                request_timeout=request_timeout,
+            )
+            break
+        except Exception as error:
+            if retry_category(error) not in _TRANSIENT:
+                raise
+            delay = retry_delay(error)
+            _warning(
+                f"[仓库检查失败] {_failure_details(error, 'setup')}\n"
+                f"处理：等待 {delay:g} 秒后重新检查；尚未开始文件上传"
+            )
+            until = time.monotonic() + delay
+            while time.monotonic() < until:
+                time.sleep(min(1.0, until - time.monotonic()))
 
 
 class UploadServiceMixin:
@@ -316,7 +353,7 @@ class UploadServiceMixin:
                 CLI 会在调用本方法前拒绝其他值。
             ignore_patterns: 忽略的文件模式列表（fnmatch/glob 风格，如
                 ``*.tmp``、``logs/``、``**/.DS_Store``）。为 None 时不忽略。
-            resumable: 是否启用可断点续传/分块上传模式。为 True 时改用 HF
+            resumable: 是否启用文件级断点续传模式。为 True 时改用 HF
                 ``upload_large_folder``：进程级元数据写入目录下
                 ``.cache/.huggingface/``，中断后再次执行可自动续传；适合
                 大目录。CLI 使用按上传身份隔离的私有持久投影；
@@ -403,17 +440,66 @@ class UploadServiceMixin:
                     _notify_resumable_upload_progress(
                         progress_callback, 0, batch_count, total_files, completed_files
                     )
-                    # 断点续传/分块上传：走 upload_large_folder
+                    # 文件级断点续传：走 upload_large_folder
                     eff_repo_type = _atomgit_repo_type(repo_type) or "model"
                     normalized_repo_id = self._normalize_repo_id(repo_id)
-                    _validate_resumable_upload_target(
+                    _validate_resumable_target_with_retry(
                         token=credentials["token"],
                         repo_id=normalized_repo_id,
                         revision=revision,
                         request_timeout=request_timeout,
                     )
                     attempted_lfs_patterns = set()
-                    for batch_index, batch in enumerate(batches):
+                    pending_batches = deque(
+                        (index, 0.0) for index in range(batch_count)
+                    )
+                    accounted = {}
+                    accounted_skips = {}
+                    retry_report = RetryReport()
+                    for index, batch in enumerate(batches):
+                        checkpoint = _resumable_projection_path(
+                            dir_path,
+                            normalized_repo_id,
+                            eff_repo_type,
+                            revision,
+                            pipr,
+                            f"batch-{batch_size}-{index}",
+                        )
+                        sources = {
+                            (
+                                f"{pipr}/{path.as_posix()}" if pipr else path.as_posix()
+                            ): source
+                            for path, source, _ in batch
+                        }
+                        summary = RetryState(checkpoint).pending_summary(
+                            sources, sources
+                        )
+                        if summary["pending"]:
+                            retry_report.batches[index] = summary
+                    if retry_report.batches:
+                        print(
+                            "[恢复候补队列] "
+                            + _queue_counts(0, 0, 0, retry_report.counts()),
+                            flush=True,
+                        )
+                    global_cooldown = 0.0
+                    while pending_batches:
+                        now = time.time()
+                        if now < global_cooldown:
+                            time.sleep(min(1.0, global_cooldown - now))
+                            continue
+                        if not any(due <= now for _, due in pending_batches):
+                            time.sleep(
+                                min(1.0, min(due for _, due in pending_batches) - now)
+                            )
+                            continue
+                        while pending_batches[0][1] > now:
+                            pending_batches.rotate(-1)
+                        batch_index, _ = pending_batches.popleft()
+                        batch = batches[batch_index]
+                        previous_completed = accounted.get(batch_index, 0)
+                        previous_skips = accounted_skips.get(batch_index, 0)
+                        retry_report.batches.pop(batch_index, None)
                         batch_number = batch_index + 1
                         batch_file_count = len(batch)
                         _notify_resumable_upload_progress(
@@ -490,10 +576,59 @@ class UploadServiceMixin:
                                                         attempted_lfs_patterns
                                                     )
                                                 ),
+                                                retry_counts=retry_report.counts(),
+                                                selected_paths=tuple(
+                                                    (
+                                                        f"{pipr}/{path.as_posix()}"
+                                                        if pipr
+                                                        else path.as_posix()
+                                                    )
+                                                    for path in sorted(selected_paths)
+                                                ),
+                                                source_paths={
+                                                    (
+                                                        f"{pipr}/{path.as_posix()}"
+                                                        if pipr
+                                                        else path.as_posix()
+                                                    ): str(
+                                                        dir_path.expanduser().resolve()
+                                                        / path
+                                                    )
+                                                    for path in sorted(selected_paths)
+                                                },
                                             )
                                         )
                                     break
                                 except ResumableWorkerError as error:
+                                    if (
+                                        retry_category(error) in _TRANSIENT
+                                        or retry_category(error)
+                                        == "remote_commit_unconfirmed"
+                                    ):
+                                        _warning(
+                                            f"[批次 {batch_number}/{batch_count} 失败]\n"
+                                            f"{_failure_details(error)}\n"
+                                            f"处理：保留断点，等待至少 {retry_delay(error):g} 秒后轮转重试"
+                                        )
+                                        confirmed = _resumable_committed_file_count(
+                                            upload_root, selected_paths, pipr
+                                        )
+                                        process_result = {
+                                            "recovered": 0,
+                                            "pending": batch_file_count - confirmed,
+                                            "delay": retry_delay(error),
+                                            "abnormal": int(
+                                                error.category
+                                                == "remote_commit_unconfirmed"
+                                            ),
+                                            "failures": 1,
+                                            "cooldown": (
+                                                retry_delay(error)
+                                                if retry_category(error) == "rate_limit"
+                                                else 0.0
+                                            ),
+                                        }
+                                        break
                                     if (
                                         error.category
                                         not in ("upload_mode", "lfs_attributes")
@@ -535,7 +670,6 @@ class UploadServiceMixin:
                                                 flush=True,
                                             )
                                         raise
-                                    attempted_lfs_patterns.update(new_patterns)
                                     if error.category == "lfs_attributes":
                                         print(
                                             f"[批次 {batch_number}/{batch_count}] "
@@ -563,6 +697,7 @@ class UploadServiceMixin:
                                         patterns=new_patterns,
                                         request_timeout=request_timeout,
                                     )
+                                    attempted_lfs_patterns.update(new_patterns)
                                     if outcome["changed"]:
                                         action = (
                                             "已创建" if outcome["created"] else "已更新"
@@ -591,64 +726,134 @@ class UploadServiceMixin:
                                             flush=True,
                                         )
                         except Exception as error:
-                            if isinstance(
-                                error, ResumableWorkerError
-                            ) and error.category in (
-                                "remote_commit_conflict",
-                                "remote_recovery_state",
+                            if (
+                                retry_category(error) in _TRANSIENT
+                                and upload_root is not None
                             ):
-                                batch_skipped += error.confirmed or 0
-                            confirmed_in_batch = batch_skipped
-                            batch_progress = None
-                            if upload_root is not None:
-                                batch_progress = _resumable_upload_progress(
-                                    upload_root, batch, pipr
+                                confirmed = _resumable_committed_file_count(
+                                    upload_root, selected_paths, pipr
                                 )
-                                confirmed_in_batch = max(
+                                process_result = {
+                                    "recovered": 0,
+                                    "pending": batch_file_count - confirmed,
+                                    "delay": retry_delay(error),
+                                    "abnormal": 0,
+                                    "failures": 1,
+                                    "cooldown": (
+                                        retry_delay(error)
+                                        if retry_category(error) == "rate_limit"
+                                        else 0.0
+                                    ),
+                                }
+                            else:
+                                if isinstance(
+                                    error, ResumableWorkerError
+                                ) and error.category in (
+                                    "remote_commit_conflict",
+                                    "remote_recovery_state",
+                                ):
+                                    batch_skipped += error.confirmed or 0
+                                confirmed_in_batch = batch_skipped
+                                batch_progress = None
+                                if upload_root is not None:
+                                    batch_progress = _resumable_upload_progress(
+                                        upload_root, batch, pipr
+                                    )
+                                    confirmed_in_batch = max(
+                                        confirmed_in_batch,
+                                        batch_progress["committed_files"],
+                                    )
+                                current_skips = min(
                                     confirmed_in_batch,
-                                    batch_progress["committed_files"],
+                                    accounted_skips.get(batch_index, batch_skipped),
                                 )
-                            skipped_files += batch_skipped
-                            submitted_files += max(
-                                0, confirmed_in_batch - batch_skipped
-                            )
-                            completed_files += confirmed_in_batch
-                            _notify_resumable_upload_progress(
-                                progress_callback,
-                                batch_number,
-                                batch_count,
-                                total_files,
-                                completed_files,
-                            )
-                            remaining_files = total_files - completed_files
-                            print(
-                                f"[批次 {batch_number}/{batch_count}] 失败: "
-                                f"累计确认完成 {completed_files}/{total_files}，"
-                                f"剩余 {remaining_files}",
-                                flush=True,
-                            )
-                            if batch_progress is not None:
-                                _print_resumable_upload_progress(
-                                    batch_number, batch_count, batch_progress
+                                skipped_files += current_skips - previous_skips
+                                submitted_files += (
+                                    confirmed_in_batch - current_skips
+                                ) - (previous_completed - previous_skips)
+                                completed_files += (
+                                    confirmed_in_batch - previous_completed
                                 )
-                            print(
-                                "断点元数据已保留；修复问题后重新执行同一命令可继续上传",
-                                flush=True,
-                            )
-                            _print_upload_batch_summary(
-                                total_files,
-                                submitted_files,
-                                skipped_files,
-                                completed_files,
-                            )
-                            raise
+                                _notify_resumable_upload_progress(
+                                    progress_callback,
+                                    batch_number,
+                                    batch_count,
+                                    total_files,
+                                    completed_files,
+                                )
+                                remaining_files = total_files - completed_files
+                                print(
+                                    f"[批次 {batch_number}/{batch_count}] 失败: "
+                                    f"累计确认完成 {completed_files}/{total_files}，"
+                                    f"剩余 {remaining_files}",
+                                    flush=True,
+                                )
+                                if batch_progress is not None:
+                                    _print_resumable_upload_progress(
+                                        batch_number, batch_count, batch_progress
+                                    )
+                                print(
+                                    "断点元数据已保留；修复问题后重新执行同一命令可继续上传",
+                                    flush=True,
+                                )
+                                _print_upload_batch_summary(
+                                    total_files,
+                                    submitted_files,
+                                    skipped_files,
+                                    completed_files,
+                                )
+                                raise
 
                         recovered_files = process_result["recovered"]
                         batch_skipped += recovered_files
-                        skipped_files += batch_skipped
-                        newly_submitted = batch_file_count - batch_skipped
-                        submitted_files += newly_submitted
-                        completed_files += batch_file_count
+                        remaining = process_result.get("pending", 0)
+                        if "pending" in process_result:
+                            remaining = max(
+                                remaining,
+                                batch_file_count
+                                - _resumable_committed_file_count(
+                                    upload_root, selected_paths, pipr
+                                ),
+                            )
+                            process_result["pending"] = remaining
+                        global_cooldown = max(
+                            global_cooldown,
+                            time.time() + process_result.get("cooldown", 0.0),
+                        )
+                        confirmed = batch_file_count - remaining
+                        current_skips = min(
+                            confirmed, accounted_skips.get(batch_index, batch_skipped)
+                        )
+                        newly_submitted = max(
+                            0, confirmed - max(batch_skipped, previous_completed)
+                        )
+                        skipped_files += current_skips - previous_skips
+                        submitted_files += (confirmed - current_skips) - (
+                            previous_completed - previous_skips
+                        )
+                        completed_files += confirmed - previous_completed
+                        accounted[batch_index] = confirmed
+                        accounted_skips[batch_index] = current_skips
+                        if remaining:
+                            waiting = RetryState(upload_root).pending_summary(
+                                f"{pipr}/{path.as_posix()}" if pipr else path.as_posix()
+                                for path in selected_paths
+                            )
+                            retry_report.batches[batch_index] = {
+                                **process_result,
+                                "queued": waiting["pending"] - waiting["abnormal"],
+                            }
+                            print(
+                                "[批次待处理] "
+                                + _queue_counts(0, 0, 0, retry_report.counts()),
+                                flush=True,
+                            )
+                            pending_batches.append(
+                                (
+                                    batch_index,
+                                    time.time() + max(1.0, process_result["delay"]),
+                                )
+                            )
                         _notify_resumable_upload_progress(
                             progress_callback,
                             batch_number,
@@ -657,8 +862,9 @@ class UploadServiceMixin:
                             completed_files,
                         )
                         print(
-                            f"[批次 {batch_number}/{batch_count}] 成功: "
-                            f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"
+                            f"[批次 {batch_number}/{batch_count}] "
+                            + (f"待补传 {remaining} 个: " if remaining else "成功: ")
+                            + f"新增提交 {newly_submitted}，续传跳过 {batch_skipped}，"
                             f"累计完成 {completed_files}/{total_files}",
                             flush=True,
                         )

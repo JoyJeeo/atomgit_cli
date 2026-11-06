@@ -11,10 +11,17 @@ from ...infrastructure.validation import (
     _download_stage,
     _structured_http_status,
     is_auth_error,
+    is_supported_upload_revision,
     normalize_repo_id,
     run_download_with_retry,
 )
-from .integrity import _atomgit_file_checksum, _verify_download_checksum
+from ..atomgit_v5 import _atomgit_v5_get_json, _atomgit_v5_repo_path
+from . import integrity
+from .integrity import (
+    DownloadChecksumMetadataError,
+    _atomgit_file_checksum,
+    _verify_download_checksum,
+)
 from .manifest import (
     _download_manifest_lock,
     _download_manifest_path,
@@ -24,6 +31,61 @@ from .manifest import (
 from .prune import _prune_managed_download_files, _repository_filename_parts
 from .resume import _download_atomgit_file_resumable
 from .transport import _download_atomgit_file
+
+
+def _resolve_default_revision(repo_id, repo_type, token):
+    """Resolve the remote default without sending an ambient credential."""
+    with _download_stage("listing"):
+        if token:
+            metadata = run_download_with_retry(
+                lambda: _atomgit_v5_get_json(_atomgit_v5_repo_path(repo_id), token)
+            )
+            revision = (
+                metadata.get("default_branch") if isinstance(metadata, dict) else None
+            )
+        else:
+            api = HfApi(endpoint=ATOMGIT_HF_ENDPOINT, token=False)
+            candidates = ("model", "dataset") if repo_type is None else (repo_type,)
+            revisions = []
+            missing_error = None
+            for candidate in candidates:
+                try:
+                    info = run_download_with_retry(
+                        lambda: api.repo_info(repo_id, repo_type=candidate)
+                    )
+                except Exception as error:
+                    if repo_type is None and _structured_http_status(error) == 404:
+                        missing_error = error
+                        continue
+                    raise
+                revisions.append(getattr(info, "default_branch", None))
+            if not revisions and missing_error:
+                raise missing_error
+            if len(set(revisions)) > 1:
+                raise ValueError("仓库类型不明确，请使用 --repo-type model 或 dataset")
+            revision = revisions[0] if revisions else None
+        if (
+            not isinstance(revision, str)
+            or not revision.strip()
+            or not is_supported_upload_revision(revision.strip())
+        ):
+            raise RuntimeError("无法确定仓库默认分支，请使用 --revision 指定")
+    return revision.strip()
+
+
+@_download_stage("metadata")
+def _probe_download_file_metadata(repo_id, repo_type, filename, token, revision):
+    """Use direct metadata when supported, retaining ambiguous-404 fallback."""
+    try:
+        return integrity._atomgit_file_download_metadata(
+            repo_id, repo_type, filename, token, revision
+        )
+    except DownloadChecksumMetadataError:
+        return None
+    except Exception as error:
+        if _structured_http_status(error) in (404, 405, 501):
+            return None
+        raise
 
 
 def _revision_kwargs(revision):
@@ -136,6 +198,9 @@ class AtomGitDownloadAdapter:
         if self._emit_callback is not None:
             self._emit_callback(message)
 
+    def resolve_default_revision(self, repo_id, repo_type, token):
+        return _resolve_default_revision(normalize_repo_id(repo_id), repo_type, token)
+
     def download_snapshot(
         self,
         *,
@@ -157,11 +222,14 @@ class AtomGitDownloadAdapter:
         repo_info 路由（GET /api/models/{repo} 返回 404），SDK 会在任何
         下载前中止；这里改为 list_repo_files + resolve 逐文件下载。
         """
-        revision = revision or "main"
         local_path = Path(local_dir) if local_dir else None
         manifest_locks = ExitStack()
         try:
             normalized_repo_id = normalize_repo_id(repo_id)
+            if revision in (None, ""):
+                revision = _resolve_default_revision(
+                    normalized_repo_id, repo_type, token
+                )
 
             if local_path is None:
                 local_path = Path.cwd() / repo_id.split("/")[-1]
@@ -212,7 +280,7 @@ class AtomGitDownloadAdapter:
                 manifest_locks.enter_context(_download_manifest_lock(manifest_path))
                 try:
                     manifest_exists, previously_managed = _load_download_manifest(
-                        manifest_path
+                        manifest_path, **_revision_kwargs(revision)
                     )
                 except Exception:
                     manifest_locks.close()
@@ -264,7 +332,12 @@ class AtomGitDownloadAdapter:
                     )
                 if expected_checksum is None:
                     _download_atomgit_file(
-                        normalized_repo_id, effective_type, filename, dest, token
+                        normalized_repo_id,
+                        effective_type,
+                        filename,
+                        dest,
+                        token,
+                        **_revision_kwargs(revision),
                     )
                     self._emit(f"✓ 已下载: {filename}")
                 else:
@@ -290,10 +363,14 @@ class AtomGitDownloadAdapter:
             else:
                 managed_files = previously_managed | downloaded_files
             if prune:
-                _write_download_manifest(manifest_path, managed_files)
+                _write_download_manifest(
+                    manifest_path, managed_files, **_revision_kwargs(revision)
+                )
             elif manifest_available:
                 try:
-                    _write_download_manifest(manifest_path, managed_files)
+                    _write_download_manifest(
+                        manifest_path, managed_files, **_revision_kwargs(revision)
+                    )
                 except Exception:
                     self._emit("⚠ 下载 manifest 写入失败；本次下载文件不会纳入后续清理")
             self._emit("✅ 仓库下载成功")
@@ -315,36 +392,52 @@ class AtomGitDownloadAdapter:
         resume,
     ) -> bool:
         """Download one file through the canonical shared adapter."""
-        revision = revision or "main"
         local_path = Path(local_dir) if local_dir else None
         normalized_repo_id = normalize_repo_id(repo_id)
+        if revision in (None, ""):
+            revision = _resolve_default_revision(normalized_repo_id, repo_type, token)
 
         if local_path is None:
             local_path = Path.cwd()
 
         local_path.mkdir(parents=True, exist_ok=True)
 
-        if revision in (None, "", "main"):
-            effective_type, files = _atomgit_list_repo_files(
-                normalized_repo_id, token, repo_type
-            )
-        else:
-            effective_type, files = _atomgit_list_repo_files(
-                normalized_repo_id, token, repo_type, revision
-            )
-        if filename not in files:
-            with _download_stage("listing"):
-                raise RemoteDownloadFileNotFoundError(f"404 文件不存在: {filename}")
-
         dest = _safe_download_destination(local_path, filename)
+        if repo_type not in (None, "model", "dataset"):
+            raise ValueError("repo_type 仅支持 model 或 dataset")
+        metadata = (
+            _probe_download_file_metadata(
+                normalized_repo_id, repo_type, filename, token, revision
+            )
+            if repo_type is not None
+            else None
+        )
+        effective_type = repo_type
+        if metadata is None:
+            if revision in (None, "", "main"):
+                effective_type, files = _atomgit_list_repo_files(
+                    normalized_repo_id, token, repo_type
+                )
+            else:
+                effective_type, files = _atomgit_list_repo_files(
+                    normalized_repo_id, token, repo_type, revision
+                )
+            if filename not in files:
+                with _download_stage("listing"):
+                    raise RemoteDownloadFileNotFoundError(f"404 文件不存在: {filename}")
+
         if dest.exists() and not force:
             if checksum:
-                expected_checksum = _atomgit_file_checksum(
-                    normalized_repo_id,
-                    effective_type,
-                    filename,
-                    token,
-                    **_revision_kwargs(revision),
+                expected_checksum = (
+                    metadata[0]
+                    if metadata is not None
+                    else _atomgit_file_checksum(
+                        normalized_repo_id,
+                        effective_type,
+                        filename,
+                        token,
+                        **_revision_kwargs(revision),
+                    )
                 )
                 _verify_download_checksum(dest, expected_checksum)
                 self._emit(f"✅ 文件 checksum 校验通过: {filename}")
@@ -359,21 +452,31 @@ class AtomGitDownloadAdapter:
                 dest,
                 token,
                 **_revision_kwargs(revision),
+                **({"metadata": metadata} if metadata is not None else {}),
             )
             self._emit("✅ 文件可续传下载完成，checksum 校验通过")
             return True
         expected_checksum = None
         if checksum:
-            expected_checksum = _atomgit_file_checksum(
-                normalized_repo_id,
-                effective_type,
-                filename,
-                token,
-                **_revision_kwargs(revision),
+            expected_checksum = (
+                metadata[0]
+                if metadata is not None
+                else _atomgit_file_checksum(
+                    normalized_repo_id,
+                    effective_type,
+                    filename,
+                    token,
+                    **_revision_kwargs(revision),
+                )
             )
         if expected_checksum is None:
             _download_atomgit_file(
-                normalized_repo_id, effective_type, filename, dest, token
+                normalized_repo_id,
+                effective_type,
+                filename,
+                dest,
+                token,
+                **_revision_kwargs(revision),
             )
             self._emit("✅ 文件下载成功")
         else:

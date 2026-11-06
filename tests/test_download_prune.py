@@ -96,6 +96,60 @@ def main():
                 },
                 repr(payload),
             )
+            from atomgit.adapters.download import service
+
+            remote_files[:] = []
+            try:
+                service.AtomGitDownloadAdapter().download_snapshot(
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="feature",
+                    token=None,
+                    local_dir=target,
+                    force=False,
+                    checksum=False,
+                    resume=False,
+                    prune=True,
+                    allow_patterns=None,
+                    ignore_patterns=None,
+                )
+            except ValueError:
+                branch_prune_failed = True
+            else:
+                branch_prune_failed = False
+            check(
+                "branch change cannot prune main managed files",
+                branch_prune_failed and (target / "a.bin").is_file(),
+            )
+            remote_files[:] = ["a.bin", "nested/b.bin"]
+
+            feature_target = sandbox / "feature-target"
+            feature_kwargs = dict(
+                repo_id="user/repo",
+                repo_type="model",
+                revision="feature",
+                token=None,
+                local_dir=feature_target,
+                force=False,
+                checksum=False,
+                resume=False,
+                prune=True,
+                allow_patterns=None,
+                ignore_patterns=None,
+            )
+            adapter = service.AtomGitDownloadAdapter()
+            first_feature = adapter.download_snapshot(**feature_kwargs)
+            feature_manifest = api_mod._download_manifest_path(
+                "user/repo", "model", feature_target
+            )
+            feature_record = json.loads(feature_manifest.read_text(encoding="utf-8"))
+            second_feature = adapter.download_snapshot(**feature_kwargs)
+            check(
+                "feature prune keeps revision in manifest across runs",
+                first_feature
+                and second_feature
+                and feature_record.get("revision") == "feature",
+            )
             check(
                 "manifest directory permissions are restrictive",
                 stat.S_IMODE(manifest_root.stat().st_mode) == 0o700,
@@ -406,4 +460,9 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from unittest.mock import patch
+
+    from atomgit.adapters.download import service
+
+    with patch.object(service, "_resolve_default_revision", return_value="main"):
+        raise SystemExit(main())

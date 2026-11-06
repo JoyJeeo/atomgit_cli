@@ -11,7 +11,6 @@ import atomgit  # noqa: F401
 import atomgit_hub
 from atomgit.utils import normalize_repo_id, validate_repo_name
 
-
 api_mod = sys.modules["atomgit.api"]
 config = sys.modules["atomgit.config"].config
 RAW_ID = "org/namespace/repository/variant"
@@ -205,4 +204,13 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from unittest.mock import patch
+
+    from atomgit.adapters import sdk_downloads
+    from atomgit.adapters.download import service
+
+    with (
+        patch.object(service, "_resolve_default_revision", return_value="main"),
+        patch.object(sdk_downloads, "_resolve_default_revision", return_value="main"),
+    ):
+        raise SystemExit(main())

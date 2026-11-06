@@ -70,6 +70,7 @@ PACKAGE_MODULES = {
     "adapters/upload/progress.py",
     "adapters/upload/projection.py",
     "adapters/upload/resumable.py",
+    "adapters/upload/retry.py",
     "adapters/upload/service.py",
     "api.py",
     "atomgit_hub.py",
@@ -300,7 +301,11 @@ def main():
         isolated_home.mkdir()
         environment = os.environ.copy()
         environment.update(
-            {"HOME": str(isolated_home), "PYTHONPATH": str(isolated_src)}
+            {
+                "HOME": str(isolated_home),
+                "USERPROFILE": str(isolated_home),
+                "PYTHONPATH": str(isolated_src),
+            }
         )
         import_probe = subprocess.run(
             [

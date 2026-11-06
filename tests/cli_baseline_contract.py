@@ -333,6 +333,8 @@ EXPECTED_PUBLIC_SCHEMA = {
         "kind": "command",
         "params": (
             _argument("repo_id"),
+            _argument("filename", required=False),
+            _option("revision", "--revision"),
             _option(
                 "directory",
                 "--directory",
@@ -381,6 +383,7 @@ EXPECTED_PUBLIC_SCHEMA = {
         "params": (
             _argument("repo_id"),
             _argument("filename"),
+            _option("revision", "--revision"),
             _option(
                 "directory",
                 "--directory",
@@ -600,7 +603,7 @@ BASELINE_TEST_GROUPS = {
 
 
 BASELINE_PUBLIC_COMMAND_COUNT = 26
-BASELINE_PUBLIC_PARAMETER_COUNT = 50
+BASELINE_PUBLIC_PARAMETER_COUNT = 53
 BASELINE_LEAF_COMMAND_COUNT = 19
 BASELINE_TEST_SCRIPT_COUNT = 94
 

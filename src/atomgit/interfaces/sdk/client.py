@@ -238,7 +238,7 @@ class AtomGitClient:
         request = DownloadRequest(
             repo_id=repo_id,
             repo_type=repo_type,
-            revision=normalize_revision(revision),
+            revision=None if revision in (None, "") else normalize_revision(revision),
             token=self._explicit_token if token is None else token,
             local_dir=local_dir,
             force=force,
@@ -269,7 +269,7 @@ class AtomGitClient:
             repo_id=repo_id,
             filename=filename,
             repo_type=repo_type,
-            revision=normalize_revision(revision),
+            revision=None if revision in (None, "") else normalize_revision(revision),
             token=self._explicit_token if token is None else token,
             local_dir=local_dir,
             force=force,

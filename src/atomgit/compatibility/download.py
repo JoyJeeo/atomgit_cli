@@ -36,7 +36,7 @@ class DownloadServiceMixin:
             return AtomGitDownloadAdapter(emit=print).download_snapshot(
                 repo_id=repo_id,
                 repo_type=repo_type,
-                revision="main",
+                revision=None,
                 token=self._download_token(),
                 local_dir=local_path,
                 force=force_download,
@@ -65,7 +65,7 @@ class DownloadServiceMixin:
                 repo_id=repo_id,
                 filename=filename,
                 repo_type=repo_type,
-                revision="main",
+                revision=None,
                 token=self._download_token(),
                 local_dir=local_path,
                 force=force_download,

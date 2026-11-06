@@ -13,7 +13,7 @@ FORMAL_DEFINITION = (
 )
 
 BASELINE_CAPABILITY_COUNT = 28
-BASELINE_INVARIANT_COUNT = 154
+BASELINE_INVARIANT_COUNT = 163
 
 _CAPABILITY_ID = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
 _INVARIANT_ID = re.compile(r"^[A-Z][A-Z0-9]*-[0-9]{3}$")
@@ -244,6 +244,11 @@ CAPABILITY_REGISTRY = {
                 "The historical Click module delegates every leaf callback to one command owner while preserving exact schema, signatures, help, completion, and old-path runtime patch seams.",
                 "test_cli_command_ownership.py",
                 "test_cli_feature_baseline.py",
+            ),
+            _invariant(
+                "CLI-008",
+                "CLI startup does not import the optional datasets library until dataset loading is used.",
+                "test_cli_surface.py",
             ),
         ),
         (
@@ -519,7 +524,7 @@ CAPABILITY_REGISTRY = {
         (
             _invariant(
                 "RESUMEUP-001",
-                "Stable private projections isolate metadata by source, repository, revision, prefix, batch size, and batch index.",
+                "Stable private projections isolate metadata by source, repository, revision, prefix, batch size, and batch index; cross-volume symlinks are trusted only through the current parent-provided selected-source mapping.",
                 "test_upload_resumable.py",
                 "test_upload_path_in_repo.py",
             ),
@@ -539,7 +544,7 @@ CAPABILITY_REGISTRY = {
             ),
             _invariant(
                 "RESUMEUP-004",
-                "Default and explicit request timeouts never cap total upload lifetime across CLI, SDK, or multiple batches; cancellation reaps upload children and request failures remain failures.",
+                "Default and explicit request timeouts never cap total upload lifetime across CLI, SDK, or multiple batches; cancellation reaps upload children and request failures remain failures; macOS starts fresh spawn workers with matching queues without changing the global multiprocessing policy, avoiding inherited native proxy state.",
                 "test_resumable_recovery.py",
                 "test_upload_resumable.py",
             ),
@@ -550,7 +555,7 @@ CAPABILITY_REGISTRY = {
             ),
             _invariant(
                 "RESUMEUP-006",
-                "Every resumable commit intent is persisted privately before the remote write; reruns reconcile an immutable snapshot before upload and use the recorded parent revision without replaying conflicts.",
+                "Every resumable commit intent is persisted privately before the remote write; reruns bind projected files to authorized sources, verify stable size/content, reconcile an immutable remote snapshot before upload and compare complete paginated immutable Git path identities when HEAD advances, allow unchanged paths and pin that verified parent without replaying actual conflicts; independent commits never erase other pending intents. Temporary source unavailability remains pending; unsafe targets and changed content stop with allowlisted diagnostics.",
                 "test_resumable_commit_policy.py",
                 "test_upload_batching.py",
             ),
@@ -562,7 +567,7 @@ CAPABILITY_REGISTRY = {
             ),
             _invariant(
                 "RESUMEUP-008",
-                "Resumable workers coordinate per-file LFS bars and log lines in interactive terminals, append throttled file snapshots when redirected, keep transmission completion distinct from commit confirmation, disable tqdm monitors, restore streams/handlers/HF state on success and failure, and honor CLI/SDK progress disabling across fork and spawn.",
+                "Resumable workers coordinate per-file LFS bars and log lines in interactive terminals with independent approximately one-second display samples that do not mutate five-second Flow observations or 30-second recovery windows, append throttled file snapshots when redirected, keep transmission completion distinct from commit confirmation, disable tqdm monitors, restore streams/handlers/HF state on success and failure, and honor CLI/SDK progress disabling across fork and spawn.",
                 "test_resumable_recovery.py",
                 "test_upload_resumable.py",
             ),
@@ -572,6 +577,13 @@ CAPABILITY_REGISTRY = {
                 "test_upload_resumable.py",
                 "test_resumable_recovery.py",
                 "test_upload_error_classify.py",
+            ),
+            _invariant(
+                "RESUMEUP-010",
+                "Files get three attempts per round and unlimited fair retry rounds with persistent failures, independent confirmed commits, stable cross-batch rotation, Retry-After cooldown, event-only colored/plain failure diagnostics and Ctrl+C recovery; each actual failure logs file/batch, phase, attempts, safe cause and next action exactly once without periodic pending warnings or parent writes over child progress; formal enqueue and retry dispatch log deduplicated task-wide waiting/active/abnormal counts including reconstructed checkpoints, distinguish in-round retries and accurately describe hash/object/file-level recovery; transient outages never become false success or exhaust a cumulative retry budget, while global authorization/quota and unsafe commit state stop safely.",
+                "test_upload_batching.py",
+                "test_resumable_recovery.py",
+                "test_resumable_commit_policy.py",
             ),
         ),
         (
@@ -721,6 +733,17 @@ CAPABILITY_REGISTRY = {
                 "test_download_prune.py",
                 "test_download_manifest_concurrency.py",
             ),
+            _invariant(
+                "DLSNAP-004",
+                "An unspecified revision is resolved from repository metadata; an explicit revision is forwarded to listing and content.",
+                "test_download_repo_type_resolution.py",
+                "test_download_contract.py",
+            ),
+            _invariant(
+                "DLSNAP-005",
+                "Prune fails closed when the managed manifest belongs to a different revision.",
+                "test_download_prune.py",
+            ),
         ),
         (
             "test_download_contract.py",
@@ -768,12 +791,28 @@ CAPABILITY_REGISTRY = {
                 "test_download_unicode_metadata.py",
                 "test_download_standard_cleanup.py",
             ),
+            _invariant(
+                "DLFILE-005",
+                "The download alias and download-file preserve repository type while forwarding an explicit revision and rejecting single-file prune.",
+                "test_cli_download_file.py",
+            ),
+            _invariant(
+                "DLFILE-007",
+                "Explicit-type single-file downloads avoid listing after successful metadata, reuse checksum metadata, preserve unsupported/404 fallback, and never hide authentication or transient failures behind enumeration.",
+                "test_download_repo_type_resolution.py",
+            ),
+            _invariant(
+                "DLFILE-006",
+                "Single-file downloads use the selected or resolved revision for metadata, fallback listing and content.",
+                "test_download_repo_type_resolution.py",
+            ),
         ),
         (
             "test_download_recovery.py",
             "test_cli_download_file.py",
             "test_download_contract.py",
             "test_download_resume_cli.py",
+            "test_download_repo_type_resolution.py",
             "test_download_standard_cleanup.py",
             "test_download_unicode_metadata.py",
         ),
@@ -796,6 +835,11 @@ CAPABILITY_REGISTRY = {
             _invariant(
                 "DLINT-002",
                 "Resumed transfers validate range semantics, keep private partial state, and revalidate complete bytes.",
+                "test_download_resume_cli.py",
+            ),
+            _invariant(
+                "DLINT-004",
+                "Resume cache writers use persistent OS locks, recover after process death, and never terminate a process while probing liveness.",
                 "test_download_resume_cli.py",
             ),
             _invariant(
@@ -1355,6 +1399,11 @@ CAPABILITY_REGISTRY = {
                 "test_uninstaller.py",
             ),
             _invariant(
+                "PORT-010",
+                "Windows CLI pipes use UTF-8; offline subprocesses isolate native Windows home and host TLS settings; monitor persistence closes descriptors when permission setup fails or fchmod is unavailable.",
+                "test_windows_compatibility.py",
+            ),
+            _invariant(
                 "PORT-009",
                 "Fork, spawn, and available forkserver upload workers carry equivalent observations through one explicit process-safe contract without inherited callbacks or child snapshot writes.",
                 "test_resumable_recovery.py",
@@ -1467,7 +1516,7 @@ CAPABILITY_REGISTRY = {
             ),
             _invariant(
                 "REDACT-004",
-                "File, directory, SDK and child upload scopes redact dependency log records before handlers and contain background exception text, retaining only bounded diagnostic fields and restoring hooks after nested or overlapping scopes.",
+                "File, directory, SDK and child upload scopes redact dependency log records before handlers and contain background exception text, retaining only bounded diagnostic fields and restoring hooks after nested or overlapping scopes. LFS retries and terminal errors preserve recognized exception chains, known request hosts, methods, operation categories and HTTP status without raw URLs or exception text.",
                 "test_cli_error_redaction.py",
                 "test_upload_error_classify.py",
                 "test_resumable_recovery.py",
@@ -1595,7 +1644,7 @@ WORKFLOW_DOCUMENT_MARKERS = {
     "docs/development_floor.md": (
         FORMAL_DEFINITION,
         "28 个稳定能力 ID",
-        "154 条可观察行为不变量",
+        "163 条可观察行为不变量",
         "94 个隔离 pytest case",
     ),
     "docs/testing.md": ("94 个 pytest case", "development_floor.md"),

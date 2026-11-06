@@ -7,9 +7,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-import atomgit  # noqa: F401
 from click.testing import CliRunner
 
+import atomgit  # noqa: F401
 
 api_mod = sys.modules["atomgit.api"]
 cli_mod = sys.modules["atomgit.cli"]
@@ -87,4 +87,13 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    from unittest.mock import patch
+
+    from atomgit.adapters import sdk_downloads
+    from atomgit.adapters.download import service
+
+    with (
+        patch.object(service, "_resolve_default_revision", return_value="main"),
+        patch.object(sdk_downloads, "_resolve_default_revision", return_value="main"),
+    ):
+        raise SystemExit(main())

@@ -4,9 +4,9 @@
 import os
 import sys
 
-import atomgit  # noqa: F401
 from huggingface_hub import HfApi as RealHfApi
 
+import atomgit  # noqa: F401
 
 api_mod = sys.modules["atomgit.api"]
 results = []
@@ -34,9 +34,16 @@ def legacy_download_checks():
         patch.object(sdk_downloads, "_get_token", return_value=None),
         patch.object(sdk_downloads, "hf_snapshot_download", capture),
         patch.object(sdk_downloads, "hf_hub_download", capture),
+        patch.object(
+            sdk_downloads, "_resolve_default_revision", return_value="main"
+        ) as resolve,
     ):
         sdk_downloads.snapshot_download("fake/repo")
         sdk_downloads.download_file("fake/repo", "fixture.txt")
+        check(
+            "default revision resolution is anonymous",
+            all(call.args[2] is False for call in resolve.call_args_list),
+        )
     with (
         patch.object(sdk_datasets, "_get_token", return_value=None),
         patch.object(sdk_datasets, "hf_snapshot_download", capture),
@@ -87,9 +94,7 @@ def main():
 
     api_mod.HfApi = RecordingHfApi
     try:
-        repo_type, files = api_mod._atomgit_list_repo_files(
-            "user/repo", None, "model"
-        )
+        repo_type, files = api_mod._atomgit_list_repo_files("user/repo", None, "model")
         check("anonymous repository type is preserved", repo_type == "model")
         check("anonymous repository files are preserved", files == ["README.md"])
         check(
@@ -99,9 +104,7 @@ def main():
         )
 
         explicit_token = "atomgit_fake_explicit_credential"
-        api_mod._atomgit_list_repo_files(
-            "user/repo", explicit_token, "dataset"
-        )
+        api_mod._atomgit_list_repo_files("user/repo", explicit_token, "dataset")
         check(
             "explicit AtomGit token is forwarded unchanged",
             constructor_tokens[-1] == explicit_token,

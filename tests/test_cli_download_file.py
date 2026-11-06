@@ -33,14 +33,20 @@ def main():
     )
 
     original_download = cli_mod.api.download_file
+    original_snapshot = cli_mod.api.download_repo
     original_logged_in = cli_mod.config.is_logged_in
     calls = []
 
     def fake_download(
-        repo_id, filename, local_path, force_download=False, repo_type=None
+        repo_id,
+        filename,
+        local_path,
+        force_download=False,
+        repo_type=None,
+        revision=None,
     ):
         calls.append(
-            (repo_id, filename, Path(local_path), force_download, repo_type)
+            (repo_id, filename, Path(local_path), force_download, repo_type, revision)
         )
         return True
 
@@ -52,7 +58,9 @@ def main():
                 cli_mod.cli,
                 ["download-file", "user/repo", "weights/model.bin"],
             )
-            check("default single-file download succeeds", default_result.exit_code == 0)
+            check(
+                "default single-file download succeeds", default_result.exit_code == 0
+            )
             check(
                 "default destination is current directory",
                 calls[-1][2].resolve() == Path.cwd().resolve(),
@@ -80,7 +88,9 @@ def main():
                     "dataset",
                 ],
             )
-            check("explicit single-file download succeeds", explicit_result.exit_code == 0)
+            check(
+                "explicit single-file download succeeds", explicit_result.exit_code == 0
+            )
             check(
                 "all single-file options are forwarded",
                 calls[-1]
@@ -90,8 +100,61 @@ def main():
                     Path("target"),
                     True,
                     "dataset",
+                    None,
                 ),
                 repr(calls[-1]),
+            )
+
+            alias_result = runner.invoke(
+                cli_mod.cli, ["download", "user/repo", "README.md"]
+            )
+            check(
+                "download accepts upstream single-file syntax",
+                alias_result.exit_code == 0,
+            )
+            revision_help = runner.invoke(cli_mod.cli, ["download-file", "--help"])
+            check(
+                "single-file download exposes revision",
+                "--revision" in revision_help.output,
+            )
+            snapshot_help = runner.invoke(cli_mod.cli, ["download", "--help"])
+            check(
+                "snapshot download exposes revision",
+                "--revision" in snapshot_help.output,
+            )
+            revision_result = runner.invoke(
+                cli_mod.cli,
+                [
+                    "download",
+                    "user/repo",
+                    "README.md",
+                    "--revision",
+                    "feature/test",
+                    "-r",
+                    "dataset",
+                ],
+            )
+            check(
+                "revision and repo type reach single-file download",
+                revision_result.exit_code == 0
+                and calls[-1][-2:] == ("dataset", "feature/test"),
+            )
+            invalid_prune = runner.invoke(
+                cli_mod.cli, ["download", "user/repo", "README.md", "--prune"]
+            )
+            check("single-file alias rejects prune", invalid_prune.exit_code == 2)
+
+            snapshot_calls = []
+            cli_mod.api.download_repo = (
+                lambda *args, **kwargs: snapshot_calls.append(kwargs) or True
+            )
+            snapshot = runner.invoke(
+                cli_mod.cli, ["download", "user/repo", "--revision", "feature/test"]
+            )
+            check(
+                "snapshot revision is forwarded",
+                snapshot.exit_code == 0
+                and snapshot_calls[-1].get("revision") == "feature/test",
             )
 
             calls.clear()
@@ -124,6 +187,7 @@ def main():
             check("anonymous failure provides login guidance", "login" in failed.output)
     finally:
         cli_mod.api.download_file = original_download
+        cli_mod.api.download_repo = original_snapshot
         cli_mod.config.is_logged_in = original_logged_in
 
     passed = sum(1 for _, condition, _ in results if condition)

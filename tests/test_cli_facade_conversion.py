@@ -43,11 +43,11 @@ EXPECTED_CALLBACK_SIGNATURES = {
         "auto_configure_lfs)"
     ),
     "download": (
-        "(repo_id, directory, force, verify_checksum, resume_download, prune, "
+        "(repo_id, filename, revision, directory, force, verify_checksum, resume_download, prune, "
         "repo_type)"
     ),
     "download-file": (
-        "(repo_id, filename, directory, force, verify_checksum, "
+        "(repo_id, filename, revision, directory, force, verify_checksum, "
         "resume_download, repo_type)"
     ),
     "completion show": "(shell)",

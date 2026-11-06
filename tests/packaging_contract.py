@@ -80,14 +80,14 @@ TOOL_POLICY = {
 # These declarations must tighten in the same change whenever debt is removed.
 LEGACY_TOOL_DEBT = {
     "black": {
-        "files": 76,
-        "changes": 409,
-        "digest": "6ffac0294ff98c0765c3ebd09220f1601cb1d90d8da5751aa1d79e5cbab72f35",
+        "files": 69,
+        "changes": 382,
+        "digest": "056c936d35c74a54afe113ff3f1045a907a401ab0d7425b81f005718a464c516",
     },
     "isort": {
-        "files": 80,
-        "changes": 86,
-        "digest": "b2cef22c41fc80becbf68f2e5e7a7a234c42fba2524a6ba9805828caaf661473",
+        "files": 65,
+        "changes": 71,
+        "digest": "eed409374aa51a5600475d0f232aa5b5d94ce02d27fc23e4f8cca053b8174ea1",
     },
     "ruff": {
         "files": 15,
@@ -124,6 +124,7 @@ CLEAN_POLICY_FILES = {
     "src/atomgit/adapters/upload/progress.py",
     "src/atomgit/adapters/upload/projection.py",
     "src/atomgit/adapters/upload/resumable.py",
+    "src/atomgit/adapters/upload/retry.py",
     "src/atomgit/adapters/upload/service.py",
     "src/atomgit/api.py",
     "src/atomgit/cli.py",

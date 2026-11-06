@@ -7,7 +7,6 @@ from pathlib import Path
 import atomgit
 import atomgit_hub
 
-
 results = []
 
 
@@ -254,4 +253,13 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from unittest.mock import patch
+
+    from atomgit.adapters import sdk_downloads
+    from atomgit.adapters.download import service
+
+    with (
+        patch.object(service, "_resolve_default_revision", return_value="main"),
+        patch.object(sdk_downloads, "_resolve_default_revision", return_value="main"),
+    ):
+        raise SystemExit(main())

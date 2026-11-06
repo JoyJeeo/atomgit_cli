@@ -12,7 +12,6 @@ from pathlib import Path, PureWindowsPath
 
 import atomgit  # noqa: F401
 
-
 api_mod = sys.modules["atomgit.api"]
 config_mod = sys.modules["atomgit.config"]
 utils_mod = sys.modules["atomgit.utils"]
@@ -107,7 +106,96 @@ def run_git(*args, environment):
     )
 
 
+def portability_regressions():
+    import io
+    from unittest.mock import patch
+
+    import pytest_offline_scripts
+
+    from atomgit.compatibility import cli as cli_context
+    from atomgit.infrastructure import upload_observe
+    from atomgit.interfaces.cli import schema
+
+    buffer = io.BytesIO()
+    stream = io.TextIOWrapper(buffer, encoding="cp1252")
+    with patch.object(sys, "platform", "win32"), patch.object(sys, "stdout", stream):
+        schema.build_cli(cli_context)
+        try:
+            stream.write("中文✓")
+            stream.flush()
+            encoded = buffer.getvalue() == "中文✓".encode("utf-8")
+        except UnicodeEncodeError:
+            encoded = False
+    check("Windows redirected CLI output uses UTF-8", encoded)
+    stream.close()
+
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        with patch.dict(os.environ, {"HF_HOME": str(root)}):
+            with patch.object(os, "fchmod", None, create=True):
+                path = upload_observe.publish_snapshot({"session_id": "windows-probe"})
+            check(
+                "monitor snapshot saves without os.fchmod",
+                path == root / "upload-observe/v1/windows-probe.json"
+                and path.is_file(),
+            )
+            descriptors = []
+            real_mkstemp = tempfile.mkstemp
+
+            def mkstemp(**kwargs):
+                descriptor, name = real_mkstemp(**kwargs)
+                descriptors.append(descriptor)
+                return descriptor, name
+
+            with (
+                patch.object(tempfile, "mkstemp", mkstemp),
+                patch.object(os, "fchmod", side_effect=OSError("fixture"), create=True),
+            ):
+                upload_observe.publish_snapshot({"session_id": "failure-probe"})
+            leaked = []
+            for descriptor in descriptors:
+                try:
+                    os.fstat(descriptor)
+                except OSError:
+                    continue
+                leaked.append(descriptor)
+                os.close(descriptor)
+            check("failed monitor permission setup closes every descriptor", not leaked)
+            # Remove leaked old-code temporaries only after observing the failure.
+            for path in (root / "upload-observe/v1").glob("*.tmp"):
+                path.unlink()
+
+        captured = []
+
+        def run(command, **kwargs):
+            captured.append(kwargs["env"])
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.dict(
+                os.environ,
+                {"SSL_CERT_FILE": "missing-fixture.pem", "HF_TOKEN": "fake-fixture"},
+            ),
+            patch.object(pytest_offline_scripts.subprocess, "run", run),
+        ):
+            pytest_offline_scripts.test_offline_script(
+                Path("tests/test_windows_compatibility.py"), root
+            )
+        environment = captured[0]
+        check(
+            "offline subprocesses isolate Windows home and UTF-8",
+            environment.get("USERPROFILE") == environment["HOME"]
+            and environment.get("PYTHONUTF8") == "1"
+            and environment.get("PYTHONIOENCODING") == "utf-8",
+        )
+        check(
+            "offline subprocesses exclude host TLS and token settings",
+            "SSL_CERT_FILE" not in environment and "HF_TOKEN" not in environment,
+        )
+
+
 def main():
+    portability_regressions()
     original_fchmod = getattr(os, "fchmod", None)
     original_environment = os.environ.copy()
     try:
@@ -118,6 +206,7 @@ def main():
             config_home = root / "config-home"
             config_home.mkdir()
             os.environ["HOME"] = str(config_home)
+            os.environ["USERPROFILE"] = str(config_home)
             config = config_mod.Config()
             try:
                 config.set_credentials(
@@ -183,23 +272,15 @@ def main():
             fake_locking = FakeWindowsLocking()
             api_mod._windows_file_lock_module = lambda: fake_locking
             lock_file = root / "windows-manifest.lock"
-            descriptor = os.open(
-                str(lock_file), os.O_CREAT | os.O_RDWR, 0o600
-            )
+            descriptor = os.open(str(lock_file), os.O_CREAT | os.O_RDWR, 0o600)
             try:
-                windows_locked = (
-                    api_mod._try_lock_download_manifest_descriptor_windows(
-                        descriptor
-                    )
-                )
-                api_mod._unlock_download_manifest_descriptor_windows(
+                windows_locked = api_mod._try_lock_download_manifest_descriptor_windows(
                     descriptor
                 )
+                api_mod._unlock_download_manifest_descriptor_windows(descriptor)
                 fake_locking.busy = True
-                windows_busy = (
-                    api_mod._try_lock_download_manifest_descriptor_windows(
-                        descriptor
-                    )
+                windows_busy = api_mod._try_lock_download_manifest_descriptor_windows(
+                    descriptor
                 )
             finally:
                 os.close(descriptor)
@@ -233,14 +314,11 @@ def main():
                 )
             check(
                 "Windows helper command quotes interpreter and normalized path",
-                windows_helper
-                == "!'C:/Program Files/Python/python.exe' "
+                windows_helper == "!'C:/Program Files/Python/python.exe' "
                 "'C:/Users/Test User/.atomgit/git-credential-atomgit'",
                 repr(windows_helper),
             )
-            legacy_helper = (
-                r"!C:\Users\Test User\.atomgit\git-credential-atomgit"
-            )
+            legacy_helper = r"!C:\Users\Test User\.atomgit\git-credential-atomgit"
             cleaned_helpers = utils_mod._legacy_cleanup_values(
                 ["!generic", "", legacy_helper, "", windows_helper],
                 {legacy_helper, windows_helper},
@@ -293,20 +371,24 @@ def main():
             for host in ("atomgit.com", "hub.atomgit.com"):
                 key = f"credential.https://{host}.helper"
                 run_git(
-                    "config", "--global", "--add", key, "",
+                    "config",
+                    "--global",
+                    "--add",
+                    key,
+                    "",
                     environment=os.environ.copy(),
                 )
                 run_git(
-                    "config", "--global", "--add", key, legacy_value,
+                    "config",
+                    "--global",
+                    "--add",
+                    key,
+                    legacy_value,
                     environment=os.environ.copy(),
                 )
-            upgraded = utils_mod.setup_git_credentials(
-                "fake-helper-token-never-print"
-            )
+            upgraded = utils_mod.setup_git_credentials("fake-helper-token-never-print")
             upgraded_state = json.loads(
-                (atomgit_dir / "git-helper-state.json").read_text(
-                    encoding="utf-8"
-                )
+                (atomgit_dir / "git-helper-state.json").read_text(encoding="utf-8")
             )
             upgraded_cleanup = utils_mod.clear_git_credentials()
             restored_values = []
@@ -348,8 +430,7 @@ def main():
                 "Windows prune deletes opened in-root regular file by handle",
                 valid_prune is True
                 and valid_api.deleted == ["target"]
-                and set(valid_api.closed)
-                == {"root", "directory-1", "target"},
+                and set(valid_api.closed) == {"root", "directory-1", "target"},
                 repr(valid_api.deleted if valid_api else None),
             )
 
@@ -414,16 +495,11 @@ def main():
             )
 
             original_platform = api_mod._uses_windows_prune
-            original_windows_prune = (
-                api_mod._prune_managed_download_file_windows
-            )
+            original_windows_prune = api_mod._prune_managed_download_file_windows
             dispatched = []
             api_mod._uses_windows_prune = lambda: True
             api_mod._prune_managed_download_file_windows = (
-                lambda local_root, parts: dispatched.append(
-                    (local_root, parts)
-                )
-                or True
+                lambda local_root, parts: dispatched.append((local_root, parts)) or True
             )
             try:
                 dispatch_result = api_mod._prune_managed_download_file(
@@ -431,9 +507,7 @@ def main():
                 )
             finally:
                 api_mod._uses_windows_prune = original_platform
-                api_mod._prune_managed_download_file_windows = (
-                    original_windows_prune
-                )
+                api_mod._prune_managed_download_file_windows = original_windows_prune
             check(
                 "platform dispatcher selects Windows handle pruning",
                 dispatch_result is True

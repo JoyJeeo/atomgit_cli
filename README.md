@@ -23,7 +23,7 @@ AtomGit 是一个完整的工具包，提供命令行工具（CLI）和Python SD
   - 仓库类型选择（`-r/--repo-type model|dataset`）
   - 显式分支创建与非 `main` 上传（CLI）
   - 忽略文件模式（`-i/--ignore`）
-  - 目录默认断点续传/分块上传（`--resumable/--no-resumable`、`--num-workers`）
+  - 目录默认文件级断点续传上传（`--resumable/--no-resumable`、`--num-workers`）
   - 单文件上传无本地拷贝（直接走 `upload_file`）
   - 语义化错误分类（认证失败 / 权限不足 / 仓库不存在 / 超时等，附可执行建议）
 
@@ -279,10 +279,19 @@ N 秒，不要求整个请求在 N 秒内完成；HF 1.1.7 的写入等待仍为
 时，提交后的 pointer 确认故障可能比旧版本等待更久，但不会再被隐藏上限提前终止。
 兼容变化：显式超时不再终止整次 resumable 上传，依赖旧总时限行为的脚本需相应调整。
 
-resumable 的 Git LFS 预上传不会无限重试。认证、权限、仓库不存在、LFS 存储或
-带宽额度不足，以及被拒绝的 Batch 请求会立即停止；限流、服务暂不可用、超时和
-连接失败最多尝试三次，使用有上限的退避并遵循有效的 `Retry-After`。失败时 SHA-256、LFS 模式和已确认批次均保留，未确认
-对象不会标记为已上传或已提交；外部条件恢复后可重新执行同一命令继续。
+resumable 对临时失败的文件每轮尝试三次，仍失败则进入候补队列，让其他文件先上传；
+候补文件循环补传，不按累计失败次数停止，已完成文件独立提交。第三次失败入队时
+立即显示整个任务的候补文件数、正在补传数和异常待处理数，前两次显示“本轮重试”。
+开始补传时从候补数中移除该文件；同一文件反复入队不重复计数。计数按当前批次划分
+和所选文件重建，保留断点并用同一命令重启可恢复。
+
+日志会区分复用哈希、尝试复用已上传对象并核对提交、以及重新传输内容。
+这是**文件级断点续传**，不保证文件内部字节偏移续传：basic LFS 未完整上传的文件
+需要从头传输，已上传对象也可能因服务端过期而重新上传。认证、权限、仓库、额度和
+不安全的提交恢复状态等全局故障仍会停止；其他异常保留待处理。
+每次实际失败只打印一次完整原因、文件名、阶段、失败次数和后续处理；不会定时重复
+提示同一待处理状态。入队与开始补传时立即更新队列数量，日志与进度条协调输出。
+Ctrl+C 会停止上传并保留断点。
 
 resumable 还会在上传数据实际被网络请求持续消费时监测单个 LFS 连接。只有对象先
 形成可靠的自身或同伴速度基线，随后连续三个 30 秒窗口显著降速，并且预计更换连接
@@ -362,11 +371,15 @@ atomgit cache clear
 > 显式选择 `dataset` 时仍使用 AtomGit 已验证的 `model` 兼容传输路由，但
 > `.arrow` / `.parquet` 不再显示 HF 1.1.7 因该映射产生的 model 仓库误报警；
 > 真正的 model 上传和其他警告仍会显示。
+> macOS 的 resumable 批次使用独立的 `spawn` 子进程，避免多线程父进程经 `fork`
+> 后读取系统代理设置时崩溃。无需更改 CLI 命令或清理断点；每次子进程启动会重新
+> 加载 Python 及依赖，增加少量批次启动开销，不改变文件传输协议。
 > 每次 resumable 提交前还会在对应稳定投影中私密、原子地记录待对账状态，并把
 > 当前远端提交作为 `parent_commit`。若写响应或 pointer 确认不明确，下一次同身份
 > 运行会先在同一不可变 revision 上核对大小、强摘要和规范 pointer；完全匹配时只
-> 恢复本地 committed 状态并显示“新增提交 0”，远端已前进、内容冲突、状态损坏或
-> 无法确认时则停止且不创建新提交。`atomgit cache clear` 会删除这份保护状态，未
+> 恢复本地 committed 状态并显示“新增提交 0”。分支版本变化时会分页核对待确认
+> 路径的 Git 内容：路径未变（包括两边均不存在）可继续；同路径内容、类型或权限
+> 发生变化、状态损坏或无法安全确认时保留断点并停止。`atomgit cache clear` 会删除这份保护状态，未
 > 人工核对远端前不应在失败后立即清理缓存。
 > `--auto-configure-lfs` 启用后，CLI 会在服务端把文件判定为 LFS 后、对象预上传或
 > 引用提交前，从安全扩展名生成 `*.ext filter=lfs diff=lfs merge=lfs -text`，检查
@@ -436,6 +449,10 @@ atomgit download your-username/your-dataset -d ./data/ --repo-type dataset
 未指定 `--repo-type` 时会安全探测两种路由；若两种路由返回不同内容，命令会
 要求显式选择，避免混合下载错误仓库的数据。
 
+未指定 `--revision` 时会查询仓库默认分支；查询失败时不会猜测分支，请检查
+网络和权限，或使用 `--revision` 明确指定。旧 SDK 的 `local_files_only=True`
+保持离线，不为获取默认分支发起网络请求。
+
 目标目录中已存在的文件默认直接跳过，不会校验大小或内容，也不代表断点续传。
 需要重新下载并覆盖已有文件时使用 `--force`：
 
@@ -480,6 +497,7 @@ atomgit download your-username/your-model-name -d ./models/ --prune
 不可用时会警告但仍完成下载，这些文件不会被后续清理；显式 `--prune` 则失败关闭。
 同一仓库、类型和本地目录的整仓下载会独占 manifest 事务；并发命令会在传输或
 清理前失败并提示等待当前任务完成，不会覆盖彼此的受管理文件记录。
+清理清单也记录分支；切换分支后不能用旧分支的清单清理，建议使用不同的本地目录。
 
 #### 只下载一个文件
 
@@ -488,6 +506,9 @@ atomgit download your-username/your-model-name -d ./models/ --prune
 ```bash
 atomgit download-file your-username/your-model-name weights/model.bin -d ./models/
 ```
+
+也可以使用上游兼容写法 `atomgit download your-username/your-model-name weights/model.bin`。
+整仓和单文件下载均支持 `--revision <分支、标签或提交>`；`-r` 仍用于 `--repo-type`。
 
 dataset、强制覆盖和匿名下载与整仓命令使用相同策略：
 
@@ -1031,6 +1052,7 @@ python tests/test_git_credentials_isolation.py  # Git helper 隔离与恢复
 
 - 原生 `AtomGitClient` 上传下载使用“方法 token → 客户端 token → 保存凭证”的优先级；`False` 明确请求匿名，匿名上传被拒绝。旧版 SDK 无 AtomGit 凭证时不会回退读取 `HF_TOKEN`。
 - 上传客户端及旧版下载显式指定 AtomGit endpoint，不依赖 Hugging Face 与 AtomGit 的导入顺序。上传子目录拒绝 `..`，保留 `.records` 等合法名称。
+- macOS/Windows 上从 Python 脚本调用 `resumable=True` 时，将启动上传的代码放在 `if __name__ == "__main__":` 保护下。Notebook 或交互会话建议启动独立的 `atomgit upload` CLI 进程，避免 `spawn` 重新导入交互入口失败；普通 SDK 上传不受此要求影响。
 - 原生普通上传支持 `progress`、`num_workers` 和 `timeout`；普通目录上传不支持 `auto_configure_lfs=True` 或自定义 `batch_size`，需要这些选项时使用 `resumable=True`。单文件 SDK 上传不支持 `ignore_patterns`，应由调用方先筛选文件。
 - 为隔离锁定 HF 库的全局超时和进度状态，同进程普通上传调用串行执行；单次上传内部保留文件并发。HTTP 会话按请求超时重新建立，退出后恢复状态；LFS 写入等待仍为 60 秒。
 - push/PR 工作流运行完整离线基线；发布准备依赖指定源码 SHA 的同一测试矩阵。矩阵配置覆盖 Linux、macOS、Windows 及 Python 3.9/3.13 边界；配置存在不代表这些远程运行已经通过。

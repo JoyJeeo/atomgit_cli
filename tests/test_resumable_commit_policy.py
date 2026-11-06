@@ -94,12 +94,253 @@ def make_controller(
     )
 
 
+def check_path_aware_recovery(check):
+    from unittest.mock import patch
+
+    from atomgit.adapters.upload import resumable
+
+    with tempfile.TemporaryDirectory(prefix="atomgit-unrelated-head-") as td:
+        folder = Path(td)
+        payload = folder / "payload.bin"
+        payload.write_bytes(b"payload")
+        operation = CommitOperationAdd(
+            path_in_repo="payload.bin", path_or_fileobj=payload
+        )
+        operation._upload_mode = "regular"
+        paths = api_mod.get_local_upload_paths(folder, "payload.bin")
+        metadata = api_mod.read_upload_metadata(folder, "payload.bin")
+        metadata.sha256 = operation.upload_info.sha256.hex()
+        metadata.upload_mode = "regular"
+        metadata.is_uploaded = True
+        metadata.save(paths)
+        api_mod._write_pending_commit(
+            folder,
+            api_mod._pending_commit_value(
+                state="attempting",
+                base_revision="a" * 40,
+                commit_revision=None,
+                operations=[operation],
+            ),
+        )
+        reads = []
+
+        def tree(path, token, timeout, **kwargs):
+            reads.append(path)
+            return {"sha": path.rsplit("/", 1)[-1], "tree": []}
+
+        client = ScriptedClient([SimpleNamespace(oid="c" * 40)])
+        with (
+            patch.object(
+                resumable,
+                "_resolve_resumable_revision",
+                side_effect=["b" * 40, "b" * 40, "d" * 40],
+            ) as resolve,
+            patch.object(
+                resumable, "_atomgit_file_checksum", side_effect=http_error(404)
+            ),
+            patch.object(resumable, "_atomgit_v5_get_json", side_effect=tree),
+        ):
+            controller = api_mod._ResumableCommitController(
+                client.create_commit,
+                token="fake-token-never-print",
+                folder_path=folder,
+            )
+            try:
+                result = controller.create_commit(
+                    repo_id="user/repo",
+                    repo_type="model",
+                    revision="main",
+                    operations=[operation],
+                    commit_message="batch",
+                )
+                recovered = result.oid == "c" * 40
+            except api_mod.ResumableCommitError:
+                recovered = False
+        check(
+            "unrelated HEAD advance resumes absent target with validated parent",
+            recovered
+            and len(client.calls) == 1
+            and client.kwarg_calls[0]["parent_commit"] == "b" * 40
+            and resolve.call_count == 2
+            and len(reads) == 2
+            and api_mod._read_pending_commit(folder) is None,
+        )
+
+        def write_pending(operations):
+            api_mod._write_pending_commit(
+                folder,
+                api_mod._pending_commit_value(
+                    state="attempting",
+                    base_revision="a" * 40,
+                    commit_revision=None,
+                    operations=operations,
+                ),
+            )
+
+        def recover():
+            return resumable._recover_pending_commit(
+                folder_path=folder,
+                token="fake-token-never-print",
+                repo_id="user/repo",
+                repo_type="model",
+                revision="main",
+                request_timeout=17,
+            )
+
+        def leaf(sha="e" * 40, mode="100644"):
+            return {"path": "payload.bin", "type": "blob", "mode": mode, "sha": sha}
+
+        with (
+            patch.object(
+                resumable, "_resolve_resumable_revision", return_value="b" * 40
+            ),
+            patch.object(
+                resumable, "_atomgit_file_checksum", side_effect=http_error(404)
+            ),
+        ):
+            for label, before, after, conflict in (
+                ("unchanged existing blob", [leaf()], [leaf()], False),
+                ("concurrent creation", [], [leaf()], True),
+                ("concurrent content edit", [leaf()], [leaf("f" * 40)], True),
+                ("concurrent deletion", [leaf()], [], True),
+                ("concurrent mode change", [leaf()], [leaf(mode="100755")], True),
+            ):
+                write_pending([operation])
+
+                def snapshot(path, token, **kwargs):
+                    revision = path.rsplit("/", 1)[-1]
+                    return {
+                        "sha": revision,
+                        "tree": before if revision == "a" * 40 else after,
+                    }
+
+                with patch.object(
+                    resumable, "_atomgit_v5_get_json", side_effect=snapshot
+                ):
+                    try:
+                        result = recover()
+                        conflicted = False
+                    except resumable.ResumableCommitConflictError:
+                        conflicted = True
+                journal = api_mod._read_pending_commit(folder)
+                check(
+                    label + " uses path identity rather than branch version",
+                    conflicted == conflict
+                    and journal["base_revision"] == ("a" if conflict else "b") * 40
+                    and len(journal["operations"]) == 1,
+                )
+
+            # The production tree API silently defaults to 20 entries and caps
+            # page size at 100. A target on page two must not look absent.
+            write_pending([operation])
+            pages = []
+
+            def paginated(path, token, **kwargs):
+                revision = path.rsplit("/", 1)[-1]
+                query = kwargs["query"]
+                assert query["per_page"] == 100
+                pages.append((revision, query["page"]))
+                entries = [dict(leaf(), path=f"other-{i}") for i in range(100)]
+                if query["page"] == 2:
+                    entries = [leaf("e" * 40 if revision == "a" * 40 else "f" * 40)]
+                return {"sha": revision, "tree": entries}
+
+            with patch.object(resumable, "_atomgit_v5_get_json", side_effect=paginated):
+                try:
+                    recover()
+                    blocked = False
+                except resumable.ResumableCommitConflictError:
+                    blocked = True
+            check(
+                "page-two conflict is found before rebase", blocked and len(pages) == 4
+            )
+
+            for label, response in (
+                ("truncated", {"sha": "a" * 40, "tree": [], "truncated": True}),
+                ("wrong snapshot", {"sha": "c" * 40, "tree": []}),
+                ("malformed", {"sha": "a" * 40, "tree": [{}]}),
+                ("duplicate entries", {"sha": "a" * 40, "tree": [leaf(), leaf()]}),
+                ("404 is not absence", http_error(404)),
+                ("transient read", http_error(503)),
+            ):
+                write_pending([operation])
+                before_journal = api_mod._read_pending_commit(folder)
+                mock_args = (
+                    {"side_effect": response}
+                    if isinstance(response, Exception)
+                    else {"return_value": response}
+                )
+                with patch.object(resumable, "_atomgit_v5_get_json", **mock_args):
+                    try:
+                        recover()
+                        blocked = False
+                    except (resumable.ResumableRecoveryStateError, HfHubHTTPError):
+                        blocked = True
+                check(
+                    label + " preserves unresolved journal",
+                    blocked and api_mod._read_pending_commit(folder) == before_journal,
+                )
+
+            # A different healthy file may commit while the old one remains
+            # pending. Both the attempt and the success cleanup must retain it.
+            write_pending([operation])
+            other = folder / "other.bin"
+            other.write_bytes(b"other")
+            other_operation = CommitOperationAdd(
+                path_in_repo="other.bin", path_or_fileobj=other
+            )
+            other_operation._upload_mode = "regular"
+            saved = []
+
+            def commit_other(**kwargs):
+                saved.extend(
+                    item["path"]
+                    for item in api_mod._read_pending_commit(folder)["operations"]
+                )
+                assert kwargs["parent_commit"] == "b" * 40
+                return SimpleNamespace(oid="c" * 40)
+
+            with patch.object(resumable, "_atomgit_v5_get_json", side_effect=tree):
+                controller = resumable._ResumableCommitController(
+                    commit_other,
+                    token="fake-token-never-print",
+                    folder_path=folder,
+                )
+                controller.create_commit(
+                    repo_id="user/repo",
+                    operations=[other_operation],
+                    commit_message="other",
+                )
+                retained = api_mod._read_pending_commit(folder)
+                check(
+                    "independent healthy commit retains unresolved intent",
+                    set(saved) == {"payload.bin", "other.bin"}
+                    and retained["state"] == "attempting"
+                    and retained["commit_revision"] is None
+                    and [item["path"] for item in retained["operations"]]
+                    == ["payload.bin"],
+                )
+                # Simulate a restart after another successful commit.
+                with patch.object(
+                    resumable, "_resolve_resumable_revision", return_value="c" * 40
+                ):
+                    recovered = recover()
+                check(
+                    "retained intent can rebase again after restart",
+                    recovered["remaining"] == 1
+                    and api_mod._read_pending_commit(folder)["base_revision"]
+                    == "c" * 40,
+                )
+
+
 def main():
     results = []
 
     def check(name, condition, detail=""):
         results.append(bool(condition))
         print(f"[{'PASS' if condition else 'FAIL'}] {name}" + (f" -> {detail}" if detail else ""))
+
+    check_path_aware_recovery(check)
 
     operations = [FakeOperation(f"file-{index:02d}.bin") for index in range(20)]
 
@@ -646,7 +887,24 @@ def main():
 
     original_resolve_revision = api_mod._resolve_resumable_revision
     original_checksum = api_mod._atomgit_file_checksum
+    original_tree_get = api_mod._atomgit_v5_get_json
     try:
+
+        def conflicting_tree(path, token, **kwargs):
+            revision = path.rsplit("/", 1)[-1]
+            return {
+                "sha": revision,
+                "tree": [
+                    {
+                        "path": "missing.bin",
+                        "type": "blob",
+                        "mode": "100644",
+                        "sha": revision,
+                    }
+                ],
+            }
+
+        api_mod._atomgit_v5_get_json = conflicting_tree
         with tempfile.TemporaryDirectory(prefix="atomgit-partial-conflict-") as td:
             projection = Path(td)
             operations_by_path = {}
@@ -770,6 +1028,7 @@ def main():
     finally:
         api_mod._resolve_resumable_revision = original_resolve_revision
         api_mod._atomgit_file_checksum = original_checksum
+        api_mod._atomgit_v5_get_json = original_tree_get
 
     sleeps = []
     timeout_client = ScriptedClient([httpx.ReadTimeout("response timed out")])
@@ -1222,6 +1481,12 @@ def main():
         original_resolve_revision = api_mod._resolve_resumable_revision
         api_mod.HfApi = FatalHfApi
         api_mod._resolve_resumable_revision = lambda **kwargs: "a" * 40
+        original_checksum = api_mod._atomgit_file_checksum
+        api_mod._atomgit_file_checksum = lambda *args: (_ for _ in ()).throw(
+            http_error(404)
+        )
+        child_folder = tempfile.TemporaryDirectory(prefix="atomgit-fatal-commit-")
+        (Path(child_folder.name) / "payload.bin").write_bytes(b"payload")
         process = None
         try:
             context = api_mod.multiprocessing.get_context("fork")
@@ -1232,7 +1497,7 @@ def main():
                     "fake-token-never-print",
                     {
                         "repo_id": "user/repo",
-                        "folder_path": ".",
+                        "folder_path": child_folder.name,
                         "repo_type": "model",
                     },
                     result_queue,
@@ -1254,7 +1519,11 @@ def main():
                             "stage": "commit",
                             "reason": "reported",
                             "error_type": "HfHubHTTPError",
+                            "error_chain": ("ResumableCommitError", "HfHubHTTPError"),
                             "status_code": 429,
+                            "request_host": "hub.atomgit.com",
+                            "request_method": "POST",
+                            "operation": "http",
                         },
                     },
                 ),
@@ -1266,6 +1535,8 @@ def main():
                 process.join(2)
             api_mod.HfApi = original_api
             api_mod._resolve_resumable_revision = original_resolve_revision
+            api_mod._atomgit_file_checksum = original_checksum
+            child_folder.cleanup()
     else:
         check("persistent child failure test requires fork", True)
 
@@ -1274,5 +1545,141 @@ def main():
     return 0 if passed == len(results) else 1
 
 
+def cross_volume_recovery_checks():
+    import errno
+    import hashlib
+    from unittest.mock import patch
+
+    from atomgit.adapters.upload import projection, resumable
+
+    with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {"HF_HOME": td}):
+        source = (Path(td) / "source").resolve()
+        source.mkdir()
+        original = source / "data.bag"
+        original.write_bytes(b"unchanged cross-device payload")
+        with patch.object(
+            projection.os, "link", side_effect=OSError(errno.EXDEV, "cross-device")
+        ):
+            root = projection._prepare_resumable_upload_projection(
+                source,
+                "user/test",
+                "model",
+                "main",
+                "prefix",
+                selected_paths={Path("data.bag")},
+            )
+        name = "prefix/data.bag"
+        target = root / name
+        assert target.is_symlink(), "exercise the actual cross-volume fallback"
+        operation = CommitOperationAdd(path_in_repo=name, path_or_fileobj=target)
+        operation._upload_mode = "lfs"
+        paths = resumable.get_local_upload_paths(root, name)
+        metadata = resumable.read_upload_metadata(root, name)
+        metadata.sha256 = hashlib.sha256(original.read_bytes()).hexdigest()
+        metadata.upload_mode = "lfs"
+        metadata.is_uploaded = True
+        metadata.save(paths)
+        pending = resumable._pending_commit_value(
+            state="attempting",
+            base_revision="a" * 40,
+            commit_revision=None,
+            operations=[operation],
+        )
+        resumable._write_pending_commit(root, pending)
+        sources = {name: str(original)}
+        args = dict(
+            folder_path=root,
+            token="offline-token",
+            repo_id="user/test",
+            repo_type="model",
+            revision="main",
+            request_timeout=1,
+            source_paths=sources,
+        )
+        with (
+            patch.object(
+                resumable, "_resolve_resumable_revision", return_value="b" * 40
+            ) as heads,
+            patch.object(
+                resumable,
+                "_atomgit_file_checksum",
+                return_value=("sha256", metadata.sha256, metadata.size),
+            ),
+            patch.object(resumable, "verify_canonical_lfs_pointers"),
+        ):
+            recovered = resumable._recover_pending_commit(**args)
+        assert recovered["confirmed"] == 1 and heads.call_count == 2
+        assert resumable.read_upload_metadata(root, name).is_committed
+        assert resumable._read_pending_commit(root) is None
+
+        try:
+            resumable._local_pending_record_matches(root, pending["operations"][0])
+        except resumable.ResumableRecoveryStateError as error:
+            assert error.recovery_reason == "projection_target_mismatch"
+        else:
+            raise AssertionError("a symlink alone is not authorization")
+
+        # Same bytes at an unauthorized target do not establish source identity.
+        outside = (Path(td) / "outside.bag").resolve()
+        outside.write_bytes(original.read_bytes())
+        target.unlink()
+        target.symlink_to(outside)
+        resumable._write_pending_commit(root, pending)
+        with patch.object(resumable, "_resolve_resumable_revision") as remote:
+            try:
+                resumable._recover_pending_commit(**args)
+            except resumable.ResumableRecoveryStateError as error:
+                assert error.recovery_reason == "projection_target_mismatch"
+            else:
+                raise AssertionError("retargeted projection must not be trusted")
+        assert not remote.called and resumable._read_pending_commit(root) is not None
+
+        target.unlink()
+        target.symlink_to(original)
+        original.unlink()
+        original.symlink_to(outside)
+        try:
+            resumable._local_pending_record_matches(
+                root, pending["operations"][0], sources
+            )
+        except resumable.ResumableRecoveryStateError as error:
+            assert error.recovery_reason == "projection_target_mismatch"
+        else:
+            raise AssertionError("a replaced source symlink must be rejected")
+        original.unlink()
+        original.write_bytes(b"changed data")
+        with patch.object(resumable, "_resolve_resumable_revision") as remote:
+            try:
+                resumable._recover_pending_commit(**args)
+            except resumable.ResumableRecoveryStateError as error:
+                assert error.recovery_reason == "local_content_changed"
+            else:
+                raise AssertionError("changed payload must not be replayed")
+        assert not remote.called
+        original.write_bytes(outside.read_bytes())
+        open_file = Path.open
+
+        def unavailable(path, *args, **kwargs):
+            if path == original:
+                raise PermissionError("sensitive local path must not be printed")
+            return open_file(path, *args, **kwargs)
+
+        with (
+            patch.object(Path, "open", unavailable),
+            patch.object(resumable, "_resolve_resumable_revision") as remote,
+        ):
+            try:
+                resumable._recover_pending_commit(**args)
+            except resumable.ResumableWorkerError as error:
+                assert error.category == "local_source_unavailable"
+            else:
+                raise AssertionError("unreadable source must stay pending")
+        assert not remote.called and resumable._read_pending_commit(root) is not None
+        print(
+            "[PASS] cross-volume pending commit recovery, target binding, changed bytes and unavailable source"
+        )
+
+
 if __name__ == "__main__":
+    cross_volume_recovery_checks()
     raise SystemExit(main())

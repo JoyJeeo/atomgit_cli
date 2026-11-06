@@ -30,6 +30,9 @@ def _offline_resumable_worker(
     _configured_lfs_patterns,
     observation_queue,
     _suppress_dataset_warning,
+    _selected_paths,
+    _source_paths,
+    retry_counts,
 ):
     from atomgit.adapters.lfs.service import _SlowFlowCoordinator
     from atomgit.adapters.upload.resumable import _UploadObservationSender

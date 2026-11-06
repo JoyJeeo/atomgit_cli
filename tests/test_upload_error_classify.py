@@ -82,6 +82,56 @@ def main():
         _resumable_failure_envelope,
     )
 
+    # A useful transport error must survive an unrecognized inner exception.
+    request = _httpx.Request(
+        "PUT", "https://lfs-ai-cdn.gitcode.com/private/object?token=fake-secret"
+    )
+    transport = _httpx.ConnectError("fake-secret", request=request)
+    transport.__cause__ = Exception("fake-secret")
+    wrapped = api_mod.ResumableLfsPreuploadError("connection")
+    wrapped.__cause__ = transport
+    safe = _resumable_failure_envelope(wrapped, stage="preupload")["diagnostic"]
+    check(
+        "transport diagnostics survive unknown inner causes without secrets",
+        safe.get("error_type") == "ConnectError"
+        and safe.get("error_chain")
+        == ("ResumableLfsPreuploadError", "ConnectError", "UnclassifiedError")
+        and safe.get("request_host") == "lfs-ai-cdn.gitcode.com"
+        and safe.get("request_method") == "PUT"
+        and safe.get("operation") == "object_upload"
+        and "fake-secret" not in repr(safe)
+        and "/private/" not in repr(safe),
+    )
+    import socket
+    import ssl
+
+    for inner in (
+        socket.gaierror(-2, "fake-secret"),
+        ConnectionResetError(errno.ECONNRESET, "fake-secret"),
+        ssl.SSLCertVerificationError(1, "fake-secret"),
+        ssl.SSLEOFError(8, "fake-secret"),
+    ):
+        transport.__cause__ = inner
+        details = _resumable_failure_envelope(wrapped, stage="preupload")["diagnostic"]
+        check(
+            "recognized network cause " + type(inner).__name__,
+            details.get("error_type") == type(inner).__name__
+            and "fake-secret" not in repr(details),
+        )
+    unsafe = ResumableWorkerError(
+        "connection",
+        diagnostic={
+            "error_chain": ["ConnectError", "fake-secret"],
+            "request_host": "fake-secret.atomgit.com",
+            "request_method": "fake-secret",
+            "operation": "fake-secret",
+            "network_errno": "fake-secret",
+        },
+    )
+    check(
+        "diagnostic payload validates every additional field", unsafe.diagnostic == {}
+    )
+
     diagnostic_error = _httpx.HTTPStatusError(
         "Authorization: Bearer fake-diagnostic-secret",
         request=_httpx.Request(
@@ -103,6 +153,9 @@ def main():
             "reason": "reported",
             "error_type": "HTTPStatusError",
             "status_code": 422,
+            "request_host": "other",
+            "request_method": "POST",
+            "operation": "http",
         }
         and "提交与确认" in hint
         and "HTTP 422" in hint
@@ -141,6 +194,27 @@ def main():
             f"{label} write timeout does not suggest an ineffective timeout change",
             kind == "请求超时" and "60 秒" in hint and "--timeout 不改变" in hint,
         )
+
+    nested_write = _httpx.WriteTimeout(
+        "fake-secret",
+        request=_httpx.Request(
+            "PUT", "https://hub.gitcode.com/private/object?signature=fake-secret"
+        ),
+    )
+    nested_write.__cause__ = TimeoutError("fake-secret")
+    nested_envelope = _resumable_failure_envelope(nested_write, stage="preupload")
+    nested_kind, nested_hint = classify(
+        ResumableWorkerError(
+            nested_envelope["category"], diagnostic=nested_envelope["diagnostic"]
+        )
+    )
+    check(
+        "nested write timeout retains precise type and useful fixed timeout advice",
+        nested_envelope["diagnostic"]["error_type"] == "WriteTimeout"
+        and nested_envelope["diagnostic"]["request_host"] == "hub.gitcode.com"
+        and "60 秒" in nested_hint
+        and "fake-secret" not in nested_hint,
+    )
 
     # --- 认证失败 ---
     case("U1 401 文本 → 认证失败",
@@ -413,5 +487,39 @@ def main():
     return 0 if passed == len(results) else 1
 
 
+def recovery_reason_checks():
+    from atomgit.adapters.upload.errors import (
+        ResumableRecoveryStateError,
+        ResumableWorkerError,
+        _resumable_failure_envelope,
+    )
+
+    for reason, phrase in (
+        ("projection_target_mismatch", "源文件不匹配"),
+        ("local_content_changed", "源文件内容"),
+    ):
+        error = ResumableRecoveryStateError(
+            "private path and token must not appear",
+            confirmed=0,
+            remaining=1,
+            recovery_reason=reason,
+        )
+        envelope = _resumable_failure_envelope(error, stage="recovery")
+        _, hint = classify(ResumableWorkerError(**envelope))
+        assert phrase in hint and "先前已确认的提交保留" in hint
+        assert "private path" not in hint and "本次没有创建新提交" not in hint
+    envelope = _resumable_failure_envelope(
+        ResumableRecoveryStateError("secret", recovery_reason="fake-secret"),
+        stage="recovery",
+    )
+    assert "fake-secret" not in repr(envelope)
+    _, hint = classify(ResumableWorkerError("local_source_unavailable"))
+    assert "继续等待重试" in hint
+    print(
+        "[PASS] recovery reasons are actionable, allowlisted and do not deny prior commits"
+    )
+
+
 if __name__ == "__main__":
+    recovery_reason_checks()
     sys.exit(main())

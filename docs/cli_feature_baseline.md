@@ -94,6 +94,8 @@ atomgit download REPO [OPTIONS]
 - `--resume` 保留未完成数据并从中断位置续传，完成后强制校验；
 - `--prune` 仅清理由下载 manifest 记录、且远端已经删除的文件；
 - `--repo-type/-r model|dataset` 显式指定类型，不指定时探测类型；
+- `--revision` 指定分支、标签或提交，不指定时查询远端默认分支，失败不猜测；
+- `--prune` 拒绝使用其他分支的下载 manifest 清理文件；
 - 公开仓库可匿名下载，私有仓库使用已保存凭证；
 - 下载文件名经过路径穿越、绝对路径、控制字符和符号链接边界检查；
 - 标准及 raw Unicode 路径下载使用唯一临时文件，失败时保留原目标。
@@ -102,11 +104,12 @@ atomgit download REPO [OPTIONS]
 
 ```text
 atomgit download-file REPO FILENAME [OPTIONS]
+atomgit download REPO FILENAME [OPTIONS]
 ```
 
-支持 `--directory/-d`、`--force`、`--verify-checksum`、`--resume` 和
-`--repo-type/-r`，并保持与整仓下载一致的公开/私有凭证选择、路径安全、原子替换
-和错误退出语义。
+支持 `--directory/-d`、`--force`、`--verify-checksum`、`--resume`、
+`--repo-type/-r` 和 `--revision`，并保持与整仓下载一致的默认分支解析、公开/私有
+凭证选择、路径安全、原子替换和错误退出语义。单文件下载不支持 `--prune`。
 
 ## 回归测试边界
 

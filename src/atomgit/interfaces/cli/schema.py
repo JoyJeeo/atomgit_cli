@@ -1,5 +1,7 @@
 """Canonical Click schema for the AtomGit command line interface."""
 
+import sys
+
 import click
 
 from ...core.contracts import DEFAULT_UPLOAD_BATCH_SIZE
@@ -17,6 +19,14 @@ def build_cli(context):
     object as the dependency boundary preserves its established patch seams
     while the schema and decorators have a canonical interface owner.
     """
+
+    # Windows pipes otherwise default to a legacy code page that cannot encode
+    # Chinese status messages. Do not change SDK-only imports or custom streams.
+    if sys.platform == "win32":
+        for stream in (sys.stdout, sys.stderr):
+            reconfigure = getattr(stream, "reconfigure", None)
+            if callable(reconfigure) and not stream.closed and not stream.isatty():
+                reconfigure(encoding="utf-8")
 
     _COMMAND_CONTEXT = context
 
@@ -277,7 +287,7 @@ def build_cli(context):
     @click.option(
         "--resumable/--no-resumable",
         default=None,
-        help="目录上传默认启用断点续传/分块模式；--no-resumable 改用普通上传。"
+        help="目录上传默认启用文件级断点续传模式；--no-resumable 改用普通上传。"
         "--resumable 不能与 --message 同用",
     )
     @click.option(
@@ -337,6 +347,8 @@ def build_cli(context):
 
     @cli.command()
     @click.argument("repo_id")
+    @click.argument("filename", required=False)
+    @click.option("--revision", default=None, help="下载指定分支、标签或提交")
     @click.option("--directory", "-d", type=click.Path(), help="下载到指定目录")
     @click.option("--force", is_flag=True, help="强制覆盖已存在的文件")
     @click.option(
@@ -363,6 +375,8 @@ def build_cli(context):
     )
     def download(
         repo_id,
+        filename,
+        revision,
         directory,
         force,
         verify_checksum,
@@ -371,6 +385,20 @@ def build_cli(context):
         repo_type,
     ):
         """下载仓库到本地（公开仓库无需登录）"""
+        if filename:
+            if prune:
+                raise click.UsageError("--prune 仅支持整仓下载")
+            return _transfers_commands.download_file(
+                _COMMAND_CONTEXT,
+                repo_id,
+                filename,
+                directory,
+                force,
+                verify_checksum,
+                resume_download,
+                repo_type,
+                revision,
+            )
         return _transfers_commands.download(
             _COMMAND_CONTEXT,
             repo_id,
@@ -380,11 +408,13 @@ def build_cli(context):
             resume_download,
             prune,
             repo_type,
+            revision,
         )
 
     @cli.command()
     @click.argument("repo_id")
     @click.argument("filename")
+    @click.option("--revision", default=None, help="下载指定分支、标签或提交")
     @click.option(
         "--directory", "-d", type=click.Path(), help="下载到指定目录，默认当前目录"
     )
@@ -411,6 +441,7 @@ def build_cli(context):
     def download_file(
         repo_id,
         filename,
+        revision,
         directory,
         force,
         verify_checksum,
@@ -427,6 +458,7 @@ def build_cli(context):
             verify_checksum,
             resume_download,
             repo_type,
+            revision,
         )
 
     @cli.command()

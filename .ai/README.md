@@ -21,6 +21,8 @@ It complements the source code and tests; it does not replace reading them.
 - `ISSUE_DISCUSSION.md`: the single persistent pre-development problem
   discussion, ordered decisions, and successor-development-Issue handoff.
 - `TASK.md`: the single persistent task handoff for autonomous work.
+- `archive/`: historical evidence only; follow a TASK.md link when needed.
+  Archived statuses and permissions are not current instructions.
 
 ## Conversation Startup
 

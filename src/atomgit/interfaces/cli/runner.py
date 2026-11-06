@@ -128,6 +128,14 @@ class _CliTransferPort:
             return None
         return getattr(api, name)
 
+    def resolve_default_revision(self, repo_id, repo_type, token, operation):
+        legacy_name = "download_repo" if operation == "snapshot" else "download_file"
+        if self._patched_legacy_download(legacy_name) is not None:
+            return "main"
+        return AtomGitDownloadAdapter().resolve_default_revision(
+            repo_id, self._legacy_repo_type(repo_type), self._download_token(token)
+        )
+
     def upload_file(
         self,
         *,
@@ -232,6 +240,8 @@ class _CliTransferPort:
                 "force_download": force,
                 "repo_type": self._legacy_repo_type(repo_type),
             }
+            if revision not in (None, "", "main"):
+                options["revision"] = revision
             if checksum:
                 options["verify_checksum"] = True
             if resume:
@@ -280,6 +290,8 @@ class _CliTransferPort:
                 "force_download": force,
                 "repo_type": self._legacy_repo_type(repo_type),
             }
+            if revision not in (None, "", "main"):
+                options["revision"] = revision
             if checksum:
                 options["verify_checksum"] = True
             if resume:

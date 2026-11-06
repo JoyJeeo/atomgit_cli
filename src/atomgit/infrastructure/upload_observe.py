@@ -174,14 +174,21 @@ def publish_snapshot(session: Dict[str, Any]) -> Path:
             prefix=f".{sid}.", suffix=".tmp", dir=str(path.parent)
         )
         try:
-            os.fchmod(fd, 0o600)
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                fd = None  # The context manager now owns the descriptor.
+                fchmod = getattr(os, "fchmod", None)
+                if callable(fchmod):
+                    fchmod(handle.fileno(), 0o600)
+                else:
+                    os.chmod(tmp, 0o600)
                 json.dump(session, handle, ensure_ascii=False, separators=(",", ":"))
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(tmp, path)
             os.chmod(path, 0o600)
         finally:
+            if fd is not None:
+                os.close(fd)
             if os.path.exists(tmp):
                 os.unlink(tmp)
         return path

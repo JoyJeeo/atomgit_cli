@@ -24,6 +24,55 @@ def check(name, condition, detail=""):
 def main():
     runner = CliRunner()
 
+    lazy = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import atomgit.cli, sys; print('datasets' in sys.modules)",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    check(
+        "CLI startup does not import datasets",
+        lazy.returncode == 0 and lazy.stdout.strip() == "False",
+    )
+    missing = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import importlib.util; original=importlib.util.find_spec; "
+            "importlib.util.find_spec=lambda name,*a,**k: None if name=='datasets' else original(name,*a,**k); "
+            "from atomgit.adapters import sdk_datasets as d; "
+            "print(d.DATASET_SUPPORT, d.ds_load_dataset is None, d.HF_DATASETS_CACHE is None)",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    check(
+        "missing datasets preserves optional dependency behavior",
+        missing.returncode == 0 and missing.stdout.strip() == "False True True",
+    )
+    cache_check = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import huggingface_hub.constants; "
+            "from atomgit.adapters import sdk_datasets; "
+            "from datasets.config import HF_DATASETS_CACHE; "
+            "print(sdk_datasets.HF_DATASETS_CACHE == HF_DATASETS_CACHE)",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    check(
+        "datasets cache honors AtomGit environment after prior HF import",
+        cache_check.returncode == 0 and cache_check.stdout.strip() == "True",
+    )
+
     root_help = runner.invoke(cli_mod.cli, ["--help"])
     check("root help succeeds", root_help.exit_code == 0)
     for command in (
@@ -58,11 +107,14 @@ def main():
     check("repo create help succeeds", create_help.exit_code == 0)
 
     original_login = cli_mod.api.login
+    original_set_credentials = cli_mod.config.set_credentials
     original_git_available = cli_mod.check_git_available
     original_setup = cli_mod.setup_git_credentials
     token = "fake-cli-surface-token"
     try:
         supplied_tokens = []
+        saved_tokens = []
+        cli_mod.config.set_credentials = lambda supplied, username=None: saved_tokens.append(supplied)
         cli_mod.api.login = lambda supplied: supplied_tokens.append(supplied) or True
         cli_mod.check_git_available = lambda: False
         stdin_login = runner.invoke(
@@ -70,6 +122,7 @@ def main():
         )
         check("login token stdin succeeds", stdin_login.exit_code == 0)
         check("login token stdin forwards exact token", supplied_tokens == [token])
+        check("login stores the validated token through the isolated config seam", saved_tokens == [token])
         check("login token stdin does not echo token", token not in stdin_login.output)
 
         supplied_tokens.clear()
@@ -114,6 +167,7 @@ def main():
         )
     finally:
         cli_mod.api.login = original_login
+        cli_mod.config.set_credentials = original_set_credentials
         cli_mod.check_git_available = original_git_available
         cli_mod.setup_git_credentials = original_setup
 

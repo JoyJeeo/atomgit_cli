@@ -50,7 +50,7 @@ def _download_manifest_path(repo_id: str, repo_type: str, local_root: Path) -> P
     return _download_manifest_root() / f"{hashlib.sha256(identity).hexdigest()}.json"
 
 
-def _load_download_manifest(manifest_path: Path) -> tuple:
+def _load_download_manifest(manifest_path: Path, revision: str = "main") -> tuple:
     """Load and validate managed repository filenames, failing closed."""
     descriptor = None
     try:
@@ -85,6 +85,8 @@ def _load_download_manifest(manifest_path: Path) -> tuple:
         or not isinstance(payload.get("files"), list)
     ):
         raise ValueError("下载 manifest 格式不受支持，已拒绝清理")
+    if payload.get("revision", "main") != revision:
+        raise ValueError("下载 manifest 分支与当前分支不一致，已拒绝清理")
     managed_files = set()
     for filename in payload["files"]:
         _repository_filename_parts(filename)
@@ -92,7 +94,9 @@ def _load_download_manifest(manifest_path: Path) -> tuple:
     return True, managed_files
 
 
-def _write_download_manifest(manifest_path: Path, managed_files) -> None:
+def _write_download_manifest(
+    manifest_path: Path, managed_files, revision: str = "main"
+) -> None:
     """Atomically persist managed filenames with restrictive permissions."""
     temporary_path = None
     try:
@@ -106,11 +110,14 @@ def _write_download_manifest(manifest_path: Path, managed_files) -> None:
         ) as manifest_file:
             temporary_path = Path(manifest_file.name)
             _set_private_file_mode(manifest_file.fileno(), temporary_path)
+            payload = {
+                "version": _DOWNLOAD_MANIFEST_VERSION,
+                "files": sorted(managed_files),
+            }
+            if revision != "main":
+                payload["revision"] = revision
             json.dump(
-                {
-                    "version": _DOWNLOAD_MANIFEST_VERSION,
-                    "files": sorted(managed_files),
-                },
+                payload,
                 manifest_file,
                 ensure_ascii=False,
                 separators=(",", ":"),
@@ -138,8 +145,6 @@ def _try_lock_download_manifest_descriptor_windows(
 ) -> bool:
     """Acquire a nonblocking one-byte Windows lock."""
     locking = _windows_file_lock_module()
-    if os.fstat(descriptor).st_size == 0:
-        os.write(descriptor, b"\0")
     os.lseek(descriptor, 0, os.SEEK_SET)
     try:
         locking.locking(descriptor, locking.LK_NBLCK, 1)
@@ -150,6 +155,8 @@ def _try_lock_download_manifest_descriptor_windows(
         if error.errno in busy_errors:
             return False
         raise
+    if os.fstat(descriptor).st_size == 0:
+        os.write(descriptor, b"\0")
     return True
 
 
@@ -192,21 +199,26 @@ def _unlock_download_manifest_descriptor(descriptor: int, backend: str) -> None:
 
 
 @contextmanager
-def _download_manifest_lock(manifest_path: Path):
-    """Hold one OS-released transaction lock for an opaque manifest."""
-    lock_path = manifest_path.with_name(manifest_path.name + ".lock")
-    flags = os.O_CREAT | os.O_RDWR
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
+def _download_file_lock(lock_path: Path, busy_message: str):
+    """Hold a persistent lock inode; never unlink a contender's lock."""
+    if lock_path.is_symlink():
+        raise ValueError("下载锁不是普通文件")
+    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NONBLOCK", 0)
+    flags |= getattr(os, "O_NOFOLLOW", 0)
     descriptor = os.open(str(lock_path), flags, 0o600)
     backend = None
     try:
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-            raise ValueError("下载 manifest 锁不是普通文件")
+        status = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(status.st_mode)
+            or status.st_nlink != 1
+            or not os.path.samestat(status, lock_path.lstat())
+        ):
+            raise ValueError("下载锁不是普通文件")
         _set_private_file_mode(descriptor, lock_path)
         backend = _try_lock_download_manifest_descriptor(descriptor)
         if backend is None:
-            raise RuntimeError("download manifest is already in use")
+            raise RuntimeError(busy_message)
         yield
     finally:
         try:
@@ -214,3 +226,11 @@ def _download_manifest_lock(manifest_path: Path):
                 _unlock_download_manifest_descriptor(descriptor, backend)
         finally:
             os.close(descriptor)
+
+
+@contextmanager
+def _download_manifest_lock(manifest_path: Path):
+    """Hold one OS-released transaction lock for an opaque manifest."""
+    lock_path = manifest_path.with_name(manifest_path.name + ".lock")
+    with _download_file_lock(lock_path, "download manifest is already in use"):
+        yield

@@ -159,7 +159,8 @@ def main():
                 and len(resume_calls) == 1
                 and "中文样本.csv" in resume_calls[0][0]
                 and resume_calls[0][2:] == (0, len(content))
-                and not list(cache.iterdir()),
+                and not list(cache.glob("*.part"))
+                and len(list(cache.glob("*.lock"))) == 1,
                 repr(
                     [
                         (url, resume_size, expected_size)

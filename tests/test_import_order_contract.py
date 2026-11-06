@@ -8,7 +8,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_ENDPOINT = "https://hub.atomgit.com"
 FORBIDDEN_COMPLETION_IMPORTS = (
@@ -36,6 +35,7 @@ def run_probe(imports, home, completion=False):
     for name in ("HF_ENDPOINT", "HF_HUB_DISABLE_XET", "HF_HOME"):
         environment.pop(name, None)
     environment["HOME"] = str(home)
+    environment["USERPROFILE"] = str(home)
     if completion:
         environment["_ATOMGIT_COMPLETE"] = "zsh_complete"
     else:

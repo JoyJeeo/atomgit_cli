@@ -95,6 +95,32 @@ def main():
         file_call = sdk_file_calls[-1]
         check("SDK file explicit token forwarded", file_call.get("token") == "fake-explicit-token")
         check("SDK file force forwarded", file_call.get("force_download") is True)
+        from unittest.mock import patch
+
+        from atomgit.adapters import sdk_downloads
+
+        with patch.object(
+            sdk_downloads, "_resolve_default_revision", return_value="develop"
+        ) as default_revision:
+            atomgit_hub.snapshot_download("user/repo", token=False)
+            atomgit_hub.download_file("user/repo", "README.md", token=False)
+            check(
+                "legacy SDK downloads use the remote default revision",
+                sdk_snapshot_calls[-1].get("revision") == "develop"
+                and sdk_file_calls[-1].get("revision") == "develop",
+            )
+            check(
+                "legacy SDK resolves both default revisions",
+                default_revision.call_count == 2,
+            )
+            default_revision.reset_mock()
+            atomgit_hub.snapshot_download(
+                "user/repo", token=False, local_files_only=True
+            )
+            check(
+                "cache-only snapshot does not resolve remotely",
+                not default_revision.called,
+            )
     finally:
         atomgit_hub.hf_snapshot_download = original_sdk_snapshot
         atomgit_hub.hf_hub_download = original_sdk_file
@@ -381,4 +407,13 @@ def main():
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    from unittest.mock import patch
+
+    from atomgit.adapters import sdk_downloads
+    from atomgit.adapters.download import service
+
+    with (
+        patch.object(service, "_resolve_default_revision", return_value="main"),
+        patch.object(sdk_downloads, "_resolve_default_revision", return_value="main"),
+    ):
+        raise SystemExit(main())

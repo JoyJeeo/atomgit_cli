@@ -56,6 +56,17 @@ _SAFE_UPLOAD_ERROR_TYPES = frozenset(
         "MemoryError",
         "TimeoutError",
         "ConnectionError",
+        "ConnectionResetError",
+        "ConnectionRefusedError",
+        "ConnectionAbortedError",
+        "BrokenPipeError",
+        "gaierror",
+        "SSLError",
+        "SSLCertVerificationError",
+        "SSLEOFError",
+        "SSLZeroReturnError",
+        "ProxyError",
+        "LocalProtocolError",
         "ReadTimeout",
         "WriteTimeout",
         "ConnectTimeout",
@@ -93,12 +104,52 @@ _LFS_WRITE_TIMEOUT_HINT = (
     "LFS 写入等待超时（60 秒）；--timeout 不改变该等待上限。"
     "请检查网络或降低并发后重试，不要删除已有断点。"
 )
+_UPLOAD_DIAGNOSTIC_HOSTS = frozenset(
+    {
+        "hub.atomgit.com",
+        "hub.gitcode.com",
+        "ai.atomgit.com",
+        "atomgit.com",
+        "gitcode.com",
+        "lfs-ai-cdn.gitcode.com",
+        "other",
+    }
+)
+_UPLOAD_DIAGNOSTIC_METHODS = frozenset(
+    {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"}
+)
+_UPLOAD_DIAGNOSTIC_OPERATIONS = frozenset(
+    {"lfs_batch", "object_upload", "lfs_verify", "http"}
+)
+_UPLOAD_NETWORK_ERRNOS = frozenset(
+    {
+        "ECONNRESET",
+        "ECONNREFUSED",
+        "ECONNABORTED",
+        "EPIPE",
+        "ETIMEDOUT",
+        "ENETUNREACH",
+        "EHOSTUNREACH",
+    }
+)
+
+_RECOVERY_FAILURE_REASONS = {
+    "projection_target_mismatch": "投影链接或文件与本次选中的源文件不匹配",
+    "local_content_changed": "源文件内容或身份与待对账记录不一致",
+    "local_source_unavailable": "源文件暂时无法读取，保留断点等待重试",
+}
 
 
 def _validated_upload_diagnostic(value):
     if not isinstance(value, dict):
         return {}
     result = {}
+    recovery_reason = value.get("recovery_reason")
+    if (
+        isinstance(recovery_reason, str)
+        and recovery_reason in _RECOVERY_FAILURE_REASONS
+    ):
+        result["recovery_reason"] = recovery_reason
     stage = value.get("stage")
     if isinstance(stage, str) and stage in _UPLOAD_STAGES:
         result["stage"] = stage
@@ -115,6 +166,26 @@ def _validated_upload_diagnostic(value):
         "UnclassifiedError"
     }:
         result["error_type"] = error_type
+    chain = value.get("error_chain")
+    if (
+        isinstance(chain, (list, tuple))
+        and 1 <= len(chain) <= 8
+        and all(
+            isinstance(item, str)
+            and item in _SAFE_UPLOAD_ERROR_TYPES | {"UnclassifiedError"}
+            for item in chain
+        )
+    ):
+        result["error_chain"] = tuple(chain)
+    for key, allowed in (
+        ("request_host", _UPLOAD_DIAGNOSTIC_HOSTS),
+        ("request_method", _UPLOAD_DIAGNOSTIC_METHODS),
+        ("operation", _UPLOAD_DIAGNOSTIC_OPERATIONS),
+        ("network_errno", _UPLOAD_NETWORK_ERRNOS),
+    ):
+        item = value.get(key)
+        if isinstance(item, str) and item in allowed:
+            result[key] = item
     for key, minimum, maximum in (("status_code", 100, 599), ("exit_code", -255, 255)):
         item = value.get(key)
         if (
@@ -221,6 +292,7 @@ _RESUMABLE_WORKER_ERROR_MESSAGES = {
     "service_unavailable": "resumable worker service is unavailable",
     "timeout": "resumable worker timed out",
     "connection": "resumable worker connection failed",
+    "local_source_unavailable": "resumable source is temporarily unavailable",
     "upload_mode": "resumable worker upload mode is unsafe",
     "lfs_attributes": "resumable worker LFS attributes need verification",
     "lfs_pointer": "resumable worker LFS pointer verification failed",
@@ -339,9 +411,17 @@ class ResumableCommitConflictError(ResumableCommitError):
 class ResumableRecoveryStateError(ResumableCommitError):
     """Pending resumable state could not be validated safely."""
 
-    def __init__(self, message, *, confirmed=None, remaining=None):
+    def __init__(
+        self, message, *, confirmed=None, remaining=None, recovery_reason=None
+    ):
         self.confirmed = _bounded_recovery_count(confirmed)
         self.remaining = _bounded_recovery_count(remaining)
+        self.recovery_reason = (
+            recovery_reason
+            if isinstance(recovery_reason, str)
+            and recovery_reason in _RECOVERY_FAILURE_REASONS
+            else None
+        )
         super().__init__(message)
 
 
@@ -446,16 +526,70 @@ def _resumable_failure_envelope(error: BaseException, *, stage=None) -> dict:
     envelope = {"category": category}
     if stage is not None:
         chain = list(_resumable_error_chain(error))
+        types = tuple(_safe_upload_error_type(type(cause)) for cause in chain)
+        recognized = [name for name in types if name != "UnclassifiedError"]
+        specific = [
+            name
+            for name in recognized
+            if name
+            not in {
+                "RuntimeError",
+                "OSError",
+                "TimeoutError",
+                "ConnectionError",
+                "ResumableLfsPreuploadError",
+                "ResumableWorkerError",
+            }
+        ]
         diagnostic = {
             "stage": stage,
             "reason": "reported",
-            "error_type": _safe_upload_error_type(type(chain[-1])),
+            "error_type": (specific or recognized or ["UnclassifiedError"])[-1],
         }
+        if len(types) > 1:
+            diagnostic["error_chain"] = types
         for cause in chain:
+            recovery_reason = getattr(cause, "recovery_reason", None)
+            if recovery_reason is None:
+                cause_diagnostic = getattr(cause, "diagnostic", None)
+                if isinstance(cause_diagnostic, dict):
+                    recovery_reason = cause_diagnostic.get("recovery_reason")
+            if (
+                isinstance(recovery_reason, str)
+                and recovery_reason in _RECOVERY_FAILURE_REASONS
+            ):
+                diagnostic["recovery_reason"] = recovery_reason
             status = _resumable_error_status(cause)
-            if status is not None:
+            if status is not None and "status_code" not in diagnostic:
                 diagnostic["status_code"] = status
-                break
+            if isinstance(cause, OSError):
+                diagnostic["network_errno"] = errno.errorcode.get(cause.errno)
+            try:
+                request = getattr(cause, "request", None)
+            except RuntimeError:  # httpx errors need not have a request attached.
+                request = None
+            if request is None:
+                response = getattr(cause, "response", None)
+                try:
+                    request = getattr(response, "request", None)
+                except RuntimeError:
+                    request = None
+            if isinstance(request, httpx.Request) and "request_host" not in diagnostic:
+                host = request.url.host
+                diagnostic["request_host"] = (
+                    host if host in _UPLOAD_DIAGNOSTIC_HOSTS else "other"
+                )
+                diagnostic["request_method"] = request.method
+                path = request.url.path
+                diagnostic["operation"] = (
+                    "lfs_batch"
+                    if path.endswith("/info/lfs/objects/batch")
+                    else (
+                        "object_upload"
+                        if request.method == "PUT"
+                        else "lfs_verify" if path.endswith("/verify") else "http"
+                    )
+                )
         envelope["diagnostic"] = _validated_upload_diagnostic(diagnostic)
     if category == "remote_commit_unconfirmed":
         for cause in _resumable_error_chain(error):
@@ -483,6 +617,30 @@ def _resumable_failure_envelope(error: BaseException, *, stage=None) -> dict:
                 envelope.update(confirmed=confirmed, remaining=remaining)
                 break
     return envelope
+
+
+def _format_upload_diagnostic(value) -> str:
+    """Render only validated fields, including when called with child events."""
+    diagnostic = _validated_upload_diagnostic(value)
+    details = []
+    if "recovery_reason" in diagnostic:
+        details.append(
+            "对账原因：" + _RECOVERY_FAILURE_REASONS[diagnostic["recovery_reason"]]
+        )
+    for key, label in (
+        ("request_method", "方法"),
+        ("request_host", "域名"),
+        ("operation", "请求类别"),
+        ("error_type", "异常类型"),
+        ("network_errno", "系统错误"),
+    ):
+        if key in diagnostic:
+            details.append(label + "：" + diagnostic[key])
+    if "status_code" in diagnostic:
+        details.append(f"HTTP {diagnostic['status_code']}")
+    if "error_chain" in diagnostic:
+        details.append("异常链：" + " → ".join(diagnostic["error_chain"]))
+    return "；".join(details)
 
 
 def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
@@ -579,17 +737,21 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             ),
             "remote_commit_conflict": (
                 "远端提交冲突",
-                "目标分支在待对账期间已发生变化；本次没有创建新提交。"
+                "待确认路径存在冲突，或分支在核验/提交期间再次变化；已停止后续提交，先前已确认的提交保留。"
                 "请先人工核对远端内容。",
             ),
             "remote_recovery_state": (
                 "断点对账状态异常",
-                "无法安全确认待对账提交；本次没有创建新提交。"
+                "无法安全确认待对账提交；已停止后续提交，先前已确认的提交保留。"
                 "请保留缓存并先人工核对远端内容。",
             ),
             "client_resource": (
                 "客户端资源不足",
                 "本机内存、磁盘空间或文件句柄不足；释放资源后重新执行同一命令。",
+            ),
+            "local_source_unavailable": (
+                "源文件暂时不可读",
+                "源文件暂时无法读取；断点已保留，将继续等待重试，请检查磁盘连接和文件权限。",
             ),
             "unknown": (
                 "未知错误",
@@ -615,10 +777,9 @@ def _classify_upload_error(e: Exception, repo_id: str = None) -> tuple:
             }
             if diagnostic.get("reason") in reasons:
                 details.append(reasons[diagnostic["reason"]])
-            if "error_type" in diagnostic:
-                details.append("异常类型：" + diagnostic["error_type"])
-            if "status_code" in diagnostic:
-                details.append(f"HTTP {diagnostic['status_code']}")
+            safe_details = _format_upload_diagnostic(diagnostic)
+            if safe_details:
+                details.append(safe_details)
             if "exit_code" in diagnostic:
                 details.append(f"退出码：{diagnostic['exit_code']}")
             hint += " 诊断：" + "；".join(details) + "。"

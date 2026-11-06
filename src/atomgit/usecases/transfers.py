@@ -77,13 +77,22 @@ class DownloadUseCase:
         self.transfer = transfer
         self.config = config
 
+    def _revision(self, request, token, operation):
+        if request.revision is not None:
+            return request.revision
+        resolver = getattr(self.transfer, "resolve_default_revision", None)
+        if resolver is None:
+            return "main"
+        return resolver(request.repo_id, request.repo_type, token, operation)
+
     def snapshot(self, request: DownloadRequest) -> OperationResult[Any]:
         request = validate_download_request(request)
         token = resolve_token(request.token, _saved_token(self.config), write=False)
+        revision = self._revision(request, token, "snapshot")
         value = self.transfer.download_snapshot(
             repo_id=request.repo_id,
             repo_type=request.repo_type,
-            revision=request.revision,
+            revision=revision,
             token=token,
             local_dir=request.local_dir,
             force=request.force,
@@ -102,7 +111,7 @@ class DownloadUseCase:
             True,
             value=value,
             repo_id=request.repo_id,
-            revision=request.revision,
+            revision=revision,
             metadata={
                 "checksum": request.checksum,
                 "resume": request.resume,
@@ -115,11 +124,12 @@ class DownloadUseCase:
         if not request.filename:
             raise ValueError("filename 不能为空")
         token = resolve_token(request.token, _saved_token(self.config), write=False)
+        revision = self._revision(request, token, "file")
         value = self.transfer.download_file(
             repo_id=request.repo_id,
             filename=request.filename,
             repo_type=request.repo_type,
-            revision=request.revision,
+            revision=revision,
             token=token,
             local_dir=request.local_dir,
             force=request.force,
@@ -131,7 +141,7 @@ class DownloadUseCase:
             True,
             value=value,
             repo_id=request.repo_id,
-            revision=request.revision,
+            revision=revision,
             metadata={"checksum": request.checksum, "resume": request.resume},
         )
 

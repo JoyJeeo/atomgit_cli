@@ -340,3 +340,12 @@ AI 专用测试要求见 `.ai/TESTING.md`。
   `snapshot_download` 和 `load_dataset`（1 条记录）均通过。
 - 最终离线基线 `92 passed`（103.51s），`compileall`、`pip check`、`git diff --check`
   通过。dataset 正向目标为新仓库；旧 `test_datasets` 不再计入正向验收。
+
+### Windows 验证范围
+
+离线测试子进程同时隔离 HOME/USERPROFILE，固定 UTF-8 输出，并移除继承的
+证书路径和测试令牌，避免宿主配置影响离线结果。上传监控保存兼容没有
+`os.fchmod` 的 Python，失败时也关闭临时文件描述符。
+这些回归在本机运行不等同于 Windows 实机验收；四组 CI 必须分别记录结果。
+Windows 的 ACL、POSIX shell 夹具和文件共享语义仍须在 Windows runner 上验证，
+不能用跳过脚本或仅放宽权限断言替代。

@@ -154,7 +154,7 @@ def upload(
             context.print_info(f"并发 worker: {num_workers}")
         context.print_info(f"外层批次上限: {batch_size} 个文件")
         if resumable:
-            context.print_info("上传模式: 断点续传/分块 (resumable)")
+            context.print_info("上传模式: 文件级断点续传 (resumable)")
             if auto_configure_lfs:
                 context.print_info(
                     "Git LFS 自动配置: 已启用；将检查服务端判定的 LFS 扩展名并按需修改远端配置"
@@ -240,6 +240,7 @@ def download(
     resume_download,
     prune,
     repo_type,
+    revision=None,
 ):
     if not context.validate_repo_name(repo_id):
         context.print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -285,6 +286,7 @@ def download(
     if not context.config.is_logged_in():
         context.print_info("当前未登录，尝试下载公开仓库...")
 
+    revision_options = {"revision": revision} if revision else {}
     result = context.run_usecase(
         "download_snapshot",
         repo_id,
@@ -294,6 +296,7 @@ def download(
         checksum=verify_checksum,
         resume=resume_download,
         prune=prune,
+        **revision_options,
     )
     if result.ok:
         context.print_success(f"仓库下载成功: {local_path}")
@@ -313,6 +316,7 @@ def download_file(
     verify_checksum,
     resume_download,
     repo_type,
+    revision=None,
 ):
     if not context.validate_repo_name(repo_id):
         context.print_error("仓库ID格式不正确，应为: username/repo-name")
@@ -342,6 +346,7 @@ def download_file(
     if not context.config.is_logged_in():
         context.print_info("当前未登录，尝试从公开仓库下载...")
 
+    revision_options = {"revision": revision} if revision else {}
     result = context.run_usecase(
         "download_file",
         repo_id,
@@ -351,6 +356,7 @@ def download_file(
         force=force,
         checksum=verify_checksum,
         resume=resume_download,
+        **revision_options,
     )
     if result.ok:
         context.print_success(f"文件下载成功: {filename}")

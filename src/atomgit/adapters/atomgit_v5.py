@@ -10,7 +10,7 @@ import socket
 import urllib.error
 import urllib.request
 from typing import Any, Dict, Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from huggingface_hub import HfApi, create_repo
 
@@ -39,7 +39,7 @@ def _atomgit_repo_type(repo_type: str = None) -> str:
 
 
 def _atomgit_v5_request_json(
-    method: str, path: str, token: str, body=None, timeout: int = 15
+    method: str, path: str, token: str, body=None, timeout: int = 15, *, query=None
 ):
     if not token:
         raise ValueError("missing AtomGit credential")
@@ -62,7 +62,7 @@ def _atomgit_v5_request_json(
         headers["Content-Type"] = "application/json"
 
     request = urllib.request.Request(
-        _ATOMGIT_V5_API_BASE + path,
+        _ATOMGIT_V5_API_BASE + path + ("?" + urlencode(query) if query else ""),
         data=data,
         headers=headers,
         method=method,
@@ -76,8 +76,8 @@ def _atomgit_v5_request_json(
     return json.loads(payload.decode("utf-8"))
 
 
-def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15):
-    return _atomgit_v5_request_json("GET", path, token, timeout=timeout)
+def _atomgit_v5_get_json(path: str, token: str, timeout: int = 15, *, query=None):
+    return _atomgit_v5_request_json("GET", path, token, timeout=timeout, query=query)
 
 
 def _atomgit_v5_repo_path(repo_id: str) -> str:

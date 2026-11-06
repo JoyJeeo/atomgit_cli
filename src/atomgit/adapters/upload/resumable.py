@@ -9,6 +9,7 @@ import random
 import re
 import socket
 import stat
+import sys
 import tempfile
 import threading
 import time
@@ -22,6 +23,7 @@ from urllib.parse import quote
 
 import httpx
 import huggingface_hub._upload_large_folder as hf_large_folder
+import huggingface_hub.hf_api as hf_api_module
 from huggingface_hub import HfApi
 from huggingface_hub import close_session as close_hf_session
 from huggingface_hub import constants as hf_constants
@@ -55,6 +57,7 @@ from .errors import (
     _suppress_hf_model_repo_warning,
 )
 from .progress import _UploadProgress
+from .retry import _GLOBAL, _TRANSIENT, retry_category, run_upload_round
 
 # Program-step 9 LFS policy slots are wired by atomgit.api.
 _atomgit_v5_get_json = None
@@ -467,35 +470,100 @@ def _pending_commit_value(
     )
 
 
-def _local_pending_record_matches(folder_path: Path, record: dict) -> bool:
+def _local_pending_record_matches(
+    folder_path: Path, record: dict, source_paths=None
+) -> bool:
     candidate = Path(folder_path).joinpath(*PurePosixPath(record["path"]).parts)
+
+    def bound_source():
+        expected = (
+            source_paths.get(record["path"]) if source_paths is not None else None
+        )
+        if expected is None:
+            if source_paths is not None or candidate.is_symlink():
+                raise ResumableRecoveryStateError(
+                    "pending projection has no authorized source",
+                    recovery_reason="projection_target_mismatch",
+                )
+            return candidate
+        expected = Path(expected)
+        # This mapping comes from the current parent invocation, never from
+        # a cache file or the symlink itself. Resolving the leaf would otherwise
+        # silently accept a source that has been replaced with another link.
+        if not expected.is_absolute() or expected.resolve(strict=True) != expected:
+            raise ResumableRecoveryStateError(
+                "pending projection source is unsafe",
+                recovery_reason="projection_target_mismatch",
+            )
+        for parent in candidate.parents:
+            if parent.is_symlink():
+                raise ResumableRecoveryStateError(
+                    "pending projection directory is unsafe",
+                    recovery_reason="projection_target_mismatch",
+                )
+            if parent == Path(folder_path):
+                break
+        if candidate.is_symlink():
+            matches = Path(os.readlink(candidate)) == expected
+        else:
+            matches = os.path.samefile(candidate, expected)
+        if not matches:
+            raise ResumableRecoveryStateError(
+                "pending projection does not match the selected source",
+                recovery_reason="projection_target_mismatch",
+            )
+        return expected
+
+    def identity(value):
+        return (
+            value.st_dev,
+            value.st_ino,
+            value.st_size,
+            value.st_mtime_ns,
+            value.st_ctime_ns,
+        )
+
     try:
-        if candidate.is_symlink() or not candidate.is_file():
+        source = bound_source()
+        before = source.stat()
+        if not stat.S_ISREG(before.st_mode) or before.st_size != record["size"]:
             return False
         digest = hashlib.sha256()
-        with candidate.open("rb") as stream:
+        git_digest = hashlib.sha1(f"blob {record['size']}\0".encode())
+        # Read the authorized source, not a possibly retargeted projection.
+        with source.open("rb") as stream:
+            if identity(os.fstat(stream.fileno())) != identity(before):
+                return False
             while True:
                 chunk = stream.read(1024 * 1024)
                 if not chunk:
                     break
                 digest.update(chunk)
-        if candidate.stat().st_size != record["size"]:
+                if record["upload_mode"] == "regular":
+                    git_digest.update(chunk)
+            if identity(os.fstat(stream.fileno())) != identity(before):
+                return False
+        if bound_source() != source or identity(source.stat()) != identity(before):
             return False
-        if digest.hexdigest() != record["sha256"]:
-            return False
-        if record["upload_mode"] == "regular":
-            operation = type(
-                "_PendingOperation",
-                (),
-                {
-                    "path_or_fileobj": candidate,
-                    "upload_info": type("_UploadInfo", (), {"size": record["size"]})(),
-                },
-            )()
-            return _operation_git_sha1(operation) == record["git_sha1"]
-        return True
-    except OSError:
-        return False
+        return digest.hexdigest() == record["sha256"] and (
+            record["upload_mode"] != "regular"
+            or git_digest.hexdigest() == record["git_sha1"]
+        )
+    except OSError as error:
+        raise ResumableWorkerError(
+            "local_source_unavailable",
+            diagnostic={
+                "stage": "recovery",
+                "recovery_reason": "local_source_unavailable",
+            },
+        ) from error
+    except RuntimeError as error:
+        if isinstance(error, (ResumableRecoveryStateError, ResumableWorkerError)):
+            raise
+        raise ResumableRecoveryStateError(
+            "pending source link cannot be resolved safely",
+            recovery_reason="projection_target_mismatch",
+        ) from error
 
 
 def _mark_pending_records_committed(folder_path: Path, records) -> None:
@@ -534,6 +602,8 @@ def _remote_pending_record_matches(
     except Exception as error:
         if _commit_error_status(error) == 404 or getattr(error, "code", None) == 404:
             return False
+        if retry_category(error) in _TRANSIENT | {"authentication", "permission"}:
+            raise
         raise ResumableRecoveryStateError(
             "remote pending commit state could not be read"
         ) from error
@@ -558,10 +628,93 @@ def _remote_pending_record_matches(
             timeout=request_timeout,
         )
     except CanonicalLfsPointerError as error:
+        category = retry_category(error)
+        if category in _TRANSIENT | {"authentication", "permission"}:
+            raise ResumableWorkerError(category) from error
         raise ResumableRecoveryStateError(
             "remote LFS pointer could not be confirmed"
         ) from error
     return True
+
+
+def _remote_pending_path_identity(
+    *, record, revision, repo_id, token, request_timeout, trees
+):
+    """Read immutable Git entries; a download 404 is not proof of absence."""
+    if revision is None:
+        raise ResumableRecoveryStateError("pending commit has no base revision")
+    sha = revision
+    parts = PurePosixPath(record["path"]).parts
+    for index, part in enumerate(parts):
+        if sha not in trees:
+            entries = {}
+            page = 1
+            while True:
+                try:
+                    payload = _atomgit_v5_get_json(
+                        _atomgit_v5_repo_path(repo_id) + "/git/trees/" + sha,
+                        token,
+                        timeout=request_timeout,
+                        query={"page": page, "per_page": 100},
+                    )
+                except Exception as error:
+                    if retry_category(error) in _TRANSIENT | {
+                        "authentication",
+                        "permission",
+                    }:
+                        raise
+                    raise ResumableRecoveryStateError(
+                        "pending Git tree could not be read"
+                    ) from error
+                if (
+                    not isinstance(payload, dict)
+                    or payload.get("sha") != sha
+                    or payload.get("truncated", False) is not False
+                    or not isinstance(payload.get("tree"), list)
+                ):
+                    raise ResumableRecoveryStateError("pending Git tree is incomplete")
+                for entry in payload["tree"]:
+                    if not isinstance(entry, dict):
+                        raise ResumableRecoveryStateError(
+                            "pending Git tree is malformed"
+                        )
+                    name = entry.get("path")
+                    identity = (entry.get("type"), entry.get("mode"), entry.get("sha"))
+                    if (
+                        not isinstance(name, str)
+                        or not name
+                        or "/" in name
+                        or name in (".", "..")
+                        or name in entries
+                        or identity[:2]
+                        not in (
+                            ("tree", "040000"),
+                            ("blob", "100644"),
+                            ("blob", "100755"),
+                            ("blob", "120000"),
+                            ("commit", "160000"),
+                        )
+                        or not isinstance(identity[2], str)
+                        or re.fullmatch(r"[0-9a-f]{40}", identity[2]) is None
+                    ):
+                        raise ResumableRecoveryStateError(
+                            "pending Git tree is malformed"
+                        )
+                    entries[name] = identity
+                # AtomGit defaults to 20 entries and caps per_page at 100.
+                # Inspect every page, never infer absence from the first page.
+                if len(payload["tree"]) < 100:
+                    break
+                page += 1
+            trees[sha] = entries
+        identity = trees[sha].get(part)
+        if identity is None or index == len(parts) - 1:
+            return identity
+        if identity[0] != "tree":
+            raise ResumableCommitConflictError(
+                "pending path has a non-directory ancestor", confirmed=0, remaining=1
+            )
+        sha = identity[2]
 
 
 def _recover_pending_commit(
@@ -572,14 +725,22 @@ def _recover_pending_commit(
     repo_type: str,
     revision: str,
     request_timeout: float,
+    source_paths=None,
 ) -> dict:
     pending = _read_pending_commit(folder_path)
     if pending is None:
         return {"confirmed": 0, "remaining": 0, "confirmed_paths": ()}
     for record in pending["operations"]:
-        if not _local_pending_record_matches(folder_path, record):
+        try:
+            matches = _local_pending_record_matches(folder_path, record, source_paths)
+        except ResumableRecoveryStateError as error:
+            error.confirmed = 0
+            error.remaining = len(pending["operations"])
+            raise
+        if not matches:
             raise ResumableRecoveryStateError(
                 "local content changed while a commit remains pending",
+                recovery_reason="local_content_changed",
                 confirmed=0,
                 remaining=len(pending["operations"]),
             )
@@ -601,6 +762,24 @@ def _recover_pending_commit(
             request_timeout=request_timeout,
         )
     ]
+    remaining = [item for item in pending["operations"] if item not in matched]
+    conflicts = False
+    if remaining and first_revision != pending["base_revision"]:
+        trees = {}
+        for record in remaining:
+            identities = [
+                _remote_pending_path_identity(
+                    record=record,
+                    revision=snapshot,
+                    repo_id=repo_id,
+                    token=token,
+                    request_timeout=request_timeout,
+                    trees=trees,
+                )
+                for snapshot in (pending["base_revision"], first_revision)
+            ]
+            if identities[0] != identities[1]:
+                conflicts = True
     second_revision = _resolve_resumable_revision(
         token=token,
         repo_id=repo_id,
@@ -613,15 +792,16 @@ def _recover_pending_commit(
             confirmed=0,
             remaining=len(pending["operations"]),
         )
-    remaining = [item for item in pending["operations"] if item not in matched]
     if matched:
         _mark_pending_records_committed(folder_path, matched)
     if not remaining:
         _delete_pending_commit(folder_path)
     else:
         pending["operations"] = remaining
+        if not conflicts:
+            pending["base_revision"] = first_revision
         _write_pending_commit(folder_path, pending)
-        if first_revision != pending["base_revision"]:
+        if conflicts:
             raise ResumableCommitConflictError(
                 "pending commit conflicts with the target revision",
                 confirmed=len(matched),
@@ -810,6 +990,7 @@ class _ResumableCommitController:
         lfs_attributes_policy=None,
         folder_path=None,
         request_timeout: float = _RESUMABLE_DEFAULT_REQUEST_TIMEOUT,
+        source_paths=None,
     ):
         self._create_commit = create_commit
         self._token = token
@@ -829,6 +1010,7 @@ class _ResumableCommitController:
         self._lfs_attributes_policy = lfs_attributes_policy
         self._folder_path = Path(folder_path) if folder_path is not None else None
         self._request_timeout = request_timeout
+        self._source_paths = source_paths
 
     def _recover_pending(self, kwargs, operations):
         if self._folder_path is None:
@@ -841,6 +1023,7 @@ class _ResumableCommitController:
                 repo_type=kwargs.get("repo_type") or "model",
                 revision=kwargs.get("revision") or "main",
                 request_timeout=self._request_timeout,
+                source_paths=self._source_paths,
             )
         except (ResumableCommitConflictError, ResumableRecoveryStateError) as error:
             self._raise_fatal(error, len(operations))
@@ -858,33 +1041,55 @@ class _ResumableCommitController:
         ]
 
     def _write_attempt(self, kwargs, operations) -> str:
-        base_revision = _resolve_resumable_revision(
-            token=self._token,
-            repo_id=kwargs.get("repo_id"),
-            revision=kwargs.get("revision") or "main",
-            request_timeout=self._request_timeout,
+        pending = _read_pending_commit(self._folder_path)
+        # Recovery already checked this exact parent. A fresh HEAD here could
+        # accept a concurrent same-path edit without checking it.
+        base_revision = (
+            pending["base_revision"]
+            if pending
+            else _resolve_resumable_revision(
+                token=self._token,
+                repo_id=kwargs.get("repo_id"),
+                revision=kwargs.get("revision") or "main",
+                request_timeout=self._request_timeout,
+            )
         )
-        _write_pending_commit(
-            self._folder_path,
-            _pending_commit_value(
-                state="attempting",
-                base_revision=base_revision,
-                commit_revision=None,
-                operations=operations,
-            ),
+        attempt = _pending_commit_value(
+            state="attempting",
+            base_revision=base_revision,
+            commit_revision=None,
+            operations=operations,
         )
+        if pending:
+            records = {item["path"]: item for item in pending["operations"]}
+            for item in attempt["operations"]:
+                if item["path"] in records and records[item["path"]] != item:
+                    raise ResumableRecoveryStateError(
+                        "pending operation changed before commit"
+                    )
+                records[item["path"]] = item
+            attempt["operations"] = list(records.values())
+        _write_pending_commit(self._folder_path, attempt)
         return base_revision
 
-    def _write_created(self, base_revision, commit_revision, operations) -> None:
-        _write_pending_commit(
-            self._folder_path,
-            _pending_commit_value(
-                state="created_unconfirmed",
-                base_revision=base_revision,
-                commit_revision=commit_revision,
-                operations=operations,
-            ),
-        )
+    def _write_created(self, commit_revision) -> None:
+        pending = _read_pending_commit(self._folder_path)
+        pending["state"] = "created_unconfirmed"
+        pending["commit_revision"] = commit_revision
+        _write_pending_commit(self._folder_path, pending)
+
+    def _finish_attempt(self, operations) -> None:
+        pending = _read_pending_commit(self._folder_path)
+        completed = {item.path_in_repo for item in operations}
+        pending["operations"] = [
+            item for item in pending["operations"] if item["path"] not in completed
+        ]
+        if pending["operations"]:
+            pending["state"] = "attempting"
+            pending["commit_revision"] = None
+            _write_pending_commit(self._folder_path, pending)
+        else:
+            _delete_pending_commit(self._folder_path)
 
     def _emit(self, kind: str, **details) -> None:
         if self._event_callback is None:
@@ -946,7 +1151,7 @@ class _ResumableCommitController:
                         raise ResumableRecoveryStateError(
                             "resumable commit revision is unavailable"
                         ) from error
-                    self._write_created(base_revision, commit_revision, operations)
+                    self._write_created(commit_revision)
                 if expectations:
                     if self._folder_path is None:
                         try:
@@ -970,7 +1175,7 @@ class _ResumableCommitController:
                         ) from error
                 self._mark_committed(operations)
                 if self._folder_path is not None:
-                    _delete_pending_commit(self._folder_path)
+                    self._finish_attempt(operations)
                 return result
             except Exception as error:
                 last_error = error
@@ -1043,18 +1248,7 @@ class _ResumableCommitController:
                     if not operations:
                         return None
                 if status_code == 413:
-                    if self._folder_path is not None:
-                        _delete_pending_commit(self._folder_path)
                     break
-                if self._folder_path is not None and status_code in (
-                    400,
-                    401,
-                    403,
-                    404,
-                    422,
-                    429,
-                ):
-                    _delete_pending_commit(self._folder_path)
                 if not _is_retryable_commit_error(error):
                     self._raise_fatal(error, len(operations))
                 if attempts < self._max_attempts:
@@ -1211,6 +1405,9 @@ def _run_resumable_upload(
     configured_lfs_patterns=(),
     observation_queue=None,
     suppress_dataset_warning=False,
+    selected_paths=None,
+    source_paths=None,
+    retry_counts=None,
 ):
     """Run HF's resumable uploader in an isolated child process.
 
@@ -1222,6 +1419,9 @@ def _run_resumable_upload(
     original_timeout = hf_constants.DEFAULT_REQUEST_TIMEOUT
     original_get_upload_mode = hf_large_folder._get_upload_mode
     original_preupload_lfs = hf_large_folder._preupload_lfs
+    original_runner = hf_large_folder.upload_large_folder_internal
+    original_api_runner = hf_api_module.upload_large_folder_internal
+    round_result = {}
     lfs_attributes_policy = (
         _ResumableLfsAttributesPolicy(configured_lfs_patterns)
         if auto_configure_lfs
@@ -1262,6 +1462,21 @@ def _run_resumable_upload(
             result_queue.join_thread()
         os._exit(1)
 
+    def fatal_global(error):
+        if retry_category(error) in _GLOBAL | {"upload_mode", "lfs_attributes"}:
+            fatal_exit(error)
+
+    def upload_round(*args, **kwargs):
+        round_result.update(
+            run_upload_round(
+                *args,
+                **kwargs,
+                selected_paths=selected_paths,
+                retry_counts=retry_counts,
+                batch_context=batch_context,
+            )
+        )
+
     def get_upload_mode_with_policy(*args, **kwargs):
         observation_sender.stage("upload_mode")
         result = original_get_upload_mode(*args, **kwargs)
@@ -1289,6 +1504,7 @@ def _run_resumable_upload(
             repo_type=kwargs.get("repo_type") or "model",
             revision=kwargs.get("revision") or "main",
             request_timeout=request_timeout,
+            source_paths=source_paths,
         )
         if recovery["confirmed"]:
             _print_resumable_commit_event(
@@ -1327,10 +1543,8 @@ def _run_resumable_upload(
         hf_large_folder._get_upload_mode = get_upload_mode_with_policy
         preupload_controller = _ResumableLfsPreuploadController(
             original_preupload_lfs,
-            fatal_callback=fatal_exit,
-            event_callback=lambda event: _print_resumable_lfs_preupload_event(
-                event, batch_context
-            ),
+            max_attempts=1,
+            fatal_callback=fatal_global,
             lfs_attributes_policy=lfs_attributes_policy,
         )
 
@@ -1359,13 +1573,15 @@ def _run_resumable_upload(
                         timeout=request_timeout,
                     )
                 ),
-                fatal_callback=fatal_exit,
+                max_attempts=1,
+                fatal_callback=fatal_global,
                 event_callback=lambda event: _print_resumable_commit_event(
                     event, batch_context
                 ),
                 lfs_attributes_policy=lfs_attributes_policy,
                 folder_path=Path(kwargs["folder_path"]),
                 request_timeout=request_timeout,
+                source_paths=source_paths,
             )
 
             def commit_with_stage(*args, **kwargs):
@@ -1373,6 +1589,8 @@ def _run_resumable_upload(
                 return controller.create_commit(*args, **kwargs)
 
             client.create_commit = commit_with_stage
+        hf_large_folder.upload_large_folder_internal = upload_round
+        hf_api_module.upload_large_folder_internal = upload_round
         with (
             _scoped_resumable_progress(),
             progress,
@@ -1380,13 +1598,20 @@ def _run_resumable_upload(
         ):
             with _suppress_hf_model_repo_warning(suppress_dataset_warning):
                 client.upload_large_folder(**kwargs)
-        result_queue.put((True, {"recovered": recovery["confirmed"]}))
+        result = {"recovered": recovery["confirmed"]}
+        if round_result:
+            result.update(round_result)
+        result_queue.put((True, result))
         result_sent = True
     except BaseException as exc:
+        if retry_category(exc) in _GLOBAL | {"upload_mode", "lfs_attributes"}:
+            fatal_exit(exc)
         send_failure(exc)
     finally:
         hf_large_folder._get_upload_mode = original_get_upload_mode
         hf_large_folder._preupload_lfs = original_preupload_lfs
+        hf_large_folder.upload_large_folder_internal = original_runner
+        hf_api_module.upload_large_folder_internal = original_api_runner
         hf_constants.DEFAULT_REQUEST_TIMEOUT = original_timeout
         close_hf_session()
         _close_upload_observation_queue(observation_queue)
@@ -1421,10 +1646,16 @@ def _execute_resumable_upload_process(
     auto_configure_lfs: bool = False,
     suppress_dataset_warning: bool = False,
     configured_lfs_patterns=(),
+    selected_paths=None,
+    source_paths=None,
+    retry_counts=None,
 ) -> dict:
     """Run one outer resumable batch and require an explicit child result."""
     methods = multiprocessing.get_all_start_methods()
-    context = multiprocessing.get_context("fork" if "fork" in methods else "spawn")
+    # macOS proxy discovery calls CoreFoundation, which is unsafe in a child
+    # forked from a threaded parent. Use a fresh interpreter for every batch.
+    method = "spawn" if sys.platform == "darwin" or "fork" not in methods else "fork"
+    context = multiprocessing.get_context(method)
     result_queue = context.Queue()
     try:
         observation_queue = context.Queue(maxsize=_UPLOAD_OBSERVATION_QUEUE_SIZE)
@@ -1443,6 +1674,9 @@ def _execute_resumable_upload_process(
             configured_lfs_patterns,
             observation_queue,
             suppress_dataset_warning,
+            selected_paths,
+            source_paths,
+            retry_counts,
         ),
     )
     process.daemon = True
@@ -1512,15 +1746,35 @@ def _execute_resumable_upload_process(
         if (
             ok is not True
             or not isinstance(error, dict)
-            or set(error) != {"recovered"}
+            or set(error)
+            not in (
+                {"recovered"},
+                {"recovered", "pending", "delay", "abnormal", "failures", "cooldown"},
+            )
             or not isinstance(error["recovered"], int)
             or isinstance(error["recovered"], bool)
             or not 0 <= error["recovered"] <= _PENDING_COMMIT_MAX_OPERATIONS
         ):
             raise process_failure("invalid_result")
+        if "pending" in error:
+            for field in ("pending", "abnormal", "failures"):
+                if type(error[field]) is not int or error[field] < 0:
+                    raise process_failure("invalid_result")
+            if (
+                not 0
+                <= error["abnormal"]
+                <= error["pending"]
+                <= _PENDING_COMMIT_MAX_OPERATIONS
+            ):
+                raise process_failure("invalid_result")
+            for field in ("delay", "cooldown"):
+                delay = error[field]
+                if type(delay) not in (int, float) or not 0 <= delay < float("inf"):
+                    raise process_failure("invalid_result")
         if getattr(process, "exitcode", 0) != 0:
             raise process_failure("abnormal_exit")
-        terminal = "completed"
+        # Close this round's transport flows without marking the upload complete.
+        terminal = "interrupted" if error.get("pending") else "completed"
         return error
     except KeyboardInterrupt:
         terminal = "interrupted"

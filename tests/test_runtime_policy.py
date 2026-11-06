@@ -14,7 +14,6 @@ from atomgit.runtime import (
     configure_hf_environment,
 )
 
-
 results = []
 
 
@@ -96,20 +95,37 @@ def main():
                 second = configure_hf_environment()
 
             expected_cache = home / ".cache" / "atomgit"
-            check("endpoint policy applied", os.environ["HF_ENDPOINT"] == ATOMGIT_HF_ENDPOINT)
-            check("XET policy applied", os.environ["HF_HUB_DISABLE_XET"] == ATOMGIT_DISABLE_XET)
+            check(
+                "endpoint policy applied",
+                os.environ["HF_ENDPOINT"] == ATOMGIT_HF_ENDPOINT,
+            )
+            check(
+                "XET policy applied",
+                os.environ["HF_HUB_DISABLE_XET"] == ATOMGIT_DISABLE_XET,
+            )
             check("cache policy applied", os.environ["HF_HOME"] == str(expected_cache))
-            check("runtime setup does not create cache during import policy",
-                  not expected_cache.exists())
+            check(
+                "runtime setup does not create cache during import policy",
+                not expected_cache.exists(),
+            )
             check("repeated setup is idempotent", first == second == expected_cache)
 
         import atomgit.api as package_api  # noqa: F401
         import atomgit.cli as package_cli  # noqa: F401
         import atomgit_hub as standalone_sdk  # noqa: F401
 
-        check("API import keeps shared endpoint", os.environ["HF_ENDPOINT"] == ATOMGIT_HF_ENDPOINT)
-        check("CLI import keeps shared endpoint", os.environ["HF_HOME"].endswith("/.cache/atomgit"))
-        check("standalone SDK keeps shared XET policy", os.environ["HF_HUB_DISABLE_XET"] == "1")
+        check(
+            "API import keeps shared endpoint",
+            os.environ["HF_ENDPOINT"] == ATOMGIT_HF_ENDPOINT,
+        )
+        check(
+            "CLI import keeps shared endpoint",
+            Path(os.environ["HF_HOME"]).parts[-2:] == (".cache", "atomgit"),
+        )
+        check(
+            "standalone SDK keeps shared XET policy",
+            os.environ["HF_HUB_DISABLE_XET"] == "1",
+        )
     finally:
         for name, value in original.items():
             if value is None:

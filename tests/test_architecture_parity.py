@@ -272,6 +272,16 @@ def main():
             transfer.calls[-1][1]["token"] is None,
         )
         check("download result records canonical revision", result.revision == "main")
+        transfer.resolve_default_revision = (
+            lambda repo_id, repo_type, token, operation: "develop"
+        )
+        resolved_result = client.download_file("user/repo", "file.txt", token=False)
+        check(
+            "native result and transfer preserve resolved default revision",
+            resolved_result.revision == "develop"
+            and transfer.calls[-1][1]["revision"] == "develop",
+        )
+        del transfer.resolve_default_revision
         client.download_snapshot(
             "user/repo",
             revision="feature",

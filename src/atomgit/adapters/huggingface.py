@@ -53,6 +53,10 @@ class HuggingFaceAdapter:
             self._api = api
         return self._api
 
+    def resolve_default_revision(self, repo_id, repo_type, token, operation):
+        resolver = getattr(self.downloads, "resolve_default_revision", None)
+        return resolver(repo_id, repo_type, token) if resolver else "main"
+
     def create_repository(self, repo_id, repo_type, private, exist_ok):
         return self.sdk.create_repository(
             repo_id, private=private, repo_type=repo_type, exist_ok=exist_ok

@@ -754,5 +754,716 @@ def main():
         api_mod._execute_resumable_upload_process = original["execute_resumable"]
 
 
+def retry_round_checks():
+    from unittest.mock import patch
+
+    import httpx
+
+    from atomgit.adapters.upload import retry
+    from atomgit.adapters.upload.errors import ResumableRecoveryStateError
+
+    attempts = []
+    committed = []
+
+    def mode(items, api, repo_id, repo_type, revision):
+        for paths, metadata in items:
+            metadata.upload_mode = "lfs"
+            metadata.should_ignore = False
+            metadata.save(paths)
+
+    def preupload(items, api, repo_id, repo_type, revision):
+        paths, metadata = items[0]
+        attempts.append(paths.path_in_repo)
+        if paths.path_in_repo == "bad.bin" and attempts.count("bad.bin") <= 12:
+            raise httpx.ConnectError("secret=never-log-this")
+        metadata.is_uploaded = True
+        metadata.save(paths)
+
+    def commit(items, api, repo_id, repo_type, revision):
+        paths, metadata = items[0]
+        committed.append(paths.path_in_repo)
+        metadata.is_committed = True
+        metadata.save(paths)
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(retry.hf, "_get_upload_mode", mode),
+        patch.object(retry.hf, "_preupload_lfs", preupload),
+        patch.object(retry.hf, "_commit", commit),
+        patch.object(retry, "retry_delay", return_value=0),
+    ):
+        root = Path(td)
+        (root / "bad.bin").write_bytes(b"bad")
+        (root / "good.bin").write_bytes(b"good")
+        output = StringIO()
+        with redirect_stdout(output):
+            result = retry.run_upload_round(
+                None, "user/test", root, repo_type="dataset", num_workers=2
+            )
+        assert result["pending"] == 1 and committed == ["good.bin"]
+        assert attempts.count("bad.bin") == 3
+        first_log = output.getvalue()
+        assert first_log.count("[上传失败]") == 3, first_log
+        assert "bad.bin" in first_log and "阶段：LFS 预上传" in first_log
+        assert (
+            "原因：网络连接失败" in first_log and "异常类型：ConnectError" in first_log
+        )
+        assert first_log.count("[本轮重试]") == 2, first_log
+        assert first_log.count("[加入候补]") == 1, first_log
+        assert "当前候补：1 个｜正在补传：0 个｜异常待处理：0 个" in first_log
+        with redirect_stdout(output):
+            for _ in range(4):
+                result = retry.run_upload_round(
+                    None, "user/test", root, repo_type="dataset", num_workers=2
+                )
+        assert output.getvalue().count("[加入候补]") == 4
+        assert "当前候补：2 个" not in output.getvalue()
+        state = retry.RetryState(root).files["bad.bin"]
+        assert result["pending"] == 0 and attempts.count("bad.bin") == 13
+        assert state["failures"] == 12 and state["rounds"] == 4
+        assert committed == ["good.bin", "bad.bin"], committed
+        assert "never-log-this" not in output.getvalue()
+        checkpoint = retry.RetryState(root)
+        checkpoint.path.write_text("invalid", encoding="utf-8")
+        try:
+            retry.RetryState(root)
+        except ResumableRecoveryStateError:
+            pass
+        else:
+            raise AssertionError("corrupt retry state must stop safely")
+
+    mode_calls = []
+
+    def changed_server_mode(items, api, repo_id, repo_type, revision):
+        mode_calls.append(1)
+        mode(items, api, repo_id, repo_type, revision)
+        paths, metadata = items[0]
+        metadata.should_ignore = len(mode_calls) == 1
+        metadata.save(paths)
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(retry.hf, "_get_upload_mode", changed_server_mode),
+        patch.object(retry.hf, "_preupload_lfs", preupload),
+        patch.object(retry.hf, "_commit", commit),
+        patch.object(retry, "retry_delay", return_value=0),
+    ):
+        root = Path(td)
+        (root / "excluded.bin").write_bytes(b"content")
+        abnormal_output = StringIO()
+        with redirect_stdout(abnormal_output):
+            result = retry.run_upload_round(
+                None, "user/test", root, repo_type="dataset"
+            )
+            assert result["abnormal"] == 1
+        assert (
+            "当前候补：0 个｜正在补传：0 个｜异常待处理：1 个"
+            in abnormal_output.getvalue()
+        )
+        assert "[加入候补]" not in abnormal_output.getvalue()
+        assert (
+            retry.run_upload_round(None, "user/test", root, repo_type="dataset")[
+                "pending"
+            ]
+            == 0
+        )
+        assert len(mode_calls) == 2, "cached exclusions must be queried again"
+
+    class Terminal(StringIO):
+        def isatty(self):
+            return True
+
+    terminal = Terminal()
+    with (
+        redirect_stdout(terminal),
+        patch.object(retry.sys, "stderr", terminal),
+        patch.dict(os.environ),
+    ):
+        os.environ.pop("NO_COLOR", None)
+        retry._warning("pending", abnormal=True)
+    assert "\x1b[31m" in terminal.getvalue()
+
+    request = httpx.Request("PUT", "https://hub.gitcode.com/object")
+    error = httpx.HTTPStatusError(
+        "secret",
+        request=request,
+        response=httpx.Response(429, headers={"Retry-After": "900"}, request=request),
+    )
+    assert retry.retry_delay(error) == 900
+    assert retry.retry_delay(httpx.ConnectError("offline"), 1000000) == 300
+    report = retry.RetryReport()
+    report.batches[0] = {"pending": 1, "abnormal": 1, "failures": 12}
+    assert not callable(report), "queue accounting must not schedule periodic warnings"
+    assert report.counts() == {"queued": 0, "abnormal": 1}
+    print(
+        "[PASS] fair file retries exceed twelve failures; healthy file commits first; durable counters and safe logs"
+    )
+
+
+def retry_parent_checks():
+    from unittest.mock import patch
+
+    from huggingface_hub._local_folder import (
+        get_local_upload_paths,
+        read_upload_metadata,
+    )
+
+    from atomgit.adapters.upload import service
+    from atomgit.adapters.upload.errors import ResumableWorkerError
+
+    calls = []
+    events = []
+
+    def execute(**kwargs):
+        selected = kwargs["selected_paths"]
+        calls.append(selected)
+        root = Path(kwargs["upload_kwargs"]["folder_path"])
+        remaining = 1 if len(calls) == 1 else 0
+        for name in selected[remaining:]:
+            paths = get_local_upload_paths(root, name)
+            metadata = read_upload_metadata(root, name)
+            metadata.is_committed = True
+            metadata.save(paths)
+        return {
+            "recovered": 0,
+            "pending": remaining,
+            "delay": 0,
+            "cooldown": 0,
+            "abnormal": 0,
+            "failures": 3 if remaining else 0,
+        }
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        source = root / "source"
+        source.mkdir()
+        for index in range(4):
+            (source / f"{index}.bin").write_bytes(b"file")
+        with (
+            patch.dict(os.environ, {"HF_HOME": str(root / "cache")}),
+            patch.object(
+                config, "get_credentials", return_value={"token": "offline-token"}
+            ),
+            patch.object(service, "_validate_resumable_upload_target"),
+            patch.object(service, "_execute_resumable_upload_process", execute),
+            redirect_stdout(StringIO()) as output,
+        ):
+            result = api_mod.api.upload_directory(
+                source,
+                "user/rotation",
+                resumable=True,
+                batch_size=2,
+                progress_callback=events.append,
+            )
+        assert result is True
+        assert calls == [
+            ("0.bin", "1.bin"),
+            ("2.bin", "3.bin"),
+            ("0.bin", "1.bin"),
+        ], calls
+        assert events[-1]["files_done"] == 4
+        assert (
+            "计划 4，新增提交 4，续传跳过 0，确认完成 4" in output.getvalue()
+        ), output.getvalue()
+        with (
+            patch.dict(os.environ, {"HF_HOME": str(root / "cache")}),
+            patch.object(
+                config, "get_credentials", return_value={"token": "offline-token"}
+            ),
+            patch.object(service, "_validate_resumable_upload_target"),
+            patch.object(
+                service,
+                "_execute_resumable_upload_process",
+                side_effect=ResumableWorkerError("timeout"),
+            ) as execute_failure,
+            patch.object(service.time, "sleep", side_effect=KeyboardInterrupt),
+            redirect_stdout(StringIO()),
+        ):
+            try:
+                api_mod.api.upload_directory(
+                    source, "user/cancel-retry", resumable=True, batch_size=2
+                )
+            except KeyboardInterrupt:
+                pass
+            else:
+                raise AssertionError(
+                    "transient failures must keep retrying until cancellation"
+                )
+        assert (
+            execute_failure.call_count >= 2
+        ), "later batches must get their turn before cooldown"
+        with (
+            patch.dict(os.environ, {"HF_HOME": str(root / "cache")}),
+            patch.object(
+                config, "get_credentials", return_value={"token": "offline-token"}
+            ),
+            patch.object(service, "_validate_resumable_upload_target"),
+            patch.object(
+                service,
+                "_execute_resumable_upload_process",
+                side_effect=ResumableWorkerError("authentication"),
+            ) as execute_failure,
+            redirect_stdout(StringIO()),
+        ):
+            assert (
+                api_mod.api.upload_directory(
+                    source, "user/auth-failure", resumable=True, batch_size=2
+                )
+                is False
+            )
+        assert execute_failure.call_count == 1
+    calls.clear()
+    roots = {}
+
+    def invalidate_then_finish(**kwargs):
+        index = kwargs["batch_context"][0]
+        root = Path(kwargs["upload_kwargs"]["folder_path"])
+        roots[index] = root
+        result = execute(**kwargs)
+        if len(calls) == 2:
+            get_local_upload_paths(roots[1], "1.bin").metadata_path.unlink()
+        elif len(calls) == 3:
+            for name in kwargs["selected_paths"]:
+                get_local_upload_paths(root, name).metadata_path.unlink()
+            result.update(pending=2, failures=6)
+        return result
+
+    with tempfile.TemporaryDirectory() as td:
+        source = Path(td) / "source"
+        source.mkdir()
+        for index in range(4):
+            (source / f"{index}.bin").write_bytes(b"file")
+        with (
+            patch.dict(os.environ, {"HF_HOME": str(Path(td) / "cache")}),
+            patch.object(
+                config, "get_credentials", return_value={"token": "offline-token"}
+            ),
+            patch.object(service, "_validate_resumable_upload_target"),
+            patch.object(
+                service, "_execute_resumable_upload_process", invalidate_then_finish
+            ),
+            redirect_stdout(StringIO()) as output,
+        ):
+            assert api_mod.api.upload_directory(
+                source, "user/invalidation", resumable=True, batch_size=2
+            )
+        assert len(calls) == 4
+        assert (
+            "计划 4，新增提交 4，续传跳过 0，确认完成 4" in output.getvalue()
+        ), output.getvalue()
+    print(
+        "[PASS] later batches commit before retries; partial counts stay exact; transient cancellation and global auth stop"
+    )
+
+
+def queue_observability_checks():
+    from unittest.mock import patch
+
+    import httpx
+    from huggingface_hub._local_folder import (
+        get_local_upload_paths,
+        read_upload_metadata,
+    )
+
+    from atomgit.adapters.upload import retry, service
+
+    failing = True
+    calls = []
+    uploads = []
+    roots = []
+
+    def mode(items, **kwargs):
+        for paths, metadata in items:
+            metadata.upload_mode = "lfs"
+            metadata.should_ignore = False
+            metadata.save(paths)
+
+    def preupload(items, **kwargs):
+        paths, metadata = items[0]
+        uploads.append(paths.path_in_repo)
+        if failing:
+            raise httpx.ConnectError("signed-url-secret-must-not-appear")
+        metadata.is_uploaded = True
+        metadata.save(paths)
+
+    def commit(items, **kwargs):
+        for paths, metadata in items:
+            metadata.is_committed = True
+            metadata.save(paths)
+
+    def execute(**kwargs):
+        calls.append(kwargs["retry_counts"])
+        if failing and len(calls) == 3:
+            raise KeyboardInterrupt
+        root = Path(kwargs["upload_kwargs"]["folder_path"])
+        roots.append(root)
+        return {
+            "recovered": 0,
+            **retry.run_upload_round(
+                None,
+                **kwargs["upload_kwargs"],
+                selected_paths=kwargs["selected_paths"],
+                retry_counts=kwargs["retry_counts"],
+                batch_context=kwargs["batch_context"],
+            ),
+        }
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(
+            config, "get_credentials", return_value={"token": "offline-token"}
+        ),
+        patch.object(service, "_validate_resumable_upload_target"),
+        patch.object(service, "_execute_resumable_upload_process", execute),
+        patch.object(retry.hf, "_get_upload_mode", mode),
+        patch.object(retry.hf, "_preupload_lfs", preupload),
+        patch.object(retry.hf, "_commit", commit),
+        patch.object(retry, "retry_delay", return_value=0),
+        patch.dict(os.environ, {"HF_HOME": str(Path(td) / "cache")}),
+    ):
+        source = Path(td) / "source"
+        source.mkdir()
+        for name in ("a.bin", "b.bin"):
+            (source / name).write_bytes(b"data")
+        first = StringIO()
+        with redirect_stdout(first):
+            try:
+                api_mod.api.upload_directory(
+                    source,
+                    "user/queue",
+                    resumable=True,
+                    batch_size=1,
+                    path_in_repo="prefix",
+                    num_workers=1,
+                )
+            except KeyboardInterrupt:
+                pass
+            else:
+                raise AssertionError("expected explicit cancellation after two rounds")
+        text = first.getvalue()
+        assert text.count("[加入候补]") == 2, text
+        assert "当前候补：2 个｜正在补传：0 个｜异常待处理：0 个" in text
+        assert calls[:2] == [{"queued": 0, "abnormal": 0}, {"queued": 1, "abnormal": 0}]
+        assert len(uploads) == 6
+        # Restart: global totals must include the later batch before it runs.
+        failing = False
+        calls.clear()
+        second = StringIO()
+        with redirect_stdout(second):
+            assert api_mod.api.upload_directory(
+                source,
+                "user/queue",
+                resumable=True,
+                batch_size=1,
+                path_in_repo="prefix",
+                num_workers=1,
+            )
+        text = second.getvalue()
+        assert "[恢复候补队列] 当前候补：2 个" in text, text
+        assert "当前候补：1 个｜正在补传：1 个｜异常待处理：0 个" in text
+        assert "当前候补：0 个｜正在补传：1 个｜异常待处理：0 个" in text
+        assert "复用已有哈希" in text and "整文件 PUT 从头传输" in text
+        assert calls == [{"queued": 1, "abnormal": 0}, {"queued": 0, "abnormal": 0}]
+        assert len(uploads) == 8
+        assert "signed-url-secret" not in text + first.getvalue()
+        # Successful metadata excludes historical failures; a changed source
+        # invalidates completion, while deselected and duplicate entries do not inflate totals.
+        state = retry.RetryState(roots[0])
+        assert state.pending_summary(["prefix/a.bin"])["pending"] == 0
+        (source / "a.bin").write_bytes(b"changed-source")
+        assert state.pending_summary(["prefix/a.bin", "prefix/a.bin"])["pending"] == 1
+        assert state.pending_summary(["prefix/b.bin"])["pending"] == 0
+        # Counters reconstruct from source even when the projection still points
+        # to an old inode; observational reads never repair corrupt metadata.
+        paths = get_local_upload_paths(roots[1], "prefix/b.bin")
+        replacement = source / "replacement"
+        replacement.write_bytes(b"different inode")
+        replacement.replace(source / "b.bin")
+        other = retry.RetryState(roots[1])
+        assert (
+            other.pending_summary(["prefix/b.bin"], {"prefix/b.bin": source / "b.bin"})[
+                "pending"
+            ]
+            == 1
+        )
+        paths.metadata_path.write_text("broken metadata")
+        assert other.pending_summary(["prefix/b.bin"])["pending"] == 1
+        assert paths.metadata_path.read_text() == "broken metadata"
+        record = other.files["prefix/b.bin"]
+        record.update(category="unknown", status="prepare", attempts=1, rounds=0)
+        other.save()
+        assert (
+            retry.RetryState(roots[1]).pending_summary(["prefix/b.bin"])["abnormal"]
+            == 1
+        )
+
+    # An object already uploaded before a failed commit must not be sent again.
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(retry.hf, "_get_upload_mode", mode),
+        patch.object(
+            retry.hf, "_preupload_lfs", side_effect=AssertionError("must reuse object")
+        ),
+        patch.object(retry.hf, "_commit", commit),
+    ):
+        root = Path(td)
+        (root / "object.bin").write_bytes(b"object")
+        paths = get_local_upload_paths(root, "object.bin")
+        metadata = read_upload_metadata(root, "object.bin")
+        retry.hf._compute_sha256((paths, metadata))
+        metadata.upload_mode = "lfs"
+        metadata.should_ignore = False
+        metadata.is_uploaded = True
+        metadata.save(paths)
+        state = retry.RetryState(root)
+        record = state.record("object.bin")
+        stat = paths.file_path.stat()
+        record.update(
+            failures=3,
+            attempts=3,
+            rounds=1,
+            status="retry",
+            category="connection",
+            signature=[stat.st_size, stat.st_mtime_ns],
+        )
+        state.save()
+        output = StringIO()
+        with redirect_stdout(output):
+            result = retry.run_upload_round(
+                None,
+                "user/test",
+                root,
+                repo_type="model",
+                selected_paths=("object.bin", "object.bin"),
+            )
+        assert result["pending"] == 0
+        assert output.getvalue().count("[开始补传]") == 1
+        assert "本地记录对象已上传，尝试复用并核对提交" in output.getvalue()
+        assert "从头传输" not in output.getvalue()
+        # A stale retry record for an already committed object is not queued.
+        assert retry.RetryState(root).pending_summary(["object.bin"])["pending"] == 0
+        output = StringIO()
+        with redirect_stdout(output):
+            retry.run_upload_round(None, "user/test", root, repo_type="model")
+        assert "[开始补传]" not in output.getvalue(), output.getvalue()
+        assert "已确认提交，跳过上传" in output.getvalue()
+    print(
+        "[PASS] immediate global queue counts, cross-batch restart, deduplication and truthful object reuse"
+    )
+
+    # Concurrent retry dispatch subtracts waiting files exactly once, while
+    # nontransient failures enter the separate abnormal category.
+    import threading
+
+    barrier = threading.Barrier(2)
+
+    def abnormal_upload(items, **kwargs):
+        barrier.wait(timeout=5)
+        raise ValueError("secret-never-print")
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(retry.hf, "_get_upload_mode", mode),
+        patch.object(retry.hf, "_preupload_lfs", abnormal_upload),
+        patch.object(retry, "retry_delay", return_value=0),
+    ):
+        root = Path(td)
+        state = retry.RetryState(root)
+        for name in ("one.bin", "two.bin"):
+            (root / name).write_bytes(b"data")
+            state.record(name).update(
+                failures=3, attempts=3, rounds=1, status="retry", category="connection"
+            )
+        state.save()
+        output = StringIO()
+        with redirect_stdout(output):
+            result = retry.run_upload_round(
+                None,
+                "user/test",
+                root,
+                repo_type="model",
+                num_workers=2,
+                selected_paths=("one.bin", "two.bin"),
+                retry_counts={"queued": 7, "abnormal": 2},
+            )
+        text = output.getvalue()
+        assert "当前候补：8 个｜正在补传：1 个｜异常待处理：2 个" in text
+        assert "当前候补：7 个｜正在补传：2 个｜异常待处理：2 个" in text
+        assert "当前候补：7 个｜正在补传：0 个｜异常待处理：4 个" in text
+        assert result["abnormal"] == result["pending"] == 2
+        assert "secret-never-print" not in text
+        # An interrupted first round's ordinary backoff is not formal enqueue.
+        state = retry.RetryState(root)
+        for record in state.files.values():
+            record.update(
+                failures=1,
+                attempts=1,
+                rounds=0,
+                status="retry",
+                category="connection",
+                next_attempt=retry.time.time() + 60,
+            )
+        state.save()
+        assert state.pending_summary(["one.bin", "two.bin"])["pending"] == 0
+        output = StringIO()
+        with redirect_stdout(output):
+            result = retry.run_upload_round(
+                None, "user/test", root, repo_type="model", num_workers=2
+            )
+        assert result["pending"] == 2 and "[开始补传]" not in output.getvalue()
+        report = retry.RetryReport()
+        report.batches[0] = {**result, "queued": 0}
+        assert report.counts() == {"queued": 0, "abnormal": 0}
+        for record in state.files.values():
+            record.update(category="unknown", status="prepare")
+        state.save()
+        with redirect_stdout(StringIO()):
+            result = retry.run_upload_round(
+                None, "user/test", root, repo_type="model", num_workers=2
+            )
+        assert result["abnormal"] == 2, result
+
+
+def event_failure_checks():
+    import ssl
+    import time
+    from unittest.mock import patch
+
+    import httpx
+
+    from atomgit.adapters.upload import retry, service
+
+    request = httpx.Request("PUT", "https://hub.gitcode.com/object?token=do-not-log")
+    errors = [
+        httpx.HTTPStatusError(
+            "do-not-log", request=request, response=httpx.Response(502, request=request)
+        ),
+        httpx.WriteTimeout("do-not-log", request=request),
+        httpx.ConnectError(
+            "do-not-log",
+            request=httpx.Request(
+                "POST",
+                "https://hub.atomgit.com/user/repo.git/info/lfs/objects/batch?token=do-not-log",
+            ),
+        ),
+        RuntimeError("do-not-log"),
+    ]
+    errors[2].__cause__ = ssl.SSLEOFError("do-not-log")
+    clock = [time.time() + 1]
+    attempted = []
+
+    def mode(items, **kwargs):
+        for paths, metadata in items:
+            metadata.upload_mode = "lfs"
+            metadata.should_ignore = False
+            metadata.save(paths)
+
+    def fail(items, **kwargs):
+        attempted.append(1)
+        raise errors[len(attempted) - 1]
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(retry.hf, "_get_upload_mode", mode),
+        patch.object(retry.hf, "_preupload_lfs", fail),
+        patch.object(retry, "retry_delay", return_value=30),
+        patch.object(retry.time, "time", side_effect=lambda: clock[0]),
+        patch.object(retry.time, "monotonic", side_effect=lambda: clock[0]),
+        patch.object(
+            retry.time,
+            "sleep",
+            side_effect=lambda seconds: clock.__setitem__(0, clock[0] + 10),
+        ),
+    ):
+        root = Path(td)
+        filename = "failure\x1b[31m\n.bag" if os.name != "nt" else "failure.bag"
+        (root / filename).write_bytes(b"payload")
+        output = StringIO()
+        with redirect_stdout(output):
+            first = retry.run_upload_round(
+                None,
+                "user/test",
+                root,
+                repo_type="model",
+                num_workers=1,
+                print_report=False,
+                batch_context=(2, 25),
+            )
+            # A delayed candidate is returned without a fabricated new failure.
+            deferred = retry.run_upload_round(
+                None,
+                "user/test",
+                root,
+                repo_type="model",
+                num_workers=1,
+                print_report=False,
+            )
+            clock[0] += 60
+            second = retry.run_upload_round(
+                None,
+                "user/test",
+                root,
+                repo_type="model",
+                num_workers=1,
+                print_report=False,
+            )
+        text = output.getvalue()
+        assert first["pending"] == deferred["pending"] == second["pending"] == 1
+        assert len(attempted) == text.count("[上传失败]") == 4, text
+        assert text.count("[加入候补]") == 1 and text.count("[异常待处理]") == 1
+        assert "[待处理异常]" not in text and "do-not-log" not in text
+        assert "HTTP 502" in text and "WriteTimeout" in text and "SSLEOFError" in text
+        assert "方法：PUT" in text and "域名：hub.gitcode.com" in text
+        assert "方法：POST" in text and "域名：hub.atomgit.com" in text
+        assert "原因：未识别" in text
+        displayed_name = "failure?[31m?.bag" if os.name != "nt" else filename
+        assert displayed_name in text
+        assert "\x1b" not in text and "阶段：LFS 预上传" in text
+        assert "本轮失败：3/3｜累计失败：3 次" in text
+        assert "[队列状态] 当前候补：1 个｜正在补传：0 个｜异常待处理：0 个" in text
+        assert "等待至少 30 秒" in text and "[批次 2/25]" in text
+
+    with (
+        tempfile.TemporaryDirectory() as td,
+        patch.object(
+            config, "get_credentials", return_value={"token": "offline-token"}
+        ),
+        patch.object(
+            service,
+            "_validate_resumable_upload_target",
+            side_effect=[httpx.ConnectError("do-not-log"), KeyboardInterrupt],
+        ),
+        patch.object(service, "retry_delay", return_value=30),
+        patch.object(service.time, "monotonic", side_effect=lambda: clock[0]),
+        patch.object(
+            service.time,
+            "sleep",
+            side_effect=lambda seconds: clock.__setitem__(0, clock[0] + 10),
+        ),
+    ):
+        root = Path(td)
+        (root / "sample.bin").write_bytes(b"payload")
+        output = StringIO()
+        with redirect_stdout(output):
+            try:
+                api_mod.api.upload_directory(root, "user/test", resumable=True)
+            except KeyboardInterrupt:
+                pass
+            else:
+                raise AssertionError(
+                    "explicit cancellation must still stop target validation"
+                )
+        assert output.getvalue().count("[仓库检查失败]") == 1
+        assert "阶段：初始化" in output.getvalue()
+        assert "[待处理异常]" not in output.getvalue()
+    print(
+        "[PASS] one diagnostic per real failure, no timed repeats, safe filenames and causes"
+    )
+
+
 if __name__ == "__main__":
+    retry_round_checks()
+    retry_parent_checks()
+    queue_observability_checks()
+    event_failure_checks()
     raise SystemExit(main())

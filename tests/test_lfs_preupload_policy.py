@@ -196,18 +196,31 @@ def main():
     check("retry exhaustion invokes fatal once", len(fatal) == 1)
     check(
         "retry exhaustion emits bounded attempt count",
-        exhausted_events[-1] == {
+        exhausted_events[-1]
+        == {
             "kind": "lfs_preupload_exhausted",
             "category": "service_unavailable",
             "attempts": 3,
+            "diagnostic": {
+                "stage": "preupload",
+                "reason": "reported",
+                "error_type": "HfHubHTTPError",
+                "status_code": 503,
+                "error_chain": ("ResumableLfsPreuploadError", "HfHubHTTPError"),
+                "request_host": "hub.atomgit.com",
+                "request_method": "POST",
+                "operation": "lfs_batch",
+            },
         },
         repr(exhausted_events),
     )
 
-    controller, call, sleeps, _, _ = make_controller([
-        http_error(429, retry_after=7),
-        "ok",
-    ])
+    controller, call, sleeps, _, _ = make_controller(
+        [
+            http_error(429, retry_after=7),
+            "ok",
+        ]
+    )
     controller.preupload_lfs([], None, "u/r", "model", "main")
     check("valid Retry-After is honored", call.calls == 2 and sleeps == [7.0])
 
@@ -236,6 +249,32 @@ def main():
     check("retry retains bounded wait", sleeps == [2.0])
     check("recovered request does not invoke fatal path", not fatal)
 
+    controller, _, _, events, _ = make_controller([http_error(502), "ok"])
+    controller.preupload_lfs([], None, "u/r", "model", "main")
+    details = events[0].get("diagnostic", {})
+    check(
+        "retry retains safe HTTP request evidence",
+        details.get("status_code") == 502
+        and details.get("request_host") == "hub.atomgit.com"
+        and details.get("request_method") == "POST"
+        and details.get("operation") == "lfs_batch"
+        and "fake-token" not in repr(events)
+        and "signed.invalid" not in repr(events),
+    )
+    import contextlib
+    import io
+
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        api_mod._print_resumable_lfs_preupload_event(events[0], (1, 6))
+    check(
+        "retry output includes HTTP status and endpoint without URL",
+        "HTTP 502" in output.getvalue()
+        and "hub.atomgit.com" in output.getvalue()
+        and "lfs_batch" in output.getvalue()
+        and "https://" not in output.getvalue(),
+    )
+
     envelope = api_mod._resumable_failure_envelope(
         api_mod.ResumableLfsPreuploadError("lfs_quota")
     )
@@ -243,9 +282,16 @@ def main():
     check("LFS envelope is category-only", envelope == {"category": "lfs_quota"})
     check(
         "LFS envelope contains no sensitive detail",
-        all(secret not in serialized for secret in (
-            "fake-token", "signed.invalid", "trace-secret", "oid", "/private/",
-        )),
+        all(
+            secret not in serialized
+            for secret in (
+                "fake-token",
+                "signed.invalid",
+                "trace-secret",
+                "oid",
+                "/private/",
+            )
+        ),
     )
 
     structured = [
@@ -364,6 +410,10 @@ def main():
                         "reason": "reported",
                         "error_type": "HfHubHTTPError",
                         "status_code": 413,
+                        "error_chain": ("ResumableLfsPreuploadError", "HfHubHTTPError"),
+                        "request_host": "hub.atomgit.com",
+                        "request_method": "POST",
+                        "operation": "lfs_batch",
                     },
                 },
             ),
@@ -402,6 +452,13 @@ def main():
                             "reason": "reported",
                             "error_type": "HfHubHTTPError",
                             "status_code": 413,
+                            "error_chain": (
+                                "ResumableLfsPreuploadError",
+                                "HfHubHTTPError",
+                            ),
+                            "request_host": "hub.atomgit.com",
+                            "request_method": "POST",
+                            "operation": "lfs_batch",
                         },
                     },
                 ),

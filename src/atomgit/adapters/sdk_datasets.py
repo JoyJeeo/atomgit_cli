@@ -1,25 +1,38 @@
 """Dataset loading behavior for the public Python SDK."""
 
 import os
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from huggingface_hub import snapshot_download as hf_snapshot_download
+from huggingface_hub.constants import HF_HOME
 
 from ..infrastructure.runtime import ATOMGIT_HF_ENDPOINT
 from ..infrastructure.utils import run_download_with_retry
 from .sdk_common import _get_token, _normalize_repo_id
 from .sdk_errors import _sdk_error
 
-try:
-    from datasets import load_dataset as ds_load_dataset  # type: ignore
-    from datasets.config import HF_DATASETS_CACHE  # type: ignore
+DATASET_SUPPORT = find_spec("datasets") is not None
+HF_DATASETS_CACHE = (
+    Path(
+        os.getenv(
+            "HF_DATASETS_CACHE",
+            os.path.join(os.path.expanduser(os.getenv("HF_HOME", HF_HOME)), "datasets"),
+        )
+    )
+    if DATASET_SUPPORT
+    else None
+)
 
-    DATASET_SUPPORT = True
-except ImportError:
-    DATASET_SUPPORT = False
-    ds_load_dataset = None
-    HF_DATASETS_CACHE = None
+
+def _lazy_load_dataset(**kwargs):
+    from datasets import load_dataset
+
+    return load_dataset(**kwargs)
+
+
+ds_load_dataset = _lazy_load_dataset if DATASET_SUPPORT else None
 
 
 def _collect_patterns(value):

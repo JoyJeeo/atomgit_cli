@@ -44,7 +44,11 @@ def validate_download_request(request: DownloadRequest) -> DownloadRequest:
             if request.repo_type in (None, "")
             else normalize_repo_type(request.repo_type)
         ),
-        revision=normalize_revision(request.revision),
+        revision=(
+            None
+            if request.revision in (None, "")
+            else normalize_revision(request.revision)
+        ),
         token=request.token,
         local_dir=request.local_dir,
         force=bool(request.force),

@@ -79,7 +79,7 @@ class DownloadRequest:
     repo_id: str
     filename: Optional[str] = None
     repo_type: Optional[str] = None
-    revision: str = "main"
+    revision: Optional[str] = None
     token: Optional[Union[str, bool]] = None
     local_dir: Optional[Union[str, Path]] = None
     force: bool = False

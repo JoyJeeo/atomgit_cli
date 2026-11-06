@@ -133,6 +133,7 @@ def main():
             "src/atomgit/adapters/upload/progress.py",
             "src/atomgit/adapters/upload/projection.py",
             "src/atomgit/adapters/upload/resumable.py",
+            "src/atomgit/adapters/upload/retry.py",
             "src/atomgit/adapters/upload/service.py",
             "src/atomgit/api.py",
             "src/atomgit/cli.py",

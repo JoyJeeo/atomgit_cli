@@ -162,7 +162,11 @@ def main():
         check("dataset resumable warning is suppressed", not caught)
         check(
             "dataset warning policy crosses the process boundary explicitly",
-            len(process_args) == 1 and process_args[0][-1] is True,
+            len(process_args) == 1
+            and process_args[0][8] is True
+            and process_args[0][9] == ("data.parquet",)
+            and process_args[0][10]
+            == {"data.parquet": str(root.resolve() / "data.parquet")},
         )
         check(
             "token authenticates HfApi instance",

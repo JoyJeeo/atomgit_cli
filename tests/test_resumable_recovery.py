@@ -14,7 +14,7 @@ import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -28,6 +28,104 @@ def check(name, condition, detail=""):
     results.append((name, condition, detail))
     flag = "PASS" if condition else "FAIL"
     print(f"[{flag}] {name}" + (f" -> {detail}" if detail else ""))
+
+
+def configured_upload_probe(error_name, args):
+    # Install the fake transport inside the fresh child, not only in the parent.
+    api_module = importlib.import_module("atomgit.api")
+    from huggingface_hub.utils import _http
+
+    class FailedHfApi:
+        def __init__(self, endpoint=None, token=None):
+            pass
+
+        def upload_large_folder(self, **kwargs):
+            if error_name in ("slow", "fast"):
+                time.sleep(0.25 if error_name == "slow" else 0)
+                return
+            with _http.default_client_factory() as client:
+                assert client.timeout.read == 0.05
+                assert client.timeout.connect == 0.05
+                assert client.timeout.pool == 0.05
+                assert client.timeout.write == 60.0
+            raise getattr(httpx, error_name)("offline request timeout")
+
+    with patch.object(api_module, "HfApi", FailedHfApi):
+        api_module._run_resumable_upload(*args)
+
+
+@contextmanager
+def offline_worker_context(kind):
+    real_context = multiprocessing.get_context
+
+    def context_for(method):
+        context = real_context(method)
+        return SimpleNamespace(
+            Queue=context.Queue,
+            Process=lambda target, args: context.Process(
+                target=configured_upload_probe,
+                args=(kind, args),
+            ),
+        )
+
+    with patch.object(multiprocessing, "get_context", side_effect=context_for):
+        yield
+
+
+def system_proxy_probe(*args):
+    import atomgit.api  # noqa: F401
+    from atomgit.adapters.upload import resumable
+
+    assert multiprocessing.get_start_method() == "spawn"
+    assert callable(resumable._atomgit_v5_get_json)
+    if sys.platform == "darwin":
+        import _scproxy
+
+        # Exercise the exact native entry point in the crash report. Never
+        # print proxy addresses or make a network request.
+        for _ in range(3):
+            assert isinstance(_scproxy._get_proxies(), dict)
+    args[2].put((True, {"recovered": 0}))
+
+
+def spawned_proxy_checks():
+    if sys.platform != "darwin":
+        return
+    from atomgit.adapters.upload import resumable
+
+    stop = threading.Event()
+    thread = threading.Thread(target=stop.wait)
+    thread.start()
+    real_context = multiprocessing.get_context
+    selected = []
+
+    def context_for(method):
+        selected.append(method)
+        context = real_context(method)
+        return SimpleNamespace(
+            Queue=context.Queue,
+            Process=lambda target, args: context.Process(
+                target=system_proxy_probe, args=args
+            ),
+        )
+
+    try:
+        with patch.object(multiprocessing, "get_context", side_effect=context_for):
+            for _ in range(3):
+                result = resumable._execute_resumable_upload_process(
+                    token="fake-token-never-print",
+                    upload_kwargs={"print_report": False},
+                    request_timeout=0.1,
+                    batch_context=(1, 1),
+                )
+                assert result == {"recovered": 0}
+        check(
+            "threaded macOS parent uses fresh children for native proxy discovery",
+            selected == ["spawn"] * 3,
+        )
+    finally:
+        stop.set()
+        thread.join()
 
 
 def offline_child(result_queue, outcome, ready, observation_queue=None):
@@ -47,6 +145,20 @@ def offline_child(result_queue, outcome, ready, observation_queue=None):
         os._exit(3)
     elif outcome == "empty":
         return
+    elif outcome in ("partial", "invalid-partial"):
+        result_queue.put(
+            (
+                True,
+                {
+                    "recovered": 0,
+                    "pending": 1,
+                    "delay": 10,
+                    "cooldown": 0,
+                    "abnormal": 0,
+                    "failures": 3 if outcome == "partial" else -1,
+                },
+            )
+        )
     elif outcome == "failure":
         result_queue.put((False, {"category": "timeout"}))
     elif outcome == "success-crash":
@@ -103,8 +215,9 @@ def hold_projection_lock(folder_path, ready, release):
 def preuploaded_commit_probe(result_queue, folder_path, reject):
     """Run real locked HF worker threads without network or retransfers."""
     import socket
+
     import atomgit  # noqa: F401
-    from atomgit.adapters.upload import resumable
+    from atomgit.adapters.upload import resumable, retry
 
     class OfflineApi:
         def __init__(self, endpoint=None, token=None):
@@ -133,8 +246,18 @@ def preuploaded_commit_probe(result_queue, folder_path, reject):
 
     with (
         patch.object(resumable, "HfApi", OfflineApi),
+        patch.object(retry, "retry_delay", return_value=0),
         patch.object(
             resumable, "_resolve_resumable_revision", lambda **kwargs: "1" * 40
+        ),
+        patch.object(
+            resumable,
+            "_atomgit_file_checksum",
+            side_effect=httpx.HTTPStatusError(
+                "missing",
+                request=httpx.Request("HEAD", "https://example.invalid/file"),
+                response=httpx.Response(404),
+            ),
         ),
         patch.object(
             socket.socket,
@@ -155,6 +278,134 @@ def preuploaded_commit_probe(result_queue, folder_path, reject):
             300,
             (1, 1),
         )
+
+
+def cross_volume_commit_probe(result_queue, folder_path, sources, already_created):
+    import atomgit  # noqa: F401
+    from atomgit.adapters.upload import resumable, retry
+
+    writes = []
+    payload = Path(sources["data.bin"]).read_bytes()
+
+    class OfflineApi:
+        def __init__(self, endpoint=None, token=None):
+            pass
+
+        def upload_large_folder(self, **kwargs):
+            return resumable.hf_large_folder.upload_large_folder_internal(
+                self, **kwargs, print_report=False
+            )
+
+        def preupload_lfs_files(self, **kwargs):
+            raise AssertionError("recovery must reuse the existing LFS object")
+
+        def create_commit(self, **kwargs):
+            writes.append(1)
+            assert (
+                not already_created and len(writes) == 1
+            ), "must not replay a confirmed commit"
+            raise httpx.ReadTimeout("fake-secret: response lost after commit")
+
+    with (
+        patch.object(resumable, "HfApi", OfflineApi),
+        patch.object(retry, "retry_delay", return_value=0),
+        patch.object(
+            resumable,
+            "_resolve_resumable_revision",
+            side_effect=lambda **kw: ("b" if already_created or writes else "a") * 40,
+        ),
+        patch.object(
+            resumable,
+            "_atomgit_file_checksum",
+            return_value=("sha256", hashlib.sha256(payload).hexdigest(), len(payload)),
+        ),
+        patch.object(resumable, "verify_canonical_lfs_pointers"),
+    ):
+        resumable._run_resumable_upload(
+            "offline-token",
+            {
+                "repo_id": "user/test",
+                "repo_type": "model",
+                "folder_path": folder_path,
+                "num_workers": 1,
+            },
+            result_queue,
+            source_paths=sources,
+            selected_paths=("data.bin",),
+        )
+    result_queue.put(("writes", len(writes)))
+
+
+def cross_volume_process_checks():
+    from huggingface_hub import CommitOperationAdd
+
+    import atomgit  # noqa: F401
+    from atomgit.adapters.upload import resumable
+
+    for method in multiprocessing.get_all_start_methods():
+        for already_created in (False, True):
+            context = multiprocessing.get_context(method)
+            with tempfile.TemporaryDirectory() as td:
+                source = (Path(td) / "source.bin").resolve()
+                source.write_bytes(b"cross-volume recovery in real process")
+                root = Path(td) / "projection"
+                root.mkdir()
+                (root / "data.bin").symlink_to(source)
+                paths = resumable.get_local_upload_paths(root, "data.bin")
+                metadata = resumable.read_upload_metadata(root, "data.bin")
+                metadata.sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+                metadata.upload_mode = "lfs"
+                metadata.should_ignore = False
+                metadata.is_uploaded = True
+                metadata.save(paths)
+                if already_created:
+                    operation = CommitOperationAdd(
+                        path_in_repo="data.bin", path_or_fileobj=root / "data.bin"
+                    )
+                    operation._upload_mode = "lfs"
+                    resumable._write_pending_commit(
+                        root,
+                        resumable._pending_commit_value(
+                            state="attempting",
+                            base_revision="a" * 40,
+                            commit_revision=None,
+                            operations=[operation],
+                        ),
+                    )
+                result_queue = context.Queue()
+                child = context.Process(
+                    target=cross_volume_commit_probe,
+                    args=(
+                        result_queue,
+                        str(root),
+                        {"data.bin": str(source)},
+                        already_created,
+                    ),
+                )
+                try:
+                    child.start()
+                    child.join(10)
+                    assert not child.is_alive(), "cross-volume recovery must finish"
+                    result = result_queue.get(timeout=1)
+                    writes = result_queue.get(timeout=1)
+                    check(
+                        f"{method} source-bound symlink recovery (restart={already_created})",
+                        child.exitcode == 0
+                        and result[0] is True
+                        and result[1]["pending"] == 0
+                        and writes == ("writes", 0 if already_created else 1)
+                        and resumable.read_upload_metadata(
+                            root, "data.bin"
+                        ).is_committed
+                        and resumable._read_pending_commit(root) is None,
+                    )
+                finally:
+                    if child.is_alive():
+                        child.kill()
+                        child.join()
+                    child.close()
+                    result_queue.close()
+                    result_queue.join_thread()
 
 
 def acquire_projection_lock(folder_path, acquired):
@@ -199,6 +450,37 @@ def observation_failure_checks():
             Process=lambda target, args: FinishedProcess(args),
         ),
     )
+    for platform, methods, expected in (
+        ("darwin", ["fork", "spawn", "forkserver"], "spawn"),
+        ("linux", ["fork", "spawn", "forkserver"], "fork"),
+        ("win32", ["spawn"], "spawn"),
+    ):
+        selected = []
+        queue_calls = 0
+        policy = SimpleNamespace(
+            get_all_start_methods=lambda: methods,
+            get_context=lambda method: selected.append(method)
+            or SimpleNamespace(
+                Queue=queue_factory,
+                Process=lambda target, args: FinishedProcess(args),
+            ),
+        )
+        with (
+            patch.object(sys, "platform", platform),
+            patch.object(resumable, "multiprocessing", policy),
+        ):
+            resumable._execute_resumable_upload_process(
+                token="fake-token-never-print",
+                upload_kwargs={"print_report": False},
+                request_timeout=0.01,
+                batch_context=(1, 1),
+            )
+        check(
+            "upload process context on " + platform,
+            selected == [expected],
+            str(selected),
+        )
+    queue_calls = 0
     with patch.object(resumable, "multiprocessing", adapter):
         result = resumable._execute_resumable_upload_process(
             token="fake-token-never-print",
@@ -235,6 +517,8 @@ def process_lifecycle_checks():
         context = multiprocessing.get_context(method)
         serialized_warning_flags = []
         for outcome in (
+            "partial",
+            "invalid-partial",
             "success",
             "observe",
             "flood",
@@ -251,7 +535,10 @@ def process_lifecycle_checks():
             children = []
 
             def process_factory(target, args):
-                serialized_warning_flags.append(args[-1])
+                serialized_warning_flags.append(args[8])
+                assert args[9] is None
+                assert args[10] == {"data.bin": "/selected/source/data.bin"}
+                assert args[11] == {"queued": 7, "abnormal": 2}
                 child = context.Process(
                     target=offline_child,
                     args=(
@@ -310,6 +597,8 @@ def process_lifecycle_checks():
                             request_timeout=0.01,
                             batch_context=(1, 1),
                             suppress_dataset_warning=True,
+                            source_paths={"data.bin": "/selected/source/data.bin"},
+                            retry_counts={"queued": 7, "abnormal": 2},
                         )
                 finally:
                     lfs_service.set_upload_observer(previous_observer)
@@ -324,6 +613,7 @@ def process_lifecycle_checks():
                     error is None
                     if outcome
                     in (
+                        "partial",
                         "success",
                         "observe",
                         "flood",
@@ -369,6 +659,11 @@ def process_lifecycle_checks():
                         and observations[0]["envelope"]["type"] == "flow_state"
                         and observations[1]["terminal"] == "completed",
                     )
+                if outcome == "partial":
+                    check(
+                        f"{method} deferred batch closes flows without completion",
+                        error is None and observations[-1]["terminal"] == "interrupted",
+                    )
                 if outcome == "flood":
                     check(
                         f"{method} observation flood cannot block result delivery",
@@ -396,7 +691,7 @@ def process_lifecycle_checks():
                     child.close()
         check(
             f"{method} serializes the dataset warning policy explicitly",
-            len(serialized_warning_flags) == 11
+            len(serialized_warning_flags) == 13
             and all(flag is True for flag in serialized_warning_flags),
         )
 
@@ -685,7 +980,7 @@ def file_progress_policy_checks():
     check("zero speed is not shown as unknown", "0.00B/s" in text)
     check(
         "file completion differs from failure and commit",
-        text.count("传输完成，等待提交确认") == 1 and "传输中断" in text,
+        text.count("传输完成，等待提交确认") == 1 and "传输中断" not in text,
     )
     check(
         "redirected progress has no cursor controls",
@@ -719,6 +1014,70 @@ def file_progress_policy_checks():
     )
 
 
+def progress_sampling_checks():
+    from atomgit.adapters.lfs.service import _SlowFlowCoordinator, _SlowFlowPayload
+
+    now = [0.0]
+    display, observations = [], []
+    coordinator = _SlowFlowCoordinator(
+        monotonic=lambda: now[0],
+        progress_callback=lambda message: display.append((now[0], message)),
+        observation_callback=lambda message: observations.append((now[0], message)),
+    )
+    coordinator.register("sample", total_bytes=1000)
+    display.clear()
+    observations.clear()
+    payload = _SlowFlowPayload(
+        io.BytesIO(b"x" * 1000),
+        coordinator=coordinator,
+        object_key="sample",
+        total_bytes=1000,
+        monotonic=lambda: now[0],
+    )
+    payload.read(10)
+    now[0] = 0.5
+    payload.read(10)
+    check("subsecond payload reads do not redraw", not display)
+    now[0] = 1.0
+    payload.read(10)
+    check(
+        "payload progress updates before five-second observation sample",
+        len(display) == 1
+        and display[-1][1]["payload"]["remaining_bytes"] == 980
+        and display[-1][1]["payload"]["sample_speed"] == 20,
+    )
+    check(
+        "fast display cannot mutate persisted flow or recovery state",
+        not observations
+        and coordinator._states["sample"].sample_speed is None
+        and coordinator._states["sample"].remaining_bytes == 1000
+        and coordinator._states["sample"].speeds == [],
+    )
+    for second in range(2, 31):
+        now[0] = float(second)
+        payload.read(10)
+    check(
+        "active payload reads produce a display update each second",
+        set(t for t, m in display if m["type"] == "flow_state") == set(range(1, 31)),
+    )
+    check(
+        "flow observations retain five-second cadence and one recovery window",
+        set(t for t, m in observations if m["type"] == "flow_state")
+        == {5, 10, 15, 20, 25, 30}
+        and len(coordinator._states["sample"].speeds) == 1
+        and abs(coordinator._states["sample"].speeds[0] - 310 / 30) < 1e-9
+        and coordinator.replacement_count("sample") == 0,
+    )
+    before = len(display)
+    coordinator.complete("sample")
+    now[0] += 1
+    payload.read(10)
+    check(
+        "completed flow cannot be revived by a display sample",
+        len(display) == before + 2,
+    )
+
+
 def progress_pty_checks():
     if os.name != "posix":
         return
@@ -729,7 +1088,7 @@ def progress_pty_checks():
     import termios
     import unicodedata
 
-    from atomgit.adapters.lfs.service import _SlowFlowCoordinator
+    from atomgit.adapters.lfs.service import _SlowFlowCoordinator, _SlowFlowPayload
     from atomgit.adapters.upload.progress import _UploadProgress
 
     master, slave = pty.openpty()
@@ -759,8 +1118,23 @@ def progress_pty_checks():
             coordinator.register("a", total_bytes=100, file_abbrev="a.bin")
             coordinator.register("b", total_bytes=100, file_abbrev="b.bin")
             print("LOG-A", flush=True)
-            coordinator.observe_sample("a", 5, 50)
+            now = [0.0]
+            payload = _SlowFlowPayload(
+                io.BytesIO(b"x" * 100),
+                coordinator=coordinator,
+                object_key="a",
+                total_bytes=100,
+                monotonic=lambda: now[0],
+            )
+            payload.read(25)
+            now[0] = 1.0
+            payload.read(25)
+            now[0] = 2.0
+            payload.read(25)
             print("LOG-B", file=sys.stderr, flush=True)
+            from atomgit.adapters.upload.retry import _warning
+
+            _warning("[上传失败] a.bin\n原因：HTTP 502\n[队列状态] 候补等待：1 个")
             coordinator.complete("a")
             coordinator.complete("b")
             print("BATCH-OK", flush=True)
@@ -774,6 +1148,7 @@ def progress_pty_checks():
         not reader.is_alive()
         and "a.bin" in text
         and "b.bin" in text
+        and "25%" in text
         and "50%" in text
         and text.count("LOG-A") == text.count("LOG-B") == 1
         and text.endswith("BATCH-OK\r\n"),
@@ -802,7 +1177,17 @@ def progress_pty_checks():
     screen = "\n".join("".join(line).rstrip() for line in rows)
     check(
         "PTY keeps log history after bars close",
-        all(line in screen.splitlines() for line in ("LOG-A", "LOG-B", "BATCH-OK"))
+        all(
+            line in screen.splitlines()
+            for line in (
+                "LOG-A",
+                "LOG-B",
+                "BATCH-OK",
+                "[上传失败] a.bin",
+                "原因：HTTP 502",
+                "[队列状态] 候补等待：1 个",
+            )
+        )
         and "50%" not in screen,
     )
 
@@ -865,21 +1250,12 @@ def preuploaded_commit_checks():
                 result = result_queue.get(timeout=1)
                 if reject:
                     check(
-                        "real HF commit failure retains safe stage, type and HTTP status",
-                        child.exitcode == 1
-                        and result
-                        == (
-                            False,
-                            {
-                                "category": "unknown",
-                                "diagnostic": {
-                                    "stage": "commit",
-                                    "reason": "reported",
-                                    "error_type": "HTTPStatusError",
-                                    "status_code": 422,
-                                },
-                            },
-                        ),
+                        "real HF file-local commit failure defers without claiming success",
+                        child.exitcode == 0
+                        and result[0] is True
+                        and result[1]["pending"] == 1
+                        and result[1]["abnormal"] == 1
+                        and result[1]["failures"] == 1,
                     )
                     retained = read_upload_metadata(root, "data.bin")
                     check(
@@ -892,7 +1268,8 @@ def preuploaded_commit_checks():
                     check(
                         "real HF rerun reuses uploaded data and confirms commit",
                         child.exitcode == 0
-                        and result == (True, {"recovered": 0})
+                        and result[0] is True
+                        and result[1]["pending"] == 0
                         and read_upload_metadata(root, "data.bin").is_committed,
                     )
             finally:
@@ -918,43 +1295,26 @@ def main():
             (source / "payload.bin").write_bytes(b"resumable-test")
             config.get_credentials = lambda: {"token": "fake-token-never-print"}
 
-            original_hf_api = api_module.HfApi
             original_progress = api_module._set_progress_bar
             original_v5_get = api_module._atomgit_v5_get_json
-            calls = []
 
             api_module._atomgit_v5_get_json = lambda *args, **kwargs: {
                 "full_name": "user/repo",
                 "default_branch": "main",
             }
 
-            class SlowHfApi:
-                def __init__(self, endpoint=None, token=None):
-                    calls.append(("init", endpoint, token))
-
-                def upload_large_folder(self, **kwargs):
-                    calls.append(("upload", kwargs))
-                    time.sleep(0.25)
-
-            class FastHfApi:
-                def __init__(self, endpoint=None, token=None):
-                    calls.append(("init-fast", endpoint, token))
-
-                def upload_large_folder(self, **kwargs):
-                    calls.append(("upload-fast", kwargs))
-
-            api_module.HfApi = SlowHfApi
             api_module._set_progress_bar = lambda enabled: None
             try:
                 started = time.monotonic()
-                result = api_module.api.upload_directory(
-                    source,
-                    "user/repo",
-                    upload_timeout=0.05,
-                    progress_bar=False,
-                    resumable=True,
-                    num_workers=1,
-                )
+                with offline_worker_context("slow"):
+                    result = api_module.api.upload_directory(
+                        source,
+                        "user/repo",
+                        upload_timeout=0.05,
+                        progress_bar=False,
+                        resumable=True,
+                        num_workers=1,
+                    )
                 elapsed = time.monotonic() - started
                 check("T1 request timeout does not cap upload lifetime", result is True)
                 check(
@@ -967,46 +1327,36 @@ def main():
                     not api_module.multiprocessing.active_children(),
                 )
             finally:
-                api_module.HfApi = original_hf_api
                 api_module._atomgit_v5_get_json = original_v5_get
                 api_module._set_progress_bar = original_progress
 
             from huggingface_hub import constants as hf_constants
-            from huggingface_hub.utils import _http
 
             before = hf_constants.DEFAULT_REQUEST_TIMEOUT
             for timeout_error in (httpx.ReadTimeout, httpx.WriteTimeout):
-
-                class FailedHfApi:
-                    def __init__(self, endpoint=None, token=None):
-                        pass
-
-                    def upload_large_folder(self, **kwargs):
-                        with _http.default_client_factory() as client:
-                            assert client.timeout.read == 0.05
-                            assert client.timeout.connect == 0.05
-                            assert client.timeout.pool == 0.05
-                            assert client.timeout.write == 60.0
-                        raise timeout_error("offline request timeout")
-
                 output = io.StringIO()
                 with (
                     redirect_stdout(output),
-                    patch.object(api_module, "HfApi", FailedHfApi),
-                    patch.object(
-                        api_module, "_atomgit_v5_get_json", lambda *a, **kw: {}
-                    ),
+                    offline_worker_context(timeout_error.__name__),
                 ):
-                    failed = api_module.api.upload_directory(
-                        source,
-                        "user/repo",
-                        upload_timeout=0.05,
-                        resumable=True,
-                        progress_bar=False,
-                    )
+                    try:
+                        api_module._execute_resumable_upload_process(
+                            token="offline-token",
+                            upload_kwargs={
+                                "folder_path": str(source),
+                                "repo_id": "user/repo",
+                                "repo_type": "dataset",
+                            },
+                            request_timeout=0.05,
+                            batch_context=(1, 1),
+                        )
+                    except api_module.ResumableWorkerError as error:
+                        failed = error.category == "timeout"
+                    else:
+                        failed = False
                 check(
-                    f"{timeout_error.__name__} fails through upload service",
-                    failed is False and "上传目录失败[请求超时]" in output.getvalue(),
+                    f"{timeout_error.__name__} reaches parent for deferred retry",
+                    failed,
                 )
                 check(
                     "request timeout restored after failure",
@@ -1014,33 +1364,34 @@ def main():
                 )
 
             observation_failure_checks()
+            spawned_proxy_checks()
             process_lifecycle_checks()
             progress_policy_checks()
             append_output_checks()
             file_progress_policy_checks()
+            progress_sampling_checks()
             progress_pty_checks()
             phase_isolation_checks()
             preuploaded_commit_checks()
+            cross_volume_process_checks()
 
-            calls.clear()
-            api_module.HfApi = FastHfApi
             api_module._atomgit_v5_get_json = lambda *args, **kwargs: {
                 "full_name": "user/repo",
                 "default_branch": "main",
             }
             try:
-                result = api_module.api.upload_directory(
-                    source,
-                    "user/repo",
-                    upload_timeout=1,
-                    progress_bar=False,
-                    resumable=True,
-                    num_workers=1,
-                )
+                with offline_worker_context("fast"):
+                    result = api_module.api.upload_directory(
+                        source,
+                        "user/repo",
+                        upload_timeout=1,
+                        progress_bar=False,
+                        resumable=True,
+                        num_workers=1,
+                    )
                 check("T4 successful child returns success", result is True)
                 check("T5 successful worker completes within timeout", result is True)
             finally:
-                api_module.HfApi = original_hf_api
                 api_module._atomgit_v5_get_json = original_v5_get
 
     finally:

@@ -210,6 +210,27 @@ def _prepare_resumable_upload_projection(
     else:
         raise ResumableProjectionError("不能将断点续传投影缓存作为上传源")
 
+    projection = _resumable_projection_path(
+        source, repo_id, repo_type, revision, path_in_repo, batch_key
+    )
+    _ensure_projection_directory(projection, cache_root)
+    os.chmod(projection, 0o700)
+    _sync_resumable_projection(
+        source,
+        projection,
+        path_in_repo,
+        ignore_patterns=ignore_patterns,
+        selected_paths=selected_paths,
+    )
+    return projection
+
+
+def _resumable_projection_path(
+    source, repo_id, repo_type, revision, path_in_repo=None, batch_key="all"
+):
+    """Locate a stable checkpoint without refreshing its source projection."""
+    source = source.expanduser().resolve(strict=True)
+    cache_root = _resumable_projection_cache_root()
     identity = "\0".join(
         (
             _atomgit_hf_endpoint(),
@@ -222,15 +243,8 @@ def _prepare_resumable_upload_projection(
         )
     )
     projection = cache_root / hashlib.sha256(identity.encode("utf-8")).hexdigest()
-    _ensure_projection_directory(projection, cache_root)
-    os.chmod(projection, 0o700)
-    _sync_resumable_projection(
-        source,
-        projection,
-        path_in_repo,
-        ignore_patterns=ignore_patterns,
-        selected_paths=selected_paths,
-    )
+    if projection.is_symlink():
+        raise ResumableProjectionError("断点续传投影缓存目录不安全")
     return projection
 
 

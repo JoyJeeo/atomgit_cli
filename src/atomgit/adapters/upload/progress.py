@@ -43,7 +43,7 @@ class _ProgressStream:
 
 
 class _UploadProgress:
-    """Render existing five-second samples; never participate in upload policy."""
+    """Render independent display samples; never participate in upload policy."""
 
     def __init__(self, enabled=True, *, monotonic=time.monotonic):
         self.enabled = enabled
@@ -155,12 +155,12 @@ class _UploadProgress:
                         bar.refresh()
             now = self.monotonic()
             if terminal:
-                status = (
-                    "传输完成，等待提交确认"
-                    if phase == "completed"
-                    else "传输中断，结果以重试或批次最终确认为准"
-                )
-                self.write(f"[{datetime.now():%H:%M:%S}] {label} {status}\n")
+                # Failed transport is explained once by the owning retry decision,
+                # where the actual exception, file and queue state are available.
+                if phase == "completed":
+                    self.write(
+                        f"[{datetime.now():%H:%M:%S}] {label} 传输完成，等待提交确认\n"
+                    )
                 self.last_log.pop(key, None)
             elif not self.dynamic and now - self.last_log.get(key, -math.inf) >= 10:
                 percent = 100 * done / total if total else 0
